@@ -5,6 +5,8 @@ import {
   Space_Grotesk,
   Orbitron,
   Chakra_Petch,
+  Anton,
+  Archivo_Black,
 } from "next/font/google";
 import "./globals.css";
 
@@ -38,6 +40,18 @@ const chakra = Chakra_Petch({
   variable: "--font-chakra",
   display: "swap",
 });
+const anton = Anton({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-anton",
+  display: "swap",
+});
+const archivoBlack = Archivo_Black({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-archivo-black",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Farmhand — Local Presence OS",
@@ -59,7 +73,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geist.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${orbitron.variable} ${chakra.variable}`}
+        className={`${geist.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${orbitron.variable} ${chakra.variable} ${anton.variable} ${archivoBlack.variable}`}
       >
         {children}
       </body>
