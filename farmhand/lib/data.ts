@@ -1,0 +1,461 @@
+/* ============================================================
+   Farmhand demo data — authentic content from the design handoff.
+   Persona: Jess, residential realtor, Gilbert AZ.
+   ============================================================ */
+
+export type Channel = "Instagram" | "Facebook" | "Nextdoor";
+
+export interface EnginePost {
+  id: string;
+  channel: Channel;
+  when: string;
+  layer: "VOLUME" | "PERSONAL";
+  title: string;
+  preview: string;
+  thumb: string;
+  thumbLabel: string;
+}
+
+export const ENGINE_POSTS: EnginePost[] = [
+  {
+    id: "e1",
+    channel: "Instagram",
+    when: "Today · 8:00 AM",
+    layer: "VOLUME",
+    title: "What Gilbert homes actually sold for in June",
+    preview:
+      "12 closings in 85234 last month. Median: $487K — up 2.1% from May. The three that went over asking all had one thing in common…",
+    thumb: "linear-gradient(135deg, #3B2B63, #1C4666)",
+    thumbLabel: "MARKET\nGRAPHIC",
+  },
+  {
+    id: "e2",
+    channel: "Facebook",
+    when: "Today · 12:30 PM",
+    layer: "PERSONAL",
+    title: "I handed the Ramirez family their keys today",
+    preview:
+      "We searched for eight months. Two heartbreaks, one perfect backyard for the twins. This is my favorite part of the job. Welcome home. 🔑",
+    thumb: "linear-gradient(135deg, #6A3B2B, #8A5A2B)",
+    thumbLabel: "YOUR\nPHOTO",
+  },
+  {
+    id: "e3",
+    channel: "Nextdoor",
+    when: "Tomorrow · 9:00 AM",
+    layer: "VOLUME",
+    title: "Monsoon season roof check: 5 things to look at this weekend",
+    preview:
+      "Before the July storms hit: check these five spots on your roof now — #3 is the one that causes 80% of insurance claims in the East Valley…",
+    thumb: "linear-gradient(135deg, #2B4A3B, #1C6650)",
+    thumbLabel: "TIP\nCARD",
+  },
+  {
+    id: "e4",
+    channel: "Instagram",
+    when: "Tomorrow · 5:30 PM",
+    layer: "PERSONAL",
+    title: "Val Vista Lakes evening walk — neighborhood spotlight",
+    preview:
+      "The lake path at 6pm is why my buyers keep asking about this neighborhood. Current listings, HOA truth, and what $520K gets you here…",
+    thumb: "linear-gradient(135deg, #2B3A63, #563B7A)",
+    thumbLabel: "YOUR\nB-ROLL",
+  },
+];
+
+export interface PlaybookAction {
+  id: string;
+  group: string;
+  members: string;
+  why: string;
+  title: string;
+  copyText: string;
+}
+
+export const PLAYBOOK: PlaybookAction[] = [
+  {
+    id: "p1",
+    group: "East Valley Homeowners",
+    members: "14.2K members",
+    why: "Promo Monday",
+    title: "Just-sold share — sanctioned promo slot",
+    copyText:
+      "Happy Monday, neighbors! Sharing per the promo thread — just helped a family close on Willow St after 8 months of searching. If you're curious what your place is worth in this market, happy to run the numbers, no strings. 🏡",
+  },
+  {
+    id: "p2",
+    group: "Gilbert Neighbors (Nextdoor)",
+    members: "8.9K neighbors",
+    why: "Hot thread · 2h ago",
+    title: "Reply: 'Anyone know what the new build on Ray Rd is?'",
+    copyText:
+      "It's the new Trilogy phase — 214 single-story homes, first closings in October. Fun fact: resale in the older phase is holding at $610K+. Happy to share the site plan if anyone wants it!",
+  },
+  {
+    id: "p3",
+    group: "85234 Buy Nothing / Local Chat",
+    members: "5.1K members",
+    why: "Helpful window",
+    title: "Monsoon prep tip drop — pure value, no pitch",
+    copyText:
+      "PSA from someone who walks a LOT of Gilbert roofs: before the storms hit, check your scuppers and flat-roof drains for spring debris. 10 minutes now saves a $4K ceiling repair in August. Stay dry out there! ⛈️",
+  },
+];
+
+export interface ScoutItem {
+  id: string;
+  color: string;
+  title: string;
+  note: string;
+}
+
+export const SCOUT: ScoutItem[] = [
+  {
+    id: "s1",
+    color: "#FFC23D",
+    title: "Gilbert Global Village Festival — Jul 12",
+    note: "Downtown Gilbert. Perfect neighborhood-spotlight + 'see you there' group post.",
+  },
+  {
+    id: "s2",
+    color: "#38BDF8",
+    title: "New thread: 'Best family neighborhoods near Higley?'",
+    note: "17 replies in Gilbert Neighbors, no agent has answered well yet.",
+  },
+  {
+    id: "s3",
+    color: "#41D98A",
+    title: "SRP rate change hits East Valley Aug 1",
+    note: "Homeowner-cost explainer opportunity — volume post + group value drop.",
+  },
+];
+
+/* ---- Post Studio ---- */
+export const STUDIO_ACCENTS: Record<string, string> = {
+  market: "#4DA6FF",
+  story: "#FF9A62",
+  tips: "#37D98A",
+  spotlight: "#B98CFF",
+};
+
+export const STUDIO_META: Record<
+  string,
+  { pillar: string; seed: string; cta: string }
+> = {
+  e1: { pillar: "market", seed: "fh-sold-map", cta: "Save this for your next price conversation." },
+  e2: { pillar: "story", seed: "fh-close1", cta: "Know someone house-hunting? Send them this." },
+  e3: { pillar: "tips", seed: "fh-desert1", cta: "Save the checklist. Roof first, storms later." },
+  e4: { pillar: "spotlight", seed: "fh-lake1", cta: "Want the Val Vista breakdown? Comment TOUR." },
+};
+
+export interface LibImg {
+  seed: string;
+  alt: string;
+  tier: string;
+}
+
+export const STUDIO_LIB: Record<string, LibImg[]> = {
+  e1: [
+    { seed: "fh-sold-map", alt: "Your photo: Gilbert street at dusk", tier: "YOURS" },
+    { seed: "fh-street1", alt: "Your photo: Heritage District", tier: "YOURS" },
+    { seed: "fh-tmpl-stats", alt: "Template: June sold-price stat card", tier: "TEMPLATE" },
+    { seed: "fh-tmpl-map", alt: "Template: 85234 sold map", tier: "TEMPLATE" },
+    { seed: "fh-stk-aerial", alt: "Stock: desert suburb aerial", tier: "PEXELS" },
+    { seed: "fh-stk-keys", alt: "Stock: keys and contract", tier: "UNSPLASH" },
+  ],
+  e2: [
+    { seed: "fh-close1", alt: "Your photo: key handoff", tier: "YOURS" },
+    { seed: "fh-family1", alt: "Your photo: buyers on porch", tier: "YOURS" },
+    { seed: "fh-house1", alt: "Your photo: Willow St exterior", tier: "YOURS" },
+    { seed: "fh-open1", alt: "Your photo: staging moment", tier: "YOURS" },
+    { seed: "fh-stk-hands", alt: "Stock: hands with house keys", tier: "PEXELS" },
+    { seed: "fh-stk-porch", alt: "Stock: family at doorway", tier: "PIXABAY" },
+  ],
+  e3: [
+    { seed: "fh-desert1", alt: "Your photo: monsoon clouds", tier: "YOURS" },
+    { seed: "fh-house2", alt: "Your photo: backyard pre-storm", tier: "YOURS" },
+    { seed: "fh-tmpl-check", alt: "Template: 5-point roof checklist", tier: "TEMPLATE" },
+    { seed: "fh-stk-roof1", alt: "Stock: desert roofline", tier: "PEXELS" },
+    { seed: "fh-stk-storm1", alt: "Stock: storm front", tier: "UNSPLASH" },
+    { seed: "fh-stk-rain1", alt: "Stock: rain on tiles", tier: "PIXABAY" },
+  ],
+  e4: [
+    { seed: "fh-lake1", alt: "Your photo: Val Vista lake path", tier: "YOURS" },
+    { seed: "fh-street1", alt: "Your photo: evening street", tier: "YOURS" },
+    { seed: "fh-cactus1", alt: "Your photo: saguaro golden hour", tier: "YOURS" },
+    { seed: "fh-tmpl-spot", alt: "Template: neighborhood stat strip", tier: "TEMPLATE" },
+    { seed: "fh-stk-lake", alt: "Stock: community lake", tier: "PEXELS" },
+    { seed: "fh-stk-walk", alt: "Stock: suburban walking path", tier: "UNSPLASH" },
+  ],
+};
+
+/* ---- Composer ---- */
+export type CompCh = "ig" | "fb" | "nd";
+
+export const COMP_COPY: Record<
+  CompCh,
+  { handle: string; meta: string; long: string; short: string; alt: string }
+> = {
+  ig: {
+    handle: "jess.sells.gilbert",
+    meta: "Instagram · carousel",
+    long: "Before the July storms hit: 5 spots on your roof to check this weekend. 🌩\n\n#3 causes 80% of monsoon insurance claims in the East Valley — and it takes 4 minutes to check.\n\nSwipe for the list. Save it for Saturday morning.",
+    short:
+      "5 roof spots to check before monsoon season — #3 causes 80% of East Valley claims. Swipe + save. 🌩",
+    alt: "Monsoon prep, the realtor version: the 5 roof checks I do at every showing this time of year. Swipe through — #3 is the one that surprises people.",
+  },
+  fb: {
+    handle: "Jess Carter · Realtor",
+    meta: "Facebook · photo post",
+    long: "East Valley friends — before the July storms roll in, take 10 minutes this weekend for a roof check.\n\nThe five spots that matter:\n1. Scuppers and flat-roof drains (clear the spring debris)\n2. Tile slippage on the south face\n3. Flashing around vents — this one causes 80% of monsoon claims\n4. Overhanging mesquite branches\n5. Coating cracks on flat sections\n\nTen minutes now beats a $4,000 ceiling repair in August.",
+    short:
+      "Monsoon prep PSA: check your scuppers, tile, flashing, branches, and coating this weekend. 10 minutes now beats a $4K ceiling repair in August.",
+    alt: "Every August I get the same sad phone calls after the first big storm. This year, do the 10-minute roof check first — here are the 5 spots that matter.",
+  },
+  nd: {
+    handle: "Jess Carter · Gilbert",
+    meta: "Nextdoor · business post",
+    long: "Hi neighbors — PSA from someone who walks a LOT of Gilbert roofs: before the storms hit, give yours a 10-minute check.\n\nScuppers, tile slippage, vent flashing, overhanging branches, coating cracks. The flashing is the one that causes most monsoon claims around here.\n\nStay dry out there! ⛈",
+    short:
+      "PSA neighbors: 10-minute roof check before the storms — scuppers, tile, flashing, branches, coating. Flashing causes most claims here. Stay dry! ⛈",
+    alt: "Neighbors: monsoon season is close. A 10-minute roof check now (especially your vent flashing) saves the August insurance headache. Happy to share my full checklist.",
+  },
+};
+
+export interface CompImg {
+  seed: string;
+  alt: string;
+  tier: string;
+  provider?: string;
+}
+
+export const COMP_IMGS: Record<string, CompImg> = {
+  t1a: { seed: "fh-desert1", alt: "Your photo: monsoon clouds over rooftops", tier: "YOUR PHOTO" },
+  t1b: { seed: "fh-house2", alt: "Your photo: backyard before the storm", tier: "YOUR PHOTO" },
+  t1c: { seed: "fh-street1", alt: "Your photo: Heritage District street", tier: "YOUR B-ROLL" },
+  t3a: { seed: "fh-tmpl1", alt: "Branded template: 5 roof checks list", tier: "TEMPLATE" },
+  t3b: { seed: "fh-tmpl2", alt: "Branded template: monsoon stat card", tier: "TEMPLATE" },
+  t3c: { seed: "fh-tmpl3", alt: "Branded template: checklist carousel cover", tier: "TEMPLATE" },
+  t4a: { seed: "fh-stk-roof1", alt: "Stock: desert home roofline", tier: "STOCK · PEXELS", provider: "PEXELS" },
+  t4b: { seed: "fh-stk-storm1", alt: "Stock: storm clouds", tier: "STOCK · UNSPLASH", provider: "UNSPLASH" },
+  t4c: { seed: "fh-stk-rain1", alt: "Stock: rain on rooftop", tier: "STOCK · PIXABAY", provider: "PIXABAY" },
+};
+
+export const COMP_RATIOS: Record<
+  string,
+  { label: string; w: number; h: number; box: string; ar: string }
+> = {
+  portrait: { label: "4:5", w: 1080, h: 1350, box: "300px", ar: "4/5" },
+  square: { label: "1:1", w: 1080, h: 1080, box: "320px", ar: "1/1" },
+  story: { label: "9:16", w: 1080, h: 1920, box: "260px", ar: "9/16" },
+};
+
+export const COMP_ACCENTS: Record<string, string> = {
+  cyan: "#38BDF8",
+  violet: "#B98CFF",
+  green: "#37D98A",
+  amber: "#FFC23D",
+  rose: "#FF5D8F",
+};
+
+export const COMP_TIERS = [
+  {
+    num: "1",
+    name: "Your photos",
+    note: "Upload straight from your computer or iPhone library — always preferred over stock.",
+    ids: ["t1a", "t1b", "t1c"],
+    color: "#41D98A",
+  },
+  {
+    num: "2",
+    name: "Branded templates",
+    note: "Your colors + license footer, built for list and stat posts like this one.",
+    ids: ["t3a", "t3b", "t3c"],
+    color: "#C9A8FF",
+  },
+  {
+    num: "3",
+    name: "On-demand stock",
+    note: "Perplexity-expanded search across free APIs. Decoration only — clearly not your listing.",
+    ids: ["t4a", "t4b", "t4c"],
+    color: "#FFC23D",
+  },
+];
+
+/* ---- Calendar ---- */
+export interface CalPost {
+  id: string;
+  day: number;
+  eng: "auto" | "play";
+  layer: "volume" | "personal";
+  time: string;
+  tag: string;
+  title: string;
+  alt: string;
+}
+
+export const CAL: CalPost[] = [
+  { id: "c1", day: 29, eng: "auto", layer: "volume", time: "8:00a", tag: "IG", title: "June closings recap teaser", alt: "June market: 3 surprises" },
+  { id: "c2", day: 30, eng: "play", layer: "volume", time: "9:30a", tag: "EVH GRP", title: "Value drop: HOA question thread", alt: "HOA myth-buster reply" },
+  { id: "c3", day: 30, eng: "auto", layer: "personal", time: "5:30p", tag: "FB", title: "Willow St closing story", alt: "Ramirez family key handoff" },
+  { id: "c4", day: 1, eng: "auto", layer: "volume", time: "8:00a", tag: "IG", title: "What sold in 85234 — June carousel", alt: "June sold map: 12 homes" },
+  { id: "c5", day: 1, eng: "play", layer: "volume", time: "12:00p", tag: "NEXTDOOR", title: "Monsoon roof-check PSA", alt: "Pre-storm drain check tip" },
+  { id: "c6", day: 2, eng: "auto", layer: "volume", time: "9:00a", tag: "ND BIZ", title: "Rate explainer: what 6.4% means here", alt: "Payment math at 6.4%" },
+  { id: "c7", day: 3, eng: "auto", layer: "personal", time: "12:30p", tag: "FB", title: "Key handoff — Ramirez family", alt: "8 months, 2 heartbreaks, 1 yard" },
+  { id: "c8", day: 3, eng: "play", layer: "volume", time: "2:00p", tag: "GILBERT", title: "Reply: Ray Rd new build thread", alt: "Trilogy phase-2 facts reply" },
+  { id: "c9", day: 4, eng: "auto", layer: "volume", time: "9:00a", tag: "IG", title: "4th in Gilbert: 5 local events", alt: "Where to watch fireworks" },
+  { id: "c10", day: 5, eng: "auto", layer: "personal", time: "5:30p", tag: "IG", title: "Val Vista Lakes evening walk", alt: "The lake path at 6pm" },
+  { id: "c11", day: 6, eng: "play", layer: "personal", time: "9:00a", tag: "EVH GRP", title: "Promo Monday: just-sold share", alt: "Willow St sold — promo slot" },
+  { id: "c12", day: 7, eng: "auto", layer: "volume", time: "8:00a", tag: "FB", title: "Homeowner tip: SRP rate change", alt: "Aug 1 SRP change explainer" },
+  { id: "c13", day: 8, eng: "auto", layer: "volume", time: "9:00a", tag: "IG", title: "Neighborhood spotlight: Agritopia", alt: "Agritopia in 60 seconds" },
+  { id: "c14", day: 9, eng: "play", layer: "volume", time: "11:00a", tag: "85234", title: "Value drop: monsoon prep list", alt: "Storm-season checklist share" },
+  { id: "c15", day: 10, eng: "auto", layer: "volume", time: "8:00a", tag: "ND BIZ", title: "What $520K gets you in Gilbert", alt: "3 homes, same price, 3 vibes" },
+  { id: "c16", day: 11, eng: "auto", layer: "personal", time: "10:00a", tag: "IG", title: "Saturday showings b-roll", alt: "3 showings, 1 offer written" },
+  { id: "c17", day: 12, eng: "play", layer: "personal", time: "9:00a", tag: "GILBERT", title: "Global Village Festival meetup", alt: "See you at the festival post" },
+  { id: "c18", day: 13, eng: "play", layer: "personal", time: "9:00a", tag: "EVH GRP", title: "Promo Monday: buyer story", alt: "First-time buyer win share" },
+  { id: "c19", day: 14, eng: "auto", layer: "volume", time: "8:00a", tag: "IG", title: "Mid-month market pulse", alt: "July pending sales check-in" },
+  { id: "c20", day: 15, eng: "auto", layer: "volume", time: "9:00a", tag: "FB", title: "Escrow explainer: the 5 steps", alt: "What escrow actually does" },
+  { id: "c21", day: 16, eng: "play", layer: "volume", time: "12:00p", tag: "NEXTDOOR", title: "Helpful reply: solar question", alt: "Battery backup: real math" },
+  { id: "c22", day: 17, eng: "auto", layer: "volume", time: "8:00a", tag: "IG", title: "Renting vs buying in 85234", alt: "Rent math nobody shows you" },
+  { id: "c23", day: 18, eng: "auto", layer: "personal", time: "5:00p", tag: "IG", title: "Client moment: inspection day", alt: "What we caught at inspection" },
+  { id: "c24", day: 20, eng: "play", layer: "personal", time: "9:00a", tag: "EVH GRP", title: "Promo Monday: open house invite", alt: "Sat open house — come by" },
+  { id: "c25", day: 21, eng: "auto", layer: "volume", time: "8:00a", tag: "ND BIZ", title: "School zones + home values", alt: "Higley district value map" },
+  { id: "c26", day: 22, eng: "auto", layer: "volume", time: "9:00a", tag: "IG", title: "Staging: 3 free wins", alt: "What buyers notice first" },
+  { id: "c27", day: 23, eng: "play", layer: "volume", time: "11:00a", tag: "85234", title: "Value drop: AC tune-up season", alt: "Pre-August AC checklist" },
+  { id: "c28", day: 24, eng: "auto", layer: "volume", time: "8:00a", tag: "FB", title: "July closings so far", alt: "3 weeks, 9 closings map" },
+  { id: "c29", day: 25, eng: "auto", layer: "personal", time: "10:00a", tag: "IG", title: "Behind the scenes: listing prep", alt: "48 hrs before we list" },
+  { id: "c30", day: 27, eng: "play", layer: "personal", time: "9:00a", tag: "EVH GRP", title: "Promo Monday: seller story", alt: "Over asking in 6 days — how" },
+  { id: "c31", day: 28, eng: "auto", layer: "volume", time: "8:00a", tag: "IG", title: "August preview: what's coming", alt: "3 things to watch in August" },
+  { id: "c32", day: 30, eng: "auto", layer: "volume", time: "9:00a", tag: "ND BIZ", title: "Month-end market recap", alt: "July by the numbers" },
+  { id: "c33", day: 31, eng: "auto", layer: "personal", time: "5:30p", tag: "FB", title: "July gratitude: client wins", alt: "The month in 5 photos" },
+];
+
+export const TODAY = 3;
+
+export const WEEK_DAYS = [
+  { name: "MON", num: 29, key: "jun29", june: true },
+  { name: "TUE", num: 30, key: "jun30", june: true },
+  { name: "WED", num: 1, key: "jul1", june: false },
+  { name: "THU", num: 2, key: "jul2", june: false },
+  { name: "FRI", num: 3, key: "jul3", june: false },
+  { name: "SAT", num: 4, key: "jul4", june: false },
+  { name: "SUN", num: 5, key: "jul5", june: false },
+];
+
+/* ---- Channel Directory ---- */
+export const CHANNELS = [
+  { platform: "FB GROUP", plat: "#7DD3FC", name: "East Valley Homeowners", members: "14.2K", cadence: "post 2×/wk", rules: "No listings except the pinned Promo Monday thread. Value posts welcome daily.", promo: "Promo Monday", promoOn: true, health: "active", healthColor: "#41D98A", last: "2 days ago" },
+  { platform: "NEXTDOOR", plat: "#26E0C8", name: "Gilbert Neighbors", members: "8.9K", cadence: "post 1×/wk", rules: "Business posts allowed from a verified page. Keep it neighborly, no hard sells.", promo: "Business post OK", promoOn: true, health: "active", healthColor: "#41D98A", last: "4 days ago" },
+  { platform: "FB GROUP", plat: "#7DD3FC", name: "85234 Local Chat", members: "5.1K", cadence: "post 1×/wk", rules: "Helpful window only. No promotion of services. Neighbor-to-neighbor tips.", promo: "No promo", promoOn: false, health: "active", healthColor: "#41D98A", last: "6 days ago" },
+  { platform: "NEXTDOOR", plat: "#26E0C8", name: "Val Vista Lakes", members: "3.4K", cadence: "post 1×/wk", rules: "Neighborhood-specific. Spotlights and market updates perform well here.", promo: "Spotlights OK", promoOn: true, health: "warm", healthColor: "#FFC23D", last: "12 days ago" },
+  { platform: "FB GROUP", plat: "#7DD3FC", name: "Power Ranch Community", members: "9.7K", cadence: "post 2×/wk", rules: "Promo allowed Fridays only. Otherwise value + community engagement.", promo: "Promo Friday", promoOn: true, health: "quiet", healthColor: "#FF5D8F", last: "3 weeks ago" },
+  { platform: "FORUM", plat: "#C9A8FF", name: "AZ Real Estate Talk", members: "2.1K", cadence: "post 1×/mo", rules: "Long-form market analysis. Link to your content, don't dump listings.", promo: "Links OK", promoOn: true, health: "warm", healthColor: "#FFC23D", last: "16 days ago" },
+];
+
+/* ---- Reply Assistant ---- */
+export const ASSISTANT_DEFAULT_INPUT =
+  "Anyone know a good realtor in Gilbert? Just moved to Val Vista and looking to buy in the spring — no idea where to start with this market.";
+
+export function assistantReplies(tone: string): string[] {
+  const base: Record<string, string> = {
+    warm: "Welcome to Val Vista — you picked a great pocket of Gilbert! Spring's actually a smart time to buy here; inventory opens up right after the winter visitors head home. Happy to share what's realistically selling in your price range, no pressure at all. The lake path alone sells most people. 🏡",
+    expert: "Good timing on the spring plan. Val Vista and the surrounding 85234 zip have been sitting around a $487K median with about 5–6 weeks of inventory — a bit more balanced than last year. The move is getting pre-approved now so you're ready when the March/April listings hit. Happy to walk you through comps whenever you want.",
+    brief: "Welcome to Val Vista! Spring's a smart time to buy here — inventory opens up. Happy to share what's selling in your range, no pressure.",
+  };
+  const t = base[tone] || base.warm;
+  return [
+    t,
+    "Oh you're gonna love Val Vista! Spring's honestly the sweet spot to buy around here — everything opens up once the snowbirds leave. Lmk if you want the real scoop on what's selling, zero pressure. That lake path though. 🙌",
+    base.brief,
+  ];
+}
+
+/* ---- Results ---- */
+export const RESULTS_STATS = [
+  { label: "Posts completed", value: "23 / 26", sub: "planned this month", color: "#C9A8FF" },
+  { label: "Playbook actions", value: "18", sub: "done · 90 sec each", color: "#7DD3FC" },
+  { label: "Farm coverage", value: "6 / 8", sub: "groups active this week", color: "#FFC23D" },
+];
+
+export const RESULTS_LOG = [
+  { channel: "DM", note: "Val Vista buyer from the market carousel", when: "2h ago", col: "#7DD3FC" },
+  { channel: "COMMENT", note: "Roof-tip post — 3 neighbors asked for the checklist", when: "1d ago", col: "#C9A8FF" },
+  { channel: "CALL", note: "Seller from Promo Monday just-sold share", when: "2d ago", col: "#FFC23D" },
+  { channel: "DM", note: "Higley thread reply → coffee booked", when: "4d ago", col: "#7DD3FC" },
+];
+
+/* ---- Settings ---- */
+export const SET_VOICE = [
+  { key: "warm", label: "Warm & neighborly", def: true },
+  { key: "story", label: "Story-driven posts", def: true },
+  { key: "emoji", label: "Light emoji use", def: false },
+];
+export const SET_IMG_PREFS = [
+  { key: "desert", label: "Desert landscaping only (no green lawns)", def: true },
+  { key: "noreuse", label: "Never reuse stock near other agents", def: true },
+];
+export const SET_CONNECTIONS = [
+  { name: "Claude — content", status: "connected", color: "#41D98A" },
+  { name: "Perplexity — local intel", status: "connected", color: "#41D98A" },
+  { name: "Instagram", status: "connected", color: "#41D98A" },
+  { name: "Facebook Page", status: "connected", color: "#41D98A" },
+  { name: "Nextdoor Business", status: "connect →", color: "#FFC23D" },
+];
+
+/* ---- Dashboard ---- */
+export const TICKER_POOL = [
+  { icon: "▣", color: "#C9A8FF", text: "Post published to Instagram — June sold report", when: "8:00a" },
+  { icon: "◈", color: "#7DD3FC", text: "New comment in East Valley Homeowners", when: "9:12a" },
+  { icon: "✓", color: "#41D98A", text: "Nextdoor monsoon tip approved & scheduled", when: "9:40a" },
+  { icon: "⚑", color: "#FFC23D", text: "Scout: Global Village Festival flagged — Jul 12", when: "10:05a" },
+  { icon: "◉", color: "#FF9A62", text: "DM from Val Vista Lakes group member", when: "10:31a" },
+  { icon: "▣", color: "#C9A8FF", text: "Facebook keys post queued — 12:30 PM slot", when: "11:02a" },
+  { icon: "◈", color: "#26E0C8", text: "85234 Local Chat: helpful window opens 6 PM", when: "11:48a" },
+  { icon: "✚", color: "#41D98A", text: "Inbound lead logged from Gilbert Neighbors", when: "12:15p" },
+];
+
+export const FARM_CHIPS = [
+  { name: "East Valley Homeowners", note: "Promo Mon", dot: "#41D98A" },
+  { name: "Gilbert Neighbors", note: "hot thread", dot: "#41D98A" },
+  { name: "85234 Local Chat", note: "helpful window", dot: "#41D98A" },
+  { name: "Power Ranch Nextdoor", note: "3 wks quiet", dot: "#FFC23D" },
+];
+
+export const DASH_STATS = [
+  { label: "Posts ready", value: "4", sub: "waiting for your approval", color: "#C9A8FF" },
+  { label: "Playbook actions", value: "3", sub: "prepped · ~90 sec each", color: "#7DD3FC" },
+  { label: "Inbound convos", value: "9", sub: "this month · your hero number", color: "#41D98A" },
+  { label: "Farm coverage", value: "6/8", sub: "groups active this week", color: "#FFC23D" },
+];
+
+export const DASH_INTEL = [
+  { tag: "EVENT", color: "#FFC23D", title: "Global Village Festival · Jul 12", angle: "Angle: neighborhood-spotlight post + group meetup comment" },
+  { tag: "MARKET", color: "#C9A8FF", title: "85234 median hit $487K in June", angle: "Angle: 'what actually sold' carousel — your top format" },
+  { tag: "THREAD", color: "#7DD3FC", title: "'Best neighborhoods near Higley?' — 17 replies", angle: "Angle: helpful reply, no pitch — Scout drafted one" },
+];
+
+/* 3D farm neighborhood clusters (also drives the iso fallback map) */
+export const FARM_CLUSTERS = [
+  { x: -3.6, z: -1.6, w: 3.0, d: 2.2, h: 1.6, c: 0x38bdf8, hex: "#38BDF8", name: "Val Vista Lakes", stat: "12 posts · warm", live: true },
+  { x: 0.6, z: -3.4, w: 2.6, d: 1.8, h: 1.1, c: 0x41d98a, hex: "#41D98A", name: "Agritopia", stat: "spotlight Jul 8", live: true },
+  { x: 0.4, z: -0.4, w: 2.0, d: 1.5, h: 2.1, c: 0xa855f7, hex: "#A855F7", name: "85234 Core", stat: "market posts", live: true },
+  { x: -2.4, z: 2.2, w: 2.7, d: 1.9, h: 1.35, c: 0x26e0c8, hex: "#26E0C8", name: "Heritage District", stat: "festival Jul 12", live: true },
+  { x: 2.9, z: 2.6, w: 2.9, d: 2.1, h: 0.85, c: 0xffc23d, hex: "#FFC23D", name: "Power Ranch", stat: "quiet · 3 wks", live: false },
+];
+
+export const NAV_DEFS = [
+  { id: "dashboard", label: "Dashboard", color: "#A855F7" },
+  { id: "engine", label: "Content Engine", color: "#A855F7" },
+  { id: "playbook", label: "Local Playbook", color: "#38BDF8" },
+  { id: "calendar", label: "Calendar", color: "#FFC23D" },
+  { id: "composer", label: "Composer", color: "#FF5D8F" },
+  { id: "directory", label: "Active Groups", color: "#26E0C8" },
+  { id: "assistant", label: "Reply Assistant", color: "#FF9A62" },
+  { id: "results", label: "Results", color: "#41D98A" },
+  { id: "settings", label: "Settings", color: "#8B89A0" },
+] as const;
+
+export type TabId = (typeof NAV_DEFS)[number]["id"];
+
+export const IMG = (seed: string, w = 400, h = 500) =>
+  `https://picsum.photos/seed/${seed}/${w}/${h}`;

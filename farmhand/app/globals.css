@@ -1,0 +1,226 @@
+@import "tailwindcss";
+
+/* ============================================================
+   FARMHAND — Local Presence OS · premium design system
+   Faithful to the design handoff, elevated for production.
+   ============================================================ */
+
+:root {
+  /* fields */
+  --bg: #0b0b16;
+  --bg-2: #191634;
+  --bg-3: #06060d;
+  --hero-1: #1b1832;
+  --hero-2: #0a0a14;
+  --hero-3: #06060d;
+
+  /* engine / brand */
+  --purple: #a855f7;
+  --purple-lt: #c9a8ff;
+  --purple-lt2: #c084fc;
+  --cyan: #38bdf8;
+  --cyan-lt: #7dd3fc;
+  --green: #41d98a;
+  --amber: #ffc23d;
+  --orange: #ff9a62;
+  --orange-dp: #ff7a2f;
+  --teal: #26e0c8;
+  --rose: #ff5d8f;
+
+  /* text */
+  --ink: #f4f3f8;
+  --ink-2: #d8d6e6;
+  --sec: #a6a4b8;
+  --muted: #6e6c82;
+  --kicker: #8d89c0;
+
+  /* studio */
+  --navy: #020617;
+  --navy-2: #0b0f1a;
+  --navy-3: #0b1120;
+  --near-white: #f9fafb;
+  --grey-2: #e5e7eb;
+  --indigo-lt: #c7d2fe;
+
+  /* glass */
+  --glass: rgba(255, 255, 255, 0.045);
+  --glass-2: rgba(255, 255, 255, 0.065);
+  --brd: rgba(255, 255, 255, 0.1);
+  --brd-2: rgba(255, 255, 255, 0.16);
+
+  /* type */
+  --body: var(--font-geist), system-ui, sans-serif;
+  --mono: var(--font-geist-mono), ui-monospace, monospace;
+  --display: var(--font-space-grotesk), sans-serif;
+  --brand: var(--font-orbitron), var(--display);
+  --label: var(--font-chakra), var(--mono);
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+html, body { background: var(--bg); }
+
+body {
+  min-height: 100vh;
+  color: var(--ink);
+  font-family: var(--body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+::selection { background: rgba(168, 85, 247, 0.3); color: #fff; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+
+/* ---------- keyframes (from handoff) ---------- */
+@keyframes fh-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes fh-aurora { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-70px, 45px) scale(1.18); } }
+@keyframes fh-aurora2 { 0%, 100% { transform: translate(0, 0) scale(1.1); } 50% { transform: translate(60px, -40px) scale(0.95); } }
+@keyframes fh-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+@keyframes fh-float2 { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes fh-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fh-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes fh-shimmer { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+@keyframes fh-draw { from { stroke-dashoffset: 300; } to { stroke-dashoffset: 0; } }
+@keyframes fh-wordup { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fh-pop { from { opacity: 0; transform: scale(0.9) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes fh-shine { 0% { transform: translateX(-130%) skewX(-18deg); } 100% { transform: translateX(240%) skewX(-18deg); } }
+@keyframes fh-fadein { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fh-iconbob { 0%, 100% { transform: translateY(0) rotateZ(0deg); } 50% { transform: translateY(-4px) rotateZ(-4deg); } }
+@keyframes fh-marker { 0%, 100% { box-shadow: 0 0 0 0 rgba(65, 217, 138, 0.5); } 70% { box-shadow: 0 0 0 14px rgba(65, 217, 138, 0); } }
+@keyframes fh-spin { to { transform: rotate(360deg); } }
+
+/* ---------- app frame ---------- */
+.fh-app {
+  min-height: 100vh;
+  background: radial-gradient(1400px 700px at 75% -12%, var(--bg-2) 0%, var(--bg) 58%);
+  color: var(--ink);
+  display: flex;
+  position: relative;
+}
+.fh-bg3d { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.fh-ambient { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+.fh-aurora1 {
+  position: absolute; width: 720px; height: 720px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.12), transparent 62%);
+  top: -240px; right: -160px; filter: blur(46px);
+  animation: fh-aurora 18s ease-in-out infinite;
+}
+.fh-aurora2 {
+  position: absolute; width: 620px; height: 620px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.09), transparent 62%);
+  bottom: -220px; left: 180px; filter: blur(54px);
+  animation: fh-aurora2 24s ease-in-out infinite;
+}
+
+/* ---------- floating 3D nav rail ---------- */
+.fh-rail {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  width: 246px;
+  min-height: 100vh;
+  padding: 26px 18px 26px 22px;
+  z-index: 5;
+  flex-shrink: 0;
+}
+.fh-nav3d { transform: perspective(700px) rotateY(4deg); transform-style: preserve-3d; }
+.fh-navitem {
+  transform: translateZ(0);
+  transition: transform 0.3s var(--ease), box-shadow 0.3s ease, background 0.25s ease, border-color 0.25s ease;
+  will-change: transform;
+}
+.fh-navitem:hover { transform: translateZ(26px) translateX(5px); }
+.fh-navitem.on { transform: translateZ(18px); }
+.fh-navitem.on:hover { transform: translateZ(30px) translateX(4px); }
+
+/* ---------- main column ---------- */
+.fh-main { flex: 1; min-width: 0; position: relative; z-index: 1; padding: 26px 34px 60px; }
+@media (max-width: 900px) {
+  .fh-app { flex-direction: column; }
+  .fh-rail { position: static; width: 100%; min-height: 0; padding: 16px; }
+  .fh-nav3d { transform: none; }
+  .fh-main { padding: 18px; }
+}
+
+/* ---------- signature card / button classes ---------- */
+.fh-card3d {
+  transform: perspective(900px) rotateY(-4deg) rotateX(2deg);
+  transition: transform 0.35s var(--ease), box-shadow 0.35s ease;
+  will-change: transform;
+}
+.fh-card3d:hover {
+  transform: perspective(900px) rotateY(0deg) rotateX(0deg) translateY(-6px) scale(1.02);
+}
+.fh-glass {
+  background: linear-gradient(165deg, var(--glass-2), var(--glass));
+  border: 1px solid var(--brd);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.fh-btn-shine { position: relative; overflow: hidden; will-change: transform; }
+.fh-btn-shine::after {
+  content: "";
+  position: absolute; top: 0; bottom: 0; width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  animation: fh-shine 3.2s ease infinite;
+}
+
+/* content-engine grid */
+.fh-enggrid { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 20px; align-items: start; }
+.fh-engpv { position: sticky; top: 24px; min-width: 0; }
+@media (max-width: 1180px) {
+  .fh-enggrid { grid-template-columns: minmax(0, 1fr); }
+  .fh-engpv { position: static; max-width: 430px; }
+}
+/* dashboard grid */
+.fh-dashgrid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: stretch; }
+@media (max-width: 1100px) { .fh-dashgrid { grid-template-columns: minmax(0, 1fr); } }
+.fh-hero { container-type: inline-size; }
+
+/* rise-in entrance for tab content */
+.fh-rise { animation: fh-rise 0.45s ease both; }
+.fh-fadein { animation: fh-fadein 0.5s ease both; }
+
+/* kicker / label helpers */
+.fh-kicker {
+  font-family: var(--label);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--kicker);
+  text-shadow: 0 0 10px rgba(168, 85, 247, 0.35);
+}
+.fh-title { font-family: var(--display); font-weight: 700; letter-spacing: -0.025em; }
+.fh-shimmer-text {
+  background: linear-gradient(90deg, #f4f3f8, var(--purple-lt) 55%, var(--cyan-lt));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: fh-shimmer 7s linear infinite;
+}
+
+/* scrollbars */
+.fh-app ::-webkit-scrollbar { width: 10px; height: 10px; }
+.fh-app ::-webkit-scrollbar-thumb { background: rgba(168, 85, 247, 0.25); border-radius: 8px; }
+.fh-app ::-webkit-scrollbar-thumb:hover { background: rgba(168, 85, 247, 0.4); }
+.fh-app ::-webkit-scrollbar-track { background: transparent; }
+
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid rgba(168, 85, 247, 0.6);
+  outline-offset: 2px;
+}
+
+/* reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .fh-card3d, .fh-nav3d { transform: none !important; }
+}
