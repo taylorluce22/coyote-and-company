@@ -4,16 +4,26 @@ import {
   createContext,
   useContext,
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import type { TabId } from "./data";
+import type { Asset, Bg, StudioDesign } from "./studio";
+import { DEFAULT_DESIGN } from "./studio";
 
 export interface Upload {
   id: string;
   url: string;
   alt: string;
+}
+
+export interface ChannelStudio {
+  design: StudioDesign;
+  slideBg: Record<number, Bg>;
+  coverBg?: Bg | null;
 }
 
 export interface AppState {
@@ -25,13 +35,13 @@ export interface AppState {
   planned: Record<string, boolean>;
   autopilotOn: boolean;
 
-  // studio
+  // engine studio (Content Engine tab)
   studioSel: string;
   studioImgs: Record<string, string>;
   studioAccents: Record<string, string>;
   stSlide: number;
 
-  // composer
+  // composer / post studio
   compChannel: "ig" | "fb" | "nd";
   compImg: string;
   compRatio: string;
@@ -40,6 +50,10 @@ export interface AppState {
   compShort: boolean;
   compRegen: boolean;
   uploads: Upload[];
+  stStudio: Record<string, ChannelStudio>; // per-channel design + slide bgs
+  stAssets: Asset[]; // analyzed image library (persisted)
+  compStatus: Record<string, string>; // per-channel: draft | ready | scheduled | posted
+  pexelsKey: string;
 
   // calendar
   calView: "week" | "month";
@@ -76,13 +90,17 @@ const initialState: AppState = {
   studioAccents: {},
   stSlide: 0,
   compChannel: "ig",
-  compImg: "t1a",
+  compImg: "",
   compRatio: "portrait",
   compBgMode: "photo",
   compAccent: "cyan",
   compShort: false,
   compRegen: false,
   uploads: [],
+  stStudio: {},
+  stAssets: [],
+  compStatus: {},
+  pexelsKey: "",
   calView: "week",
   regens: {},
   moved: {},
@@ -96,6 +114,10 @@ const initialState: AppState = {
   resLogged: 0,
 };
 
+export function defaultChannelStudio(): ChannelStudio {
+  return { design: { ...DEFAULT_DESIGN }, slideBg: {}, coverBg: null };
+}
+
 type Patch = Partial<AppState> | ((s: AppState) => Partial<AppState>);
 
 interface Store {
@@ -107,12 +129,38 @@ interface Store {
 
 const StoreContext = createContext<Store | null>(null);
 
+const PERSIST_KEY = "farmhand-studio-v1";
+const PERSIST_FIELDS = ["stStudio", "stAssets", "compStatus", "pexelsKey"] as const;
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppState>(initialState);
+  const hydrated = useRef(false);
   const dragId = useMemo(
     () => ({ current: null as string | null }),
     []
   ) as React.MutableRefObject<string | null>;
+
+  // hydrate persisted studio state (library, looks, statuses, API key)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PERSIST_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        setState((s) => ({ ...s, ...saved }));
+      }
+    } catch {}
+    hydrated.current = true;
+  }, []);
+
+  // save on change (persisted fields only)
+  useEffect(() => {
+    if (!hydrated.current) return;
+    try {
+      const out: Record<string, unknown> = {};
+      PERSIST_FIELDS.forEach((k) => (out[k] = state[k]));
+      localStorage.setItem(PERSIST_KEY, JSON.stringify(out));
+    } catch {}
+  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = useCallback((patch: Patch) => {
     setState((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));
