@@ -5,7 +5,7 @@ import gsap from "gsap";
 import { useStore } from "@/lib/store";
 import { Switch, CountUp } from "@/components/ui";
 import FarmScene from "@/components/FarmScene";
-import SplineHero from "@/components/SplineHero";
+import AerialHero from "@/components/AerialHero";
 import {
   TICKER_POOL,
   FARM_CHIPS,
@@ -237,7 +237,7 @@ export default function Dashboard() {
             boxShadow: "0 30px 70px rgba(0,0,0,0.5)",
           }}
         >
-          {view === "3d" ? <FarmScene /> : view === "map" ? <IsoMap /> : <SplineHero />}
+          {view === "3d" ? <FarmScene /> : view === "map" ? <IsoMap /> : <AerialHero />}
 
           {/* header (decorative — never blocks scene interaction) */}
           <div style={{ position: "absolute", top: 20, left: 22, zIndex: 3, pointerEvents: "none" }}>
@@ -282,7 +282,7 @@ export default function Dashboard() {
               [
                 ["3d", "3D FARM", "#C9A8FF", "rgba(168,85,247,0.22)"],
                 ["map", "LIVE MAP", "#7DD3FC", "rgba(56,189,248,0.22)"],
-                ["spline", "DESIGNER", "#FF9ABF", "rgba(255,93,143,0.2)"],
+                ["aerial", "AERIAL", "#FF9ABF", "rgba(255,93,143,0.2)"],
               ] as const
             ).map(([id, label, color, bg]) => (
               <button
