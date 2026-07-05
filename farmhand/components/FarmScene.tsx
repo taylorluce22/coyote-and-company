@@ -79,197 +79,55 @@ export default function FarmScene() {
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(38, W() / H(), 0.1, 100);
-    const HOME = new THREE.Vector3(9, 7.2, 12.5);
-    const LOOK = new THREE.Vector3(0.2, 1.35, -1.2); // keep the sunset horizon in frame
+    const HOME = new THREE.Vector3(9, 8.5, 12);
+    const LOOK = new THREE.Vector3(0.5, 0.4, 0);
     camera.position.copy(HOME);
     camera.lookAt(LOOK);
 
-    // ---- golden-hour lighting (reference: PV sunset photo) ----
-    scene.add(new THREE.AmbientLight(0xa8899a, 0.75));
-    const l1 = new THREE.PointLight(0xa855f7, 0.7, 48); // brand accents, dialed back
+    scene.fog = new THREE.Fog(0x06060d, 16, 34);
+    scene.add(new THREE.AmbientLight(0x9585c5, 0.7));
+    const l1 = new THREE.PointLight(0xa855f7, 1.9, 48);
     l1.position.set(-6, 8, 4);
     scene.add(l1);
-    const l2 = new THREE.PointLight(0x38bdf8, 0.5, 48);
+    const l2 = new THREE.PointLight(0x38bdf8, 1.4, 48);
     l2.position.set(7, 6, -5);
     scene.add(l2);
-    const key = new THREE.PointLight(0xffe0b0, 0.5, 40);
+    const key = new THREE.PointLight(0xffffff, 0.8, 40);
     scene.add(key);
-    // low sunset sun blazing from behind the ranges
-    const sun = new THREE.DirectionalLight(0xffa257, 1.15);
-    sun.position.set(-7, 4.5, -16);
+    // warm dusk sun so the sandstone tiles and stucco read Arizona-warm
+    const sun = new THREE.DirectionalLight(0xffd9b0, 0.85);
+    sun.position.set(5, 9, 3);
     scene.add(sun);
-    // warm front fill so facades read golden like the photo
-    const fill = new THREE.DirectionalLight(0xffc98a, 0.55);
-    fill.position.set(8, 6, 10);
-    scene.add(fill);
 
     const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(90, 90),
-      new THREE.MeshStandardMaterial({ color: 0x1a1220, roughness: 0.8, metalness: 0.25 })
+      new THREE.PlaneGeometry(30, 30),
+      new THREE.MeshStandardMaterial({ color: 0x0a0a16, roughness: 0.35, metalness: 0.7 })
     );
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.02;
     scene.add(floor);
     const grid = new THREE.GridHelper(26, 26, 0x4c3a8a, 0x171330);
     (grid.material as THREE.Material).transparent = true;
-    (grid.material as THREE.Material).opacity = 0.12;
+    (grid.material as THREE.Material).opacity = 0.22;
     grid.position.y = 0.01;
     scene.add(grid);
 
-    // ---- 2.5D matte-painted backdrop: sunset sky + layered mountain
-    //      silhouettes + valley light carpet (photo-reference technique:
-    //      painted layers at staggered depths, parallaxing against the
-    //      interactive 3D tiles in front) ----
-    const mkPaint = (w: number, h: number, draw: (c: CanvasRenderingContext2D, w: number, h: number) => void) => {
-      const cv = document.createElement("canvas");
-      cv.width = w;
-      cv.height = h;
-      draw(cv.getContext("2d")!, w, h);
-      const t = new THREE.CanvasTexture(cv);
-      t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
-      return t;
-    };
-    const layerPlane = (
-      tex: THREE.Texture,
-      wWorld: number,
-      hWorld: number,
-      y: number,
-      z: number,
-      order: number
-    ) => {
-      const p = new THREE.Mesh(
-        new THREE.PlaneGeometry(wWorld, hWorld),
-        new THREE.MeshBasicMaterial({ map: tex, transparent: true, fog: false, depthWrite: false })
-      );
-      p.position.set(-2, y, z);
-      p.renderOrder = order;
-      scene.add(p);
-      return p;
-    };
-    // sunset sky: dusk → ember gradient, sun glow, underlit cloud streaks
-    const skyTex = mkPaint(1024, 512, (c, w, h) => {
-      const g = c.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, "#1d1a38");
-      g.addColorStop(0.34, "#4a2c54");
-      g.addColorStop(0.58, "#a34a35");
-      g.addColorStop(0.76, "#e07b39");
-      g.addColorStop(0.9, "#ffb46a");
-      g.addColorStop(1, "#ffd9a0");
-      c.fillStyle = g;
-      c.fillRect(0, 0, w, h);
-      const sunG = c.createRadialGradient(w * 0.6, h * 0.88, 10, w * 0.6, h * 0.88, w * 0.3);
-      sunG.addColorStop(0, "rgba(255,224,170,0.9)");
-      sunG.addColorStop(0.4, "rgba(255,170,90,0.35)");
-      sunG.addColorStop(1, "rgba(255,170,90,0)");
-      c.fillStyle = sunG;
-      c.fillRect(0, 0, w, h);
-      for (let i = 0; i < 9; i++) {
-        const cx = Math.random() * w,
-          cy = h * (0.08 + Math.random() * 0.34),
-          cw = 90 + Math.random() * 200,
-          ch = 9 + Math.random() * 15;
-        c.fillStyle = "rgba(40,26,52,0.5)";
-        c.beginPath();
-        c.ellipse(cx, cy, cw, ch, 0, 0, 7);
-        c.fill();
-        c.fillStyle = "rgba(255,150,80,0.22)";
-        c.beginPath();
-        c.ellipse(cx, cy + ch * 0.75, cw * 0.9, ch * 0.4, 0, 0, 7);
-        c.fill();
-      }
-    });
-    layerPlane(skyTex, 110, 42, 13, -36, -10);
-    // painted ridge generator: jagged silhouette + warm rim light + speckle + city dots
-    const ridgeTex = (
-      colTop: string,
-      colBot: string,
-      rim: string,
-      base: number,
-      jag: number,
-      peaks: number[][],
-      cityDots: number
-    ) =>
-      mkPaint(1024, 256, (c, w, h) => {
-        const pts: number[] = [];
-        let y = h * base;
-        for (let x = 0; x <= w; x += 6) {
-          y += (Math.random() - 0.5) * jag * 8;
-          y = Math.max(h * (base - jag * 0.35), Math.min(h * (base + jag * 0.12), y));
-          let py = y;
-          peaks.forEach(([pxF, phF, pwF]) => {
-            const dx = Math.abs(x - w * pxF);
-            const pk = h * base - h * phF * Math.max(0, 1 - dx / (w * pwF));
-            py = Math.min(py, pk + (Math.random() - 0.5) * jag * 6);
-          });
-          pts.push(py);
-        }
-        const grd = c.createLinearGradient(0, h * (base - 0.6), 0, h);
-        grd.addColorStop(0, colTop);
-        grd.addColorStop(1, colBot);
-        c.fillStyle = grd;
-        c.beginPath();
-        c.moveTo(0, h);
-        pts.forEach((pv, i) => c.lineTo(i * 6, pv));
-        c.lineTo(w, h);
-        c.closePath();
-        c.fill();
-        // warm rim light along the crest
-        c.strokeStyle = rim;
-        c.lineWidth = 2.5;
-        c.beginPath();
-        pts.forEach((pv, i) => (i === 0 ? c.moveTo(0, pv - 1) : c.lineTo(i * 6, pv - 1)));
-        c.stroke();
-        // rock speckle under the crest
-        for (let i = 0; i < 1600; i++) {
-          const x = Math.random() * w;
-          const yy = pts[Math.min(pts.length - 1, (x / 6) | 0)] + Math.random() * (h * 0.5);
-          if (yy < h) {
-            c.fillStyle = `rgba(0,0,0,${0.05 + Math.random() * 0.1})`;
-            c.fillRect(x, yy, 1.6, 1.6);
-          }
-        }
-        // valley city lights along the base
-        for (let i = 0; i < cityDots; i++) {
-          const x = Math.random() * w;
-          const yy = h * (0.86 + Math.random() * 0.12);
-          c.fillStyle = `rgba(255,${175 + ((Math.random() * 60) | 0)},110,${0.35 + Math.random() * 0.5})`;
-          c.fillRect(x, yy, 1.6 + Math.random(), 1.4);
-        }
-      });
-    layerPlane(
-      ridgeTex("#6b4258", "#2e1e36", "rgba(255,150,90,0.55)", 0.52, 0.8, [[0.45, 0.42, 0.16], [0.7, 0.3, 0.1], [0.16, 0.26, 0.09]], 0),
-      96,
-      15,
-      5.4,
-      -27,
-      -9
-    );
-    layerPlane(
-      ridgeTex("#4e3046", "#241628", "rgba(255,130,70,0.4)", 0.46, 1.0, [[0.24, 0.4, 0.1], [0.82, 0.34, 0.12], [0.55, 0.22, 0.07]], 340),
-      84,
-      12,
-      3.6,
-      -20,
-      -8
-    );
-    layerPlane(
-      ridgeTex("#33203a", "#160e1e", "rgba(230,110,60,0.28)", 0.4, 1.2, [[0.62, 0.3, 0.08], [0.1, 0.22, 0.07]], 520),
-      74,
-      9,
-      2.2,
-      -14,
-      -7
-    );
-    // warm valley haze where the painted layers meet the 3D floor
-    const hazeTex = mkPaint(64, 64, (c, w, h) => {
-      const g = c.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, "rgba(255,150,80,0)");
-      g.addColorStop(1, "rgba(224,110,60,0.34)");
-      c.fillStyle = g;
-      c.fillRect(0, 0, w, h);
-    });
-    layerPlane(hazeTex, 70, 5, 1.4, -12.6, -6);
-    scene.fog = new THREE.Fog(0x3a2438, 16, 42);
+    // dark-dusk backdrop: subtle distant foothill silhouettes
+    const hillNear = new THREE.MeshStandardMaterial({ color: 0x2a2244, roughness: 1 });
+    const hillFar = new THREE.MeshStandardMaterial({ color: 0x1c1738, roughness: 1 });
+    const backAngle = Math.atan2(12, 9) + Math.PI;
+    for (let i = 0; i < 16; i++) {
+      const far = i % 2 === 0;
+      const ang = backAngle + ((i + Math.random() * 0.6) / 16 - 0.5) * Math.PI * 1.3;
+      const r = far ? 18 : 14;
+      const hw = 3 + Math.random() * 4.5;
+      const hh = far ? 2.4 + Math.random() * 2.2 : 1.1 + Math.random() * 1.1;
+      const hill = new THREE.Mesh(new THREE.ConeGeometry(hw, hh, 7, 1), far ? hillFar : hillNear);
+      hill.position.set(Math.cos(ang) * r, hh / 2 - 0.06, Math.sin(ang) * r);
+      hill.rotation.y = Math.random() * Math.PI;
+      hill.scale.z = 0.5;
+      scene.add(hill);
+    }
 
     // ---- Arizona diorama kit: sandstone tiles, adobe + tile-roof houses,
     //      palms & saguaros, little street grids (reference: neighborhood tile) ----

@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { useStore } from "@/lib/store";
 import { Switch, CountUp } from "@/components/ui";
 import FarmScene from "@/components/FarmScene";
+import SplineHero from "@/components/SplineHero";
 import {
   TICKER_POOL,
   FARM_CHIPS,
@@ -218,7 +219,7 @@ function RailCard({
 
 export default function Dashboard() {
   const { state, set } = useStore();
-  const is3D = state.heroView === "3d";
+  const view = state.heroView;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -236,21 +237,7 @@ export default function Dashboard() {
             boxShadow: "0 30px 70px rgba(0,0,0,0.5)",
           }}
         >
-          {is3D ? <FarmScene /> : <IsoMap />}
-
-          {/* top scrim keeps the title crisp against the sunset sky */}
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              top: 0,
-              height: 150,
-              zIndex: 2,
-              pointerEvents: "none",
-              background: "linear-gradient(rgba(8,6,16,0.62), rgba(8,6,16,0.3) 55%, transparent)",
-            }}
-          />
+          {view === "3d" ? <FarmScene /> : view === "map" ? <IsoMap /> : <SplineHero />}
 
           {/* header (decorative — never blocks scene interaction) */}
           <div style={{ position: "absolute", top: 20, left: 22, zIndex: 3, pointerEvents: "none" }}>
@@ -291,40 +278,32 @@ export default function Dashboard() {
               WebkitBackdropFilter: "blur(18px)",
             }}
           >
-            <button
-              onClick={() => set({ heroView: "3d" })}
-              style={{
-                border: "none",
-                borderRadius: 7,
-                padding: "6px 12px",
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                fontFamily: "var(--label)",
-                cursor: "pointer",
-                background: is3D ? "rgba(168,85,247,0.22)" : "transparent",
-                color: is3D ? "#C9A8FF" : "#8B89A0",
-              }}
-            >
-              3D FARM
-            </button>
-            <button
-              onClick={() => set({ heroView: "map" })}
-              style={{
-                border: "none",
-                borderRadius: 7,
-                padding: "6px 12px",
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                fontFamily: "var(--label)",
-                cursor: "pointer",
-                background: !is3D ? "rgba(56,189,248,0.22)" : "transparent",
-                color: !is3D ? "#7DD3FC" : "#8B89A0",
-              }}
-            >
-              LIVE MAP
-            </button>
+            {(
+              [
+                ["3d", "3D FARM", "#C9A8FF", "rgba(168,85,247,0.22)"],
+                ["map", "LIVE MAP", "#7DD3FC", "rgba(56,189,248,0.22)"],
+                ["spline", "DESIGNER", "#FF9ABF", "rgba(255,93,143,0.2)"],
+              ] as const
+            ).map(([id, label, color, bg]) => (
+              <button
+                key={id}
+                onClick={() => set({ heroView: id })}
+                style={{
+                  border: "none",
+                  borderRadius: 7,
+                  padding: "6px 12px",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.06em",
+                  fontFamily: "var(--label)",
+                  cursor: "pointer",
+                  background: view === id ? bg : "transparent",
+                  color: view === id ? color : "#8B89A0",
+                }}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
           <Ticker />
