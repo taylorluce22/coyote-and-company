@@ -529,7 +529,7 @@ export default function Dashboard() {
             </span>
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 8, height: 8, borderRadius: 3, background: "#38BDF8" }} />
-              PLAYBOOK
+              YOU
             </span>
           </div>
         </div>

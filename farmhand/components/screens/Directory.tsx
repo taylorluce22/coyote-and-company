@@ -177,7 +177,7 @@ export default function Directory() {
                           padding: "8px 11px",
                         }}
                       >
-                        Quiet — last post {c.last}. Action queued in the Playbook.
+                        Quiet — last post {c.last}. A post is queued in your Weekly Planner.
                       </div>
                     )}
                   </article>
