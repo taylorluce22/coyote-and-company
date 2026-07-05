@@ -1,14 +1,14 @@
 "use client";
 
 import { useStore } from "@/lib/store";
-import { NAV_DEFS, ENGINE_POSTS, PLAYBOOK, type TabId } from "@/lib/data";
+import { NAV_DEFS, ENGINE_POSTS, type TabId } from "@/lib/data";
 
 export default function Rail() {
   const { state, set } = useStore();
   const pending = ENGINE_POSTS.filter((p) => !state.approved[p.id]).length;
-  const open = PLAYBOOK.filter((p) => !state.done[p.id]).length;
+  const drafts = state.plannedPosts.filter((p) => p.plannedDay && p.status === "draft").length;
   const badgeFor = (id: string) =>
-    id === "engine" ? pending || null : id === "playbook" ? open || null : null;
+    id === "engine" ? pending || null : id === "planner" ? drafts || null : null;
 
   return (
     <aside className="fh-rail">
