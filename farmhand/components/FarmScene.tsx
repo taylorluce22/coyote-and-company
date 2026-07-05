@@ -106,27 +106,48 @@ export default function FarmScene() {
     const stuccoMat = () =>
       new THREE.MeshStandardMaterial({ color: STUCCO[(Math.random() * STUCCO.length) | 0], roughness: 0.9, metalness: 0.02 });
 
-    // flat-roof adobe/pueblo house with parapet + rooftop AC unit
+    // flat-roof adobe/pueblo house with parapet + rooftop AC unit.
+    // ~1 in 3 gets a stepped second story (pueblo style) for skyline variety.
     const mkAdobe = (lit: boolean) => {
       const g = new THREE.Group();
       const bw = 0.5 + Math.random() * 0.24,
         bd = 0.38 + Math.random() * 0.16,
-        bh = 0.2 + Math.random() * 0.1;
+        bh = 0.16 + Math.random() * 0.16;
       const body = new THREE.Mesh(bodyGeo, stuccoMat());
       body.scale.set(bw, bh, bd);
       body.position.y = bh / 2;
-      const parapet = new THREE.Mesh(
-        bodyGeo,
-        new THREE.MeshStandardMaterial({ color: 0xb99b74, roughness: 0.92 })
-      );
+      const parapetMat = new THREE.MeshStandardMaterial({ color: 0xb99b74, roughness: 0.92 });
+      const parapet = new THREE.Mesh(bodyGeo, parapetMat);
       parapet.scale.set(bw * 1.05, 0.022, bd * 1.05);
       parapet.position.y = bh + 0.011;
+      g.add(body, parapet);
+      let topY = bh;
+      if (Math.random() < 0.34) {
+        // stepped second story, set back toward one corner
+        const uw = bw * (0.5 + Math.random() * 0.2),
+          ud = bd * (0.55 + Math.random() * 0.2),
+          uh = bh * (0.7 + Math.random() * 0.4);
+        const upper = new THREE.Mesh(bodyGeo, stuccoMat());
+        upper.scale.set(uw, uh, ud);
+        upper.position.set(-bw * 0.18, bh + uh / 2, -bd * 0.12);
+        const upPara = new THREE.Mesh(bodyGeo, parapetMat);
+        upPara.scale.set(uw * 1.06, 0.02, ud * 1.06);
+        upPara.position.set(-bw * 0.18, bh + uh + 0.01, -bd * 0.12);
+        const upWin = new THREE.Mesh(
+          winGeo,
+          new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: lit ? 0.9 : 0.12 })
+        );
+        upWin.scale.set(uw * 0.34, uh * 0.4, 1);
+        upWin.position.set(-bw * 0.18, bh + uh * 0.45, -bd * 0.12 + ud / 2 + 0.004);
+        g.add(upper, upPara, upWin);
+        topY = bh + uh;
+      }
       const ac = new THREE.Mesh(
         bodyGeo,
         new THREE.MeshStandardMaterial({ color: 0x9aa0a8, roughness: 0.6, metalness: 0.4 })
       );
       ac.scale.set(0.07, 0.035, 0.07);
-      ac.position.set(bw * 0.22, bh + 0.028, -bd * 0.18);
+      ac.position.set(bw * 0.22, topY === bh ? bh + 0.028 : bh + 0.028, -bd * 0.18);
       const win = new THREE.Mesh(
         winGeo,
         new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: lit ? 0.95 : 0.14 })
@@ -139,7 +160,36 @@ export default function FarmScene() {
       );
       door.scale.set(bw * 0.13, bh * 0.62, 1);
       door.position.set(-bw * 0.22, bh * 0.31, bd / 2 + 0.004);
-      g.add(body, parapet, ac, win, door);
+      g.add(ac, win, door);
+      return g;
+    };
+
+    // taller stucco landmark (2-3 story) — one per live tile anchors the skyline
+    const mkLandmark = (lit: boolean) => {
+      const g = new THREE.Group();
+      const bw = 0.42 + Math.random() * 0.14,
+        bd = 0.36 + Math.random() * 0.12,
+        bh = 0.46 + Math.random() * 0.22;
+      const body = new THREE.Mesh(bodyGeo, stuccoMat());
+      body.scale.set(bw, bh, bd);
+      body.position.y = bh / 2;
+      const parapet = new THREE.Mesh(
+        bodyGeo,
+        new THREE.MeshStandardMaterial({ color: 0xb08c62, roughness: 0.92 })
+      );
+      parapet.scale.set(bw * 1.06, 0.024, bd * 1.06);
+      parapet.position.y = bh + 0.012;
+      g.add(body, parapet);
+      // stacked window rows
+      for (let f = 0; f < 3; f++) {
+        const win = new THREE.Mesh(
+          winGeo,
+          new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: lit && Math.random() < 0.75 ? 0.9 : 0.14 })
+        );
+        win.scale.set(bw * 0.55, bh * 0.14, 1);
+        win.position.set(0, bh * (0.24 + f * 0.27), bd / 2 + 0.004);
+        g.add(win);
+      }
       return g;
     };
 
@@ -195,6 +245,24 @@ export default function FarmScene() {
       return g;
     };
 
+    // desert bush: squashed sage-green spheres, clustered
+    const mkBush = () => {
+      const g = new THREE.Group();
+      const colors = [0x6b7c4a, 0x7d8f56, 0x8a9a6b, 0x5f7045];
+      const n = 1 + (Math.random() < 0.5 ? 1 : 0);
+      for (let i = 0; i < n; i++) {
+        const r = 0.05 + Math.random() * 0.05;
+        const bush = new THREE.Mesh(
+          new THREE.SphereGeometry(r, 7, 6),
+          new THREE.MeshStandardMaterial({ color: colors[(Math.random() * colors.length) | 0], roughness: 0.95 })
+        );
+        bush.scale.y = 0.6 + Math.random() * 0.2;
+        bush.position.set(i * r * 1.2, r * 0.55, (Math.random() - 0.5) * r);
+        g.add(bush);
+      }
+      return g;
+    };
+
     // saguaro cactus: body + two offset arms
     const mkSaguaro = () => {
       const g = new THREE.Group();
@@ -234,11 +302,23 @@ export default function FarmScene() {
       return s;
     };
 
+    // rocky mound (foothill / mountain) — flattened low-poly cone
+    const ROCK = [0x8a6a4d, 0x7a5c42, 0x6e5138, 0x94745a];
+    const mkMound = (w: number, h: number) => {
+      const m = new THREE.Mesh(
+        new THREE.ConeGeometry(w, h, 7, 1),
+        new THREE.MeshStandardMaterial({ color: ROCK[(Math.random() * ROCK.length) | 0], roughness: 1 })
+      );
+      m.scale.z = 0.55;
+      m.rotation.y = Math.random() * Math.PI;
+      return m;
+    };
+
     // clusters — Arizona diorama tiles with a generous invisible hit-cylinder
     const clusterGroups: THREE.Group[] = [];
     const hitMeshes: THREE.Mesh[] = [];
     const PLATE_H = 0.1;
-    FARM_CLUSTERS.forEach((d) => {
+    FARM_CLUSTERS.forEach((d, ci) => {
       const cg = new THREE.Group();
       cg.position.set(d.x, 0, d.z);
       cg.userData = { name: d.name, baseY: 0 };
@@ -274,6 +354,62 @@ export default function FarmScene() {
       roadV.position.y = PLATE_H + 0.004;
       cg.add(roadH, roadV);
 
+      const isPV = d.name === "Paradise Valley";
+      if (isPV) {
+        // ---- Paradise Valley: mountain backdrop + winding golf fairways ----
+        const peak = mkMound(pw * 0.34, 1.15);
+        peak.position.set(pw * 0.16, PLATE_H + 1.15 / 2 - 0.02, -pd * 0.34);
+        const peak2 = mkMound(pw * 0.22, 0.7);
+        peak2.position.set(-pw * 0.24, PLATE_H + 0.7 / 2 - 0.02, -pd * 0.4);
+        const peak3 = mkMound(pw * 0.16, 0.45);
+        peak3.position.set(pw * 0.42, PLATE_H + 0.45 / 2 - 0.02, -pd * 0.28);
+        cg.add(peak, peak2, peak3);
+        // fairways: overlapping green blobs winding diagonally across the tile
+        const fairwayMat = new THREE.MeshStandardMaterial({ color: 0x3f9448, roughness: 0.85 });
+        const fairway2Mat = new THREE.MeshStandardMaterial({ color: 0x4aa64f, roughness: 0.85 });
+        [
+          { x: -0.28, z: 0.3, a: 0.5, b: 0.3, m: fairwayMat },
+          { x: -0.02, z: 0.12, a: 0.42, b: 0.26, m: fairway2Mat },
+          { x: 0.22, z: -0.04, a: 0.4, b: 0.24, m: fairwayMat },
+          { x: 0.36, z: 0.28, a: 0.3, b: 0.2, m: fairway2Mat },
+        ].forEach((f) => {
+          const blob = new THREE.Mesh(new THREE.CircleGeometry(1, 22), f.m);
+          blob.rotation.x = -Math.PI / 2;
+          blob.rotation.z = Math.random() * Math.PI;
+          blob.scale.set(f.a * pw * 0.5, f.b * pd * 0.5, 1);
+          blob.position.set(f.x * pw, PLATE_H + 0.005, f.z * pd);
+          cg.add(blob);
+        });
+        // pond + sand bunkers
+        const pond = new THREE.Mesh(
+          new THREE.CircleGeometry(0.16, 20),
+          new THREE.MeshStandardMaterial({ color: 0x2fb9c9, emissive: 0x1a7f8e, emissiveIntensity: 0.7, roughness: 0.2 })
+        );
+        pond.rotation.x = -Math.PI / 2;
+        pond.scale.set(1.4, 0.9, 1);
+        pond.position.set(-pw * 0.1, PLATE_H + 0.008, pd * 0.18);
+        cg.add(pond);
+        const bunkerMat = new THREE.MeshStandardMaterial({ color: 0xe8dcae, roughness: 1 });
+        [
+          [-0.2, 0.36], [0.12, 0.06], [0.3, 0.2],
+        ].forEach(([bx, bz]) => {
+          const bunker = new THREE.Mesh(new THREE.CircleGeometry(0.05, 12), bunkerMat);
+          bunker.rotation.x = -Math.PI / 2;
+          bunker.scale.set(1.3, 0.8, 1);
+          bunker.position.set(bx * pw, PLATE_H + 0.009, bz * pd);
+          cg.add(bunker);
+        });
+      } else if (ci % 2 === 0) {
+        // foothill backdrop on some tiles — low rocky mounds along the back edge
+        const mounds = 2 + (ci % 3);
+        for (let i = 0; i < mounds; i++) {
+          const mh = 0.22 + Math.random() * 0.3;
+          const mound = mkMound(pw * (0.1 + Math.random() * 0.1), mh);
+          mound.position.set((i / Math.max(1, mounds - 1) - 0.5) * pw * 0.8, PLATE_H + mh / 2 - 0.02, -pd * (0.38 + Math.random() * 0.06));
+          cg.add(mound);
+        }
+      }
+
       // generous invisible hit volume: consistent hover/click target
       const hitR = Math.max(pw, pd) * 0.62;
       const hit = new THREE.Mesh(
@@ -290,16 +426,32 @@ export default function FarmScene() {
         [-0.3, -0.3], [0.3, -0.3], [-0.3, 0.3], [0.3, 0.3],
         [-0.33, 0], [0.33, 0], [0, -0.33], [0, 0.33],
       ];
-      const count = d.live ? 8 : 5;
+      // Paradise Valley builds only on the front half (mountain owns the back)
+      const useCells = isPV ? cells.filter(([, cz]) => cz > -0.2) : cells;
+      const count = isPV ? 6 : d.live ? 8 : 5;
       for (let i = 0; i < count; i++) {
-        const [cx, cz] = cells[i % cells.length];
-        const az = Math.random() < 0.55 ? mkAdobe(d.live && Math.random() < 0.7) : mkRanch(d.live && Math.random() < 0.7);
+        const [cx, cz] = useCells[i % useCells.length];
+        // one taller landmark anchors each live tile's skyline; the rest vary.
+        // PV skews to luxury tile-roof estates.
+        const az = isPV
+          ? i === 0
+            ? mkLandmark(true)
+            : Math.random() < 0.75
+              ? mkRanch(Math.random() < 0.8)
+              : mkAdobe(true)
+          : d.live && i === 3
+            ? mkLandmark(true)
+            : Math.random() < 0.55
+              ? mkAdobe(d.live && Math.random() < 0.7)
+              : mkRanch(d.live && Math.random() < 0.7);
         az.position.set(cx * pw + (Math.random() - 0.5) * 0.1, PLATE_H, cz * pd + (Math.random() - 0.5) * 0.1);
         // axis-aligned with tiny jitter — tidy diorama look
         az.rotation.y = (Math.round(Math.random()) * Math.PI) / 2 + (Math.random() - 0.5) * 0.08;
+        // per-lot size variety on top of per-type height variety
+        az.scale.setScalar(0.82 + Math.random() * 0.4);
         cg.add(az);
-        // backyard pool — it's Arizona
-        if (Math.random() < 0.3) {
+        // backyard pool — it's Arizona (near-standard in Paradise Valley)
+        if (Math.random() < (isPV ? 0.55 : 0.3)) {
           const pool = new THREE.Mesh(
             bodyGeo,
             new THREE.MeshStandardMaterial({ color: 0x2f9fd8, emissive: 0x1a6f9e, emissiveIntensity: 0.9, roughness: 0.15 })
@@ -309,16 +461,19 @@ export default function FarmScene() {
           cg.add(pool);
         }
       }
-      // desert greenery: palms first, then saguaros
-      const greens = d.live ? 6 : 4;
+      // desert greenery: palms, saguaros and sage bushes at varied sizes
+      const greens = d.live ? 8 : 6;
       for (let i = 0; i < greens; i++) {
-        const green = Math.random() < 0.6 ? mkPalm() : mkSaguaro();
+        const roll = Math.random();
+        const green = roll < 0.42 ? mkPalm() : roll < 0.68 ? mkSaguaro() : mkBush();
         const edge = Math.random() < 0.5;
+        const gz = edge ? (Math.random() - 0.5) * pd * 0.8 : (Math.random() < 0.5 ? -1 : 1) * pd * 0.42;
         green.position.set(
           (edge ? (Math.random() < 0.5 ? -1 : 1) * pw * 0.42 : (Math.random() - 0.5) * pw * 0.7),
           PLATE_H,
-          (edge ? (Math.random() - 0.5) * pd * 0.8 : (Math.random() < 0.5 ? -1 : 1) * pd * 0.42)
+          isPV ? Math.abs(gz) * 0.9 : gz // PV greenery stays on the fairway side, off the mountain
         );
+        green.scale.setScalar(0.7 + Math.random() * 0.75);
         cg.add(green);
       }
 

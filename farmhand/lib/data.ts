@@ -314,6 +314,7 @@ export const FARM_CLUSTERS = [
   { x: 0.4, z: -0.4, w: 2.0, d: 1.5, h: 2.1, c: 0xa855f7, hex: "#A855F7", name: "85234 Core", stat: "market posts", live: true },
   { x: -2.4, z: 2.2, w: 2.7, d: 1.9, h: 1.35, c: 0x26e0c8, hex: "#26E0C8", name: "Heritage District", stat: "festival Jul 12", live: true },
   { x: 2.9, z: 2.6, w: 2.9, d: 2.1, h: 0.85, c: 0xffc23d, hex: "#FFC23D", name: "Power Ranch", stat: "quiet · 3 wks", live: false },
+  { x: 4.0, z: -1.4, w: 3.1, d: 2.3, h: 1.5, c: 0xff5d8f, hex: "#FF5D8F", name: "Paradise Valley", stat: "golf-course luxury", live: true },
 ];
 
 export const NAV_DEFS = [
