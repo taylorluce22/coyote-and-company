@@ -2,8 +2,48 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import gsap from "gsap";
 import { FARM_CLUSTERS } from "@/lib/data";
+
+/* Kenney City-Builder kit (MIT) — professional diorama models.
+   Loaded once; tiles fall back to procedural geometry if a model
+   fails to load (offline dev, blocked CDN, etc.). */
+const MODEL_NAMES = [
+  "building-small-a",
+  "building-small-b",
+  "building-small-c",
+  "building-small-d",
+  "building-garage",
+  "grass-trees",
+  "grass-trees-tall",
+  "grass",
+  "pavement-fountain",
+  "road-straight",
+  "road-intersection",
+] as const;
+type ModelMap = Partial<Record<(typeof MODEL_NAMES)[number], THREE.Object3D>>;
+
+function loadModels(): Promise<ModelMap> {
+  const loader = new GLTFLoader();
+  const out: ModelMap = {};
+  return Promise.all(
+    MODEL_NAMES.map(
+      (n) =>
+        new Promise<void>((res) => {
+          loader.load(
+            `/models/${n}.glb`,
+            (g) => {
+              out[n] = g.scene;
+              res();
+            },
+            undefined,
+            () => res()
+          );
+        })
+    )
+  ).then(() => out);
+}
 
 /**
  * Real-time 3D farm — 5 neighborhood clusters of low-poly AZ ranch houses.
@@ -314,10 +354,56 @@ export default function FarmScene() {
       return m;
     };
 
+    // ---- Kenney model instancing: clone + normalize footprint, base at y=0 ----
+    let kit: ModelMap = {};
+    const fitModel = (
+      name: (typeof MODEL_NAMES)[number],
+      targetW: number,
+      ry = 0,
+      warm = false
+    ): THREE.Group | null => {
+      const src = kit[name];
+      if (!src) return null;
+      const inst = src.clone(true);
+      if (warm) {
+        // desert-warm the Kenney palette: clone materials, multiply toward stucco
+        const tint = new THREE.Color(1.0, 0.9 + Math.random() * 0.05, 0.74 + Math.random() * 0.08);
+        inst.traverse((o) => {
+          const m = o as THREE.Mesh;
+          if (m.isMesh && m.material) {
+            const mats = Array.isArray(m.material) ? m.material : [m.material];
+            m.material = (Array.isArray(m.material) ? mats.map((x) => x.clone()) : mats[0].clone()) as typeof m.material;
+            (Array.isArray(m.material) ? m.material : [m.material]).forEach((mm) => {
+              const std = mm as THREE.MeshStandardMaterial;
+              if (std.color) std.color.multiply(tint);
+            });
+          }
+        });
+      }
+      const g = new THREE.Group();
+      g.add(inst);
+      const box = new THREE.Box3().setFromObject(inst);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      const s = targetW / Math.max(size.x, size.z, 0.0001);
+      inst.scale.setScalar(s);
+      inst.position.set(-((box.min.x + box.max.x) / 2) * s, -box.min.y * s, -((box.min.z + box.max.z) / 2) * s);
+      g.rotation.y = ry;
+      return g;
+    };
+    const BUILD_MODELS = [
+      "building-small-a",
+      "building-small-b",
+      "building-small-c",
+      "building-small-d",
+      "building-garage",
+    ] as const;
+
     // clusters — Arizona diorama tiles with a generous invisible hit-cylinder
     const clusterGroups: THREE.Group[] = [];
     const hitMeshes: THREE.Mesh[] = [];
     const PLATE_H = 0.1;
+    const buildClusters = () => {
     FARM_CLUSTERS.forEach((d, ci) => {
       const cg = new THREE.Group();
       cg.position.set(d.x, 0, d.z);
@@ -344,15 +430,41 @@ export default function FarmScene() {
       rim.position.y = 0.028;
       cg.add(rim);
 
-      // street cross on the tile
-      const roadMat = new THREE.MeshStandardMaterial({ color: 0x54545e, roughness: 0.9 });
-      const roadH = new THREE.Mesh(bodyGeo, roadMat);
-      roadH.scale.set(pw * 0.92, 0.008, 0.15);
-      roadH.position.y = PLATE_H + 0.004;
-      const roadV = new THREE.Mesh(bodyGeo, roadMat);
-      roadV.scale.set(0.15, 0.008, pd * 0.92);
-      roadV.position.y = PLATE_H + 0.004;
-      cg.add(roadH, roadV);
+      // street cross on the tile — real Kenney road tiles when loaded
+      const roadY = PLATE_H + 0.002;
+      const inter = fitModel("road-intersection", 0.36);
+      if (inter) {
+        inter.position.y = roadY;
+        cg.add(inter);
+        const rs = 0.36;
+        const nx = Math.floor((pw * 0.46) / rs),
+          nz = Math.floor((pd * 0.46) / rs);
+        for (let i = 1; i <= nx; i++)
+          [-1, 1].forEach((sgn) => {
+            const r = fitModel("road-straight", rs, Math.PI / 2);
+            if (r) {
+              r.position.set(sgn * i * rs, roadY, 0);
+              cg.add(r);
+            }
+          });
+        for (let i = 1; i <= nz; i++)
+          [-1, 1].forEach((sgn) => {
+            const r = fitModel("road-straight", rs);
+            if (r) {
+              r.position.set(0, roadY, sgn * i * rs);
+              cg.add(r);
+            }
+          });
+      } else {
+        const roadMat = new THREE.MeshStandardMaterial({ color: 0x54545e, roughness: 0.9 });
+        const roadH = new THREE.Mesh(bodyGeo, roadMat);
+        roadH.scale.set(pw * 0.92, 0.008, 0.15);
+        roadH.position.y = PLATE_H + 0.004;
+        const roadV = new THREE.Mesh(bodyGeo, roadMat);
+        roadV.scale.set(0.15, 0.008, pd * 0.92);
+        roadV.position.y = PLATE_H + 0.004;
+        cg.add(roadH, roadV);
+      }
 
       const isPV = d.name === "Paradise Valley";
       if (isPV) {
@@ -431,24 +543,32 @@ export default function FarmScene() {
       const count = isPV ? 6 : d.live ? 8 : 5;
       for (let i = 0; i < count; i++) {
         const [cx, cz] = useCells[i % useCells.length];
-        // one taller landmark anchors each live tile's skyline; the rest vary.
-        // PV skews to luxury tile-roof estates.
-        const az = isPV
-          ? i === 0
-            ? mkLandmark(true)
-            : Math.random() < 0.75
-              ? mkRanch(Math.random() < 0.8)
-              : mkAdobe(true)
-          : d.live && i === 3
-            ? mkLandmark(true)
-            : Math.random() < 0.55
-              ? mkAdobe(d.live && Math.random() < 0.7)
-              : mkRanch(d.live && Math.random() < 0.7);
+        const isLandmark = isPV ? i === 0 : d.live && i === 3;
+        // Kenney buildings when loaded (warm-tinted, house-scaled); procedural fallback
+        let az: THREE.Object3D | null = fitModel(
+          BUILD_MODELS[(Math.random() * BUILD_MODELS.length) | 0],
+          0.34 + Math.random() * 0.12,
+          0,
+          true
+        );
+        if (!az) {
+          az = isPV
+            ? i === 0
+              ? mkLandmark(true)
+              : Math.random() < 0.75
+                ? mkRanch(Math.random() < 0.8)
+                : mkAdobe(true)
+            : d.live && i === 3
+              ? mkLandmark(true)
+              : Math.random() < 0.55
+                ? mkAdobe(d.live && Math.random() < 0.7)
+                : mkRanch(d.live && Math.random() < 0.7);
+        }
         az.position.set(cx * pw + (Math.random() - 0.5) * 0.1, PLATE_H, cz * pd + (Math.random() - 0.5) * 0.1);
         // axis-aligned with tiny jitter — tidy diorama look
         az.rotation.y = (Math.round(Math.random()) * Math.PI) / 2 + (Math.random() - 0.5) * 0.08;
-        // per-lot size variety on top of per-type height variety
-        az.scale.setScalar(0.82 + Math.random() * 0.4);
+        // per-lot size variety; landmarks scale up to anchor the skyline
+        az.scale.setScalar((0.85 + Math.random() * 0.3) * (isLandmark ? 1.35 : 1));
         cg.add(az);
         // backyard pool — it's Arizona (near-standard in Paradise Valley)
         if (Math.random() < (isPV ? 0.55 : 0.3)) {
@@ -461,6 +581,27 @@ export default function FarmScene() {
           cg.add(pool);
         }
       }
+      // Kenney green pockets (tree yards) + Heritage District fountain plaza
+      if (!isPV) {
+        [
+          [0.16, -0.16, "grass-trees"],
+          [-0.16, 0.16, "grass-trees-tall"],
+        ].forEach(([gx, gz, gname]) => {
+          const gm = fitModel(gname as (typeof MODEL_NAMES)[number], 0.42);
+          if (gm) {
+            gm.position.set((gx as number) * pw, PLATE_H + 0.002, (gz as number) * pd);
+            cg.add(gm);
+          }
+        });
+        if (d.name === "Heritage District") {
+          const fountain = fitModel("pavement-fountain", 0.4);
+          if (fountain) {
+            fountain.position.set(-0.16 * pw, PLATE_H + 0.002, -0.16 * pd);
+            cg.add(fountain);
+          }
+        }
+      }
+
       // desert greenery: palms, saguaros and sage bushes at varied sizes
       const greens = d.live ? 8 : 6;
       for (let i = 0; i < greens; i++) {
@@ -486,6 +627,16 @@ export default function FarmScene() {
       cg.scale.setScalar(0.001);
       scene.add(cg);
       clusterGroups.push(cg);
+    });
+      t0 = performance.now(); // start the grow-in once tiles exist
+    };
+
+    // load the Kenney kit, then build the tiles (procedural fallback inside)
+    let disposed = false;
+    loadModels().then((m) => {
+      if (disposed) return;
+      kit = m;
+      buildClusters();
     });
 
     // ---- interaction state ----
@@ -592,13 +743,13 @@ export default function FarmScene() {
     };
     window.addEventListener("resize", onResize);
 
-    const t0 = performance.now();
+    let t0 = 0;
     let raf = 0;
     let running = true;
     const animate = () => {
       if (!running) return;
       const t = performance.now() / 1000;
-      const el0 = performance.now() - t0;
+      const el0 = t0 ? performance.now() - t0 : 0;
       clusterGroups.forEach((cg, i) => {
         const k = Math.min(1, Math.max(0, (el0 - i * 160 - 200) / 700));
         const e = 1 - Math.pow(1 - k, 3);
@@ -629,6 +780,7 @@ export default function FarmScene() {
     document.addEventListener("visibilitychange", onVis);
 
     return () => {
+      disposed = true;
       running = false;
       cancelAnimationFrame(raf);
       el.removeEventListener("mousemove", onMove);
