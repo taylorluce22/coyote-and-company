@@ -238,6 +238,20 @@ export default function Dashboard() {
         >
           {is3D ? <FarmScene /> : <IsoMap />}
 
+          {/* top scrim keeps the title crisp against the sunset sky */}
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: 0,
+              height: 150,
+              zIndex: 2,
+              pointerEvents: "none",
+              background: "linear-gradient(rgba(8,6,16,0.62), rgba(8,6,16,0.3) 55%, transparent)",
+            }}
+          />
+
           {/* header (decorative — never blocks scene interaction) */}
           <div style={{ position: "absolute", top: 20, left: 22, zIndex: 3, pointerEvents: "none" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
