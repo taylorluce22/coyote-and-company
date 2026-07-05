@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@splinetool/runtime": "^1.12.98",
     "gsap": "^3.12.5",
     "html2canvas": "^1.4.1",
     "next": "^15.5.20",

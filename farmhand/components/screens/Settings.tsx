@@ -60,6 +60,32 @@ export default function Settings() {
         })}
       </Card>
 
+      <Card title="Designer scene (Spline)">
+        <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.55, marginBottom: 10 }}>
+          Design a 3D hero scene visually at <b style={{ color: "#C9A8FF" }}>spline.design</b> (free), then Export → Code
+          Export → React and paste the scene URL here. The dashboard&apos;s DESIGNER view renders it live.
+        </div>
+        <input
+          value={(state.splineUrl as string) || ""}
+          onChange={(e) => set({ splineUrl: e.target.value.trim() })}
+          placeholder="https://prod.spline.design/…/scene.splinecode"
+          style={{
+            width: "100%",
+            fontFamily: "var(--mono)",
+            fontSize: 12,
+            color: "#F4F3F8",
+            background: "rgba(0,0,0,0.28)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 9,
+            padding: "10px 12px",
+            outline: "none",
+          }}
+        />
+        <div style={{ fontSize: 10.5, color: state.splineUrl ? "#41D98A" : "#6E6C82", marginTop: 8 }}>
+          {state.splineUrl ? "● Scene connected — switch the dashboard to DESIGNER view" : "No scene connected yet"}
+        </div>
+      </Card>
+
       <Card title="Connections">
         {SET_CONNECTIONS.map((c) => (
           <div key={c.name} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
