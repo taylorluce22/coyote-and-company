@@ -61,11 +61,6 @@ export interface AppState {
   weekBrief: string;
   integrations: Integrations;
 
-  // calendar (legacy)
-  calView: "week" | "month";
-  regens: Record<string, boolean>;
-  moved: Record<string, string>;
-
   // dashboard
   heroView: "3d" | "map";
 
@@ -110,9 +105,6 @@ const initialState: AppState = {
   plannedPosts: SEED_POSTS,
   weekBrief: "",
   integrations: { cloudName: "", uploadPreset: "", makeWebhook: "", timezone: "", autoPublish: true },
-  calView: "week",
-  regens: {},
-  moved: {},
   heroView: "3d",
   asstInput:
     "Anyone know a good realtor in Gilbert? Just moved to Val Vista and looking to buy in the spring — no idea where to start with this market.",
