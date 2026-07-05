@@ -5,9 +5,8 @@ import { useStore } from "@/lib/store";
 const TITLES: Record<string, string> = {
   dashboard: "Good morning, Jess",
   engine: "Content Engine",
-  playbook: "Local Playbook",
-  calendar: "Calendar",
   composer: "Composer",
+  planner: "Weekly Planner",
   directory: "Active Groups",
   assistant: "Reply Assistant",
   results: "Results",

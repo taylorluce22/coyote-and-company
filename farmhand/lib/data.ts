@@ -373,7 +373,7 @@ export function assistantReplies(tone: string): string[] {
 /* ---- Results ---- */
 export const RESULTS_STATS = [
   { label: "Posts completed", value: "23 / 26", sub: "planned this month", color: "#C9A8FF" },
-  { label: "Playbook actions", value: "18", sub: "done · 90 sec each", color: "#7DD3FC" },
+  { label: "Week planned", value: "7 / 7", sub: "posts on best times", color: "#FFC23D" },
   { label: "Farm coverage", value: "6 / 8", sub: "groups active this week", color: "#FFC23D" },
 ];
 
@@ -423,7 +423,7 @@ export const FARM_CHIPS = [
 
 export const DASH_STATS = [
   { label: "Posts ready", value: "4", sub: "waiting for your approval", color: "#C9A8FF" },
-  { label: "Playbook actions", value: "3", sub: "prepped · ~90 sec each", color: "#7DD3FC" },
+  { label: "Week planned", value: "5/7", sub: "days with a post scheduled", color: "#FFC23D" },
   { label: "Inbound convos", value: "9", sub: "this month · your hero number", color: "#41D98A" },
   { label: "Farm coverage", value: "6/8", sub: "groups active this week", color: "#FFC23D" },
 ];
@@ -446,9 +446,8 @@ export const FARM_CLUSTERS = [
 export const NAV_DEFS = [
   { id: "dashboard", label: "Dashboard", color: "#A855F7" },
   { id: "engine", label: "Content Engine", color: "#A855F7" },
-  { id: "playbook", label: "Local Playbook", color: "#38BDF8" },
-  { id: "calendar", label: "Calendar", color: "#FFC23D" },
   { id: "composer", label: "Composer", color: "#FF5D8F" },
+  { id: "planner", label: "Weekly Planner", color: "#FFC23D" },
   { id: "directory", label: "Active Groups", color: "#26E0C8" },
   { id: "assistant", label: "Reply Assistant", color: "#FF9A62" },
   { id: "results", label: "Results", color: "#41D98A" },

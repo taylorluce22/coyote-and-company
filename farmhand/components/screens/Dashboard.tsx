@@ -420,41 +420,41 @@ export default function Dashboard() {
             </button>
           </RailCard>
 
-          <RailCard glow="rgba(56,189,248,0.28)">
+          <RailCard glow="rgba(255,194,61,0.26)">
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ color: "#38BDF8", fontSize: 16 }}>✦</span>
+              <span style={{ color: "#FFC23D", fontSize: 16 }}>✦</span>
               <div className="fh-kicker" style={{ fontSize: 9.5 }}>
-                You, prepped · 90 sec
+                Best times · auto-publish
               </div>
               <span
                 style={{
                   marginLeft: "auto",
                   fontSize: 9.5,
                   fontWeight: 700,
-                  color: "#7DD3FC",
-                  background: "rgba(56,189,248,0.14)",
-                  border: "1px solid rgba(56,189,248,0.4)",
+                  color: "#FFC23D",
+                  background: "rgba(255,194,61,0.12)",
+                  border: "1px solid rgba(255,194,61,0.4)",
                   borderRadius: 999,
                   padding: "2px 8px",
                 }}
               >
-                HUMAN
+                WEEK
               </span>
             </div>
             <div className="fh-title" style={{ fontSize: 15.5, marginTop: 10 }}>
-              Local Playbook
+              Weekly Planner
             </div>
             <div style={{ fontSize: 13, color: "#A6A4B8", marginTop: 6, lineHeight: 1.5 }}>
-              Groups ban robots. That&apos;s why this works.
+              Plan the whole week in one click, then auto-publish it.
             </div>
             <button
-              onClick={() => set({ tab: "playbook" })}
+              onClick={() => set({ tab: "planner" })}
               style={{
                 width: "100%",
                 marginTop: 14,
-                background: "rgba(56,189,248,0.14)",
-                color: "#7DD3FC",
-                border: "1px solid rgba(56,189,248,0.4)",
+                background: "rgba(255,194,61,0.12)",
+                color: "#FFC23D",
+                border: "1px solid rgba(255,194,61,0.4)",
                 borderRadius: 10,
                 padding: "10px",
                 fontSize: 13,
@@ -462,7 +462,7 @@ export default function Dashboard() {
                 cursor: "pointer",
               }}
             >
-              Open playbook
+              Open planner
             </button>
           </RailCard>
 

@@ -7,8 +7,7 @@ import TopBar from "./TopBar";
 import Dashboard from "./screens/Dashboard";
 import ContentEngine from "./screens/ContentEngine";
 import Composer from "./screens/Composer";
-import Playbook from "./screens/Playbook";
-import Calendar from "./screens/Calendar";
+import Planner from "./screens/Planner";
 import Directory from "./screens/Directory";
 import Assistant from "./screens/Assistant";
 import Results from "./screens/Results";
@@ -23,10 +22,8 @@ function Screen() {
       return <ContentEngine />;
     case "composer":
       return <Composer />;
-    case "playbook":
-      return <Playbook />;
-    case "calendar":
-      return <Calendar />;
+    case "planner":
+      return <Planner />;
     case "directory":
       return <Directory />;
     case "assistant":

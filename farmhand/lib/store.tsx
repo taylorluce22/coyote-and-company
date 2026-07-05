@@ -13,6 +13,7 @@ import {
 import type { TabId } from "./data";
 import type { Asset, Bg, StudioDesign } from "./studio";
 import { DEFAULT_DESIGN } from "./studio";
+import { SEED_POSTS, type Integrations, type PlannedPost } from "./planner";
 
 export interface Upload {
   id: string;
@@ -55,7 +56,12 @@ export interface AppState {
   compStatus: Record<string, string>; // per-channel: draft | ready | scheduled | posted
   pexelsKey: string;
 
-  // calendar
+  // weekly planner
+  plannedPosts: PlannedPost[];
+  weekBrief: string;
+  integrations: Integrations;
+
+  // calendar (legacy)
   calView: "week" | "month";
   regens: Record<string, boolean>;
   moved: Record<string, string>;
@@ -101,6 +107,9 @@ const initialState: AppState = {
   stAssets: [],
   compStatus: {},
   pexelsKey: "",
+  plannedPosts: SEED_POSTS,
+  weekBrief: "",
+  integrations: { cloudName: "", uploadPreset: "", makeWebhook: "", timezone: "", autoPublish: true },
   calView: "week",
   regens: {},
   moved: {},
@@ -130,7 +139,15 @@ interface Store {
 const StoreContext = createContext<Store | null>(null);
 
 const PERSIST_KEY = "farmhand-studio-v1";
-const PERSIST_FIELDS = ["stStudio", "stAssets", "compStatus", "pexelsKey"] as const;
+const PERSIST_FIELDS = [
+  "stStudio",
+  "stAssets",
+  "compStatus",
+  "pexelsKey",
+  "plannedPosts",
+  "weekBrief",
+  "integrations",
+] as const;
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppState>(initialState);
@@ -160,7 +177,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       PERSIST_FIELDS.forEach((k) => (out[k] = state[k]));
       localStorage.setItem(PERSIST_KEY, JSON.stringify(out));
     } catch {}
-  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = useCallback((patch: Patch) => {
     setState((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));
