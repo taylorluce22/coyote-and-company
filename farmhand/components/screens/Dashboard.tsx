@@ -47,42 +47,46 @@ function Ticker() {
   const rows = Array.from({ length: 4 }, (_, i) => TICKER_POOL[(off + i) % TICKER_POOL.length]);
   return (
     <div
-      className="fh-glass"
       style={{
         position: "absolute",
-        top: 18,
+        top: 62,
         right: 18,
-        width: 250,
+        width: 244,
         borderRadius: 14,
-        padding: "13px 14px",
+        padding: "12px 13px",
         zIndex: 3,
+        background: "rgba(8,8,18,0.62)",
+        border: "1px solid rgba(255,255,255,0.09)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+        boxShadow: "0 16px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 9 }}>
         <span
           style={{
-            width: 7,
-            height: 7,
+            width: 6,
+            height: 6,
             borderRadius: "50%",
             background: "#41D98A",
-            boxShadow: "0 0 8px #41D98A",
+            boxShadow: "0 0 7px #41D98A",
             animation: "fh-pulse 2s ease infinite",
           }}
         />
-        <span className="fh-kicker" style={{ fontSize: 10 }}>
+        <span className="fh-kicker" style={{ fontSize: 9.5 }}>
           Live Activity
         </span>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
         {rows.map((r, i) => (
           <div
             key={`${off}-${i}`}
             ref={i === 0 ? rowRef : undefined}
-            style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 11.5 }}
+            style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 11 }}
           >
-            <span style={{ color: r.color, flexShrink: 0 }}>{r.icon}</span>
-            <span style={{ color: "#D8D6E6", lineHeight: 1.35, flex: 1 }}>{r.text}</span>
-            <span style={{ color: "#6E6C82", fontFamily: "var(--mono)", fontSize: 10 }}>{r.when}</span>
+            <span style={{ color: r.color, flexShrink: 0, fontSize: 10 }}>{r.icon}</span>
+            <span style={{ color: "#C9C7D6", lineHeight: 1.35, flex: 1 }}>{r.text}</span>
+            <span style={{ color: "#5E5C72", fontFamily: "var(--mono)", fontSize: 9.5 }}>{r.when}</span>
           </div>
         ))}
       </div>
@@ -234,8 +238,8 @@ export default function Dashboard() {
         >
           {is3D ? <FarmScene /> : <IsoMap />}
 
-          {/* header */}
-          <div style={{ position: "absolute", top: 20, left: 22, zIndex: 3 }}>
+          {/* header (decorative — never blocks scene interaction) */}
+          <div style={{ position: "absolute", top: 20, left: 22, zIndex: 3, pointerEvents: "none" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
               <span className="fh-kicker" style={{ fontSize: 10 }}>
                 Your Farm
@@ -256,19 +260,21 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* toggle */}
+          {/* toggle — anchored above the ticker in one clean control column */}
           <div
             style={{
               position: "absolute",
-              top: 20,
-              right: 286,
+              top: 18,
+              right: 18,
               zIndex: 3,
               display: "flex",
               gap: 2,
-              background: "rgba(8,8,20,0.6)",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: "rgba(8,8,18,0.62)",
+              border: "1px solid rgba(255,255,255,0.09)",
               borderRadius: 9,
               padding: 3,
+              backdropFilter: "blur(18px)",
+              WebkitBackdropFilter: "blur(18px)",
             }}
           >
             <button
@@ -311,24 +317,28 @@ export default function Dashboard() {
 
           {/* farm health HUD */}
           <div
-            className="fh-glass"
             style={{
               position: "absolute",
-              bottom: 66,
-              left: 22,
+              bottom: 62,
+              left: 20,
               zIndex: 3,
-              borderRadius: 13,
-              padding: "13px 16px",
-              border: "1px solid rgba(255,194,61,0.35)",
-              maxWidth: 260,
-              animation: "fh-float 9s ease-in-out infinite",
+              borderRadius: 12,
+              padding: "11px 14px",
+              background: "rgba(8,8,18,0.62)",
+              border: "1px solid rgba(255,194,61,0.28)",
+              backdropFilter: "blur(18px)",
+              WebkitBackdropFilter: "blur(18px)",
+              boxShadow: "0 14px 34px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.07)",
+              maxWidth: 250,
+              animation: "fh-float2 11s ease-in-out infinite",
+              pointerEvents: "none",
             }}
           >
-            <div className="fh-kicker" style={{ fontSize: 9.5, color: "#FFC23D" }}>
+            <div className="fh-kicker" style={{ fontSize: 9, color: "#FFC23D" }}>
               Farm Health
             </div>
-            <div style={{ fontSize: 14, fontWeight: 700, marginTop: 4 }}>6/8 groups active</div>
-            <div style={{ fontSize: 11.5, color: "#FFC23D", marginTop: 3 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700, marginTop: 3 }}>6/8 groups active</div>
+            <div style={{ fontSize: 11, color: "#E8B563", marginTop: 2 }}>
               Power Ranch quiet 3 weeks — action queued
             </div>
           </div>
@@ -342,10 +352,11 @@ export default function Dashboard() {
               bottom: 0,
               zIndex: 3,
               display: "flex",
-              gap: 8,
+              gap: 7,
               flexWrap: "wrap",
-              padding: "26px 20px 14px",
-              background: "linear-gradient(transparent, rgba(6,6,13,0.85))",
+              padding: "34px 18px 13px",
+              background: "linear-gradient(transparent, rgba(6,6,13,0.92))",
+              pointerEvents: "none",
             }}
           >
             {FARM_CHIPS.map((c) => (
@@ -354,19 +365,21 @@ export default function Dashboard() {
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: 7,
-                  fontSize: 11.5,
+                  gap: 6,
+                  fontSize: 11,
                   fontWeight: 600,
-                  color: "#D8D6E6",
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  color: "#C9C7D6",
+                  background: "rgba(8,8,18,0.55)",
+                  border: "1px solid rgba(255,255,255,0.08)",
                   borderRadius: 999,
-                  padding: "6px 12px",
+                  padding: "5px 11px",
+                  backdropFilter: "blur(10px)",
+                  WebkitBackdropFilter: "blur(10px)",
                 }}
               >
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: c.dot, boxShadow: `0 0 7px ${c.dot}` }} />
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: c.dot, boxShadow: `0 0 6px ${c.dot}` }} />
                 {c.name}
-                <span style={{ fontFamily: "var(--mono)", fontSize: 10, color: "#8B89A0" }}>{c.note}</span>
+                <span style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: "#77758C" }}>{c.note}</span>
               </span>
             ))}
           </div>
@@ -493,10 +506,14 @@ export default function Dashboard() {
       {/* stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
         {DASH_STATS.map((s) => (
-          <div key={s.label} className="fh-glass" style={{ borderRadius: 15, padding: "18px 20px" }}>
-            <div style={{ fontFamily: "var(--display)", fontWeight: 700, fontSize: 30, color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 4 }}>{s.label}</div>
-            <div style={{ fontSize: 11.5, color: "#6E6C82", marginTop: 2 }}>{s.sub}</div>
+          <div
+            key={s.label}
+            className="fh-glass"
+            style={{ borderRadius: 15, padding: "16px 18px", borderTop: `1px solid ${s.color}33` }}
+          >
+            <div style={{ fontFamily: "var(--display)", fontWeight: 700, fontSize: 28, letterSpacing: "-0.02em", color: s.color }}>{s.value}</div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 3 }}>{s.label}</div>
+            <div style={{ fontSize: 11, color: "#6E6C82", marginTop: 2 }}>{s.sub}</div>
           </div>
         ))}
       </div>
