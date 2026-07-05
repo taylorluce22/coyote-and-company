@@ -190,7 +190,7 @@ export default function StockPanel({ pillar }: { pillar: string }) {
     setErr("");
     try {
       const all = await fanOut(term, 8);
-      setResults(all.slice(0, 18));
+      setResults(all.slice(0, 20));
       if (!all.length) setErr("No results — try different words.");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Search failed");
@@ -212,29 +212,29 @@ export default function StockPanel({ pillar }: { pillar: string }) {
     setAdding(null);
   }
 
-  /* Auto-match: pillar-keyed seeds across ALL connected sources,
-     keep the darkest/cleanest (most text-legible) picks */
+  /* Auto-match: pillar-keyed seeds across ALL connected sources.
+     Pulls 20 different candidate options (two seed queries per source
+     for variety), deduped and interleaved — tap any option to add it. */
   async function autoMatch() {
     setMatching(true);
     setErr("");
     const seeds = (PILLAR_QUERIES[pillar] || PILLAR_QUERIES.tips).slice();
-    const pick = seeds[Math.floor(Math.random() * seeds.length)];
+    // two distinct seeds → broader variety across the same post subject
+    const i1 = Math.floor(Math.random() * seeds.length);
+    let i2 = Math.floor(Math.random() * seeds.length);
+    if (i2 === i1) i2 = (i2 + 1) % seeds.length;
     try {
-      const photos = await fanOut(pick, 6);
-      const scored: { r: StockPhoto; p: { dataURL: string; lum: number; busy: number } }[] = [];
-      for (const r of photos.slice(0, 9)) {
-        const p = await processImageURL(r.full, 1200, 0.82);
-        if (p) scored.push({ r, p });
+      const [batch1, batch2] = await Promise.all([fanOut(seeds[i1], 5), fanOut(seeds[i2], 5)]);
+      const seen = new Set<string>();
+      const options: StockPhoto[] = [];
+      for (const r of interleave([batch1, batch2])) {
+        if (seen.has(r.key)) continue;
+        seen.add(r.key);
+        options.push(r);
+        if (options.length >= 20) break;
       }
-      scored.sort(
-        (a, b) => a.p.lum * 0.62 + a.p.busy * 0.38 - (b.p.lum * 0.62 + b.p.busy * 0.38)
-      );
-      scored
-        .slice(0, 3)
-        .forEach(({ r, p }) =>
-          addAsset({ name: r.provider.toLowerCase() + "-" + r.key, dataURL: p.dataURL, lum: p.lum, busy: p.busy, source: r.provider.toLowerCase() })
-        );
-      if (!scored.length) setErr("No matches found — try a manual search.");
+      setResults(options);
+      if (!options.length) setErr("No matches found — try a manual search.");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Auto-match failed");
     }
