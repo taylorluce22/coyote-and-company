@@ -123,10 +123,10 @@ function IsoMap() {
                 key={b.name}
                 style={{
                   position: "absolute",
-                  left: [42, 272, 262, 84, 300][i],
-                  top: [66, 38, 186, 242, 322][i],
-                  width: [182, 152, 128, 164, 172][i],
-                  height: [126, 108, 92, 118, 128][i],
+                  left: [42, 272, 262, 84, 300, 448][i],
+                  top: [66, 38, 186, 242, 322, 96][i],
+                  width: [182, 152, 128, 164, 172, 158][i],
+                  height: [126, 108, 92, 118, 128, 120][i],
                   background: `linear-gradient(135deg, ${b.hex}2E, ${b.hex}0F)`,
                   border: `1px solid ${b.hex}66`,
                   borderRadius: 12,
@@ -256,7 +256,7 @@ export default function Dashboard() {
               Gilbert, AZ
             </div>
             <div style={{ fontSize: 13, color: "#A6A4B8", marginTop: 2 }}>
-              5 neighborhoods · 8 groups · one presence
+              6 neighborhoods · 8 groups · one presence
             </div>
           </div>
 
