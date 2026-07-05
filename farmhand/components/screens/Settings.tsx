@@ -60,16 +60,6 @@ export default function Settings() {
         })}
       </Card>
 
-      <Card title="Aerial hero photo">
-        <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.55, marginBottom: 10 }}>
-          The dashboard&apos;s <b style={{ color: "#7DD3FC" }}>AERIAL</b> view turns one photo of your farm area into a
-          living, digitized scene. Drop the photo in right on the dashboard — it&apos;s saved on this device.
-        </div>
-        <div style={{ fontSize: 10.5, color: state.aerialImg ? "#41D98A" : "#6E6C82" }}>
-          {state.aerialImg ? "● Photo loaded — switch the dashboard to AERIAL view" : "No photo yet — add one from the dashboard AERIAL view"}
-        </div>
-      </Card>
-
       <Card title="Connections">
         {SET_CONNECTIONS.map((c) => (
           <div key={c.name} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>

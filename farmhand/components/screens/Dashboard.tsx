@@ -4,8 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { useStore } from "@/lib/store";
 import { Switch, CountUp } from "@/components/ui";
-import FarmScene from "@/components/FarmScene";
-import AerialHero from "@/components/AerialHero";
 import {
   TICKER_POOL,
   FARM_CHIPS,
@@ -31,7 +29,7 @@ function Sparkline() {
   );
 }
 
-function Ticker() {
+function LiveActivity() {
   const [off, setOff] = useState(0);
   const rowRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -49,21 +47,13 @@ function Ticker() {
   return (
     <div
       style={{
-        position: "absolute",
-        top: 62,
-        right: 18,
-        width: 244,
         borderRadius: 14,
-        padding: "12px 13px",
-        zIndex: 3,
-        background: "rgba(8,8,18,0.62)",
-        border: "1px solid rgba(255,255,255,0.09)",
-        backdropFilter: "blur(18px)",
-        WebkitBackdropFilter: "blur(18px)",
-        boxShadow: "0 16px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)",
+        padding: "14px 16px",
+        background: "rgba(8,8,18,0.5)",
+        border: "1px solid rgba(255,255,255,0.08)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 9 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10 }}>
         <span
           style={{
             width: 6,
@@ -83,7 +73,7 @@ function Ticker() {
           <div
             key={`${off}-${i}`}
             ref={i === 0 ? rowRef : undefined}
-            style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 11 }}
+            style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 11.5 }}
           >
             <span style={{ color: r.color, flexShrink: 0, fontSize: 10 }}>{r.icon}</span>
             <span style={{ color: "#C9C7D6", lineHeight: 1.35, flex: 1 }}>{r.text}</span>
@@ -95,98 +85,108 @@ function Ticker() {
   );
 }
 
-/* isometric self-contained map (Live Map view) */
-function IsoMap() {
+/** deterministic 7-day mini activity bars per neighborhood */
+function MiniBars({ seedName, color, live }: { seedName: string; color: string; live: boolean }) {
+  const bars = Array.from({ length: 7 }, (_, i) => {
+    const seed = seedName.charCodeAt(i % seedName.length) + i * 17;
+    return live ? 24 + (seed % 62) : 8 + (seed % 18);
+  });
   return (
-    <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
-      <div className="fh-hero" style={{ position: "absolute", inset: 0 }}>
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 30, marginTop: 12 }}>
+      {bars.map((h, i) => (
         <div
+          key={i}
           style={{
-            position: "absolute",
-            left: "50%",
-            top: "54%",
-            width: 0,
-            height: 0,
-            transform: "translate(-50%,-50%) scale(0.92)",
+            flex: 1,
+            height: `${h}%`,
+            borderRadius: 2,
+            background: `linear-gradient(180deg, ${color}, ${color}44)`,
+            transformOrigin: "bottom",
+            animation: "fh-grow 0.6s cubic-bezier(0.22,1,0.36,1) both",
+            animationDelay: `${(0.15 + i * 0.05).toFixed(2)}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function NeighborhoodCard({
+  cluster,
+  onDraft,
+}: {
+  cluster: (typeof FARM_CLUSTERS)[number];
+  onDraft: () => void;
+}) {
+  return (
+    <div
+      className="fh-card3d"
+      style={{
+        borderRadius: 15,
+        padding: "16px 17px",
+        background: `linear-gradient(160deg, ${cluster.hex}17, rgba(255,255,255,0.02) 55%)`,
+        border: `1px solid ${cluster.hex}36`,
+        boxShadow: `0 16px 38px rgba(0,0,0,0.45), 0 6px 22px ${cluster.hex}1A, inset 0 1px 0 rgba(255,255,255,0.1)`,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span
+          style={{
+            width: 9,
+            height: 9,
+            borderRadius: "50%",
+            background: cluster.hex,
+            boxShadow: `0 0 9px ${cluster.hex}`,
+            animation: cluster.live ? "fh-pulse 2.4s ease infinite" : "none",
+            opacity: cluster.live ? 1 : 0.45,
+          }}
+        />
+        <span style={{ fontSize: 14.5, fontWeight: 700, color: "#F4F3F8", letterSpacing: "-0.01em" }}>
+          {cluster.name}
+        </span>
+        <span
+          style={{
+            marginLeft: "auto",
+            fontSize: 8.5,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            fontFamily: "var(--label)",
+            color: cluster.live ? "#41D98A" : "#FFC23D",
+            background: cluster.live ? "rgba(65,217,138,0.1)" : "rgba(255,194,61,0.1)",
+            border: `1px solid ${cluster.live ? "rgba(65,217,138,0.35)" : "rgba(255,194,61,0.35)"}`,
+            borderRadius: 999,
+            padding: "3px 8px",
           }}
         >
-          <div
-            style={{
-              position: "relative",
-              width: 520,
-              height: 480,
-              transform: "translate(-50%,-50%) rotateX(57deg) rotateZ(-42deg)",
-              transformStyle: "preserve-3d",
-            }}
-          >
-            {FARM_CLUSTERS.map((b, i) => (
-              <div
-                key={b.name}
-                style={{
-                  position: "absolute",
-                  left: [42, 272, 262, 84, 300, 448][i],
-                  top: [66, 38, 186, 242, 322, 96][i],
-                  width: [182, 152, 128, 164, 172, 158][i],
-                  height: [126, 108, 92, 118, 128, 120][i],
-                  background: `linear-gradient(135deg, ${b.hex}2E, ${b.hex}0F)`,
-                  border: `1px solid ${b.hex}66`,
-                  borderRadius: 12,
-                  transform: "translateZ(30px)",
-                  transformStyle: "preserve-3d",
-                  boxShadow: `18px 18px 0 rgba(2,6,23,0.55), 0 0 34px ${b.hex}26`,
-                }}
-              >
-                <span
-                  style={{
-                    position: "absolute",
-                    top: 10,
-                    right: 10,
-                    width: 9,
-                    height: 9,
-                    borderRadius: "50%",
-                    background: b.live ? b.hex : "#FFC23D",
-                    boxShadow: `0 0 10px ${b.hex}`,
-                    animation: b.live ? "fh-marker 2.6s ease infinite" : undefined,
-                  }}
-                />
-                <span
-                  style={{
-                    position: "absolute",
-                    left: 8,
-                    bottom: 8,
-                    transform: "rotateZ(42deg) rotateX(-57deg) scale(1.2)",
-                    transformOrigin: "left bottom",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 2,
-                    whiteSpace: "nowrap",
-                    color: "#F4F3F8",
-                    background: "rgba(5,5,12,0.78)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    borderRadius: 9,
-                    padding: "6px 10px",
-                    lineHeight: 1.25,
-                    fontSize: 11,
-                    fontWeight: 700,
-                  }}
-                >
-                  {b.name}
-                  <span
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 600,
-                      fontFamily: "var(--mono)",
-                      color: b.hex,
-                    }}
-                  >
-                    {b.stat}
-                  </span>
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+          {cluster.live ? "ACTIVE" : "QUIET"}
+        </span>
       </div>
+
+      <div style={{ fontSize: 12, color: "#A6A4B8", marginTop: 7, fontFamily: "var(--mono)" }}>
+        {cluster.stat}
+      </div>
+
+      <MiniBars seedName={cluster.name} color={cluster.hex} live={cluster.live} />
+
+      <button
+        onClick={onDraft}
+        style={{
+          marginTop: 13,
+          width: "100%",
+          background: `${cluster.hex}14`,
+          color: cluster.hex,
+          border: `1px solid ${cluster.hex}44`,
+          borderRadius: 9,
+          padding: "8px 0",
+          fontSize: 12,
+          fontWeight: 700,
+          cursor: "pointer",
+        }}
+      >
+        Draft a post →
+      </button>
     </div>
   );
 }
@@ -219,139 +219,76 @@ function RailCard({
 
 export default function Dashboard() {
   const { state, set } = useStore();
-  const view = state.heroView;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <div className="fh-dashgrid">
-        {/* HERO */}
+        {/* YOUR FARM — one panel, 2D neighborhood cards */}
         <div
-          className="fh-hero"
           style={{
             position: "relative",
-            minHeight: 560,
             borderRadius: 22,
-            overflow: "hidden",
             border: "1px solid rgba(255,255,255,0.1)",
             background: "radial-gradient(1000px 600px at 60% -10%, #1B1832, #0A0A14 60%, #06060D)",
             boxShadow: "0 30px 70px rgba(0,0,0,0.5)",
+            padding: "22px 22px 18px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
           }}
         >
-          {view === "3d" ? <FarmScene /> : view === "map" ? <IsoMap /> : <AerialHero />}
+          {/* header */}
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                <span className="fh-kicker" style={{ fontSize: 10 }}>
+                  Your Farm
+                </span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 10, color: "#41D98A", fontWeight: 700 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#41D98A", boxShadow: "0 0 8px #41D98A", animation: "fh-pulse 2s ease infinite" }} />
+                  LIVE
+                </span>
+              </div>
+              <div className="fh-title fh-shimmer-text" style={{ fontSize: 38, marginTop: 2 }}>
+                Gilbert, AZ
+              </div>
+              <div style={{ fontSize: 13, color: "#A6A4B8", marginTop: 1 }}>
+                6 neighborhoods · 8 groups · one presence
+              </div>
+            </div>
 
-          {/* header (decorative — never blocks scene interaction) */}
-          <div style={{ position: "absolute", top: 20, left: 22, zIndex: 3, pointerEvents: "none" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-              <span className="fh-kicker" style={{ fontSize: 10 }}>
-                Your Farm
-              </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 10, color: "#41D98A", fontWeight: 700 }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#41D98A", boxShadow: "0 0 8px #41D98A", animation: "fh-pulse 2s ease infinite" }} />
-                LIVE
-              </span>
-            </div>
+            {/* farm health */}
             <div
-              className="fh-title fh-shimmer-text"
-              style={{ fontSize: 42, marginTop: 4 }}
+              style={{
+                marginLeft: "auto",
+                borderRadius: 12,
+                padding: "10px 14px",
+                background: "rgba(8,8,18,0.55)",
+                border: "1px solid rgba(255,194,61,0.28)",
+                maxWidth: 250,
+              }}
             >
-              Gilbert, AZ
-            </div>
-            <div style={{ fontSize: 13, color: "#A6A4B8", marginTop: 2 }}>
-              6 neighborhoods · 8 groups · one presence
+              <div className="fh-kicker" style={{ fontSize: 9, color: "#FFC23D" }}>
+                Farm Health
+              </div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, marginTop: 3 }}>6/8 groups active</div>
+              <div style={{ fontSize: 11, color: "#E8B563", marginTop: 2 }}>
+                Power Ranch quiet 3 weeks — action queued
+              </div>
             </div>
           </div>
 
-          {/* toggle — anchored above the ticker in one clean control column */}
-          <div
-            style={{
-              position: "absolute",
-              top: 18,
-              right: 18,
-              zIndex: 3,
-              display: "flex",
-              gap: 2,
-              background: "rgba(8,8,18,0.62)",
-              border: "1px solid rgba(255,255,255,0.09)",
-              borderRadius: 9,
-              padding: 3,
-              backdropFilter: "blur(18px)",
-              WebkitBackdropFilter: "blur(18px)",
-            }}
-          >
-            {(
-              [
-                ["3d", "3D FARM", "#C9A8FF", "rgba(168,85,247,0.22)"],
-                ["map", "LIVE MAP", "#7DD3FC", "rgba(56,189,248,0.22)"],
-                ["aerial", "AERIAL", "#FF9ABF", "rgba(255,93,143,0.2)"],
-              ] as const
-            ).map(([id, label, color, bg]) => (
-              <button
-                key={id}
-                onClick={() => set({ heroView: id })}
-                style={{
-                  border: "none",
-                  borderRadius: 7,
-                  padding: "6px 12px",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: "0.06em",
-                  fontFamily: "var(--label)",
-                  cursor: "pointer",
-                  background: view === id ? bg : "transparent",
-                  color: view === id ? color : "#8B89A0",
-                }}
-              >
-                {label}
-              </button>
+          {/* neighborhood cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(225px, 1fr))", gap: 12 }}>
+            {FARM_CLUSTERS.map((cl) => (
+              <NeighborhoodCard key={cl.name} cluster={cl} onDraft={() => set({ tab: "composer" })} />
             ))}
           </div>
 
-          <Ticker />
-
-          {/* farm health HUD */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 62,
-              left: 20,
-              zIndex: 3,
-              borderRadius: 12,
-              padding: "11px 14px",
-              background: "rgba(8,8,18,0.62)",
-              border: "1px solid rgba(255,194,61,0.28)",
-              backdropFilter: "blur(18px)",
-              WebkitBackdropFilter: "blur(18px)",
-              boxShadow: "0 14px 34px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.07)",
-              maxWidth: 250,
-              animation: "fh-float2 11s ease-in-out infinite",
-              pointerEvents: "none",
-            }}
-          >
-            <div className="fh-kicker" style={{ fontSize: 9, color: "#FFC23D" }}>
-              Farm Health
-            </div>
-            <div style={{ fontSize: 13.5, fontWeight: 700, marginTop: 3 }}>6/8 groups active</div>
-            <div style={{ fontSize: 11, color: "#E8B563", marginTop: 2 }}>
-              Power Ranch quiet 3 weeks — action queued
-            </div>
-          </div>
+          <LiveActivity />
 
           {/* group chips */}
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 3,
-              display: "flex",
-              gap: 7,
-              flexWrap: "wrap",
-              padding: "34px 18px 13px",
-              background: "linear-gradient(transparent, rgba(6,6,13,0.92))",
-              pointerEvents: "none",
-            }}
-          >
+          <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
             {FARM_CHIPS.map((c) => (
               <span
                 key={c.name}
@@ -366,8 +303,6 @@ export default function Dashboard() {
                   border: "1px solid rgba(255,255,255,0.08)",
                   borderRadius: 999,
                   padding: "5px 11px",
-                  backdropFilter: "blur(10px)",
-                  WebkitBackdropFilter: "blur(10px)",
                 }}
               >
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: c.dot, boxShadow: `0 0 6px ${c.dot}` }} />
