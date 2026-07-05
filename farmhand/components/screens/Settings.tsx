@@ -60,29 +60,13 @@ export default function Settings() {
         })}
       </Card>
 
-      <Card title="Designer scene (Spline)">
+      <Card title="Aerial hero photo">
         <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.55, marginBottom: 10 }}>
-          Design a 3D hero scene visually at <b style={{ color: "#C9A8FF" }}>spline.design</b> (free), then Export → Code
-          Export → React and paste the scene URL here. The dashboard&apos;s DESIGNER view renders it live.
+          The dashboard&apos;s <b style={{ color: "#7DD3FC" }}>AERIAL</b> view turns one photo of your farm area into a
+          living, digitized scene. Drop the photo in right on the dashboard — it&apos;s saved on this device.
         </div>
-        <input
-          value={(state.splineUrl as string) || ""}
-          onChange={(e) => set({ splineUrl: e.target.value.trim() })}
-          placeholder="https://prod.spline.design/…/scene.splinecode"
-          style={{
-            width: "100%",
-            fontFamily: "var(--mono)",
-            fontSize: 12,
-            color: "#F4F3F8",
-            background: "rgba(0,0,0,0.28)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 9,
-            padding: "10px 12px",
-            outline: "none",
-          }}
-        />
-        <div style={{ fontSize: 10.5, color: state.splineUrl ? "#41D98A" : "#6E6C82", marginTop: 8 }}>
-          {state.splineUrl ? "● Scene connected — switch the dashboard to DESIGNER view" : "No scene connected yet"}
+        <div style={{ fontSize: 10.5, color: state.aerialImg ? "#41D98A" : "#6E6C82" }}>
+          {state.aerialImg ? "● Photo loaded — switch the dashboard to AERIAL view" : "No photo yet — add one from the dashboard AERIAL view"}
         </div>
       </Card>
 

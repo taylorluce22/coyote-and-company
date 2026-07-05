@@ -224,3 +224,5 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   }
   .fh-card3d, .fh-nav3d { transform: none !important; }
 }
+
+@keyframes fh-pinring { 0% { transform: translate(-50%, -50%) scale(0.35); opacity: 0.8; } 100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; } }

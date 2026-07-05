@@ -62,8 +62,8 @@ export interface AppState {
   integrations: Integrations;
 
   // dashboard
-  heroView: "3d" | "map" | "spline";
-  splineUrl: string;
+  heroView: "3d" | "map" | "aerial";
+  aerialImg: string; // digitized-aerial hero photo (dataURL, persisted)
 
   // reply assistant
   asstInput: string;
@@ -107,7 +107,7 @@ const initialState: AppState = {
   weekBrief: "",
   integrations: { cloudName: "", uploadPreset: "", makeWebhook: "", timezone: "", autoPublish: true },
   heroView: "3d",
-  splineUrl: "",
+  aerialImg: "",
   asstInput:
     "Anyone know a good realtor in Gilbert? Just moved to Val Vista and looking to buy in the spring — no idea where to start with this market.",
   asstTone: "warm",
@@ -141,7 +141,7 @@ const PERSIST_FIELDS = [
   "plannedPosts",
   "weekBrief",
   "integrations",
-  "splineUrl",
+  "aerialImg",
 ] as const;
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -172,7 +172,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       PERSIST_FIELDS.forEach((k) => (out[k] = state[k]));
       localStorage.setItem(PERSIST_KEY, JSON.stringify(out));
     } catch {}
-  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.splineUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.aerialImg]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = useCallback((patch: Patch) => {
     setState((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));
