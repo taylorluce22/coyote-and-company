@@ -342,14 +342,94 @@ export default function FarmScene() {
       return s;
     };
 
-    // rocky mound (foothill / mountain) — flattened low-poly cone
-    const ROCK = [0x8a6a4d, 0x7a5c42, 0x6e5138, 0x94745a];
+    // ---- procedural surface textures (reference-photo realism, zero downloads) ----
+    const canvasTex = (draw: (c: CanvasRenderingContext2D, w: number, h: number) => void, w = 256, h = 256) => {
+      const cv = document.createElement("canvas");
+      cv.width = w;
+      cv.height = h;
+      draw(cv.getContext("2d")!, w, h);
+      const t = new THREE.CanvasTexture(cv);
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      return t;
+    };
+    // desert floor: warm sand with speckle + soft wash blotches
+    const desertTex = canvasTex((c, w, h) => {
+      c.fillStyle = "#d3b78e";
+      c.fillRect(0, 0, w, h);
+      for (let i = 0; i < 5; i++) {
+        const g = c.createRadialGradient(Math.random() * w, Math.random() * h, 4, Math.random() * w, Math.random() * h, 60 + Math.random() * 70);
+        g.addColorStop(0, "rgba(160,128,88,0.16)");
+        g.addColorStop(1, "rgba(160,128,88,0)");
+        c.fillStyle = g;
+        c.fillRect(0, 0, w, h);
+      }
+      for (let i = 0; i < 5200; i++) {
+        const v = Math.random();
+        c.fillStyle = v < 0.5 ? `rgba(120,92,60,${0.05 + Math.random() * 0.08})` : `rgba(240,222,190,${0.05 + Math.random() * 0.07})`;
+        c.fillRect(Math.random() * w, Math.random() * h, 1.4, 1.4);
+      }
+    });
+    desertTex.repeat.set(2.4, 2.4);
+    // fairway turf: two-tone mow stripes + mottle
+    const grassTex = canvasTex((c, w, h) => {
+      c.fillStyle = "#3f9448";
+      c.fillRect(0, 0, w, h);
+      const stripe = 26;
+      for (let x = 0; x < w + h; x += stripe * 2) {
+        c.fillStyle = "rgba(96,196,102,0.32)";
+        c.save();
+        c.translate(x, 0);
+        c.rotate(0.24);
+        c.fillRect(0, -h, stripe, h * 3);
+        c.restore();
+      }
+      for (let i = 0; i < 3800; i++) {
+        const v = Math.random();
+        c.fillStyle = v < 0.5 ? `rgba(28,92,40,${0.05 + Math.random() * 0.09})` : `rgba(140,220,130,${0.04 + Math.random() * 0.07})`;
+        c.fillRect(Math.random() * w, Math.random() * h, 1.3, 1.3);
+      }
+    });
+    grassTex.repeat.set(1.6, 1.6);
+    // rock face: layered strata + heavy grain (Camelback granite)
+    const rockTex = canvasTex((c, w, h) => {
+      c.fillStyle = "#8a6a4d";
+      c.fillRect(0, 0, w, h);
+      const bands = ["#75563d", "#94745a", "#6e5138", "#9d7d5e", "#7a5c42"];
+      let y = 0;
+      let bi = 0;
+      while (y < h) {
+        const bh2 = 8 + Math.random() * 22;
+        c.fillStyle = bands[bi++ % bands.length];
+        c.globalAlpha = 0.4 + Math.random() * 0.3;
+        c.fillRect(0, y, w, bh2);
+        y += bh2;
+      }
+      c.globalAlpha = 1;
+      for (let i = 0; i < 6400; i++) {
+        const v = Math.random();
+        c.fillStyle = v < 0.55 ? `rgba(52,38,24,${0.06 + Math.random() * 0.1})` : `rgba(214,186,150,${0.05 + Math.random() * 0.08})`;
+        c.fillRect(Math.random() * w, Math.random() * h, 1.5, 1.5);
+      }
+    });
+    rockTex.repeat.set(2, 1.4);
+
+    // craggy mound (foothill / mountain): noise-displaced, flat-shaded, strata-textured
+    const rockMat = new THREE.MeshStandardMaterial({ map: rockTex, roughness: 1, flatShading: true });
     const mkMound = (w: number, h: number) => {
-      const m = new THREE.Mesh(
-        new THREE.ConeGeometry(w, h, 7, 1),
-        new THREE.MeshStandardMaterial({ color: ROCK[(Math.random() * ROCK.length) | 0], roughness: 1 })
-      );
-      m.scale.z = 0.55;
+      const geo = new THREE.ConeGeometry(w, h, 10, 5);
+      const pos = geo.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < pos.count; i++) {
+        const y = pos.getY(i);
+        const rFrac = 1 - (y + h / 2) / h; // 1 at base → 0 at apex
+        if (rFrac > 0.02 && rFrac < 0.99) {
+          pos.setX(i, pos.getX(i) + (Math.random() - 0.5) * w * 0.22 * rFrac);
+          pos.setZ(i, pos.getZ(i) + (Math.random() - 0.5) * w * 0.22 * rFrac);
+          pos.setY(i, y + (Math.random() - 0.5) * h * 0.07);
+        }
+      }
+      geo.computeVertexNormals();
+      const m = new THREE.Mesh(geo, rockMat);
+      m.scale.z = 0.55 + Math.random() * 0.15;
       m.rotation.y = Math.random() * Math.PI;
       return m;
     };
@@ -415,7 +495,7 @@ export default function FarmScene() {
       const plateGeo = new THREE.ExtrudeGeometry(plateShape(pw, pd, 0.32), { depth: PLATE_H, bevelEnabled: false });
       const plate = new THREE.Mesh(
         plateGeo,
-        new THREE.MeshStandardMaterial({ color: 0xcbb187, roughness: 0.95, metalness: 0 })
+        new THREE.MeshStandardMaterial({ map: desertTex, color: 0xf5ead2, roughness: 0.95, metalness: 0 })
       );
       plate.rotation.x = -Math.PI / 2;
       plate.position.y = 0; // extrusion rises +y, so the walkable top lands at PLATE_H
@@ -503,7 +583,7 @@ export default function FarmScene() {
           roof.rotation.y = home.rotation.y;
           cg.add(home, roof);
         }
-        // S-curve fairway chain along a sampled path
+        // ---- ONE continuous fairway ribbon (no stacked decals) ----
         const curve = new THREE.CatmullRomCurve3([
           new THREE.Vector3(-pw * 0.4, 0, pd * 0.36),
           new THREE.Vector3(-pw * 0.16, 0, pd * 0.16),
@@ -511,70 +591,133 @@ export default function FarmScene() {
           new THREE.Vector3(pw * 0.22, 0, pd * 0.08),
           new THREE.Vector3(pw * 0.36, 0, -pd * 0.06),
         ]);
-        const fairwayMat = new THREE.MeshStandardMaterial({ color: 0x3f9448, roughness: 0.85, emissive: 0x123f18, emissiveIntensity: 0.5 });
-        const fairway2Mat = new THREE.MeshStandardMaterial({ color: 0x4aa64f, roughness: 0.85, emissive: 0x164a1c, emissiveIntensity: 0.5 });
-        const greenMat = new THREE.MeshStandardMaterial({ color: 0x5cbe57, roughness: 0.8, emissive: 0x1c5a22, emissiveIntensity: 0.55 });
-        const treeMat = new THREE.MeshStandardMaterial({ color: 0x2e6e3c, roughness: 0.9 });
-        const trunkMatPV = new THREE.MeshStandardMaterial({ color: 0x5a4530, roughness: 0.95 });
-        const pathMat = new THREE.MeshStandardMaterial({ color: 0xd9d2bd, roughness: 1 });
-        const SAMPLES = 9;
-        for (let i = 0; i < SAMPLES; i++) {
-          const t = i / (SAMPLES - 1);
+        const N = 32;
+        const ribbonShape = (center: THREE.CatmullRomCurve3, halfAt: (t: number) => number) => {
+          const left: THREE.Vector2[] = [];
+          const right: THREE.Vector2[] = [];
+          for (let i = 0; i <= N; i++) {
+            const t = i / N;
+            const pt = center.getPoint(t);
+            const tan = center.getTangent(t);
+            const px = -tan.z,
+              pz = tan.x;
+            const hw = halfAt(t);
+            left.push(new THREE.Vector2(pt.x + px * hw, pt.z + pz * hw));
+            right.push(new THREE.Vector2(pt.x - px * hw, pt.z - pz * hw));
+          }
+          const shape = new THREE.Shape();
+          shape.moveTo(left[0].x, left[0].y);
+          left.forEach((v) => shape.lineTo(v.x, v.y));
+          right.reverse().forEach((v) => shape.lineTo(v.x, v.y));
+          shape.closePath();
+          return shape;
+        };
+        const flatMesh = (shape: THREE.Shape, mat: THREE.Material, y: number, order: number) => {
+          const geo = new THREE.ShapeGeometry(shape, 6);
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.rotation.x = -Math.PI / 2;
+          mesh.position.y = y;
+          mesh.renderOrder = order;
+          return mesh;
+        };
+        const decalMat = (opts: THREE.MeshStandardMaterialParameters, layer: number) =>
+          new THREE.MeshStandardMaterial({
+            ...opts,
+            polygonOffset: true,
+            polygonOffsetFactor: -2 * layer,
+            polygonOffsetUnits: -1,
+          });
+        // fairway: organic width variation, striped turf texture, single mesh
+        const fairwayMat = decalMat({ map: grassTex, color: 0xd9ffdc, roughness: 0.85, emissive: 0x123f18, emissiveIntensity: 0.35 }, 1);
+        const fairway = flatMesh(
+          ribbonShape(curve, (t) => 0.16 + 0.07 * Math.sin(t * Math.PI * 2.6) + 0.05 * Math.sin(t * Math.PI * 7 + 1.2)),
+          fairwayMat,
+          PLATE_H + 0.004,
+          2
+        );
+        cg.add(fairway);
+        // cart path: thin ribbon offset alongside the fairway, single mesh
+        const pathPts: THREE.Vector3[] = [];
+        for (let i = 0; i <= N; i++) {
+          const t = i / N;
           const pt = curve.getPoint(t);
           const tan = curve.getTangent(t);
-          const blob = new THREE.Mesh(new THREE.CircleGeometry(1, 20), i % 2 ? fairway2Mat : fairwayMat);
-          blob.rotation.x = -Math.PI / 2;
-          blob.rotation.z = Math.atan2(tan.x, tan.z);
-          blob.scale.set(0.34 + Math.random() * 0.1, 0.19 + Math.random() * 0.05, 1);
-          blob.position.set(pt.x, PLATE_H + 0.005, pt.z);
-          cg.add(blob);
-          // flanking trees (alternate sides)
-          const perp = new THREE.Vector3(-tan.z, 0, tan.x).normalize();
-          if (i > 0 && i < SAMPLES - 1) {
-            const side = i % 2 === 0 ? 1 : -1;
-            const tp = pt.clone().add(perp.clone().multiplyScalar(side * 0.26));
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.09, 5), trunkMatPV);
-            trunk.position.set(tp.x, PLATE_H + 0.045, tp.z);
-            const crown = new THREE.Mesh(new THREE.SphereGeometry(0.055 + Math.random() * 0.025, 7, 6), treeMat);
-            crown.position.set(tp.x, PLATE_H + 0.12, tp.z);
-            crown.scale.y = 0.85;
-            cg.add(trunk, crown);
-          }
-          // cart path segments hugging one side
-          const pp = pt.clone().add(perp.clone().multiplyScalar(0.2));
-          const seg = new THREE.Mesh(bodyGeo, pathMat);
-          seg.scale.set(0.16, 0.004, 0.035);
-          seg.rotation.y = Math.atan2(tan.x, tan.z) + Math.PI / 2;
-          seg.position.set(pp.x, PLATE_H + 0.007, pp.z);
-          cg.add(seg);
+          pathPts.push(new THREE.Vector3(pt.x - tan.z * 0.27, 0, pt.z + tan.x * 0.27));
         }
-        // putting greens at both ends + clustered bunkers near them
-        const bunkerMat = new THREE.MeshStandardMaterial({ color: 0xefe6c2, roughness: 1 });
-        [0, 1].forEach((endT) => {
+        const pathCurve = new THREE.CatmullRomCurve3(pathPts);
+        const pathMat = decalMat({ color: 0xdcd4bd, roughness: 1 }, 2);
+        cg.add(flatMesh(ribbonShape(pathCurve, () => 0.018), pathMat, PLATE_H + 0.005, 3));
+        // putting greens: collar ring + green, at both ends
+        const greenMat = decalMat({ map: grassTex, color: 0xb4ffb0, roughness: 0.8, emissive: 0x1c5a22, emissiveIntensity: 0.4 }, 3);
+        const collarMat = decalMat({ color: 0x77c46b, roughness: 0.85 }, 2);
+        const bunkerMat = decalMat({ color: 0xefe6c2, roughness: 1 }, 3);
+        [0.02, 0.98].forEach((endT) => {
           const pt = curve.getPoint(endT);
-          const green = new THREE.Mesh(new THREE.CircleGeometry(0.11, 18), greenMat);
+          const collar = new THREE.Mesh(new THREE.CircleGeometry(0.15, 22), collarMat);
+          collar.rotation.x = -Math.PI / 2;
+          collar.scale.set(1.25, 1, 1);
+          collar.position.set(pt.x, PLATE_H + 0.005, pt.z);
+          collar.renderOrder = 3;
+          const green = new THREE.Mesh(new THREE.CircleGeometry(0.11, 22), greenMat);
           green.rotation.x = -Math.PI / 2;
           green.scale.set(1.25, 1, 1);
-          green.position.set(pt.x, PLATE_H + 0.009, pt.z);
-          cg.add(green);
-          for (let b = 0; b < 3; b++) {
-            const ang = Math.random() * Math.PI * 2;
-            const bunker = new THREE.Mesh(new THREE.CircleGeometry(0.028 + Math.random() * 0.018, 10), bunkerMat);
+          green.position.set(pt.x, PLATE_H + 0.006, pt.z);
+          green.renderOrder = 4;
+          cg.add(collar, green);
+          // two bunkers tucked at each green edge
+          [0.8, 2.4].forEach((ang) => {
+            const bunker = new THREE.Mesh(new THREE.CircleGeometry(0.035, 12), bunkerMat);
             bunker.rotation.x = -Math.PI / 2;
-            bunker.scale.set(1.4, 0.8, 1);
-            bunker.position.set(pt.x + Math.cos(ang) * 0.15, PLATE_H + 0.01, pt.z + Math.sin(ang) * 0.12);
+            bunker.scale.set(1.5, 0.9, 1);
+            bunker.position.set(pt.x + Math.cos(ang + endT * 2) * 0.17, PLATE_H + 0.006, pt.z + Math.sin(ang + endT * 2) * 0.13);
+            bunker.renderOrder = 4;
             cg.add(bunker);
-          }
+          });
         });
-        // pond beside the mid-fairway
+        // pond with sand rim so it sits IN the terrain, not on it
+        const pondRim = new THREE.Mesh(new THREE.CircleGeometry(0.155, 22), decalMat({ color: 0xcbb58c, roughness: 1 }, 2));
+        pondRim.rotation.x = -Math.PI / 2;
+        pondRim.scale.set(1.5, 0.9, 1);
+        pondRim.position.set(-pw * 0.02, PLATE_H + 0.005, pd * 0.12);
+        pondRim.renderOrder = 3;
         const pond = new THREE.Mesh(
-          new THREE.CircleGeometry(0.13, 20),
-          new THREE.MeshStandardMaterial({ color: 0x2fb9c9, emissive: 0x1a7f8e, emissiveIntensity: 0.7, roughness: 0.2 })
+          new THREE.CircleGeometry(0.13, 22),
+          decalMat({ color: 0x2fb9c9, emissive: 0x1a7f8e, emissiveIntensity: 0.7, roughness: 0.2 }, 3)
         );
         pond.rotation.x = -Math.PI / 2;
         pond.scale.set(1.5, 0.9, 1);
-        pond.position.set(-pw * 0.02, PLATE_H + 0.008, pd * 0.12);
-        cg.add(pond);
+        pond.position.set(-pw * 0.02, PLATE_H + 0.006, pd * 0.12);
+        pond.renderOrder = 4;
+        cg.add(pondRim, pond);
+        // orderly instanced tree rows lining the fairway (reference look)
+        const crownGeo = new THREE.SphereGeometry(0.055, 7, 6);
+        const trunkGeoPV = new THREE.CylinderGeometry(0.011, 0.015, 0.08, 5);
+        const crownMat = new THREE.MeshStandardMaterial({ color: 0x2e6e3c, roughness: 0.9 });
+        const trunkMatPV = new THREE.MeshStandardMaterial({ color: 0x5a4530, roughness: 0.95 });
+        const spots: { x: number; z: number; s: number }[] = [];
+        for (let i = 1; i < N; i += 2) {
+          const t = i / N;
+          const pt = curve.getPoint(t);
+          const tan = curve.getTangent(t);
+          [1, -1].forEach((side) => {
+            if (t < 0.14 && side < 0) return; // keep the resort corner open
+            spots.push({
+              x: pt.x + -tan.z * side * (0.3 + Math.random() * 0.05),
+              z: pt.z + tan.x * side * (0.3 + Math.random() * 0.05),
+              s: 0.75 + Math.random() * 0.55,
+            });
+          });
+        }
+        const crowns = new THREE.InstancedMesh(crownGeo, crownMat, spots.length);
+        const trunks = new THREE.InstancedMesh(trunkGeoPV, trunkMatPV, spots.length);
+        const m4 = new THREE.Matrix4();
+        spots.forEach((sp, i) => {
+          m4.compose(new THREE.Vector3(sp.x, PLATE_H + 0.04 * sp.s, sp.z), new THREE.Quaternion(), new THREE.Vector3(sp.s, sp.s, sp.s));
+          trunks.setMatrixAt(i, m4);
+          m4.compose(new THREE.Vector3(sp.x, PLATE_H + 0.11 * sp.s, sp.z), new THREE.Quaternion(), new THREE.Vector3(sp.s, sp.s * 0.85, sp.s));
+          crowns.setMatrixAt(i, m4);
+        });
+        cg.add(crowns, trunks);
         // resort complex: villas + bright pool with white deck
         const deck = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: 0xf0ead8, roughness: 0.95 }));
         deck.scale.set(0.24, 0.006, 0.16);
@@ -593,13 +736,15 @@ export default function FarmScene() {
           villa.scale.setScalar(0.8);
           cg.add(villa);
         }
-        // desert scrub between holes
-        for (let s = 0; s < 9; s++) {
+        // desert scrub kept OFF the fairway — two tidy pockets only
+        [
+          [-0.12, 0.4], [0.14, 0.42], [0.42, 0.3], [0.44, 0.14], [-0.44, -0.1], [0.05, -0.05],
+        ].forEach(([sx, sz]) => {
           const bush = mkBush();
-          bush.position.set((Math.random() - 0.5) * pw * 0.85, PLATE_H, pd * (0.05 + Math.random() * 0.4) * (Math.random() < 0.25 ? -0.4 : 1));
-          bush.scale.setScalar(0.6 + Math.random() * 0.5);
+          bush.position.set(sx * pw, PLATE_H, sz * pd);
+          bush.scale.setScalar(0.6 + Math.random() * 0.4);
           cg.add(bush);
-        }
+        });
       } else if (ci % 2 === 0) {
         // foothill backdrop on some tiles — low rocky mounds along the back edge
         const mounds = 2 + (ci % 3);
