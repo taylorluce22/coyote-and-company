@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { processImageURL, uid, type Asset } from "@/lib/studio";
 
@@ -156,31 +156,54 @@ export default function StockPanel({ pillar }: { pillar: string }) {
   const [showKeys, setShowKeys] = useState(false);
   const [drafts, setDrafts] = useState({ pexels: "", pixabay: "", unsplash: "" });
 
+  /* app-side keys (Vercel env vars) — connected once for every device, forever */
+  const [server, setServer] = useState({ pexels: false, pixabay: false, unsplash: false });
+  useEffect(() => {
+    fetch("/api/stock")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => j && setServer(j))
+      .catch(() => {});
+  }, []);
+
+  const pexelsOn = server.pexels || !!pexelsKey;
+  const pixabayOn = server.pixabay || !!pixabayKey;
+  const unsplashOn = server.unsplash || !!unsplashKey;
+
   const sources: { id: string; label: string; on: boolean }[] = [
     { id: "openverse", label: "Openverse", on: true },
     { id: "stocksnap", label: "StockSnap", on: true },
     { id: "wikimedia", label: "Wikimedia", on: true },
-    { id: "pexels", label: "Pexels", on: !!pexelsKey },
-    { id: "pixabay", label: "Pixabay", on: !!pixabayKey },
-    { id: "unsplash", label: "Unsplash", on: !!unsplashKey },
+    { id: "pexels", label: "Pexels", on: pexelsOn },
+    { id: "pixabay", label: "Pixabay", on: pixabayOn },
+    { id: "unsplash", label: "Unsplash", on: unsplashOn },
   ];
   const connectedCount = sources.filter((s) => s.on).length;
 
   const addAsset = (a: Omit<Asset, "id">) =>
     set((s) => ({ stAssets: [...s.stAssets, { ...a, id: uid() }].slice(-40) }));
 
-  /* fan-out search across every connected source (3 keyless + any keyed) */
+  /* fan-out search across every connected source (3 keyless + any keyed).
+     App-side keys are proxied through /api/stock so they never need
+     reconnecting; browser-pasted keys act as a fallback. */
   async function fanOut(term: string, per: number): Promise<StockPhoto[]> {
-    const jobs: Promise<StockPhoto[]>[] = [
-      searchOpenverse(term, per).catch(() => []),
-      searchOpenverse(term, per, "stocksnap").catch(() => []),
-      searchWikimedia(term, per).catch(() => []),
+    const jobs: Promise<StockPhoto[][]>[] = [
+      searchOpenverse(term, per).then((l) => [l]).catch(() => [[]]),
+      searchOpenverse(term, per, "stocksnap").then((l) => [l]).catch(() => [[]]),
+      searchWikimedia(term, per).then((l) => [l]).catch(() => [[]]),
     ];
-    if (pexelsKey) jobs.push(searchPexels(pexelsKey, term, per).catch(() => []));
-    if (pixabayKey) jobs.push(searchPixabay(pixabayKey, term, per).catch(() => []));
-    if (unsplashKey) jobs.push(searchUnsplash(unsplashKey, term, per).catch(() => []));
-    const lists = await Promise.all(jobs);
-    return interleave(lists);
+    if (server.pexels || server.pixabay || server.unsplash) {
+      jobs.push(
+        fetch(`/api/stock?q=${encodeURIComponent(term)}&n=${per}`)
+          .then((r) => (r.ok ? r.json() : { lists: [] }))
+          .then((j) => (j.lists || []) as StockPhoto[][])
+          .catch(() => [[]])
+      );
+    }
+    if (!server.pexels && pexelsKey) jobs.push(searchPexels(pexelsKey, term, per).then((l) => [l]).catch(() => [[]]));
+    if (!server.pixabay && pixabayKey) jobs.push(searchPixabay(pixabayKey, term, per).then((l) => [l]).catch(() => [[]]));
+    if (!server.unsplash && unsplashKey) jobs.push(searchUnsplash(unsplashKey, term, per).then((l) => [l]).catch(() => [[]]));
+    const nested = await Promise.all(jobs);
+    return interleave(nested.flat());
   }
 
   async function run(query?: string) {
@@ -260,7 +283,15 @@ export default function StockPanel({ pillar }: { pillar: string }) {
     saved: string,
     savePatch: (v: string) => Record<string, unknown>,
     helpUrl: string
-  ) => (
+  ) => {
+    if (server[id])
+      return (
+        <div key={id} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+          <span style={{ fontSize: 10.5, fontWeight: 700, color: PROVIDER_COLORS[id.toUpperCase()], fontFamily: "var(--mono)" }}>{label}</span>
+          <span style={{ fontSize: 10, color: "#41D98A" }}>● connected in the app — permanent, all devices</span>
+        </div>
+      );
+    return (
     <div key={id} style={{ marginBottom: 8 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
         <span style={{ fontSize: 10.5, fontWeight: 700, color: PROVIDER_COLORS[id.toUpperCase()], fontFamily: "var(--mono)" }}>{label}</span>
@@ -297,7 +328,8 @@ export default function StockPanel({ pillar }: { pillar: string }) {
         </div>
       )}
     </div>
-  );
+    );
+  };
 
   return (
     <div className="fh-glass" style={{ borderRadius: 14, padding: 14 }}>
