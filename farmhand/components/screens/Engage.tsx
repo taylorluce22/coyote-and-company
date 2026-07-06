@@ -8,6 +8,118 @@ import Assistant from "./Assistant";
 import { cadenceCap, type StrategyProfile } from "@/lib/strategy";
 import { draftReply, fairHousingLint, scoreOpportunity, tagOpportunity, type Opportunity } from "@/lib/engage";
 
+interface RadarItem {
+  id: string;
+  title: string;
+  text: string;
+  subreddit: string;
+  author: string;
+  url: string;
+  ageMins: number;
+  comments: number;
+}
+
+function ageLabel(mins: number) {
+  return mins < 60 ? `${mins}m ago` : mins < 1440 ? `${Math.round(mins / 60)}h ago` : `${Math.round(mins / 1440)}d ago`;
+}
+
+/** Live Reddit radar — real conversations mentioning the agent's territories. */
+function Radar({ onCapture }: { onCapture: (item: RadarItem) => void }) {
+  const { state } = useStore();
+  const strategy = state.strategy as StrategyProfile;
+  const [items, setItems] = useState<RadarItem[] | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState(false);
+  const [captured, setCaptured] = useState<Record<string, boolean>>({});
+
+  const scan = async () => {
+    if (scanning) return;
+    setScanning(true);
+    setError(false);
+    try {
+      const results = await Promise.all(
+        strategy.territories.slice(0, 4).map((t) =>
+          fetch(`/api/radar?q=${encodeURIComponent(`"${t.name}"`)}`)
+            .then((r) => r.json())
+            .catch(() => ({ items: [] }))
+        )
+      );
+      const seen = new Set<string>();
+      const all: RadarItem[] = [];
+      results.forEach((r) => (r.items || []).forEach((it: RadarItem) => {
+        if (!seen.has(it.id)) {
+          seen.add(it.id);
+          all.push(it);
+        }
+      }));
+      all.sort((a, b) => a.ageMins - b.ageMins);
+      setItems(all.slice(0, 8));
+      if (!all.length && results.every((r) => r.error)) setError(true);
+    } catch {
+      setError(true);
+      setItems([]);
+    }
+    setScanning(false);
+  };
+
+  return (
+    <div className="fh-glass" style={{ borderRadius: 14, padding: "15px 17px", marginBottom: 16, border: "1px solid rgba(255,154,98,0.22)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#FF9A62", boxShadow: "0 0 8px #FF9A62", animation: "fh-pulse 2s ease infinite" }} />
+        <span className="fh-kicker" style={{ fontSize: 9.5 }}>Live radar · Reddit</span>
+        <span style={{ fontSize: 10.5, color: "#77758C" }}>
+          real conversations mentioning {strategy.territories.map((t) => t.name).join(", ")}
+        </span>
+        <button
+          onClick={scan}
+          disabled={scanning}
+          style={{ marginLeft: "auto", background: scanning ? "rgba(255,255,255,0.05)" : "rgba(255,154,98,0.12)", color: scanning ? "#8B89A0" : "#FF9A62", border: "1px solid rgba(255,154,98,0.4)", borderRadius: 8, padding: "6px 15px", fontSize: 11.5, fontWeight: 700, cursor: scanning ? "default" : "pointer" }}
+        >
+          {scanning ? "Scanning…" : items === null ? "Scan now" : "↻ Rescan"}
+        </button>
+      </div>
+
+      {items !== null && (
+        <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+          {items.length === 0 ? (
+            <div style={{ fontSize: 11.5, color: "#77758C", lineHeight: 1.55 }}>
+              {error
+                ? "Couldn't reach Reddit from this deployment right now — try again in a minute."
+                : "No fresh threads mentioning your territories this month. Rescan tomorrow — relocation questions come in waves."}
+            </div>
+          ) : (
+            items.map((it) => (
+              <div key={it.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "9px 10px", background: "rgba(0,0,0,0.24)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 650, color: "#EDEBF6", lineHeight: 1.4 }}>{it.title}</div>
+                  <div style={{ fontSize: 10, color: "#77758C", marginTop: 3, fontFamily: "var(--mono)" }}>
+                    r/{it.subreddit} · u/{it.author} · {ageLabel(it.ageMins)} · {it.comments} comments ·{" "}
+                    <a href={it.url} target="_blank" rel="noreferrer" style={{ color: "#7DD3FC", textDecoration: "none" }}>
+                      open thread ↗
+                    </a>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { onCapture(it); setCaptured((c) => ({ ...c, [it.id]: true })); }}
+                  disabled={!!captured[it.id]}
+                  style={{ flexShrink: 0, background: captured[it.id] ? "transparent" : "rgba(38,224,200,0.12)", color: captured[it.id] ? "#41D98A" : "#26E0C8", border: captured[it.id] ? "none" : "1px solid rgba(38,224,200,0.4)", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: captured[it.id] ? "default" : "pointer" }}
+                >
+                  {captured[it.id] ? "✓ In inbox" : "→ Inbox"}
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      <div style={{ fontSize: 10, color: "#5E5C72", marginTop: 10, lineHeight: 1.5 }}>
+        Reddit is the one platform apps may read. Facebook Groups &amp; Nextdoor don&apos;t allow it (and scraping risks
+        your account) — capture those below, and turn on each group&apos;s keyword alerts so they come to you.
+      </div>
+    </div>
+  );
+}
+
 const TAG_COLORS: Record<string, string> = {
   relocation: "#7DD3FC",
   "market-question": "#FFC23D",
@@ -51,8 +163,27 @@ function Opportunities() {
 
   const engagedThisWeek = opps.filter((o) => o.status === "engaged").length;
 
+  const captureFromRadar = (it: { title: string; text: string; subreddit: string; url: string }) => {
+    const full = `${it.title} ${it.text}`.trim();
+    const territoryNames = strategy.territories.map((t) => t.name);
+    const matched = territoryNames.find((n) => full.toLowerCase().includes(n.toLowerCase()));
+    const opp: Opportunity = {
+      id: `opp-${Date.now()}-${Math.round(Math.random() * 1e6)}`,
+      sourceName: `r/${it.subreddit}`,
+      territory: matched || territoryNames[0] || "General",
+      excerpt: full.slice(0, 400),
+      url: it.url,
+      tags: tagOpportunity(full),
+      status: "new",
+      capturedAt: "just now",
+      firstTouch: !opps.some((o) => o.sourceName === `r/${it.subreddit}`),
+    };
+    set((s) => ({ opportunities: [opp, ...(s.opportunities as Opportunity[])] }));
+  };
+
   return (
     <div>
+      <Radar onCapture={captureFromRadar} />
       {/* cadence cap — visible, not secret */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, fontSize: 12, color: "#A6A4B8", background: "rgba(38,224,200,0.06)", border: "1px solid rgba(38,224,200,0.22)", borderRadius: 11, padding: "10px 14px" }}>
         <span style={{ color: "#26E0C8", fontWeight: 800, fontFamily: "var(--mono)", fontSize: 12.5 }}>
