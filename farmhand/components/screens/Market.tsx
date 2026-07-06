@@ -92,9 +92,10 @@ function TerritoryDetail({ t, onBack }: { t: Territory; onBack: () => void }) {
 }
 
 export default function Market() {
-  const { state } = useStore();
+  const { state, set } = useStore();
   const strategy = state.strategy as StrategyProfile;
-  const [sel, setSel] = useState<string | null>(null);
+  const sel = state.marketSel as string | null;
+  const setSel = (slug: string | null) => set({ marketSel: slug });
   const selT = strategy.territories.find((t) => t.slug === sel);
 
   if (selT) return <TerritoryDetail t={selT} onBack={() => setSel(null)} />;
