@@ -78,21 +78,31 @@ function isMatch(text) {
   return intent && (pageMatch || kwInText);
 }
 
-async function queueMatch(text, url) {
+// Serialize all storage writes through one chain — concurrent matches in a
+// single scan would otherwise read-modify-write the same array and clobber
+// each other, losing all but the last capture.
+let writeLock = Promise.resolve();
+
+function queueMatch(text, url) {
   const key = hashOf(text.slice(0, 200));
-  if (seen.has(key)) return false;
+  if (seen.has(key)) return Promise.resolve(false);
   seen.add(key);
-  const { fhQueue = [] } = await chrome.storage.local.get("fhQueue");
-  if (fhQueue.some((q) => q.key === key) || fhQueue.length >= 30) return false;
-  fhQueue.push({
-    key,
-    t: text.slice(0, 500),
-    s: sourceName(),
-    u: (url || location.href).slice(0, 400),
-    at: Date.now(),
+  const result = writeLock.then(async () => {
+    const { fhQueue = [] } = await chrome.storage.local.get("fhQueue");
+    if (fhQueue.some((q) => q.key === key) || fhQueue.length >= 30) return false;
+    fhQueue.push({
+      key,
+      t: text.slice(0, 500),
+      s: sourceName(),
+      u: (url || location.href).slice(0, 400),
+      at: Date.now(),
+    });
+    await chrome.storage.local.set({ fhQueue });
+    return true;
   });
-  await chrome.storage.local.set({ fhQueue });
-  return true;
+  // keep the lock chain alive even if this write throws
+  writeLock = result.then(() => {}, () => {});
+  return result;
 }
 
 function scan() {
