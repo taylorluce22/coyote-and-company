@@ -247,6 +247,44 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         });
         window.history.replaceState({}, "", window.location.pathname);
       }
+
+      // radar batch from the extension: /?captureBatch=[{t,s,u},...]
+      const batchRaw = params.get("captureBatch");
+      if (batchRaw) {
+        const batch = JSON.parse(batchRaw) as { t?: string; s?: string; u?: string }[];
+        if (Array.isArray(batch) && batch.length) {
+          setState((s) => {
+            const territories = (s.strategy as { territories?: { name: string }[] })?.territories?.map((t) => t.name) || [];
+            const existing = s.opportunities as Opportunity[];
+            const newOpps: Opportunity[] = [];
+            batch.slice(0, 6).forEach((b, i) => {
+              const text = String(b.t || "").trim();
+              if (!text) return;
+              const srcName = String(b.s || "Radar capture").slice(0, 80);
+              const matched = territories.find((n) => text.toLowerCase().includes(n.toLowerCase()));
+              newOpps.push({
+                id: `opp-radar-${Date.now()}-${i}`,
+                sourceName: srcName,
+                territory: matched || territories[0] || "General",
+                excerpt: text.slice(0, 400),
+                url: b.u ? String(b.u).slice(0, 500) : undefined,
+                tags: tagOpportunity(text),
+                status: "new",
+                capturedAt: "just now",
+                firstTouch: !existing.some((o) => o.sourceName === srcName) && !newOpps.some((o) => o.sourceName === srcName),
+              });
+            });
+            if (!newOpps.length) return s;
+            return {
+              ...s,
+              opportunities: [...newOpps, ...existing],
+              tab: s.onboarded ? "engage" : s.tab,
+              engageTab: "opportunities",
+            };
+          });
+          window.history.replaceState({}, "", window.location.pathname);
+        }
+      }
     } catch {}
   }, []);
 

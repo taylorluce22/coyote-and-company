@@ -1,9 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "Farmhand Capture",
-  "version": "1.0.0",
-  "description": "Send any thread you're reading — Facebook group, Nextdoor, Reddit, forum — to your Farmhand opportunity inbox in one click.",
+  "name": "Farmhand Radar",
+  "version": "1.1.0",
+  "description": "Scans Facebook groups, Nextdoor and Reddit as you browse — flags posts matching your territories and sends them to your Farmhand inbox in one click.",
   "permissions": ["contextMenus", "activeTab", "scripting", "storage"],
+  "content_scripts": [
+    {
+      "matches": ["https://*.facebook.com/*", "https://*.nextdoor.com/*", "https://*.reddit.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "background": { "service_worker": "background.js" },
   "action": {
     "default_popup": "popup.html",
