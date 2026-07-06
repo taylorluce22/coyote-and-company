@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import SubTabs from "@/components/SubTabs";
-import Directory from "./Directory";
+import Sources from "./Sources";
 import Assistant from "./Assistant";
-import { cadenceCap, suggestedSources, type StrategyProfile } from "@/lib/strategy";
+import { cadenceCap, type StrategyProfile } from "@/lib/strategy";
 import { draftReply, fairHousingLint, scoreOpportunity, tagOpportunity, type Opportunity } from "@/lib/engage";
 
 const TAG_COLORS: Record<string, string> = {
@@ -175,16 +175,15 @@ function Opportunities() {
         </div>
       )}
 
-      {/* suggested communities */}
-      <div style={{ marginTop: 22 }}>
-        <div className="fh-kicker" style={{ fontSize: 9.5, marginBottom: 10 }}>Suggested communities for your farm</div>
-        <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-          {suggestedSources(strategy).slice(0, 9).map((s) => (
-            <span key={s.name} style={{ fontSize: 11, fontWeight: 600, color: "#C9C7D6", background: "rgba(8,8,18,0.55)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 999, padding: "5px 12px" }}>
-              {s.name} <span style={{ color: "#5E5C72", fontSize: 9.5 }}>· {s.territory}</span>
-            </span>
-          ))}
-        </div>
+      {/* rotation shortcut */}
+      <div style={{ marginTop: 22, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <div className="fh-kicker" style={{ fontSize: 9.5 }}>Not sure where to look?</div>
+        <button
+          onClick={() => set({ engageTab: "sources" })}
+          style={{ background: "rgba(38,224,200,0.1)", color: "#26E0C8", border: "1px solid rgba(38,224,200,0.35)", borderRadius: 8, padding: "7px 15px", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}
+        >
+          Open your auto-discovered sources →
+        </button>
       </div>
     </div>
   );
@@ -205,7 +204,7 @@ export default function Engage() {
         color="#26E0C8"
         onPick={(id) => set({ engageTab: id })}
       />
-      {tab === "opportunities" ? <Opportunities /> : tab === "sources" ? <Directory /> : <Assistant />}
+      {tab === "opportunities" ? <Opportunities /> : tab === "sources" ? <Sources /> : <Assistant />}
     </div>
   );
 }

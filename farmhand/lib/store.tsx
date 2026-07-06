@@ -17,6 +17,7 @@ import { SEED_POSTS, type Integrations, type PlannedPost } from "./planner";
 import { DEFAULT_STRATEGY, type StrategyProfile } from "./strategy";
 import { SEED_CONTACTS, type Contact } from "./pipeline";
 import type { Opportunity } from "./engage";
+import type { SourceEntry } from "./sources";
 
 export interface Upload {
   id: string;
@@ -71,6 +72,7 @@ export interface AppState {
   engageTab: "opportunities" | "sources" | "drafts";
   contacts: Contact[];
   opportunities: Opportunity[];
+  sources: SourceEntry[];
 
 
   // reply assistant
@@ -120,6 +122,7 @@ const initialState: AppState = {
   engageTab: "opportunities",
   contacts: SEED_CONTACTS,
   opportunities: [],
+  sources: [],
   asstInput:
     "Anyone know a good realtor in Gilbert? Just moved to Val Vista and looking to buy in the spring — no idea where to start with this market.",
   asstTone: "warm",
@@ -157,6 +160,7 @@ const PERSIST_FIELDS = [
   "strategy",
   "contacts",
   "opportunities",
+  "sources",
 ] as const;
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -187,7 +191,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       PERSIST_FIELDS.forEach((k) => (out[k] = state[k]));
       localStorage.setItem(PERSIST_KEY, JSON.stringify(out));
     } catch {}
-  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = useCallback((patch: Patch) => {
     setState((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));
