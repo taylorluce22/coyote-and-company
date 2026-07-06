@@ -75,6 +75,7 @@ export interface AppState {
   sources: SourceEntry[];
   marketSel: string | null;
   doneActions: Record<string, boolean>;
+  briefs: Record<string, { summary: string; facts: string[] }>; // live area briefs, cached per territory
   demoMode: boolean; // true = example data visible; false = every number is real
 
 
@@ -128,6 +129,7 @@ const initialState: AppState = {
   sources: [],
   marketSel: null,
   doneActions: {},
+  briefs: {},
   demoMode: true,
   asstInput:
     "Anyone know a good realtor in Gilbert? Just moved to Val Vista and looking to buy in the spring — no idea where to start with this market.",
@@ -191,6 +193,7 @@ const PERSIST_FIELDS = [
   "opportunities",
   "sources",
   "doneActions",
+  "briefs",
   "demoMode",
   "streak",
 ] as const;
@@ -255,7 +258,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       PERSIST_FIELDS.forEach((k) => (out[k] = state[k]));
       localStorage.setItem(PERSIST_KEY, JSON.stringify(out));
     } catch {}
-  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.doneActions, state.demoMode, state.streak]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.doneActions, state.briefs, state.demoMode, state.streak]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = useCallback((patch: Patch) => {
     setState((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));

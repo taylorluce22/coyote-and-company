@@ -48,6 +48,52 @@ export async function GET(req: NextRequest) {
   const city = searchParams.get("city") || territory;
   const profession = searchParams.get("profession") || "real estate agent";
   const segment = searchParams.get("segment") || "";
+  const mode = searchParams.get("mode") || "sources";
+
+  if (mode === "brief") {
+    const bprompt =
+      `Write a current market + community brief on ${territory}` +
+      `${city !== territory ? ` (${city}, Arizona)` : ", Arizona"} for a ${profession}` +
+      `${segment ? ` working the ${segment} segment` : ""}. ` +
+      `Respond with ONLY a JSON object, no prose, no markdown fences: ` +
+      `{"summary": "2-3 sentences: market character, who is buying/selling, what is changing right now", ` +
+      `"facts": ["4 to 6 short current facts: price levels, growth or development news, community traits, notable amenities"]}`;
+    try {
+      const r = await fetch("https://api.perplexity.ai/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "sonar",
+          temperature: 0.2,
+          messages: [
+            { role: "system", content: "You are a precise local-market researcher. Output ONLY valid JSON. Use current, verifiable information." },
+            { role: "user", content: bprompt },
+          ],
+        }),
+        signal: AbortSignal.timeout(25000),
+      });
+      if (!r.ok) return NextResponse.json({ configured: true, error: `research upstream ${r.status}` });
+      const data = await r.json();
+      let text: string = data?.choices?.[0]?.message?.content ?? "{}";
+      text = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+      const st = text.indexOf("{");
+      const en = text.lastIndexOf("}");
+      if (st >= 0 && en > st) text = text.slice(st, en + 1);
+      let parsed: { summary?: unknown; facts?: unknown } = {};
+      try {
+        parsed = JSON.parse(text);
+      } catch {}
+      return NextResponse.json({
+        configured: true,
+        brief: {
+          summary: String(parsed.summary ?? "").slice(0, 600),
+          facts: Array.isArray(parsed.facts) ? parsed.facts.map((f) => String(f).slice(0, 200)).slice(0, 6) : [],
+        },
+      });
+    } catch {
+      return NextResponse.json({ configured: true, error: "brief request failed" });
+    }
+  }
 
   const prompt =
     `Research active online communities where a ${profession} serving ${territory}` +

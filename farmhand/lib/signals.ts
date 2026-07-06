@@ -46,14 +46,15 @@ const BY_SEGMENT: Record<string, Omit<MarketSignal, "id" | "territorySlug" | "te
 
 import type { Territory } from "./strategy";
 
+/** Full signal pack for one territory. */
+export function signalsFor(t: Territory): MarketSignal[] {
+  const pack = PACKS[t.slug] ?? [BY_SEGMENT[t.segment] ?? BY_SEGMENT.custom];
+  return pack.map((p, i) => ({ ...p, id: `${t.slug}-sig-${i}`, territorySlug: t.slug, territoryName: t.name, color: t.hex }));
+}
+
 export function pulseFor(territories: Territory[], max = 3): MarketSignal[] {
   const out: MarketSignal[] = [];
-  territories.forEach((t) => {
-    const pack = PACKS[t.slug] ?? [BY_SEGMENT[t.segment] ?? BY_SEGMENT.custom];
-    pack.forEach((p, i) =>
-      out.push({ ...p, id: `${t.slug}-sig-${i}`, territorySlug: t.slug, territoryName: t.name, color: t.hex })
-    );
-  });
+  territories.forEach((t) => out.push(...signalsFor(t)));
   // round-robin so every territory gets representation before any repeats
   const bySlug = new Map<string, MarketSignal[]>();
   out.forEach((s) => bySlug.set(s.territorySlug, [...(bySlug.get(s.territorySlug) || []), s]));

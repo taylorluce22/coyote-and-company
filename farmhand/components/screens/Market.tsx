@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { fetchNeighborhoodFeed, feedTime, KIND_META, type FeedItem } from "@/lib/feeds";
 import type { StrategyProfile, Territory } from "@/lib/strategy";
-import type { Opportunity } from "@/lib/engage";
+import { tagOpportunity, type Opportunity } from "@/lib/engage";
+import { signalsFor } from "@/lib/signals";
+import { bankFor, mergeSources, PLATFORM_META, type SourceEntry } from "@/lib/sources";
 
 /** Map strategy slugs onto the demo feed keys where they exist. */
 const FEED_ALIAS: Record<string, string> = {
@@ -14,17 +16,94 @@ const FEED_ALIAS: Record<string, string> = {
   "paradise-valley": "paradise-valley",
 };
 
+interface RadarItem {
+  id: string;
+  title: string;
+  text: string;
+  subreddit: string;
+  author: string;
+  url: string;
+  ageMins: number;
+  comments: number;
+}
+
+function SectionHead({ color, label, right }: { color: string; label: string; right?: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+      <span style={{ width: 7, height: 7, borderRadius: "50%", background: color, boxShadow: `0 0 7px ${color}` }} />
+      <span className="fh-kicker" style={{ fontSize: 9.5 }}>{label}</span>
+      {right && <span style={{ marginLeft: "auto" }}>{right}</span>}
+    </div>
+  );
+}
+
+/**
+ * The territory hub. Opening an area automatically assembles:
+ * live area brief (when research is connected) → market signals with
+ * content angles → the communities to engage in → live conversations →
+ * your real activity here.
+ */
 function TerritoryDetail({ t, onBack }: { t: Territory; onBack: () => void }) {
   const { state, set } = useStore();
   const demo = state.demoMode as boolean;
+  const strategy = state.strategy as StrategyProfile;
   const opps = (state.opportunities as Opportunity[]) || [];
-  const [items, setItems] = useState<FeedItem[] | null>(null);
+  const allSources = (state.sources as SourceEntry[]) || [];
+  const briefs = (state.briefs as Record<string, { summary: string; facts: string[] }>) || {};
+  const brief = briefs[t.slug];
 
+  const [items, setItems] = useState<FeedItem[] | null>(null);
+  const [radar, setRadar] = useState<RadarItem[] | null>(null);
+  const [live, setLive] = useState<boolean | null>(null);
+  const [briefLoading, setBriefLoading] = useState(false);
+  const [captured, setCaptured] = useState<Record<string, boolean>>({});
+  const booted = useRef(false);
+
+  const signals = signalsFor(t);
+  const tSources = allSources.filter((s) => s.territorySlug === t.slug && s.status !== "dismissed").slice(0, 6);
+
+  // one boot per territory: seed sources, check live research, scan radar, fetch brief
+  useEffect(() => {
+    if (booted.current) return;
+    booted.current = true;
+
+    // seed knowledge-base sources for this territory if none yet
+    set((s) => {
+      const cur = (s.sources as SourceEntry[]) || [];
+      return cur.some((e) => e.territorySlug === t.slug) ? {} : { sources: mergeSources(cur, bankFor(t)) };
+    });
+
+    // live radar — real Reddit threads mentioning this territory
+    fetch(`/api/radar?q=${encodeURIComponent(`"${t.name}"`)}`)
+      .then((r) => r.json())
+      .then((d) => setRadar((d.items || []).slice(0, 5)))
+      .catch(() => setRadar([]));
+
+    // live research configured? then auto-fetch the area brief (cached forever after)
+    fetch("/api/discover")
+      .then((r) => r.json())
+      .then((d) => {
+        setLive(!!d.configured);
+        if (d.configured && !briefs[t.slug]) {
+          setBriefLoading(true);
+          const q = new URLSearchParams({ territory: t.name, city: t.city, segment: t.segment, mode: "brief" });
+          fetch(`/api/discover?${q}`)
+            .then((r) => r.json())
+            .then((b) => {
+              if (b.brief?.summary)
+                set((s) => ({ briefs: { ...((s.briefs as Record<string, unknown>) || {}), [t.slug]: b.brief } }));
+            })
+            .finally(() => setBriefLoading(false));
+        }
+      })
+      .catch(() => setLive(false));
+  }, [t.slug]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // activity feed (demo feed in demo mode; real captures in clean mode)
   useEffect(() => {
     let dead = false;
     setItems(null);
     if (!demo) {
-      // clean mode: this page shows only what actually happened here
       const real: FeedItem[] = opps
         .filter((o) => o.territory === t.name)
         .map((o, i) => ({
@@ -44,9 +123,32 @@ function TerritoryDetail({ t, onBack }: { t: Territory; onBack: () => void }) {
     };
   }, [t.slug, demo]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const captureRadar = (it: RadarItem) => {
+    const full = `${it.title} ${it.text}`.trim();
+    const opp: Opportunity = {
+      id: `opp-${Date.now()}-${it.id}`,
+      sourceName: `r/${it.subreddit}`,
+      territory: t.name,
+      excerpt: full.slice(0, 400),
+      url: it.url,
+      tags: tagOpportunity(full),
+      status: "new",
+      capturedAt: "just now",
+      firstTouch: !opps.some((o) => o.sourceName === `r/${it.subreddit}`),
+    };
+    set((s) => ({ opportunities: [opp, ...(s.opportunities as Opportunity[])] }));
+    setCaptured((c) => ({ ...c, [it.id]: true }));
+  };
+
+  const addSource = (id: string) =>
+    set((s) => ({ sources: ((s.sources as SourceEntry[]) || []).map((e) => (e.id === id ? { ...e, status: "added" as const } : e)) }));
+
+  const card: React.CSSProperties = { borderRadius: 14, padding: "15px 17px", background: "rgba(8,8,18,0.5)", border: "1px solid rgba(255,255,255,0.08)" };
+
   return (
-    <div style={{ animation: "fh-rise 0.3s ease both" }}>
-      <div style={{ position: "relative", height: 190, borderRadius: 16, overflow: "hidden", border: `1px solid ${t.hex}3D`, marginBottom: 16 }}>
+    <div style={{ animation: "fh-rise 0.3s ease both", display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* banner */}
+      <div style={{ position: "relative", height: 175, borderRadius: 16, overflow: "hidden", border: `1px solid ${t.hex}3D` }}>
         {t.img && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={t.img} alt={t.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
@@ -61,30 +163,157 @@ function TerritoryDetail({ t, onBack }: { t: Territory; onBack: () => void }) {
           </span>
           <div className="fh-title" style={{ fontSize: 28, marginTop: 3 }}>{t.name}</div>
         </div>
+        <div style={{ position: "absolute", right: 14, bottom: 14, display: "flex", gap: 8 }}>
+          <button onClick={() => set({ tab: "content", contentTab: "studio" })} style={{ background: `linear-gradient(180deg, ${t.hex}, ${t.hex}B8)`, color: "#0A0A14", border: "none", borderRadius: 9, padding: "9px 16px", fontSize: 11.5, fontWeight: 800, cursor: "pointer", boxShadow: `0 8px 22px ${t.hex}55` }}>
+            Draft a post →
+          </button>
+        </div>
       </div>
 
-      <div className="fh-glass" style={{ borderRadius: 14, padding: "15px 17px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 12 }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: t.hex, boxShadow: `0 0 7px ${t.hex}`, animation: "fh-pulse 2s ease infinite" }} />
-          <span className="fh-kicker" style={{ fontSize: 9.5 }}>Your activity in {t.name}</span>
+      {/* AREA BRIEF */}
+      <div style={{ ...card, border: `1px solid ${brief ? "rgba(65,217,138,0.25)" : "rgba(255,255,255,0.08)"}` }}>
+        <SectionHead
+          color={brief ? "#41D98A" : "#8B89A0"}
+          label="Area brief"
+          right={brief && <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.06em", fontFamily: "var(--label)", color: "#41D98A" }}>✓ AI-RESEARCHED</span>}
+        />
+        {brief ? (
+          <>
+            <div style={{ fontSize: 13, color: "#D8D6E6", lineHeight: 1.6 }}>{brief.summary}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 8, marginTop: 11 }}>
+              {brief.facts.map((f, i) => (
+                <div key={i} style={{ fontSize: 11.5, color: "#A6A4B8", lineHeight: 1.45, padding: "8px 11px", background: "rgba(0,0,0,0.25)", borderRadius: 9, borderLeft: `2px solid ${t.hex}66` }}>
+                  {f}
+                </div>
+              ))}
+            </div>
+          </>
+        ) : briefLoading ? (
+          <div style={{ fontSize: 12, color: "#8B89A0" }}>Researching {t.name} live…</div>
+        ) : live ? (
+          <div style={{ fontSize: 12, color: "#8B89A0" }}>Brief loads automatically on next open.</div>
+        ) : (
+          <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.55 }}>
+            {t.segment === "luxury"
+              ? `${t.name} is a prestige market: discreet sellers, relocation and move-up buyers, long relationships over quick wins.`
+              : t.segment === "growth"
+              ? `${t.name} is a growth market: new builds, out-of-state families, school-calendar timing — speed and guidance win here.`
+              : `${t.name} is a value market: first-time buyers and right-sizers — trust and education content works hardest.`}{" "}
+            <span style={{ color: "#FFC23D" }}>Connect live research (Settings → the PERPLEXITY_API_KEY note in Engage → Sources) for a current, AI-researched brief.</span>
+          </div>
+        )}
+      </div>
+
+      {/* MARKET SIGNALS */}
+      <div style={card}>
+        <SectionHead color={t.hex} label={`What's moving in ${t.name}`} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {signals.map((sg) => (
+            <div key={sg.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 11px", background: "rgba(0,0,0,0.24)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: "#EDEBF6" }}>{sg.headline}</div>
+                <div style={{ fontSize: 10.5, color: "#8B89A0", marginTop: 2 }}>
+                  {sg.detail} · <i style={{ color: "#A6A4B8" }}>{sg.angle}</i>
+                </div>
+              </div>
+              <button onClick={() => set({ tab: "content", contentTab: "ideas" })} style={{ flexShrink: 0, background: `${t.hex}12`, color: t.hex, border: `1px solid ${t.hex}44`, borderRadius: 8, padding: "6px 12px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>
+                Make content →
+              </button>
+            </div>
+          ))}
         </div>
+      </div>
+
+      {/* START ENGAGING HERE */}
+      <div style={{ ...card, border: "1px solid rgba(38,224,200,0.22)" }}>
+        <SectionHead
+          color="#26E0C8"
+          label={`Start engaging in ${t.name}`}
+          right={
+            <button onClick={() => set({ tab: "engage", engageTab: "sources" })} style={{ background: "transparent", border: "none", color: "#26E0C8", fontSize: 10.5, fontWeight: 700, cursor: "pointer", padding: 0 }}>
+              all sources →
+            </button>
+          }
+        />
+
+        {/* communities */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 8 }}>
+          {tSources.map((sc) => {
+            const pm = PLATFORM_META[sc.platform];
+            return (
+              <div key={sc.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 11px", background: "rgba(0,0,0,0.24)", borderRadius: 10, border: `1px solid ${sc.status === "added" ? "rgba(65,217,138,0.3)" : "rgba(255,255,255,0.06)"}` }}>
+                <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 7, display: "grid", placeItems: "center", fontSize: 11, color: pm.color, background: `${pm.color}16`, border: `1px solid ${pm.color}3D` }}>{pm.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: "#EDEBF6", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sc.name}</div>
+                  <div style={{ fontSize: 9, color: pm.color, fontWeight: 700, letterSpacing: "0.05em" }}>{pm.label.toUpperCase()}</div>
+                </div>
+                {sc.status === "added" ? (
+                  <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: "#41D98A" }}>✓</span>
+                ) : (
+                  <button onClick={() => addSource(sc.id)} style={{ flexShrink: 0, background: "rgba(65,217,138,0.12)", color: "#41D98A", border: "1px solid rgba(65,217,138,0.4)", borderRadius: 7, padding: "4px 10px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+                    + Add
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* live conversations */}
+        <div style={{ marginTop: 13 }}>
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.07em", fontFamily: "var(--label)", color: "#FF9A62", marginBottom: 8 }}>
+            LIVE CONVERSATIONS · REDDIT
+          </div>
+          {radar === null ? (
+            <div style={{ fontSize: 11.5, color: "#77758C" }}>Scanning for {t.name} threads…</div>
+          ) : radar.length === 0 ? (
+            <div style={{ fontSize: 11.5, color: "#77758C", lineHeight: 1.5 }}>
+              No fresh Reddit threads mention {t.name} right now — check the communities above instead, or rescan from Engage.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+              {radar.map((it) => (
+                <div key={it.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 10px", background: "rgba(0,0,0,0.24)", borderRadius: 9, border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 650, color: "#EDEBF6", lineHeight: 1.4 }}>{it.title}</div>
+                    <div style={{ fontSize: 9.5, color: "#77758C", marginTop: 2, fontFamily: "var(--mono)" }}>
+                      r/{it.subreddit} · {it.ageMins < 60 ? `${it.ageMins}m` : it.ageMins < 1440 ? `${Math.round(it.ageMins / 60)}h` : `${Math.round(it.ageMins / 1440)}d`} ago · {it.comments} comments ·{" "}
+                      <a href={it.url} target="_blank" rel="noreferrer" style={{ color: "#7DD3FC", textDecoration: "none" }}>open ↗</a>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => captureRadar(it)}
+                    disabled={!!captured[it.id]}
+                    style={{ flexShrink: 0, background: captured[it.id] ? "transparent" : "rgba(38,224,200,0.12)", color: captured[it.id] ? "#41D98A" : "#26E0C8", border: captured[it.id] ? "none" : "1px solid rgba(38,224,200,0.4)", borderRadius: 7, padding: "5px 11px", fontSize: 10.5, fontWeight: 700, cursor: captured[it.id] ? "default" : "pointer" }}
+                  >
+                    {captured[it.id] ? "✓ In inbox" : "→ Inbox"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* YOUR ACTIVITY */}
+      <div style={card}>
+        <SectionHead color={t.hex} label={`Your activity in ${t.name}`} />
         {items === null ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {[0, 1, 2].map((i) => (
-              <div key={i} style={{ height: 42, borderRadius: 10, background: "rgba(255,255,255,0.045)", animation: "fh-pulse 1.4s ease infinite", animationDelay: `${i * 0.15}s` }} />
+            {[0, 1].map((i) => (
+              <div key={i} style={{ height: 40, borderRadius: 10, background: "rgba(255,255,255,0.045)", animation: "fh-pulse 1.4s ease infinite", animationDelay: `${i * 0.15}s` }} />
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div style={{ padding: "18px 6px", fontSize: 12.5, color: "#8B89A0", lineHeight: 1.6 }}>
-            Nothing captured here yet. Post about {t.name} in the Studio, or capture a conversation in Engage — it all
-            lands on this page.
+          <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.6 }}>
+            Nothing yet — capture one of the live conversations above and reply, and it lands here.
           </div>
         ) : (
           items.map((it, i) => {
             const meta = KIND_META[it.kind];
             const tm = feedTime(it.minsAgo);
             return (
-              <div key={it.id} style={{ display: "flex", gap: 11, alignItems: "flex-start", padding: "10px 2px", borderBottom: i < items.length - 1 ? "1px solid rgba(255,255,255,0.055)" : "none" }}>
+              <div key={it.id} style={{ display: "flex", gap: 11, alignItems: "flex-start", padding: "9px 2px", borderBottom: i < items.length - 1 ? "1px solid rgba(255,255,255,0.055)" : "none" }}>
                 <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 8, display: "grid", placeItems: "center", fontSize: 12, color: meta.color, background: `${meta.color}16`, border: `1px solid ${meta.color}3D` }}>{meta.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12.5, fontWeight: 650, color: "#EDEBF6" }}>{it.title}</div>
@@ -97,12 +326,16 @@ function TerritoryDetail({ t, onBack }: { t: Territory; onBack: () => void }) {
         )}
       </div>
 
-      <div style={{ display: "flex", gap: 9, marginTop: 14 }}>
-        <button onClick={() => set({ tab: "content", contentTab: "studio" })} style={{ flex: 1, background: `linear-gradient(180deg, ${t.hex}, ${t.hex}B8)`, color: "#0A0A14", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 12.5, fontWeight: 800, cursor: "pointer", boxShadow: `0 8px 22px ${t.hex}55` }}>
-          Draft a post for {t.name} →
+      {/* footer actions */}
+      <div style={{ display: "flex", gap: 9 }}>
+        <button onClick={() => set({ tab: "content", contentTab: "ideas" })} style={{ flex: 1, background: `${t.hex}12`, color: t.hex, border: `1px solid ${t.hex}44`, borderRadius: 10, padding: "10px 0", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+          Post ideas for {t.name}
         </button>
-        <button onClick={() => set({ tab: "engage" })} style={{ flex: 1, background: `${t.hex}12`, color: t.hex, border: `1px solid ${t.hex}44`, borderRadius: 10, padding: "10px 0", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
-          Find conversations
+        <button onClick={() => set({ tab: "engage", engageTab: "opportunities" })} style={{ flex: 1, background: "rgba(38,224,200,0.1)", color: "#26E0C8", border: "1px solid rgba(38,224,200,0.35)", borderRadius: 10, padding: "10px 0", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+          Open opportunity inbox
+        </button>
+        <button onClick={() => set({ tab: "content", contentTab: "week" })} style={{ flex: 1, background: "rgba(255,194,61,0.1)", color: "#FFC23D", border: "1px solid rgba(255,194,61,0.35)", borderRadius: 10, padding: "10px 0", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+          Plan this week
         </button>
       </div>
     </div>
@@ -112,49 +345,54 @@ function TerritoryDetail({ t, onBack }: { t: Territory; onBack: () => void }) {
 export default function Market() {
   const { state, set } = useStore();
   const strategy = state.strategy as StrategyProfile;
+  const opps = (state.opportunities as Opportunity[]) || [];
   const sel = state.marketSel as string | null;
   const setSel = (slug: string | null) => set({ marketSel: slug });
   const selT = strategy.territories.find((t) => t.slug === sel);
 
-  if (selT) return <TerritoryDetail t={selT} onBack={() => setSel(null)} />;
+  if (selT) return <TerritoryDetail key={selT.slug} t={selT} onBack={() => setSel(null)} />;
 
   return (
     <div>
       <div style={{ fontSize: 13, color: "#A6A4B8", marginBottom: 16 }}>
-        Your watchlist — the areas you told us you're farming. Click into one for its activity and angles.
+        Your watchlist. Open an area and Farmhand assembles the brief, the market signals, and exactly where to start
+        engaging — automatically.
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 13 }}>
-        {strategy.territories.map((t) => (
-          <div
-            key={t.slug}
-            className="fh-card3d"
-            role="button"
-            tabIndex={0}
-            onClick={() => setSel(t.slug)}
-            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setSel(t.slug)}
-            style={{ borderRadius: 15, overflow: "hidden", border: `1px solid ${t.hex}36`, background: "rgba(255,255,255,0.03)", cursor: "pointer", boxShadow: `0 16px 38px rgba(0,0,0,0.45), 0 6px 22px ${t.hex}1A` }}
-          >
-            <div style={{ position: "relative", height: 118, background: `linear-gradient(160deg, ${t.hex}30, #0A0A14)` }}>
-              {t.img && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={t.img} alt={t.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
-              )}
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(6,6,13,0.05) 40%, rgba(6,6,13,0.9))" }} />
-              <span style={{ position: "absolute", top: 9, right: 9, fontSize: 8.5, fontWeight: 800, letterSpacing: "0.08em", fontFamily: "var(--label)", color: t.hex, background: "rgba(8,8,18,0.66)", border: `1px solid ${t.hex}55`, borderRadius: 999, padding: "3px 8px", textTransform: "uppercase", backdropFilter: "blur(8px)" }}>
-                {t.segment}
-              </span>
-              <div style={{ position: "absolute", left: 13, bottom: 10, fontSize: 15, fontWeight: 700, color: "#F4F3F8", textShadow: "0 2px 10px rgba(0,0,0,0.8)" }}>
-                {t.name}
+        {strategy.territories.map((t) => {
+          const open = opps.filter((o) => o.territory === t.name && o.status !== "skipped").length;
+          return (
+            <div
+              key={t.slug}
+              className="fh-card3d"
+              role="button"
+              tabIndex={0}
+              onClick={() => setSel(t.slug)}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setSel(t.slug)}
+              style={{ borderRadius: 15, overflow: "hidden", border: `1px solid ${t.hex}36`, background: "rgba(255,255,255,0.03)", cursor: "pointer", boxShadow: `0 16px 38px rgba(0,0,0,0.45), 0 6px 22px ${t.hex}1A` }}
+            >
+              <div style={{ position: "relative", height: 118, background: `linear-gradient(160deg, ${t.hex}30, #0A0A14)` }}>
+                {t.img && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={t.img} alt={t.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
+                )}
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(6,6,13,0.05) 40%, rgba(6,6,13,0.9))" }} />
+                <span style={{ position: "absolute", top: 9, right: 9, fontSize: 8.5, fontWeight: 800, letterSpacing: "0.08em", fontFamily: "var(--label)", color: t.hex, background: "rgba(8,8,18,0.66)", border: `1px solid ${t.hex}55`, borderRadius: 999, padding: "3px 8px", textTransform: "uppercase", backdropFilter: "blur(8px)" }}>
+                  {t.segment}
+                </span>
+                <div style={{ position: "absolute", left: 13, bottom: 10, fontSize: 15, fontWeight: 700, color: "#F4F3F8", textShadow: "0 2px 10px rgba(0,0,0,0.8)" }}>
+                  {t.name}
+                </div>
+              </div>
+              <div style={{ padding: "10px 14px 13px", display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 11, color: open ? "#26E0C8" : "#8B89A0" }}>
+                  {open ? `● ${open} open conversation${open > 1 ? "s" : ""}` : t.status === "own" ? "● your turf" : t.status === "building" ? "◐ building presence" : "○ exploring"}
+                </span>
+                <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: t.hex }}>→</span>
               </div>
             </div>
-            <div style={{ padding: "10px 14px 13px", display: "flex", alignItems: "center" }}>
-              <span style={{ fontSize: 11, color: "#8B89A0", textTransform: "capitalize" }}>
-                {t.status === "own" ? "● your turf" : t.status === "building" ? "◐ building presence" : "○ exploring"}
-              </span>
-              <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: t.hex }}>→</span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
