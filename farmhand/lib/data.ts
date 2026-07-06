@@ -318,13 +318,12 @@ export const FARM_CLUSTERS = [
 ];
 
 export const NAV_DEFS = [
-  { id: "dashboard", label: "Dashboard", color: "#A855F7" },
-  { id: "engine", label: "Content Engine", color: "#A855F7" },
-  { id: "composer", label: "Composer", color: "#FF5D8F" },
-  { id: "planner", label: "Weekly Planner", color: "#FFC23D" },
-  { id: "directory", label: "Active Groups", color: "#26E0C8" },
-  { id: "assistant", label: "Reply Assistant", color: "#FF9A62" },
-  { id: "results", label: "Results", color: "#41D98A" },
+  { id: "today", label: "Today", color: "#A855F7" },
+  { id: "content", label: "Content", color: "#FF5D8F" },
+  { id: "market", label: "Market", color: "#38BDF8" },
+  { id: "engage", label: "Engage", color: "#26E0C8" },
+  { id: "pipeline", label: "Pipeline", color: "#FFC23D" },
+  { id: "insights", label: "Insights", color: "#41D98A" },
   { id: "settings", label: "Settings", color: "#8B89A0" },
 ] as const;
 

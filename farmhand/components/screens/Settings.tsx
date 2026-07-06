@@ -60,6 +60,31 @@ export default function Settings() {
         })}
       </Card>
 
+      <Card title="Strategy">
+        <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.55, marginBottom: 6 }}>
+          Your dashboard, content themes, engagement pace and territory watchlist are all built from your strategy
+          intake. Re-run it anytime — answers update everything.
+        </div>
+        <div style={{ fontSize: 11.5, color: "#D8D6E6", marginBottom: 12 }}>
+          {(state.strategy as { territories?: { name: string }[] })?.territories?.map((t) => t.name).join(" · ") || "No territories set"}
+        </div>
+        <button
+          onClick={() => set({ onboarded: false })}
+          style={{
+            background: "rgba(168,85,247,0.12)",
+            color: "#C9A8FF",
+            border: "1px solid rgba(168,85,247,0.4)",
+            borderRadius: 9,
+            padding: "9px 18px",
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          Re-run strategy session →
+        </button>
+      </Card>
+
       <Card title="Connections">
         {SET_CONNECTIONS.map((c) => (
           <div key={c.name} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
