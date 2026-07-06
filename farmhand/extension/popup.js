@@ -55,6 +55,22 @@ $("scan").addEventListener("click", async () => {
   setTimeout(renderQueue, 800);
 });
 
+/* open Reddit searches for territory keywords — content script sweeps them */
+const AZ_SUBS = "phoenix+arizona+MovingtoPhoenix+WestValleyAZ+Scottsdale+gilbert";
+$("redditScan").addEventListener("click", async () => {
+  const { fhKeywords } = await chrome.storage.sync.get("fhKeywords");
+  const kws = (fhKeywords || "").split(",").map((k) => k.trim()).filter(Boolean).slice(0, 3);
+  if (!kws.length) {
+    $("redditScan").textContent = "Add territory keywords above first";
+    setTimeout(() => ($("redditScan").textContent = "Search Reddit for my territories →"), 2200);
+    return;
+  }
+  kws.forEach((k, i) => {
+    const url = `https://old.reddit.com/r/${AZ_SUBS}/search?q=${encodeURIComponent('"' + k + '"')}&restrict_sr=on&sort=new&t=month`;
+    setTimeout(() => chrome.tabs.create({ url, active: i === 0 }), i * 400);
+  });
+});
+
 /* send queue to Farmhand (batches of 5 per tab, URL-size safe) */
 $("send").addEventListener("click", async () => {
   const { fhQueue = [] } = await chrome.storage.local.get("fhQueue");

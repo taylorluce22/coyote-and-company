@@ -38,21 +38,47 @@ function hashOf(s) {
 
 function candidates() {
   // FB group posts render as role=article; Nextdoor + forums use <article>;
-  // new Reddit uses <shreddit-post>. One selector covers all three.
-  return document.querySelectorAll('[role="article"], article, shreddit-post');
+  // new Reddit uses <shreddit-post>; old Reddit uses .thing and search
+  // results use .search-result. One selector covers all of them.
+  return document.querySelectorAll(
+    '[role="article"], article, shreddit-post, div.thing, div.search-result, [data-testid="search-post-unit"]'
+  );
+}
+
+/** Best-effort permalink for the matched post (falls back to the page URL). */
+function linkOf(el) {
+  try {
+    const perma = el.getAttribute && (el.getAttribute("data-permalink") || el.getAttribute("permalink"));
+    if (perma) return new URL(perma, location.origin).href;
+    const a =
+      el.querySelector &&
+      (el.querySelector('a.search-title, a[data-click-id="body"], a[slot="full-post-link"], a[href*="/comments/"]') || null);
+    if (a && a.href) return a.href;
+  } catch {}
+  return location.href;
+}
+
+function sourceName() {
+  if (/reddit\.com$/.test(location.hostname) || location.hostname.endsWith("reddit.com")) {
+    const m = location.pathname.match(/\/r\/([^/+]+)/);
+    return m ? `r/${m[1]}` : "Reddit";
+  }
+  return (document.title || location.hostname).replace(/ [-|–|·] .*$/, "").slice(0, 90);
 }
 
 function isMatch(text) {
   const t = text.toLowerCase();
-  const pageMatch = cfg.keywords.some((k) => document.title.toLowerCase().includes(k));
+  // page is "about" a territory if the group title OR the search query matches
+  const pageCtx = (document.title + " " + decodeURIComponent(location.search)).toLowerCase();
+  const pageMatch = cfg.keywords.some((k) => pageCtx.includes(k));
   const kwInText = cfg.keywords.some((k) => t.includes(k));
   const intent = INTENT.some((re) => re.test(text));
-  // On a page ABOUT your territory (group title matches), intent alone is
+  // On a page ABOUT your territory (group/search matches), intent alone is
   // enough; elsewhere the post must mention a territory too.
   return intent && (pageMatch || kwInText);
 }
 
-async function queueMatch(text) {
+async function queueMatch(text, url) {
   const key = hashOf(text.slice(0, 200));
   if (seen.has(key)) return false;
   seen.add(key);
@@ -61,8 +87,8 @@ async function queueMatch(text) {
   fhQueue.push({
     key,
     t: text.slice(0, 500),
-    s: (document.title || location.hostname).replace(/ [-|–|·] .*$/, "").slice(0, 90),
-    u: location.href.slice(0, 400),
+    s: sourceName(),
+    u: (url || location.href).slice(0, 400),
     at: Date.now(),
   });
   await chrome.storage.local.set({ fhQueue });
@@ -76,7 +102,7 @@ function scan() {
     const text = (el.innerText || "").trim();
     if (text.length < 40 || text.length > 4000) return;
     if (!isMatch(text)) return;
-    queueMatch(text).then((added) => {
+    queueMatch(text, linkOf(el)).then((added) => {
       if (added) {
         el.style.outline = "2px solid rgba(45,212,191,0.7)";
         el.style.outlineOffset = "2px";
