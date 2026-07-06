@@ -6,6 +6,7 @@ import Composer from "./Composer";
 import Planner from "./Planner";
 import ContentEngine from "./ContentEngine";
 import { ideasFor } from "@/lib/strategy";
+import Performance from "@/components/Performance";
 import type { StrategyProfile } from "@/lib/strategy";
 
 function Ideas() {
@@ -26,8 +27,16 @@ function Ideas() {
             className="fh-glass fh-card3d"
             style={{ borderRadius: 14, padding: "16px 17px", borderLeft: `3px solid ${idea.territory.hex}`, animation: "fh-rise 0.3s ease both", animationDelay: `${i * 0.03}s` }}
           >
-            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.07em", fontFamily: "var(--label)", color: idea.territory.hex, textTransform: "uppercase" }}>
-              {idea.territory.name} · {idea.territory.segment}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.07em", fontFamily: "var(--label)", color: idea.territory.hex, textTransform: "uppercase" }}>
+                {idea.territory.name}
+              </span>
+              <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.06em", fontFamily: "var(--label)", color: "#7DD3FC", background: "rgba(125,211,252,0.1)", border: "1px solid rgba(125,211,252,0.35)", borderRadius: 999, padding: "2px 8px", textTransform: "uppercase" }}>
+                {idea.format}
+              </span>
+              <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.06em", fontFamily: "var(--label)", color: "#C9A8FF", background: "rgba(201,168,255,0.1)", border: "1px solid rgba(201,168,255,0.35)", borderRadius: 999, padding: "2px 8px", textTransform: "uppercase" }}>
+                {idea.theme}
+              </span>
             </div>
             <div style={{ fontSize: 14.5, fontWeight: 700, color: "#F4F3F8", marginTop: 7, lineHeight: 1.4 }}>{idea.title}</div>
             <div style={{ fontSize: 12, color: "#8B89A0", marginTop: 6, lineHeight: 1.5 }}>{idea.angle}</div>
@@ -54,26 +63,6 @@ function Ideas() {
   );
 }
 
-function EmptyQueue() {
-  const { set } = useStore();
-  return (
-    <div className="fh-glass" style={{ borderRadius: 18, padding: "44px 32px", textAlign: "center", maxWidth: 560, margin: "40px auto" }}>
-      <div style={{ fontSize: 30, marginBottom: 12 }}>🧹</div>
-      <div className="fh-title" style={{ fontSize: 19, marginBottom: 10 }}>Example queue cleared</div>
-      <div style={{ fontSize: 13, color: "#A6A4B8", lineHeight: 1.65 }}>
-        This is where Autopilot-drafted posts will wait for your approval once channels are connected. Until then,
-        draft real posts in the Studio — everything you make there is yours.
-      </div>
-      <button
-        onClick={() => set({ contentTab: "studio" })}
-        style={{ marginTop: 18, background: "linear-gradient(180deg,#FB7185,#E11D48)", color: "#fff", border: "none", borderRadius: 10, padding: "10px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
-      >
-        Open the Studio →
-      </button>
-    </div>
-  );
-}
-
 export default function Content() {
   const { state, set } = useStore();
   const tab = state.contentTab;
@@ -85,13 +74,13 @@ export default function Content() {
           { id: "ideas" as const, label: "Ideas" },
           { id: "studio" as const, label: "Studio" },
           { id: "week" as const, label: "Week" },
-          { id: "queue" as const, label: "Queue" },
+          { id: "queue" as const, label: state.demoMode ? "Queue" : "Performance" },
         ]}
         active={tab}
         color="#FF5D8F"
         onPick={(id) => set({ contentTab: id })}
       />
-      {tab === "ideas" ? <Ideas /> : tab === "studio" ? <Composer /> : tab === "week" ? <Planner /> : state.demoMode ? <ContentEngine /> : <EmptyQueue />}
+      {tab === "ideas" ? <Ideas /> : tab === "studio" ? <Composer /> : tab === "week" ? <Planner /> : state.demoMode ? <ContentEngine /> : <Performance />}
     </div>
   );
 }

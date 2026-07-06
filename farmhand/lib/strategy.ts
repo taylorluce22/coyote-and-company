@@ -15,6 +15,7 @@ export interface Territory {
   status: "own" | "building" | "exploring";
   img?: string;
   hex: string;
+  kind?: "neighborhood" | "zip" | "subdivision" | "school-zone";
 }
 
 export interface StrategyProfile {
@@ -95,30 +96,49 @@ export const DEFAULT_STRATEGY: StrategyProfile = {
 /* ------------------------------------------------------------------ */
 
 /** Content idea templates keyed by segment + positioning. */
-const IDEA_BANK: Record<string, { title: string; angle: string }[]> = {
+const IDEA_BANK: Record<string, { title: string; angle: string; format: "carousel" | "reel" | "story" | "text"; theme: string }[]> = {
   luxury: [
-    { title: "What longer days-on-market means for {n} sellers", angle: "calm, data-first take — position as the steady hand" },
-    { title: "What ${price} actually buys in {n} right now", angle: "3-property comparison carousel, no addresses" },
-    { title: "The {n} micro-markets most agents lump together", angle: "insider segmentation — instant authority" },
-    { title: "Anatomy of a quiet {n} sale", angle: "how discreet listings work — luxury sellers care" },
+    { title: "What longer days-on-market means for {n} sellers", angle: "calm, data-first take — position as the steady hand", format: "carousel", theme: "seller-education" },
+    { title: "What ${price} actually buys in {n} right now", angle: "3-property comparison carousel, no addresses", format: "carousel", theme: "market" },
+    { title: "The {n} micro-markets most agents lump together", angle: "insider segmentation — instant authority", format: "text", theme: "authority" },
+    { title: "Anatomy of a quiet {n} sale", angle: "how discreet listings work — luxury sellers care", format: "text", theme: "seller-education" },
   ],
   growth: [
-    { title: "Why families keep choosing {n}", angle: "schools + commute + new builds, told through one family's decision" },
-    { title: "New-build vs. resale in {n}: the honest math", angle: "monthly-cost table — screenshots get shared" },
-    { title: "{n} in 90 seconds for out-of-state buyers", angle: "reel: drive-through + 3 numbers + 1 tip" },
-    { title: "What ${price} gets you in {n} vs. 10 miles closer in", angle: "the trade-off post — sparks comments" },
+    { title: "Why families keep choosing {n}", angle: "schools + commute + new builds, told through one family's decision", format: "carousel", theme: "community" },
+    { title: "New-build vs. resale in {n}: the honest math", angle: "monthly-cost table — screenshots get shared", format: "carousel", theme: "buyer-education" },
+    { title: "{n} in 90 seconds for out-of-state buyers", angle: "reel: drive-through + 3 numbers + 1 tip", format: "reel", theme: "community" },
+    { title: "What ${price} gets you in {n} vs. 10 miles closer in", angle: "the trade-off post — sparks comments", format: "carousel", theme: "market" },
   ],
   entry: [
-    { title: "First-home playbook for {n}", angle: "5 steps, zero jargon, save-worthy checklist" },
-    { title: "The {n} streets where starter homes still exist", angle: "hyper-specific = trust; no addresses, just areas" },
-    { title: "Rent vs. buy in {n} this year", angle: "real numbers with today's rates — update quarterly" },
+    { title: "First-home playbook for {n}", angle: "5 steps, zero jargon, save-worthy checklist", format: "carousel", theme: "buyer-education" },
+    { title: "The {n} streets where starter homes still exist", angle: "hyper-specific = trust; no addresses, just areas", format: "text", theme: "market" },
+    { title: "Rent vs. buy in {n} this year", angle: "real numbers with today's rates — update quarterly", format: "carousel", theme: "buyer-education" },
   ],
 };
 
-export function ideasFor(profile: StrategyProfile): { id: string; territory: Territory; title: string; angle: string }[] {
-  const out: { id: string; territory: Territory; title: string; angle: string }[] = [];
-  profile.territories.forEach((t) => {
-    const bank = IDEA_BANK[t.segment] ?? IDEA_BANK.growth;
+/** Conversion pack — applies to every territory; the content that books appointments. */
+const CONVERSION_BANK: { title: string; angle: string; format: "carousel" | "reel" | "story" | "text"; theme: string }[] = [
+  { title: "3 things {n} sellers fix that buyers never notice", angle: "myth-busting saves sellers money — instant trust", format: "carousel", theme: "myth-busting" },
+  { title: "“We'll just wait for rates to drop” — the honest math", angle: "objection-handling with real numbers, zero pressure", format: "carousel", theme: "objection-handling" },
+  { title: "What my last {n} client said after closing", angle: "social proof — quote card, first name only, with permission", format: "story", theme: "social-proof" },
+  { title: "How I knew this {n} home was overpriced (and what we did)", angle: "story of advocacy — sellers remember who protects them", format: "reel", theme: "seller-education" },
+  { title: "The question I wish every buyer asked me", angle: "authority through generosity — answer it fully", format: "text", theme: "authority" },
+  { title: "Know someone moving to {n}? Here's what I send them", angle: "referral prompt disguised as a resource — highly shareable", format: "carousel", theme: "referral" },
+];
+
+export interface Idea {
+  id: string;
+  territory: Territory;
+  title: string;
+  angle: string;
+  format: "carousel" | "reel" | "story" | "text";
+  theme: string;
+}
+
+export function ideasFor(profile: StrategyProfile): Idea[] {
+  const out: Idea[] = [];
+  profile.territories.forEach((t, ti) => {
+    const bank = [...(IDEA_BANK[t.segment] ?? IDEA_BANK.growth), ...CONVERSION_BANK.slice(ti % 2, (ti % 2) + 4)];
     const price = t.segment === "luxury" ? "2M" : t.segment === "growth" ? "450K" : "350K";
     bank.forEach((b, i) => {
       out.push({
@@ -126,10 +146,13 @@ export function ideasFor(profile: StrategyProfile): { id: string; territory: Ter
         territory: t,
         title: b.title.replace(/\{n\}/g, t.name).replace(/\{price\}/g, price),
         angle: b.angle,
+        format: b.format,
+        theme: b.theme,
       });
     });
   });
-  return out;
+  // never assign formats the agent avoids
+  return profile.cameraComfort === "avoid" ? out.filter((i) => i.format !== "reel") : out;
 }
 
 /** Engage cadence caps by prospecting comfort — visible in the UI, not secret. */

@@ -1,13 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { useStore } from "@/lib/store";
+import QuickPanel from "@/components/QuickPanel";
 
 const TITLES: Record<string, string> = {
   today: "",
   content: "Content",
   market: "Your Market",
   engage: "Engage",
-  pipeline: "Pipeline",
+  pipeline: "People",
   insights: "Insights",
   settings: "Settings",
 };
@@ -40,6 +42,7 @@ export default function TopBar() {
         </h1>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <QuickPanel />
         {state.streak > 0 && (
           <div
             className="fh-glass"

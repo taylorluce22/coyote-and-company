@@ -1,13 +1,13 @@
 /**
- * Next Actions — the rules engine behind Today's queue.
- * rank = impact × urgency × strategy fit, expressed as transparent weights:
- * expiring conversation replies > due follow-ups > approvals > coverage gaps.
- * Max 5 shown; completing one removes it.
+ * Next Money Moves — the rules engine behind Today's queue.
+ * Money order: respond to new leads > overdue follow-ups > hot conversations >
+ * sphere/reactivation > seller-signal content > approvals > planning.
+ * Call-type actions always outrank content-type. Max 5; done = gone.
  */
 
 import type { AppState } from "./store";
 import type { Opportunity } from "./engage";
-import type { Contact } from "./pipeline";
+import { isOverdue, isStale, needsResponse, type Contact } from "./pipeline";
 import type { PlannedPost } from "./planner";
 import type { StrategyProfile } from "./strategy";
 import type { SourceEntry } from "./sources";
@@ -32,7 +32,34 @@ export function deriveActions(state: AppState): NextAction[] {
   const done = (state.doneActions as Record<string, boolean>) || {};
   const out: NextAction[] = [];
 
-  // 1 — conversations waiting (these expire fastest)
+  // 110 — uncontacted leads (speed-to-lead beats everything)
+  const fresh = contacts.filter(needsResponse);
+  if (fresh.length)
+    out.push({
+      id: `act-respond-${fresh[0].id}-${fresh.length}`,
+      title: `${fresh.length} lead${fresh.length > 1 ? "s" : ""} waiting for a first response`,
+      detail: `${fresh[0].name}${fresh.length > 1 ? ` and ${fresh.length - 1} more` : ""} — every hour of silence costs conversion.`,
+      cta: "Open respond queue",
+      color: "#FF5D8F",
+      go: { tab: "today" },
+      weight: 110,
+    });
+
+  // 100 — overdue follow-ups
+  const overdue = contacts.filter(isOverdue);
+  overdue.slice(0, 2).forEach((c) =>
+    out.push({
+      id: `act-fu-${c.id}`,
+      title: `Overdue follow-up: ${c.name}`,
+      detail: c.note.slice(0, 100),
+      cta: "Open People",
+      color: "#FFC23D",
+      go: { tab: "pipeline" },
+      weight: 100,
+    })
+  );
+
+  // 90 — hot conversations waiting for a reply
   opps
     .filter((o) => o.status === "new")
     .slice(0, 2)
@@ -44,27 +71,24 @@ export function deriveActions(state: AppState): NextAction[] {
         cta: "Review & reply",
         color: "#26E0C8",
         go: { tab: "engage", engageTab: "opportunities" },
-        weight: 100,
-      })
-    );
-
-  // 2 — follow-ups due
-  contacts
-    .filter((c) => c.nextTouch)
-    .slice(0, 2)
-    .forEach((c) =>
-      out.push({
-        id: `act-fu-${c.id}`,
-        title: `Follow up with ${c.name} — ${c.nextTouch}`,
-        detail: c.note.slice(0, 100),
-        cta: "Open pipeline",
-        color: "#FFC23D",
-        go: { tab: "pipeline" },
         weight: 90,
       })
     );
 
-  // 3 — posts waiting for approval (example queue only exists in demo mode)
+  // 85 — reactivation (stale relationships)
+  const stale = contacts.filter(isStale);
+  if (stale.length)
+    out.push({
+      id: `act-stale-${stale[0].id}-${stale.length}`,
+      title: `${stale.length} relationship${stale.length > 1 ? "s" : ""} going stale (30+ days)`,
+      detail: `${stale[0].name}${stale.length > 1 ? ` and ${stale.length - 1} more` : ""} — one honest check-in revives more deals than any ad.`,
+      cta: "Open reactivation list",
+      color: "#C9A8FF",
+      go: { tab: "pipeline" },
+      weight: 85,
+    });
+
+  // 80 — approvals (example queue only exists in demo mode)
   const pending = state.demoMode ? ENGINE_POSTS.filter((p) => !(state.approved as Record<string, boolean>)[p.id]).length : 0;
   if (pending > 0)
     out.push({
@@ -77,32 +101,47 @@ export function deriveActions(state: AppState): NextAction[] {
       weight: 80,
     });
 
-  // 4 — week not planned
+  // 75 — listing-opportunity content: seller questions live in a territory
+  const sellerT = strategy.territories.find((t) =>
+    opps.some((o) => o.territory === t.name && o.tags.includes("market-question") && o.status !== "skipped")
+  );
+  if (sellerT)
+    out.push({
+      id: `act-seller-${sellerT.slug}`,
+      title: `${sellerT.name} is asking seller questions`,
+      detail: "Home-value threads are live there — seller education content converts this exact moment.",
+      cta: "Draft seller content",
+      color: sellerT.hex,
+      go: { tab: "content", contentTab: "ideas" },
+      weight: 75,
+    });
+
+  // 70 — week not planned
   if (!planned.some((p) => p.plannedDay))
     out.push({
       id: "act-plan-week",
       title: "This week isn't planned yet",
       detail: `One click drafts your ${strategy.postingTarget}-post week across best time slots.`,
       cta: "Plan my week",
-      color: "#FF5D8F",
+      color: "#FF9A62",
       go: { tab: "content", contentTab: "week" },
       weight: 70,
     });
 
-  // 5 — coverage gap: a territory with zero captured conversations
+  // 60 — coverage gap
   const quiet = strategy.territories.find((t) => !opps.some((o) => o.territory === t.name));
   if (quiet)
     out.push({
       id: `act-quiet-${quiet.slug}`,
       title: `${quiet.name} has no conversations captured`,
-      detail: "Scan the radar or open its suggested communities — presence starts with one useful comment.",
+      detail: "Scan the radar or open its communities — presence starts with one useful comment.",
       cta: "Find conversations",
       color: quiet.hex,
       go: { tab: "engage", engageTab: "opportunities" },
       weight: 60,
     });
 
-  // 6 — empty rotation
+  // 55 — empty rotation
   if (!sources.some((s) => s.status === "added"))
     out.push({
       id: "act-rotation",
@@ -141,14 +180,20 @@ export function presenceScore(state: AppState): PresenceBreakdown {
   const engagedCount = opps.filter((o) => o.status === "engaged").length;
   const engagement = Math.min(1, 0.3 + engagedCount * 0.175);
 
-  const tended = contacts.filter((c) => c.nextTouch || c.stage === "consult" || c.stage === "active").length;
+  // follow-up discipline: of contacts with a next-touch set, how many aren't overdue?
+  const withNext = contacts.filter((c) => c.nextTouchAt && !c.stage.startsWith("closed"));
+  const overdueN = withNext.filter(isOverdue).length;
+  const discipline = withNext.length ? (withNext.length - overdueN) / withNext.length : contacts.length ? 0.5 : 0;
+
+  const tended = contacts.filter((c) => c.nextTouchAt || c.stage === "consult" || c.stage === "active" || c.stage === "under_contract").length;
   const hygiene = contacts.length ? tended / contacts.length : 0;
 
   const parts = [
-    { key: "consistency", label: "Consistency", value: consistency, weight: 0.35, tip: `${scheduled}/${strategy.postingTarget} posts planned this week — plan the rest` },
-    { key: "coverage", label: "Territory coverage", value: coverage, weight: 0.25, tip: `${covered}/${strategy.territories.length} territories have live conversations — capture one in the quiet areas` },
-    { key: "engagement", label: "Engagement", value: engagement, weight: 0.25, tip: engagedCount ? `${engagedCount} replies posted — keep the streak` : "Post your first community reply this week" },
-    { key: "hygiene", label: "Pipeline hygiene", value: hygiene, weight: 0.15, tip: "Give every warm contact a next-touch date" },
+    { key: "consistency", label: "Consistency", value: consistency, weight: 0.3, tip: `${scheduled}/${strategy.postingTarget} posts planned this week — plan the rest` },
+    { key: "coverage", label: "Territory coverage", value: coverage, weight: 0.2, tip: `${covered}/${strategy.territories.length} territories have live conversations` },
+    { key: "engagement", label: "Engagement", value: engagement, weight: 0.2, tip: engagedCount ? `${engagedCount} replies posted — keep going` : "Post your first community reply this week" },
+    { key: "discipline", label: "Follow-up discipline", value: discipline, weight: 0.2, tip: overdueN ? `${overdueN} overdue follow-up${overdueN > 1 ? "s" : ""} — clear them today` : "Set a next-touch date on every active person" },
+    { key: "hygiene", label: "Pipeline hygiene", value: hygiene, weight: 0.1, tip: "Give every warm contact a next-touch date" },
   ];
   const score = Math.round(parts.reduce((s, p) => s + p.value * p.weight, 0) * 100);
   return { score, parts };
