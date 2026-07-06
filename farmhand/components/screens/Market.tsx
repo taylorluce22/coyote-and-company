@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { fetchNeighborhoodFeed, feedTime, KIND_META, type FeedItem } from "@/lib/feeds";
 import type { StrategyProfile, Territory } from "@/lib/strategy";
+import type { Opportunity } from "@/lib/engage";
 
 /** Map strategy slugs onto the demo feed keys where they exist. */
 const FEED_ALIAS: Record<string, string> = {
@@ -14,17 +15,34 @@ const FEED_ALIAS: Record<string, string> = {
 };
 
 function TerritoryDetail({ t, onBack }: { t: Territory; onBack: () => void }) {
-  const { set } = useStore();
+  const { state, set } = useStore();
+  const demo = state.demoMode as boolean;
+  const opps = (state.opportunities as Opportunity[]) || [];
   const [items, setItems] = useState<FeedItem[] | null>(null);
 
   useEffect(() => {
     let dead = false;
     setItems(null);
+    if (!demo) {
+      // clean mode: this page shows only what actually happened here
+      const real: FeedItem[] = opps
+        .filter((o) => o.territory === t.name)
+        .map((o, i) => ({
+          id: o.id,
+          kind: "group" as const,
+          title: o.excerpt.slice(0, 90),
+          detail: `via ${o.sourceName} · ${o.status === "engaged" ? "you replied" : o.status}`,
+          minsAgo: 15 + i * 45,
+          source: o.sourceName,
+        }));
+      setItems(real);
+      return;
+    }
     fetchNeighborhoodFeed(FEED_ALIAS[t.slug] ?? t.slug).then((rows) => !dead && setItems(rows));
     return () => {
       dead = true;
     };
-  }, [t.slug]);
+  }, [t.slug, demo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div style={{ animation: "fh-rise 0.3s ease both" }}>

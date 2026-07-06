@@ -5,7 +5,7 @@ import { NAV_DEFS, ENGINE_POSTS, type TabId } from "@/lib/data";
 
 export default function Rail() {
   const { state, set } = useStore();
-  const pending = ENGINE_POSTS.filter((p) => !state.approved[p.id]).length;
+  const pending = state.demoMode ? ENGINE_POSTS.filter((p) => !state.approved[p.id]).length : 0;
   const drafts = state.plannedPosts.filter((p) => p.plannedDay && p.status === "draft").length;
   const badgeFor = (id: string) =>
     id === "content" ? (pending + drafts) || null : null;

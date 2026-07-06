@@ -111,6 +111,7 @@ function Presence() {
 export default function Dashboard() {
   const { state, set } = useStore();
   const strategy = state.strategy as StrategyProfile;
+  const demo = state.demoMode as boolean;
   const opps = (state.opportunities as Opportunity[]) || [];
   const contacts = (state.contacts as Contact[]) || [];
   const planned = (state.plannedPosts as PlannedPost[]) || [];
@@ -310,13 +311,13 @@ export default function Dashboard() {
             </div>
             <div className="fh-title" style={{ fontSize: 15.5, marginTop: 10 }}>Content Engine</div>
             <div style={{ fontSize: 13, color: "#A6A4B8", marginTop: 6, lineHeight: 1.5 }}>
-              4 posts waiting for approval — IG, FB, Nextdoor.
+              {demo ? "4 posts waiting for approval — IG, FB, Nextdoor." : "Draft real posts in the Studio — approvals land here once Autopilot is connected."}
             </div>
             <button
-              onClick={() => set({ tab: "content", contentTab: "queue" })}
+              onClick={() => set(demo ? { tab: "content", contentTab: "queue" } : { tab: "content", contentTab: "studio" })}
               style={{ width: "100%", marginTop: 14, background: "linear-gradient(180deg,#C084FC,#9333EA)", color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 22px rgba(147,51,234,0.5)" }}
             >
-              Open queue
+              {demo ? "Open queue" : "Open Studio"}
             </button>
           </RailCard>
 
@@ -339,15 +340,17 @@ export default function Dashboard() {
           </RailCard>
 
           <RailCard glow="rgba(65,217,138,0.28)">
-            <div className="fh-kicker" style={{ fontSize: 9.5 }}>Inbound conversations</div>
+            <div className="fh-kicker" style={{ fontSize: 9.5 }}>{demo ? "Inbound conversations" : "Conversations captured"}</div>
             <div className="fh-title" style={{ fontSize: 44, color: "#41D98A", textShadow: "0 0 24px rgba(65,217,138,0.5)", marginTop: 4 }}>
-              <CountUp value={44} />
+              <CountUp value={demo ? 44 : opps.length} />
             </div>
-            <div style={{ fontSize: 12.5, color: "#A6A4B8" }}>this month · +4 vs June</div>
-            <Sparkline />
+            <div style={{ fontSize: 12.5, color: "#A6A4B8" }}>
+              {demo ? "this month · +4 vs June" : opps.length ? "and counting — every one is real" : "starts at zero — capture your first in Engage"}
+            </div>
+            {demo && <Sparkline />}
           </RailCard>
 
-          <RailCard glow="rgba(168,85,247,0.18)">
+          {demo && <RailCard glow="rgba(168,85,247,0.18)">
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
               <div className="fh-kicker" style={{ fontSize: 9.5 }}>This week · Perplexity</div>
               <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9.5, color: "#41D98A", fontWeight: 700 }}>
@@ -364,13 +367,21 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-          </RailCard>
+          </RailCard>}
         </div>
       </div>
 
       {/* stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
-        {DASH_STATS.map((s) => (
+        {(demo
+          ? DASH_STATS
+          : [
+              { value: String(planned.filter((p) => p.plannedDay).length), label: "Posts planned this week", sub: `target ${strategy.postingTarget}`, color: "#FF5D8F" },
+              { value: String(opps.length), label: "Conversations captured", sub: "via radar, extension & paste", color: "#26E0C8" },
+              { value: String(opps.filter((o) => o.status === "engaged").length), label: "Replies posted", sub: "logged in Engage", color: "#41D98A" },
+              { value: String(contacts.length), label: "People in pipeline", sub: `${warm} warm`, color: "#FFC23D" },
+            ]
+        ).map((s) => (
           <div key={s.label} className="fh-glass" style={{ borderRadius: 15, padding: "16px 18px", borderTop: `1px solid ${s.color}33` }}>
             <div style={{ fontFamily: "var(--display)", fontWeight: 700, fontSize: 28, letterSpacing: "-0.02em", color: s.color }}>{s.value}</div>
             <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 3 }}>{s.label}</div>
@@ -379,8 +390,8 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* presence activity chart */}
-      <div className="fh-glass" style={{ borderRadius: 16, padding: "20px 22px" }}>
+      {/* presence activity chart (example data — hidden in clean mode until channels connect) */}
+      {demo && <div className="fh-glass" style={{ borderRadius: 16, padding: "20px 22px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div className="fh-kicker">Presence Activity · Last 30 days</div>
           <div style={{ display: "flex", gap: 16, fontSize: 11, color: "#A6A4B8" }}>
@@ -416,7 +427,7 @@ export default function Dashboard() {
             );
           })}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
