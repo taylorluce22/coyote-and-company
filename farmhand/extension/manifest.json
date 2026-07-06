@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Farmhand Radar",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Scans Facebook groups, Nextdoor and Reddit as you browse — flags posts matching your territories and sends them to your Farmhand inbox in one click.",
   "permissions": ["contextMenus", "activeTab", "scripting", "storage"],
   "content_scripts": [
