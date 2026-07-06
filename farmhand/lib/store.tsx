@@ -16,7 +16,7 @@ import { DEFAULT_DESIGN } from "./studio";
 import { SEED_POSTS, type Integrations, type PlannedPost } from "./planner";
 import { DEFAULT_STRATEGY, type StrategyProfile } from "./strategy";
 import { SEED_CONTACTS, type Contact } from "./pipeline";
-import type { Opportunity } from "./engage";
+import { tagOpportunity, type Opportunity } from "./engage";
 import type { SourceEntry } from "./sources";
 
 export interface Upload {
@@ -73,6 +73,8 @@ export interface AppState {
   contacts: Contact[];
   opportunities: Opportunity[];
   sources: SourceEntry[];
+  marketSel: string | null;
+  doneActions: Record<string, boolean>;
 
 
   // reply assistant
@@ -123,6 +125,8 @@ const initialState: AppState = {
   contacts: SEED_CONTACTS,
   opportunities: [],
   sources: [],
+  marketSel: null,
+  doneActions: {},
   asstInput:
     "Anyone know a good realtor in Gilbert? Just moved to Val Vista and looking to buy in the spring — no idea where to start with this market.",
   asstTone: "warm",
@@ -161,6 +165,7 @@ const PERSIST_FIELDS = [
   "contacts",
   "opportunities",
   "sources",
+  "doneActions",
 ] as const;
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -181,6 +186,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     } catch {}
     hydrated.current = true;
+
+    // browser-extension capture: /?capture=<thread text>&source=<page title>&url=<page url>
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const captured = params.get("capture");
+      if (captured && captured.trim()) {
+        const sourceName = (params.get("source") || "Captured page").replace(/ [-|–] .*(Facebook|Nextdoor|Reddit).*$/i, "").trim() || "Captured page";
+        const url = params.get("url") || undefined;
+        setState((s) => {
+          const territories = (s.strategy as { territories?: { name: string }[] })?.territories?.map((t) => t.name) || [];
+          const matched = territories.find((n) => captured.toLowerCase().includes(n.toLowerCase()));
+          const opp: Opportunity = {
+            id: `opp-ext-${Date.now()}`,
+            sourceName: sourceName.slice(0, 80),
+            territory: matched || territories[0] || "General",
+            excerpt: captured.trim().slice(0, 400),
+            url,
+            tags: tagOpportunity(captured),
+            status: "new",
+            capturedAt: "just now",
+            firstTouch: !(s.opportunities as Opportunity[]).some((o) => o.sourceName === sourceName.slice(0, 80)),
+          };
+          return {
+            ...s,
+            opportunities: [opp, ...(s.opportunities as Opportunity[])],
+            tab: s.onboarded ? "engage" : s.tab,
+            engageTab: "opportunities",
+          };
+        });
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    } catch {}
   }, []);
 
   // save on change (persisted fields only)
@@ -191,7 +228,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       PERSIST_FIELDS.forEach((k) => (out[k] = state[k]));
       localStorage.setItem(PERSIST_KEY, JSON.stringify(out));
     } catch {}
-  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.doneActions]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = useCallback((patch: Patch) => {
     setState((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));

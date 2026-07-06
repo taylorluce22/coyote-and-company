@@ -1,23 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import gsap from "gsap";
+import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { Switch, CountUp } from "@/components/ui";
-import {
-  TICKER_POOL,
-  FARM_CHIPS,
-  FARM_CLUSTERS,
-  DASH_STATS,
-  DASH_INTEL,
-} from "@/lib/data";
-import {
-  fetchNeighborhoodFeed,
-  feedTime,
-  FEED_SOURCES,
-  KIND_META,
-  type FeedItem,
-} from "@/lib/feeds";
+import { DASH_STATS, DASH_INTEL } from "@/lib/data";
+import { deriveActions, presenceScore } from "@/lib/actions";
+import { pulseFor } from "@/lib/signals";
+import { DAYS } from "@/lib/planner";
+import type { StrategyProfile } from "@/lib/strategy";
+import type { Opportunity } from "@/lib/engage";
+import type { Contact } from "@/lib/pipeline";
+import type { PlannedPost } from "@/lib/planner";
+import { WARMTH_META } from "@/lib/pipeline";
 
 function Sparkline() {
   return (
@@ -36,424 +30,7 @@ function Sparkline() {
   );
 }
 
-function LiveActivity() {
-  const [off, setOff] = useState(0);
-  const rowRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    const t = setInterval(() => {
-      setOff((o) => o + 1);
-      requestAnimationFrame(() => {
-        if (rowRef.current)
-          gsap.from(rowRef.current, { y: -12, opacity: 0, duration: 0.5, ease: "back.out(1.8)" });
-      });
-    }, 3600);
-    return () => clearInterval(t);
-  }, []);
-  const rows = Array.from({ length: 4 }, (_, i) => TICKER_POOL[(off + i) % TICKER_POOL.length]);
-  return (
-    <div
-      style={{
-        borderRadius: 14,
-        padding: "14px 16px",
-        background: "rgba(8,8,18,0.5)",
-        border: "1px solid rgba(255,255,255,0.08)",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10 }}>
-        <span
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: "50%",
-            background: "#41D98A",
-            boxShadow: "0 0 7px #41D98A",
-            animation: "fh-pulse 2s ease infinite",
-          }}
-        />
-        <span className="fh-kicker" style={{ fontSize: 9.5 }}>
-          Live Activity
-        </span>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-        {rows.map((r, i) => (
-          <div
-            key={`${off}-${i}`}
-            ref={i === 0 ? rowRef : undefined}
-            style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 11.5 }}
-          >
-            <span style={{ color: r.color, flexShrink: 0, fontSize: 10 }}>{r.icon}</span>
-            <span style={{ color: "#C9C7D6", lineHeight: 1.35, flex: 1 }}>{r.text}</span>
-            <span style={{ color: "#5E5C72", fontFamily: "var(--mono)", fontSize: 9.5 }}>{r.when}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/** deterministic 7-day mini activity bars per neighborhood */
-function MiniBars({ seedName, color, live }: { seedName: string; color: string; live: boolean }) {
-  const bars = Array.from({ length: 7 }, (_, i) => {
-    const seed = seedName.charCodeAt(i % seedName.length) + i * 17;
-    return live ? 24 + (seed % 62) : 8 + (seed % 18);
-  });
-  return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 30, marginTop: 12 }}>
-      {bars.map((h, i) => (
-        <div
-          key={i}
-          style={{
-            flex: 1,
-            height: `${h}%`,
-            borderRadius: 2,
-            background: `linear-gradient(180deg, ${color}, ${color}44)`,
-            transformOrigin: "bottom",
-            animation: "fh-grow 0.6s cubic-bezier(0.22,1,0.36,1) both",
-            animationDelay: `${(0.15 + i * 0.05).toFixed(2)}s`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function StatusBadge({ live }: { live: boolean }) {
-  return (
-    <span
-      style={{
-        fontSize: 8.5,
-        fontWeight: 800,
-        letterSpacing: "0.08em",
-        fontFamily: "var(--label)",
-        color: live ? "#41D98A" : "#FFC23D",
-        background: live ? "rgba(65,217,138,0.14)" : "rgba(255,194,61,0.14)",
-        border: `1px solid ${live ? "rgba(65,217,138,0.4)" : "rgba(255,194,61,0.4)"}`,
-        borderRadius: 999,
-        padding: "3px 8px",
-        backdropFilter: "blur(8px)",
-      }}
-    >
-      {live ? "ACTIVE" : "QUIET"}
-    </span>
-  );
-}
-
-function NeighborhoodCard({
-  cluster,
-  onOpen,
-}: {
-  cluster: (typeof FARM_CLUSTERS)[number];
-  onOpen: () => void;
-}) {
-  return (
-    <div
-      className="fh-card3d"
-      role="button"
-      tabIndex={0}
-      onClick={onOpen}
-      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onOpen()}
-      style={{
-        borderRadius: 15,
-        overflow: "hidden",
-        background: "rgba(255,255,255,0.03)",
-        border: `1px solid ${cluster.hex}36`,
-        boxShadow: `0 16px 38px rgba(0,0,0,0.45), 0 6px 22px ${cluster.hex}1A, inset 0 1px 0 rgba(255,255,255,0.08)`,
-        display: "flex",
-        flexDirection: "column",
-        cursor: "pointer",
-      }}
-    >
-      {/* image header */}
-      <div style={{ position: "relative", height: 108, background: `linear-gradient(160deg, ${cluster.hex}30, #0A0A14)` }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={cluster.img}
-          alt={cluster.name}
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-          onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
-        />
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(6,6,13,0.05) 40%, rgba(6,6,13,0.88))" }} />
-        <div style={{ position: "absolute", top: 9, right: 9 }}>
-          <StatusBadge live={cluster.live} />
-        </div>
-        <div style={{ position: "absolute", left: 13, bottom: 9, display: "flex", alignItems: "center", gap: 7 }}>
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: cluster.hex,
-              boxShadow: `0 0 9px ${cluster.hex}`,
-              animation: cluster.live ? "fh-pulse 2.4s ease infinite" : "none",
-            }}
-          />
-          <span style={{ fontSize: 14.5, fontWeight: 700, color: "#F4F3F8", letterSpacing: "-0.01em", textShadow: "0 2px 10px rgba(0,0,0,0.8)" }}>
-            {cluster.name}
-          </span>
-        </div>
-      </div>
-
-      {/* body */}
-      <div style={{ padding: "11px 14px 13px", display: "flex", flexDirection: "column", flex: 1 }}>
-        <div style={{ fontSize: 11.5, color: "#A6A4B8", fontFamily: "var(--mono)" }}>{cluster.stat}</div>
-        <MiniBars seedName={cluster.name} color={cluster.hex} live={cluster.live} />
-        <div style={{ display: "flex", alignItems: "center", marginTop: 11 }}>
-          <span style={{ fontSize: 10.5, color: "#77758C" }}>Open activity</span>
-          <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: cluster.hex }}>→</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function NeighborhoodDetail({
-  cluster,
-  onBack,
-}: {
-  cluster: (typeof FARM_CLUSTERS)[number];
-  onBack: () => void;
-}) {
-  const { set } = useStore();
-  const [items, setItems] = useState<FeedItem[] | null>(null);
-
-  useEffect(() => {
-    let dead = false;
-    setItems(null);
-    fetchNeighborhoodFeed(cluster.slug).then((rows) => {
-      if (!dead) setItems(rows);
-    });
-    return () => {
-      dead = true;
-    };
-  }, [cluster.slug]);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14, animation: "fh-rise 0.3s ease both" }}>
-      {/* banner */}
-      <div style={{ position: "relative", height: 168, borderRadius: 15, overflow: "hidden", border: `1px solid ${cluster.hex}3D` }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={cluster.img}
-          alt={cluster.name}
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-          onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
-        />
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(6,6,13,0.16) 30%, rgba(6,6,13,0.9))" }} />
-        <button
-          onClick={onBack}
-          style={{
-            position: "absolute",
-            top: 12,
-            left: 12,
-            background: "rgba(8,8,18,0.66)",
-            border: "1px solid rgba(255,255,255,0.16)",
-            borderRadius: 8,
-            color: "#D8D6E6",
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: "0.05em",
-            fontFamily: "var(--label)",
-            padding: "7px 12px",
-            cursor: "pointer",
-            backdropFilter: "blur(12px)",
-          }}
-        >
-          ← ALL NEIGHBORHOODS
-        </button>
-        <div style={{ position: "absolute", top: 12, right: 12 }}>
-          <StatusBadge live={cluster.live} />
-        </div>
-        <div style={{ position: "absolute", left: 16, bottom: 13 }}>
-          <div className="fh-title" style={{ fontSize: 26, textShadow: "0 2px 14px rgba(0,0,0,0.8)" }}>
-            {cluster.name}
-          </div>
-          <div style={{ fontSize: 12, color: "#C9C7D6", fontFamily: "var(--mono)", marginTop: 2 }}>{cluster.stat}</div>
-        </div>
-      </div>
-
-      {/* sources — flips live per-source once accounts are connected */}
-      <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
-        {FEED_SOURCES.map((s) => (
-          <span
-            key={s.key}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 10.5,
-              fontWeight: 700,
-              color: s.connected ? s.color : "#77758C",
-              background: "rgba(8,8,18,0.55)",
-              border: `1px solid ${s.connected ? s.color + "55" : "rgba(255,255,255,0.09)"}`,
-              borderRadius: 999,
-              padding: "5px 11px",
-            }}
-          >
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                background: s.connected ? s.color : "#4A4860",
-                boxShadow: s.connected ? `0 0 6px ${s.color}` : "none",
-              }}
-            />
-            {s.label}
-            {!s.connected && <span style={{ fontWeight: 600, color: "#5E5C72" }}>· not connected</span>}
-          </span>
-        ))}
-        <button
-          onClick={() => set({ tab: "settings" })}
-          style={{
-            marginLeft: "auto",
-            background: "transparent",
-            border: "none",
-            color: cluster.hex,
-            fontSize: 11,
-            fontWeight: 700,
-            cursor: "pointer",
-            padding: "5px 2px",
-          }}
-        >
-          Connect accounts →
-        </button>
-      </div>
-
-      {/* feed */}
-      <div
-        style={{
-          borderRadius: 14,
-          padding: "14px 16px",
-          background: "rgba(8,8,18,0.5)",
-          border: "1px solid rgba(255,255,255,0.08)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 12 }}>
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: cluster.hex,
-              boxShadow: `0 0 7px ${cluster.hex}`,
-              animation: "fh-pulse 2s ease infinite",
-            }}
-          />
-          <span className="fh-kicker" style={{ fontSize: 9.5 }}>
-            Your activity here
-          </span>
-          <span style={{ marginLeft: "auto", fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", fontFamily: "var(--label)", color: "#FFC23D" }}>
-            DEMO FEED — GOES LIVE WHEN ACCOUNTS CONNECT
-          </span>
-        </div>
-
-        {items === null ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {[0, 1, 2].map((i) => (
-              <div key={i} style={{ height: 44, borderRadius: 10, background: "rgba(255,255,255,0.045)", animation: "fh-pulse 1.4s ease infinite", animationDelay: `${i * 0.15}s` }} />
-            ))}
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {items.map((it, i) => {
-              const meta = KIND_META[it.kind];
-              const t = feedTime(it.minsAgo);
-              return (
-                <div
-                  key={it.id}
-                  style={{
-                    display: "flex",
-                    gap: 11,
-                    alignItems: "flex-start",
-                    padding: "11px 2px",
-                    borderBottom: i < items.length - 1 ? "1px solid rgba(255,255,255,0.055)" : "none",
-                    animation: "fh-rise 0.3s ease both",
-                    animationDelay: `${i * 0.05}s`,
-                  }}
-                >
-                  <span
-                    style={{
-                      flexShrink: 0,
-                      width: 26,
-                      height: 26,
-                      borderRadius: 8,
-                      display: "grid",
-                      placeItems: "center",
-                      fontSize: 12,
-                      color: meta.color,
-                      background: `${meta.color}16`,
-                      border: `1px solid ${meta.color}3D`,
-                    }}
-                  >
-                    {meta.icon}
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 650, color: "#EDEBF6", lineHeight: 1.35 }}>{it.title}</div>
-                    <div style={{ fontSize: 11, color: "#8B89A0", marginTop: 2, lineHeight: 1.4 }}>{it.detail}</div>
-                  </div>
-                  <div style={{ flexShrink: 0, textAlign: "right" }}>
-                    <div style={{ fontSize: 10.5, fontWeight: 700, color: meta.color, fontFamily: "var(--mono)" }}>{t.rel}</div>
-                    <div style={{ fontSize: 9.5, color: "#5E5C72", fontFamily: "var(--mono)", marginTop: 1 }}>
-                      {t.clock} · {it.source}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* actions */}
-      <div style={{ display: "flex", gap: 9 }}>
-        <button
-          onClick={() => set({ tab: "content", contentTab: "studio" })}
-          style={{
-            flex: 1,
-            background: `linear-gradient(180deg, ${cluster.hex}, ${cluster.hex}B8)`,
-            color: "#0A0A14",
-            border: "none",
-            borderRadius: 10,
-            padding: "10px 0",
-            fontSize: 12.5,
-            fontWeight: 800,
-            cursor: "pointer",
-            boxShadow: `0 8px 22px ${cluster.hex}55`,
-          }}
-        >
-          Draft a post for {cluster.name} →
-        </button>
-        <button
-          onClick={() => set({ tab: "content", contentTab: "week" })}
-          style={{
-            flex: 1,
-            background: `${cluster.hex}12`,
-            color: cluster.hex,
-            border: `1px solid ${cluster.hex}44`,
-            borderRadius: 10,
-            padding: "10px 0",
-            fontSize: 12.5,
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          Plan this week
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function RailCard({
-  children,
-  glow,
-  style,
-}: {
-  children: React.ReactNode;
-  glow: string;
-  style?: React.CSSProperties;
-}) {
+function RailCard({ children, glow, style }: { children: React.ReactNode; glow: string; style?: React.CSSProperties }) {
   return (
     <div
       className="fh-card3d"
@@ -471,15 +48,82 @@ function RailCard({
   );
 }
 
+/** Presence Score chip + expandable transparent breakdown. */
+function Presence() {
+  const { state, set } = useStore();
+  const [open, setOpen] = useState(false);
+  const { score, parts } = presenceScore(state);
+  const weakest = [...parts].sort((a, b) => a.value - b.value)[0];
+
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          background: "rgba(8,8,18,0.6)",
+          border: "1px solid rgba(168,85,247,0.35)",
+          borderRadius: 12,
+          padding: "10px 16px",
+          cursor: "pointer",
+        }}
+      >
+        <span style={{ fontFamily: "var(--display)", fontSize: 26, fontWeight: 800, color: "#C9A8FF", textShadow: "0 0 18px rgba(168,85,247,0.5)" }}>
+          {score}
+        </span>
+        <span style={{ textAlign: "left" }}>
+          <span className="fh-kicker" style={{ fontSize: 8.5, display: "block" }}>Presence Score</span>
+          <span style={{ fontSize: 10, color: "#8B89A0" }}>{open ? "hide breakdown" : "see breakdown"}</span>
+        </span>
+      </button>
+      {open && (
+        <div className="fh-glass" style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", width: 320, borderRadius: 14, padding: "15px 17px", zIndex: 10, animation: "fh-pop 0.2s ease both" }}>
+          {parts.map((p) => (
+            <div key={p.key} style={{ marginBottom: 11 }}>
+              <div style={{ display: "flex", fontSize: 11, marginBottom: 4 }}>
+                <span style={{ color: "#D8D6E6", fontWeight: 700 }}>{p.label}</span>
+                <span style={{ marginLeft: "auto", color: "#8B89A0", fontFamily: "var(--mono)" }}>
+                  {Math.round(p.value * 100)} · ×{p.weight}
+                </span>
+              </div>
+              <div style={{ height: 5, borderRadius: 3, background: "rgba(255,255,255,0.07)" }}>
+                <div style={{ width: `${p.value * 100}%`, height: "100%", borderRadius: 3, background: p.key === weakest.key ? "#FFC23D" : "#A855F7" }} />
+              </div>
+            </div>
+          ))}
+          <div style={{ fontSize: 11, color: "#FFC23D", lineHeight: 1.5, marginTop: 12 }}>
+            <b>Best next move:</b> {weakest.tip}
+          </div>
+          <button
+            onClick={() => { setOpen(false); set(weakest.key === "hygiene" ? { tab: "pipeline" } : weakest.key === "consistency" ? { tab: "content", contentTab: "week" } : { tab: "engage" }); }}
+            style={{ marginTop: 10, width: "100%", background: "rgba(255,194,61,0.12)", color: "#FFC23D", border: "1px solid rgba(255,194,61,0.4)", borderRadius: 8, padding: "8px 0", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}
+          >
+            Do it now →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { state, set } = useStore();
-  const [selected, setSelected] = useState<string | null>(null);
-  const selCluster = FARM_CLUSTERS.find((c) => c.slug === selected) || null;
+  const strategy = state.strategy as StrategyProfile;
+  const opps = (state.opportunities as Opportunity[]) || [];
+  const contacts = (state.contacts as Contact[]) || [];
+  const planned = (state.plannedPosts as PlannedPost[]) || [];
+  const actions = deriveActions(state);
+  const pulse = pulseFor(strategy.territories, 3);
+
+  const warm = contacts.filter((c) => c.warmth === "warm" || c.warmth === "hot").length;
+  const due = contacts.filter((c) => c.nextTouch === "today" || c.nextTouch === "tomorrow").length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <div className="fh-dashgrid">
-        {/* YOUR FARM — one panel, 2D neighborhood cards */}
+        {/* COMMAND CENTER */}
         <div
           style={{
             position: "relative",
@@ -487,7 +131,7 @@ export default function Dashboard() {
             border: "1px solid rgba(255,255,255,0.1)",
             background: "radial-gradient(1000px 600px at 60% -10%, #1B1832, #0A0A14 60%, #06060D)",
             boxShadow: "0 30px 70px rgba(0,0,0,0.5)",
-            padding: "22px 22px 18px",
+            padding: "22px 22px 20px",
             display: "flex",
             flexDirection: "column",
             gap: 16,
@@ -497,171 +141,206 @@ export default function Dashboard() {
           <div style={{ display: "flex", alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                <span className="fh-kicker" style={{ fontSize: 10 }}>
-                  Your Farm
-                </span>
+                <span className="fh-kicker" style={{ fontSize: 10 }}>Your Farm</span>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 10, color: "#41D98A", fontWeight: 700 }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#41D98A", boxShadow: "0 0 8px #41D98A", animation: "fh-pulse 2s ease infinite" }} />
                   LIVE
                 </span>
               </div>
-              <div className="fh-title fh-shimmer-text" style={{ fontSize: 38, marginTop: 2 }}>
-                Gilbert, AZ
+              <div className="fh-title fh-shimmer-text" style={{ fontSize: 34, marginTop: 2 }}>
+                {strategy.homeBase || "Your Market"}
               </div>
-              <div style={{ fontSize: 13, color: "#A6A4B8", marginTop: 1 }}>
-                6 neighborhoods · 8 groups · one presence
+              <div style={{ fontSize: 12.5, color: "#A6A4B8", marginTop: 1 }}>
+                {strategy.territories.length} territories · {actions.length} action{actions.length === 1 ? "" : "s"} waiting
               </div>
             </div>
-
-            {/* farm health */}
-            <div
-              style={{
-                marginLeft: "auto",
-                borderRadius: 12,
-                padding: "10px 14px",
-                background: "rgba(8,8,18,0.55)",
-                border: "1px solid rgba(255,194,61,0.28)",
-                maxWidth: 250,
-              }}
-            >
-              <div className="fh-kicker" style={{ fontSize: 9, color: "#FFC23D" }}>
-                Farm Health
-              </div>
-              <div style={{ fontSize: 13.5, fontWeight: 700, marginTop: 3 }}>6/8 groups active</div>
-              <div style={{ fontSize: 11, color: "#E8B563", marginTop: 2 }}>
-                Power Ranch quiet 3 weeks — action queued
-              </div>
+            <div style={{ marginLeft: "auto" }}>
+              <Presence />
             </div>
           </div>
 
-          {/* neighborhood cards ⇄ drill-in activity feed */}
-          {selCluster ? (
-            <NeighborhoodDetail cluster={selCluster} onBack={() => setSelected(null)} />
-          ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(225px, 1fr))", gap: 12 }}>
-              {FARM_CLUSTERS.map((cl) => (
-                <NeighborhoodCard key={cl.slug} cluster={cl} onOpen={() => setSelected(cl.slug)} />
+          {/* NEXT ACTIONS */}
+          <div>
+            <div className="fh-kicker" style={{ fontSize: 9.5, marginBottom: 9 }}>Next actions</div>
+            {actions.length === 0 ? (
+              <div style={{ borderRadius: 13, border: "1px dashed rgba(65,217,138,0.3)", padding: "18px 16px", fontSize: 12.5, color: "#41D98A" }}>
+                ✓ Queue clear — everything urgent is handled. Check the pulse below for what to talk about next.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {actions.map((a, i) => (
+                  <div
+                    key={a.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      borderRadius: 13,
+                      padding: "12px 14px",
+                      background: "rgba(8,8,18,0.5)",
+                      border: `1px solid ${a.color}30`,
+                      borderLeft: `3px solid ${a.color}`,
+                      animation: "fh-rise 0.3s ease both",
+                      animationDelay: `${i * 0.05}s`,
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#F4F3F8", lineHeight: 1.35 }}>{a.title}</div>
+                      <div style={{ fontSize: 11, color: "#8B89A0", marginTop: 2, lineHeight: 1.4 }}>{a.detail}</div>
+                    </div>
+                    <button
+                      onClick={() => set(a.go as Record<string, unknown>)}
+                      style={{ flexShrink: 0, background: `${a.color}14`, color: a.color, border: `1px solid ${a.color}4D`, borderRadius: 9, padding: "8px 15px", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}
+                    >
+                      {a.cta} →
+                    </button>
+                    <button
+                      onClick={() => set((s) => ({ doneActions: { ...(s.doneActions as Record<string, boolean>), [a.id]: true } }))}
+                      title="Mark done"
+                      style={{ flexShrink: 0, background: "transparent", color: "#5E5C72", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, width: 32, height: 32, fontSize: 13, cursor: "pointer" }}
+                    >
+                      ✓
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* TERRITORIES */}
+          <div>
+            <div className="fh-kicker" style={{ fontSize: 9.5, marginBottom: 9 }}>Territories</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 10 }}>
+              {strategy.territories.map((t) => {
+                const open = opps.filter((o) => o.territory === t.name && o.status !== "skipped").length;
+                return (
+                  <div
+                    key={t.slug}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => set({ tab: "market", marketSel: t.slug })}
+                    onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && set({ tab: "market", marketSel: t.slug })}
+                    className="fh-card3d"
+                    style={{ position: "relative", borderRadius: 13, overflow: "hidden", height: 92, border: `1px solid ${t.hex}36`, cursor: "pointer", background: `linear-gradient(160deg, ${t.hex}26, #0A0A14)` }}
+                  >
+                    {t.img && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={t.img} alt={t.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
+                    )}
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(6,6,13,0.1) 30%, rgba(6,6,13,0.92))" }} />
+                    <span style={{ position: "absolute", top: 7, right: 8, fontSize: 8, fontWeight: 800, letterSpacing: "0.08em", fontFamily: "var(--label)", color: t.hex, background: "rgba(8,8,18,0.66)", border: `1px solid ${t.hex}55`, borderRadius: 999, padding: "2px 7px", textTransform: "uppercase" }}>
+                      {t.segment}
+                    </span>
+                    <div style={{ position: "absolute", left: 11, bottom: 8, right: 11 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#F4F3F8", textShadow: "0 2px 8px rgba(0,0,0,0.8)" }}>{t.name}</div>
+                      <div style={{ fontSize: 9.5, color: open ? "#26E0C8" : "#77758C", marginTop: 1 }}>
+                        {open ? `${open} open conversation${open > 1 ? "s" : ""}` : "no live conversations"}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* MARKET PULSE */}
+          <div>
+            <div className="fh-kicker" style={{ fontSize: 9.5, marginBottom: 9 }}>Market pulse</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {pulse.map((sg) => (
+                <div key={sg.id} style={{ display: "flex", alignItems: "center", gap: 12, borderRadius: 12, padding: "10px 13px", background: "rgba(8,8,18,0.45)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <span style={{ flexShrink: 0, width: 7, height: 7, borderRadius: "50%", background: sg.color, boxShadow: `0 0 7px ${sg.color}` }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: "#EDEBF6" }}>
+                      <span style={{ color: sg.color, fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", fontFamily: "var(--label)", marginRight: 7 }}>{sg.territoryName.toUpperCase()}</span>
+                      {sg.headline}
+                    </div>
+                    <div style={{ fontSize: 10.5, color: "#8B89A0", marginTop: 2 }}>{sg.detail} · <i style={{ color: "#A6A4B8" }}>{sg.angle}</i></div>
+                  </div>
+                  <button
+                    onClick={() => set({ tab: "content", contentTab: "ideas" })}
+                    style={{ flexShrink: 0, background: `${sg.color}12`, color: sg.color, border: `1px solid ${sg.color}44`, borderRadius: 8, padding: "6px 12px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Make content →
+                  </button>
+                </div>
               ))}
             </div>
-          )}
+          </div>
 
-          {!selCluster && <LiveActivity />}
-
-          {/* group chips */}
-          <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-            {FARM_CHIPS.map((c) => (
-              <span
-                key={c.name}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: "#C9C7D6",
-                  background: "rgba(8,8,18,0.55)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 999,
-                  padding: "5px 11px",
-                }}
-              >
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: c.dot, boxShadow: `0 0 6px ${c.dot}` }} />
-                {c.name}
-                <span style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: "#77758C" }}>{c.note}</span>
+          {/* WEEK STRIP + PIPELINE SNAPSHOT */}
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <button
+              onClick={() => set({ tab: "content", contentTab: "week" })}
+              style={{ flex: "1 1 260px", display: "flex", alignItems: "center", gap: 12, borderRadius: 12, padding: "11px 14px", background: "rgba(8,8,18,0.45)", border: "1px solid rgba(255,255,255,0.07)", cursor: "pointer", textAlign: "left" }}
+            >
+              <span className="fh-kicker" style={{ fontSize: 9 }}>This week</span>
+              <span style={{ display: "flex", gap: 6 }}>
+                {DAYS.map((d) => {
+                  const has = planned.some((p) => p.plannedDay === d.id);
+                  return (
+                    <span key={d.id} title={d.label} style={{ width: 11, height: 11, borderRadius: "50%", background: has ? "#41D98A" : "rgba(255,255,255,0.1)", boxShadow: has ? "0 0 7px rgba(65,217,138,0.6)" : "none" }} />
+                  );
+                })}
               </span>
-            ))}
+              <span style={{ marginLeft: "auto", fontSize: 10.5, color: "#8B89A0" }}>
+                {planned.filter((p) => p.plannedDay).length}/{strategy.postingTarget} planned →
+              </span>
+            </button>
+            <button
+              onClick={() => set({ tab: "pipeline" })}
+              style={{ flex: "1 1 260px", display: "flex", alignItems: "center", gap: 10, borderRadius: 12, padding: "11px 14px", background: "rgba(8,8,18,0.45)", border: "1px solid rgba(255,255,255,0.07)", cursor: "pointer", textAlign: "left" }}
+            >
+              <span className="fh-kicker" style={{ fontSize: 9 }}>Pipeline</span>
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: WARMTH_META.warm.color }}>{warm} warm</span>
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: due ? "#FF5D8F" : "#8B89A0" }}>
+                {due ? `${due} follow-up${due > 1 ? "s" : ""} due` : "no follow-ups due"}
+              </span>
+              <span style={{ marginLeft: "auto", fontSize: 10.5, color: "#8B89A0" }}>open →</span>
+            </button>
           </div>
         </div>
 
         {/* RIGHT RAIL */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <RailCard glow="rgba(168,85,247,0.3)" style={{ ["--_glow" as string]: "rgba(168,85,247,0.3)" }}>
+          <RailCard glow="rgba(168,85,247,0.3)">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div className="fh-kicker" style={{ fontSize: 9.5 }}>
-                Autopilot · Claude
-              </div>
+              <div className="fh-kicker" style={{ fontSize: 9.5 }}>Autopilot · Claude</div>
               <Switch on={state.autopilotOn} color="#A855F7" onToggle={() => set({ autopilotOn: !state.autopilotOn })} label="Autopilot" />
             </div>
-            <div className="fh-title" style={{ fontSize: 15.5, marginTop: 10 }}>
-              Content Engine
-            </div>
+            <div className="fh-title" style={{ fontSize: 15.5, marginTop: 10 }}>Content Engine</div>
             <div style={{ fontSize: 13, color: "#A6A4B8", marginTop: 6, lineHeight: 1.5 }}>
               4 posts waiting for approval — IG, FB, Nextdoor.
             </div>
             <button
               onClick={() => set({ tab: "content", contentTab: "queue" })}
-              style={{
-                width: "100%",
-                marginTop: 14,
-                background: "linear-gradient(180deg,#C084FC,#9333EA)",
-                color: "#fff",
-                border: "none",
-                borderRadius: 10,
-                padding: "10px",
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: "pointer",
-                boxShadow: "0 8px 22px rgba(147,51,234,0.5)",
-              }}
+              style={{ width: "100%", marginTop: 14, background: "linear-gradient(180deg,#C084FC,#9333EA)", color: "#fff", border: "none", borderRadius: 10, padding: "10px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 8px 22px rgba(147,51,234,0.5)" }}
             >
-              Open engine
+              Open queue
             </button>
           </RailCard>
 
           <RailCard glow="rgba(255,194,61,0.26)">
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ color: "#FFC23D", fontSize: 16 }}>✦</span>
-              <div className="fh-kicker" style={{ fontSize: 9.5 }}>
-                Best times · auto-publish
-              </div>
-              <span
-                style={{
-                  marginLeft: "auto",
-                  fontSize: 9.5,
-                  fontWeight: 700,
-                  color: "#FFC23D",
-                  background: "rgba(255,194,61,0.12)",
-                  border: "1px solid rgba(255,194,61,0.4)",
-                  borderRadius: 999,
-                  padding: "2px 8px",
-                }}
-              >
-                WEEK
-              </span>
+              <div className="fh-kicker" style={{ fontSize: 9.5 }}>Best times · auto-publish</div>
+              <span style={{ marginLeft: "auto", fontSize: 9.5, fontWeight: 700, color: "#FFC23D", background: "rgba(255,194,61,0.12)", border: "1px solid rgba(255,194,61,0.4)", borderRadius: 999, padding: "2px 8px" }}>WEEK</span>
             </div>
-            <div className="fh-title" style={{ fontSize: 15.5, marginTop: 10 }}>
-              Weekly Planner
-            </div>
+            <div className="fh-title" style={{ fontSize: 15.5, marginTop: 10 }}>Weekly Planner</div>
             <div style={{ fontSize: 13, color: "#A6A4B8", marginTop: 6, lineHeight: 1.5 }}>
               Plan the whole week in one click, then auto-publish it.
             </div>
             <button
               onClick={() => set({ tab: "content", contentTab: "week" })}
-              style={{
-                width: "100%",
-                marginTop: 14,
-                background: "rgba(255,194,61,0.12)",
-                color: "#FFC23D",
-                border: "1px solid rgba(255,194,61,0.4)",
-                borderRadius: 10,
-                padding: "10px",
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
+              style={{ width: "100%", marginTop: 14, background: "rgba(255,194,61,0.12)", color: "#FFC23D", border: "1px solid rgba(255,194,61,0.4)", borderRadius: 10, padding: "10px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
             >
               Open planner
             </button>
           </RailCard>
 
           <RailCard glow="rgba(65,217,138,0.28)">
-            <div className="fh-kicker" style={{ fontSize: 9.5 }}>
-              Inbound conversations
-            </div>
-            <div
-              className="fh-title"
-              style={{ fontSize: 44, color: "#41D98A", textShadow: "0 0 24px rgba(65,217,138,0.5)", marginTop: 4 }}
-            >
+            <div className="fh-kicker" style={{ fontSize: 9.5 }}>Inbound conversations</div>
+            <div className="fh-title" style={{ fontSize: 44, color: "#41D98A", textShadow: "0 0 24px rgba(65,217,138,0.5)", marginTop: 4 }}>
               <CountUp value={44} />
             </div>
             <div style={{ fontSize: 12.5, color: "#A6A4B8" }}>this month · +4 vs June</div>
@@ -670,9 +349,7 @@ export default function Dashboard() {
 
           <RailCard glow="rgba(168,85,247,0.18)">
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <div className="fh-kicker" style={{ fontSize: 9.5 }}>
-                This week · Perplexity
-              </div>
+              <div className="fh-kicker" style={{ fontSize: 9.5 }}>This week · Perplexity</div>
               <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9.5, color: "#41D98A", fontWeight: 700 }}>
                 <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#41D98A", boxShadow: "0 0 6px #41D98A" }} />
                 LIVE
@@ -694,11 +371,7 @@ export default function Dashboard() {
       {/* stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
         {DASH_STATS.map((s) => (
-          <div
-            key={s.label}
-            className="fh-glass"
-            style={{ borderRadius: 15, padding: "16px 18px", borderTop: `1px solid ${s.color}33` }}
-          >
+          <div key={s.label} className="fh-glass" style={{ borderRadius: 15, padding: "16px 18px", borderTop: `1px solid ${s.color}33` }}>
             <div style={{ fontFamily: "var(--display)", fontWeight: 700, fontSize: 28, letterSpacing: "-0.02em", color: s.color }}>{s.value}</div>
             <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 3 }}>{s.label}</div>
             <div style={{ fontSize: 11, color: "#6E6C82", marginTop: 2 }}>{s.sub}</div>
