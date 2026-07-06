@@ -15,7 +15,7 @@ import type { Asset, Bg, StudioDesign } from "./studio";
 import { DEFAULT_DESIGN } from "./studio";
 import { SEED_POSTS, type Integrations, type PlannedPost } from "./planner";
 import { DEFAULT_STRATEGY, type StrategyProfile } from "./strategy";
-import { SEED_CONTACTS, type Contact } from "./pipeline";
+import { normalizeContact, SEED_CONTACTS, type Contact } from "./pipeline";
 import { tagOpportunity, type Opportunity } from "./engage";
 import type { SourceEntry } from "./sources";
 
@@ -75,6 +75,7 @@ export interface AppState {
   sources: SourceEntry[];
   marketSel: string | null;
   doneActions: Record<string, boolean>;
+  contentResponses: Record<string, { pillar: string; dm: number; comment: number; inquiry: number }>;
   briefs: Record<string, { summary: string; facts: string[] }>; // live area briefs, cached per territory
   demoMode: boolean; // true = example data visible; false = every number is real
 
@@ -129,6 +130,7 @@ const initialState: AppState = {
   sources: [],
   marketSel: null,
   doneActions: {},
+  contentResponses: {},
   briefs: {},
   demoMode: true,
   asstInput:
@@ -193,6 +195,7 @@ const PERSIST_FIELDS = [
   "opportunities",
   "sources",
   "doneActions",
+  "contentResponses",
   "briefs",
   "demoMode",
   "streak",
@@ -212,6 +215,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const raw = localStorage.getItem(PERSIST_KEY);
       if (raw) {
         const saved = JSON.parse(raw);
+        // migrate any old-shape contact records to the current schema
+        if (Array.isArray(saved.contacts)) saved.contacts = saved.contacts.map(normalizeContact);
         setState((s) => ({ ...s, ...saved }));
       }
     } catch {}
@@ -296,7 +301,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       PERSIST_FIELDS.forEach((k) => (out[k] = state[k]));
       localStorage.setItem(PERSIST_KEY, JSON.stringify(out));
     } catch {}
-  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.doneActions, state.briefs, state.demoMode, state.streak]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.doneActions, state.contentResponses, state.briefs, state.demoMode, state.streak]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = useCallback((patch: Patch) => {
     setState((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));

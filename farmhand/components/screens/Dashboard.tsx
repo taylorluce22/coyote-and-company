@@ -3,15 +3,14 @@
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { Switch, CountUp } from "@/components/ui";
-import { DASH_STATS, DASH_INTEL } from "@/lib/data";
+import { DASH_STATS } from "@/lib/data";
 import { deriveActions, presenceScore } from "@/lib/actions";
 import { pulseFor } from "@/lib/signals";
 import { DAYS } from "@/lib/planner";
 import type { StrategyProfile } from "@/lib/strategy";
 import type { Opportunity } from "@/lib/engage";
-import type { Contact } from "@/lib/pipeline";
+import { ageLabel, firstResponseScript, isOverdue, needsResponse, slaColor, WARMTH_META, type Contact } from "@/lib/pipeline";
 import type { PlannedPost } from "@/lib/planner";
-import { WARMTH_META } from "@/lib/pipeline";
 
 function Sparkline() {
   return (
@@ -27,6 +26,68 @@ function Sparkline() {
         style={{ animation: "fh-draw 1.6s ease both" }}
       />
     </svg>
+  );
+}
+
+/** Speed-to-lead strip: every uncontacted lead with an age timer + one-tap actions. */
+function RespondQueue() {
+  const { state, set, copy } = useStore();
+  const strategy = state.strategy as { name: string; tone: string[] };
+  const contacts = state.contacts as Contact[];
+  const fresh = contacts.filter(needsResponse).sort((a, b) => a.createdAt - b.createdAt);
+  const [scriptFor, setScriptFor] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  if (!fresh.length) return null;
+
+  const markContacted = (id: string) =>
+    set((s) => ({
+      contacts: (s.contacts as Contact[]).map((c) =>
+        c.id === id ? { ...c, stage: "contacted" as const, lastTouchAt: Date.now(), nextTouchAt: Date.now() + 3 * 86400000 } : c
+      ),
+    }));
+
+  return (
+    <div style={{ borderRadius: 13, border: "1px solid rgba(255,93,143,0.35)", background: "rgba(255,93,143,0.05)", padding: "13px 15px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#FF5D8F", boxShadow: "0 0 8px #FF5D8F", animation: "fh-pulse 1.6s ease infinite" }} />
+        <span className="fh-kicker" style={{ fontSize: 9.5, color: "#FF9ABF" }}>Respond queue · speed wins deals</span>
+        <span style={{ marginLeft: "auto", fontSize: 10.5, color: "#77758C" }}>green &lt;1h · amber &lt;24h · red = losing them</span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {fresh.slice(0, 4).map((c) => (
+          <div key={c.id} style={{ background: "rgba(8,8,18,0.55)", borderRadius: 11, padding: "10px 12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 10.5, fontWeight: 800, fontFamily: "var(--mono)", color: slaColor(c.createdAt), border: `1px solid ${slaColor(c.createdAt)}55`, borderRadius: 6, padding: "2px 7px" }}>
+                {ageLabel(c.createdAt)}
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#F4F3F8" }}>{c.name}</span>
+              <span style={{ fontSize: 10.5, color: "#77758C" }}>via {c.origin}{c.sourceContext ? ` · ${c.sourceContext.slice(0, 40)}` : ""}</span>
+              <span style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                {c.phone && <a href={`tel:${c.phone}`} style={{ background: "rgba(65,217,138,0.14)", color: "#41D98A", border: "1px solid rgba(65,217,138,0.4)", borderRadius: 7, padding: "5px 11px", fontSize: 10.5, fontWeight: 700, textDecoration: "none" }}>📞 Call</a>}
+                {c.phone && <a href={`sms:${c.phone}`} style={{ background: "rgba(125,211,252,0.12)", color: "#7DD3FC", border: "1px solid rgba(125,211,252,0.4)", borderRadius: 7, padding: "5px 11px", fontSize: 10.5, fontWeight: 700, textDecoration: "none" }}>💬 Text</a>}
+                <button onClick={() => setScriptFor(scriptFor === c.id ? null : c.id)} style={{ background: "rgba(201,168,255,0.12)", color: "#C9A8FF", border: "1px solid rgba(201,168,255,0.4)", borderRadius: 7, padding: "5px 11px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>
+                  ✎ Script
+                </button>
+                <button onClick={() => markContacted(c.id)} style={{ background: "transparent", color: "#8B89A0", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7, padding: "5px 11px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>
+                  ✓ Contacted
+                </button>
+              </span>
+            </div>
+            {scriptFor === c.id && (
+              <div style={{ marginTop: 9, background: "rgba(0,0,0,0.3)", borderRadius: 9, padding: "10px 12px" }}>
+                <div style={{ fontSize: 12.5, color: "#EDEBF6", lineHeight: 1.55 }}>{firstResponseScript(c, strategy.name, strategy.tone)}</div>
+                <button
+                  onClick={() => { copy(firstResponseScript(c, strategy.name, strategy.tone)); setCopied(true); setTimeout(() => setCopied(false), 1400); }}
+                  style={{ marginTop: 8, background: "rgba(65,217,138,0.12)", color: "#41D98A", border: "1px solid rgba(65,217,138,0.4)", borderRadius: 7, padding: "5px 13px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}
+                >
+                  {copied ? "Copied ✓" : "Copy script"}
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -119,7 +180,7 @@ export default function Dashboard() {
   const pulse = pulseFor(strategy.territories, 3);
 
   const warm = contacts.filter((c) => c.warmth === "warm" || c.warmth === "hot").length;
-  const due = contacts.filter((c) => c.nextTouch === "today" || c.nextTouch === "tomorrow").length;
+  const due = contacts.filter(isOverdue).length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -160,9 +221,11 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* NEXT ACTIONS */}
+          <RespondQueue />
+
+          {/* NEXT MONEY MOVES */}
           <div>
-            <div className="fh-kicker" style={{ fontSize: 9.5, marginBottom: 9 }}>Next actions</div>
+            <div className="fh-kicker" style={{ fontSize: 9.5, marginBottom: 9 }}>Next money moves</div>
             {actions.length === 0 ? (
               <div style={{ borderRadius: 13, border: "1px dashed rgba(65,217,138,0.3)", padding: "18px 16px", fontSize: 12.5, color: "#41D98A" }}>
                 ✓ Queue clear — everything urgent is handled. Check the pulse below for what to talk about next.
@@ -295,7 +358,7 @@ export default function Dashboard() {
               <span className="fh-kicker" style={{ fontSize: 9 }}>Pipeline</span>
               <span style={{ fontSize: 11.5, fontWeight: 700, color: WARMTH_META.warm.color }}>{warm} warm</span>
               <span style={{ fontSize: 11.5, fontWeight: 700, color: due ? "#FF5D8F" : "#8B89A0" }}>
-                {due ? `${due} follow-up${due > 1 ? "s" : ""} due` : "no follow-ups due"}
+                {due ? `${due} overdue follow-up${due > 1 ? "s" : ""}` : "follow-ups on track"}
               </span>
               <span style={{ marginLeft: "auto", fontSize: 10.5, color: "#8B89A0" }}>open →</span>
             </button>
@@ -350,24 +413,7 @@ export default function Dashboard() {
             {demo && <Sparkline />}
           </RailCard>
 
-          {demo && <RailCard glow="rgba(168,85,247,0.18)">
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <div className="fh-kicker" style={{ fontSize: 9.5 }}>This week · Perplexity</div>
-              <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9.5, color: "#41D98A", fontWeight: 700 }}>
-                <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#41D98A", boxShadow: "0 0 6px #41D98A" }} />
-                LIVE
-              </span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {DASH_INTEL.map((it) => (
-                <div key={it.title} style={{ borderLeft: `2px solid ${it.color}`, paddingLeft: 10 }}>
-                  <span style={{ fontSize: 9, fontWeight: 700, fontFamily: "var(--mono)", color: it.color }}>{it.tag}</span>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 2 }}>{it.title}</div>
-                  <div style={{ fontSize: 11, color: "#8B89A0", marginTop: 2, lineHeight: 1.4 }}>{it.angle}</div>
-                </div>
-              ))}
-            </div>
-          </RailCard>}
+
         </div>
       </div>
 

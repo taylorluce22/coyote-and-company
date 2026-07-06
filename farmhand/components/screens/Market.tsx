@@ -348,6 +348,8 @@ function TerritoryDetail({ t, onBack }: { t: Territory; onBack: () => void }) {
   );
 }
 
+const ADD_PALETTE = ["#38BDF8", "#41D98A", "#C9A8FF", "#FFC23D", "#FF9A62", "#26E0C8", "#FF5D8F", "#7DD3FC"];
+
 export default function Market() {
   const { state, set } = useStore();
   const strategy = state.strategy as StrategyProfile;
@@ -355,15 +357,63 @@ export default function Market() {
   const sel = state.marketSel as string | null;
   const setSel = (slug: string | null) => set({ marketSel: slug });
   const selT = strategy.territories.find((t) => t.slug === sel);
+  const [adding, setAdding] = useState(false);
+  const [na, setNa] = useState({ name: "", kind: "neighborhood" as NonNullable<Territory["kind"]>, segment: "growth" as Territory["segment"] });
+
+  const addArea = () => {
+    if (!na.name.trim()) return;
+    const slug = na.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    if (!slug || strategy.territories.some((t) => t.slug === slug)) return;
+    const t: Territory = {
+      slug,
+      name: na.name.trim(),
+      city: na.name.trim(),
+      segment: na.segment,
+      status: "exploring",
+      hex: ADD_PALETTE[strategy.territories.length % ADD_PALETTE.length],
+      kind: na.kind,
+    };
+    set((s) => ({ strategy: { ...(s.strategy as StrategyProfile), territories: [...(s.strategy as StrategyProfile).territories, t] } }));
+    setNa({ name: "", kind: "neighborhood", segment: "growth" });
+    setAdding(false);
+  };
 
   if (selT) return <TerritoryDetail key={selT.slug} t={selT} onBack={() => setSel(null)} />;
 
   return (
     <div>
-      <div style={{ fontSize: 13, color: "#A6A4B8", marginBottom: 16 }}>
-        Your watchlist. Open an area and Farmhand assembles the brief, the market signals, and exactly where to start
-        engaging — automatically.
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 13, color: "#A6A4B8" }}>
+          Your watchlist. Open an area and Farmhand assembles the brief, the market signals, and exactly where to start
+          engaging — automatically.
+        </div>
+        <button onClick={() => setAdding(!adding)} style={{ marginLeft: "auto", flexShrink: 0, background: "rgba(56,189,248,0.12)", color: "#7DD3FC", border: "1px solid rgba(56,189,248,0.4)", borderRadius: 9, padding: "8px 16px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+          {adding ? "Cancel" : "+ Add area"}
+        </button>
       </div>
+      {adding && (
+        <div className="fh-glass" style={{ borderRadius: 13, padding: "14px 16px", marginBottom: 16, display: "flex", gap: 9, flexWrap: "wrap", alignItems: "center" }}>
+          <input value={na.name} onChange={(e) => setNa({ ...na, name: e.target.value })} placeholder="Area name · e.g. Verrado, 85396, Kyrene school zone" style={{ flex: "2 1 240px", fontSize: 12.5, color: "#F4F3F8", background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.11)", borderRadius: 9, padding: "9px 12px", outline: "none" }} />
+          <select value={na.kind} onChange={(e) => setNa({ ...na, kind: e.target.value as NonNullable<Territory["kind"]> })} style={{ fontSize: 12, color: "#F4F3F8", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.11)", borderRadius: 9, padding: "9px 10px", outline: "none" }}>
+            <option value="neighborhood">Neighborhood</option>
+            <option value="zip">ZIP code</option>
+            <option value="subdivision">Subdivision</option>
+            <option value="school-zone">School zone</option>
+          </select>
+          <select value={na.segment} onChange={(e) => setNa({ ...na, segment: e.target.value as Territory["segment"] })} style={{ fontSize: 12, color: "#F4F3F8", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.11)", borderRadius: 9, padding: "9px 10px", outline: "none" }}>
+            <option value="luxury">Luxury</option>
+            <option value="growth">Growth</option>
+            <option value="entry">Entry</option>
+            <option value="custom">Custom</option>
+          </select>
+          <button onClick={addArea} style={{ background: "linear-gradient(180deg,#38BDF8,#0284C7)", color: "#fff", border: "none", borderRadius: 9, padding: "9px 20px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+            Add to watchlist
+          </button>
+          <div style={{ width: "100%", fontSize: 10.5, color: "#5E5C72" }}>
+            New areas flow everywhere automatically: ideas, radar keywords, community suggestions, coverage scoring.
+          </div>
+        </div>
+      )}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 13 }}>
         {strategy.territories.map((t) => {
           const open = opps.filter((o) => o.territory === t.name && o.status !== "skipped").length;

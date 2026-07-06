@@ -322,7 +322,7 @@ export const NAV_DEFS = [
   { id: "content", label: "Content", color: "#FF5D8F" },
   { id: "market", label: "Market", color: "#38BDF8" },
   { id: "engage", label: "Engage", color: "#26E0C8" },
-  { id: "pipeline", label: "Pipeline", color: "#FFC23D" },
+  { id: "pipeline", label: "People", color: "#FFC23D" },
   { id: "insights", label: "Insights", color: "#41D98A" },
   { id: "settings", label: "Settings", color: "#8B89A0" },
 ] as const;
