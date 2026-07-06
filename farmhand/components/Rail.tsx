@@ -8,7 +8,7 @@ export default function Rail() {
   const pending = ENGINE_POSTS.filter((p) => !state.approved[p.id]).length;
   const drafts = state.plannedPosts.filter((p) => p.plannedDay && p.status === "draft").length;
   const badgeFor = (id: string) =>
-    id === "engine" ? pending || null : id === "planner" ? drafts || null : null;
+    id === "content" ? (pending + drafts) || null : null;
 
   return (
     <aside className="fh-rail">

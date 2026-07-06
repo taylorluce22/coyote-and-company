@@ -408,7 +408,7 @@ function NeighborhoodDetail({
       {/* actions */}
       <div style={{ display: "flex", gap: 9 }}>
         <button
-          onClick={() => set({ tab: "composer" })}
+          onClick={() => set({ tab: "content", contentTab: "studio" })}
           style={{
             flex: 1,
             background: `linear-gradient(180deg, ${cluster.hex}, ${cluster.hex}B8)`,
@@ -425,7 +425,7 @@ function NeighborhoodDetail({
           Draft a post for {cluster.name} →
         </button>
         <button
-          onClick={() => set({ tab: "planner" })}
+          onClick={() => set({ tab: "content", contentTab: "week" })}
           style={{
             flex: 1,
             background: `${cluster.hex}12`,
@@ -589,7 +589,7 @@ export default function Dashboard() {
               4 posts waiting for approval — IG, FB, Nextdoor.
             </div>
             <button
-              onClick={() => set({ tab: "engine" })}
+              onClick={() => set({ tab: "content", contentTab: "queue" })}
               style={{
                 width: "100%",
                 marginTop: 14,
@@ -636,7 +636,7 @@ export default function Dashboard() {
               Plan the whole week in one click, then auto-publish it.
             </div>
             <button
-              onClick={() => set({ tab: "planner" })}
+              onClick={() => set({ tab: "content", contentTab: "week" })}
               style={{
                 width: "100%",
                 marginTop: 14,

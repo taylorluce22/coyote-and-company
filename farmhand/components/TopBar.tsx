@@ -3,13 +3,12 @@
 import { useStore } from "@/lib/store";
 
 const TITLES: Record<string, string> = {
-  dashboard: "Good morning, Jess",
-  engine: "Content Engine",
-  composer: "Composer",
-  planner: "Weekly Planner",
-  directory: "Active Groups",
-  assistant: "Reply Assistant",
-  results: "Results",
+  today: "Good morning, Jess",
+  content: "Content",
+  market: "Your Market",
+  engage: "Engage",
+  pipeline: "Pipeline",
+  insights: "Insights",
   settings: "Settings",
 };
 

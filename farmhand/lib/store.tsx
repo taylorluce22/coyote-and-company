@@ -14,6 +14,9 @@ import type { TabId } from "./data";
 import type { Asset, Bg, StudioDesign } from "./studio";
 import { DEFAULT_DESIGN } from "./studio";
 import { SEED_POSTS, type Integrations, type PlannedPost } from "./planner";
+import { DEFAULT_STRATEGY, type StrategyProfile } from "./strategy";
+import { SEED_CONTACTS, type Contact } from "./pipeline";
+import type { Opportunity } from "./engage";
 
 export interface Upload {
   id: string;
@@ -61,6 +64,14 @@ export interface AppState {
   weekBrief: string;
   integrations: Integrations;
 
+  // strategy spine (LocalOS)
+  onboarded: boolean;
+  strategy: StrategyProfile;
+  contentTab: "ideas" | "studio" | "week" | "queue";
+  engageTab: "opportunities" | "sources" | "drafts";
+  contacts: Contact[];
+  opportunities: Opportunity[];
+
 
   // reply assistant
   asstInput: string;
@@ -77,7 +88,7 @@ export interface AppState {
 }
 
 const initialState: AppState = {
-  tab: "dashboard",
+  tab: "today",
   streak: 11,
   approved: {},
   done: {},
@@ -103,6 +114,12 @@ const initialState: AppState = {
   plannedPosts: SEED_POSTS,
   weekBrief: "",
   integrations: { cloudName: "", uploadPreset: "", makeWebhook: "", timezone: "", autoPublish: true },
+  onboarded: false,
+  strategy: DEFAULT_STRATEGY,
+  contentTab: "studio",
+  engageTab: "opportunities",
+  contacts: SEED_CONTACTS,
+  opportunities: [],
   asstInput:
     "Anyone know a good realtor in Gilbert? Just moved to Val Vista and looking to buy in the spring — no idea where to start with this market.",
   asstTone: "warm",
@@ -136,6 +153,10 @@ const PERSIST_FIELDS = [
   "plannedPosts",
   "weekBrief",
   "integrations",
+  "onboarded",
+  "strategy",
+  "contacts",
+  "opportunities",
 ] as const;
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -166,7 +187,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       PERSIST_FIELDS.forEach((k) => (out[k] = state[k]));
       localStorage.setItem(PERSIST_KEY, JSON.stringify(out));
     } catch {}
-  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = useCallback((patch: Patch) => {
     setState((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));
