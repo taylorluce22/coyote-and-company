@@ -1,6 +1,6 @@
 "use client";
 
-import { useStore } from "@/lib/store";
+import { cleanSlate, restoreDemo, useStore } from "@/lib/store";
 import { Switch } from "@/components/ui";
 import { SET_VOICE, SET_IMG_PREFS, SET_CONNECTIONS } from "@/lib/data";
 
@@ -83,6 +83,34 @@ export default function Settings() {
         >
           Re-run strategy session →
         </button>
+      </Card>
+
+      <Card title="Data">
+        <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.55, marginBottom: 6 }}>
+          {state.demoMode
+            ? "You're looking at example data (streak, pipeline people, stats). Clear it and the app runs on real activity only — proof it works as intended."
+            : "Clean mode is on — every number in the app comes from something you actually did."}
+        </div>
+        <div style={{ fontSize: 10.5, fontWeight: 700, color: state.demoMode ? "#FFC23D" : "#41D98A", marginBottom: 12 }}>
+          {state.demoMode ? "● EXAMPLE DATA VISIBLE" : "● 100% REAL DATA"}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {state.demoMode ? (
+            <button
+              onClick={() => { if (window.confirm("Clear all example data? Streak, demo pipeline, planned posts and demo stats reset to zero. Your strategy profile, image library and captured conversations are kept.")) set(cleanSlate()); }}
+              style={{ background: "rgba(255,93,143,0.12)", color: "#FF5D8F", border: "1px solid rgba(255,93,143,0.4)", borderRadius: 9, padding: "9px 18px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+            >
+              Clear example data — start clean
+            </button>
+          ) : (
+            <button
+              onClick={() => set(restoreDemo())}
+              style={{ background: "rgba(255,255,255,0.05)", color: "#A6A4B8", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 9, padding: "9px 18px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+            >
+              Restore example data (for demos)
+            </button>
+          )}
+        </div>
       </Card>
 
       <Card title="Connections">

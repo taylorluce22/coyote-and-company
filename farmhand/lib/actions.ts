@@ -64,8 +64,8 @@ export function deriveActions(state: AppState): NextAction[] {
       })
     );
 
-  // 3 — posts waiting for approval
-  const pending = ENGINE_POSTS.filter((p) => !(state.approved as Record<string, boolean>)[p.id]).length;
+  // 3 — posts waiting for approval (example queue only exists in demo mode)
+  const pending = state.demoMode ? ENGINE_POSTS.filter((p) => !(state.approved as Record<string, boolean>)[p.id]).length : 0;
   if (pending > 0)
     out.push({
       id: "act-approve",

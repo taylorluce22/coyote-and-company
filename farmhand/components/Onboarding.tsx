@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useStore } from "@/lib/store";
+import { cleanSlate, useStore } from "@/lib/store";
 import {
   AZ_AREAS,
   DEFAULT_STRATEGY,
@@ -92,6 +92,7 @@ const CHECKLIST = (p: StrategyProfile) => [
   `${p.prospectingMode === "observer" ? "Reading-first" : p.prospectingMode === "connector" ? "Connector" : "Participant"} engagement pace set`,
   `${p.postingTarget}-post week planned in your voice`,
   "Suggested communities mapped to your farm",
+  "Example data cleared — every number from here on is real",
 ];
 
 export default function Onboarding() {
@@ -137,7 +138,7 @@ export default function Onboarding() {
   useEffect(() => {
     if (!building) return;
     if (built >= CHECKLIST(p).length) {
-      const t = setTimeout(() => set({ onboarded: true, strategy: p, tab: "today" }), 900);
+      const t = setTimeout(() => set({ ...cleanSlate(), onboarded: true, strategy: p, tab: "today" }), 900);
       return () => clearTimeout(t);
     }
     const t = setTimeout(() => setBuilt((b) => b + 1), 620);

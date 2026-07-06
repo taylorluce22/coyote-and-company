@@ -75,6 +75,7 @@ export interface AppState {
   sources: SourceEntry[];
   marketSel: string | null;
   doneActions: Record<string, boolean>;
+  demoMode: boolean; // true = example data visible; false = every number is real
 
 
   // reply assistant
@@ -127,6 +128,7 @@ const initialState: AppState = {
   sources: [],
   marketSel: null,
   doneActions: {},
+  demoMode: true,
   asstInput:
     "Anyone know a good realtor in Gilbert? Just moved to Val Vista and looking to buy in the spring — no idea where to start with this market.",
   asstTone: "warm",
@@ -138,6 +140,29 @@ const initialState: AppState = {
 
 export function defaultChannelStudio(): ChannelStudio {
   return { design: { ...DEFAULT_DESIGN }, slideBg: {}, coverBg: null };
+}
+
+/** Wipe every piece of example data — from here on, all numbers are earned. */
+export function cleanSlate(): Partial<AppState> {
+  return {
+    demoMode: false,
+    streak: 0,
+    approved: {},
+    done: {},
+    copied: {},
+    planned: {},
+    plannedPosts: [],
+    contacts: [],
+    opportunities: [],
+    doneActions: {},
+    resLogged: 0,
+    weekBrief: "",
+  };
+}
+
+/** Bring the example data back (demos, walkthroughs). */
+export function restoreDemo(): Partial<AppState> {
+  return { demoMode: true, streak: 11, contacts: SEED_CONTACTS, plannedPosts: SEED_POSTS };
 }
 
 type Patch = Partial<AppState> | ((s: AppState) => Partial<AppState>);
@@ -166,6 +191,8 @@ const PERSIST_FIELDS = [
   "opportunities",
   "sources",
   "doneActions",
+  "demoMode",
+  "streak",
 ] as const;
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -228,7 +255,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       PERSIST_FIELDS.forEach((k) => (out[k] = state[k]));
       localStorage.setItem(PERSIST_KEY, JSON.stringify(out));
     } catch {}
-  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.doneActions]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.doneActions, state.demoMode, state.streak]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = useCallback((patch: Patch) => {
     setState((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));

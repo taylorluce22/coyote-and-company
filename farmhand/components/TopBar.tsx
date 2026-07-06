@@ -3,7 +3,7 @@
 import { useStore } from "@/lib/store";
 
 const TITLES: Record<string, string> = {
-  today: "Good morning, Jess",
+  today: "",
   content: "Content",
   market: "Your Market",
   engage: "Engage",
@@ -14,6 +14,9 @@ const TITLES: Record<string, string> = {
 
 export default function TopBar() {
   const { state } = useStore();
+  const strategy = state.strategy as { name?: string; homeBase?: string };
+  const first = (strategy.name || "there").split(" ")[0];
+  const title = state.tab === "today" ? `Good morning, ${first}` : TITLES[state.tab];
   return (
     <div
       style={{
@@ -33,33 +36,35 @@ export default function TopBar() {
           className="fh-title fh-shimmer-text"
           style={{ fontSize: "clamp(26px, 4vw, 38px)", marginTop: 6 }}
         >
-          {TITLES[state.tab]}
+          {title}
         </h1>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div
-          className="fh-glass"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            borderRadius: 999,
-            padding: "9px 15px",
-            fontSize: 13,
-            fontWeight: 600,
-          }}
-        >
-          <span
+        {state.streak > 0 && (
+          <div
+            className="fh-glass"
             style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: "#FF9A62",
-              boxShadow: "0 0 8px #FF9A62",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              borderRadius: 999,
+              padding: "9px 15px",
+              fontSize: 13,
+              fontWeight: 600,
             }}
-          />
-          {state.streak}-day streak
-        </div>
+          >
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "#FF9A62",
+                boxShadow: "0 0 8px #FF9A62",
+              }}
+            />
+            {state.streak}-day streak
+          </div>
+        )}
         <div
           className="fh-glass"
           style={{
@@ -86,9 +91,9 @@ export default function TopBar() {
               color: "#0B0B16",
             }}
           >
-            J
+            {first[0]?.toUpperCase() || "F"}
           </span>
-          Jess · Gilbert, AZ
+          {strategy.name || "You"} · {strategy.homeBase || "Arizona"}
         </div>
       </div>
     </div>

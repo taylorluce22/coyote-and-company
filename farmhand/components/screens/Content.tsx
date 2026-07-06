@@ -54,6 +54,26 @@ function Ideas() {
   );
 }
 
+function EmptyQueue() {
+  const { set } = useStore();
+  return (
+    <div className="fh-glass" style={{ borderRadius: 18, padding: "44px 32px", textAlign: "center", maxWidth: 560, margin: "40px auto" }}>
+      <div style={{ fontSize: 30, marginBottom: 12 }}>🧹</div>
+      <div className="fh-title" style={{ fontSize: 19, marginBottom: 10 }}>Example queue cleared</div>
+      <div style={{ fontSize: 13, color: "#A6A4B8", lineHeight: 1.65 }}>
+        This is where Autopilot-drafted posts will wait for your approval once channels are connected. Until then,
+        draft real posts in the Studio — everything you make there is yours.
+      </div>
+      <button
+        onClick={() => set({ contentTab: "studio" })}
+        style={{ marginTop: 18, background: "linear-gradient(180deg,#FB7185,#E11D48)", color: "#fff", border: "none", borderRadius: 10, padding: "10px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+      >
+        Open the Studio →
+      </button>
+    </div>
+  );
+}
+
 export default function Content() {
   const { state, set } = useStore();
   const tab = state.contentTab;
@@ -71,7 +91,7 @@ export default function Content() {
         color="#FF5D8F"
         onPick={(id) => set({ contentTab: id })}
       />
-      {tab === "ideas" ? <Ideas /> : tab === "studio" ? <Composer /> : tab === "week" ? <Planner /> : <ContentEngine />}
+      {tab === "ideas" ? <Ideas /> : tab === "studio" ? <Composer /> : tab === "week" ? <Planner /> : state.demoMode ? <ContentEngine /> : <EmptyQueue />}
     </div>
   );
 }
