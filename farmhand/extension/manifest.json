@@ -1,13 +1,18 @@
 {
   "manifest_version": 3,
   "name": "Farmhand Radar",
-  "version": "1.2.0",
-  "description": "Scans Facebook groups, Nextdoor and Reddit as you browse — flags posts matching your territories and sends them to your Farmhand inbox in one click.",
+  "version": "1.3.0",
+  "description": "Scans Facebook groups, Nextdoor and Reddit as you browse — flags posts matching your territories and auto-syncs them into your Farmhand inbox.",
   "permissions": ["contextMenus", "activeTab", "scripting", "storage"],
   "content_scripts": [
     {
       "matches": ["https://*.facebook.com/*", "https://*.nextdoor.com/*", "https://*.reddit.com/*"],
       "js": ["content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://coyote-and-company.vercel.app/*", "https://*.vercel.app/*", "http://localhost/*", "http://127.0.0.1/*"],
+      "js": ["bridge.js"],
       "run_at": "document_idle"
     }
   ],

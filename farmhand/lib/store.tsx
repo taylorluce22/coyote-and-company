@@ -73,6 +73,7 @@ export interface AppState {
   contacts: Contact[];
   opportunities: Opportunity[];
   sources: SourceEntry[];
+  extensionConnected: boolean; // Radar extension bridge live in this tab (transient)
   marketSel: string | null;
   doneActions: Record<string, boolean>;
   contentResponses: Record<string, { pillar: string; dm: number; comment: number; inquiry: number }>;
@@ -128,6 +129,7 @@ const initialState: AppState = {
   contacts: SEED_CONTACTS,
   opportunities: [],
   sources: [],
+  extensionConnected: false,
   marketSel: null,
   doneActions: {},
   contentResponses: {},
@@ -291,6 +293,59 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch {}
+  }, []);
+
+  // Live bridge to the Farmhand Radar extension: leads it captures while you
+  // browse are pushed into this open tab automatically — no button, no new
+  // tab. The extension's bridge content script postMessages the queue; we
+  // ingest new items (dedup by extKey) and ack so it clears them.
+  useEffect(() => {
+    const ingest = (items: { key?: string; t?: string; s?: string; u?: string }[]) => {
+      setState((s) => {
+        const territories = (s.strategy as { territories?: { name: string }[] })?.territories?.map((t) => t.name) || [];
+        const existing = s.opportunities as Opportunity[];
+        const seen = new Set(existing.map((o) => o.extKey).filter(Boolean));
+        const newOpps: Opportunity[] = [];
+        items.forEach((b, i) => {
+          const text = String(b.t || "").trim();
+          if (!text || (b.key && seen.has(b.key))) return;
+          const srcName = String(b.s || "Radar capture").slice(0, 80);
+          const matched = territories.find((n) => text.toLowerCase().includes(n.toLowerCase()));
+          newOpps.push({
+            id: `opp-ext-${Date.now()}-${i}`,
+            sourceName: srcName,
+            territory: matched || territories[0] || "General",
+            excerpt: text.slice(0, 400),
+            url: b.u ? String(b.u).slice(0, 500) : undefined,
+            tags: tagOpportunity(text),
+            status: "new",
+            capturedAt: "just now",
+            firstTouch: !existing.some((o) => o.sourceName === srcName) && !newOpps.some((o) => o.sourceName === srcName),
+            extKey: b.key,
+          });
+        });
+        if (!newOpps.length) return s.extensionConnected ? s : { ...s, extensionConnected: true };
+        return { ...s, extensionConnected: true, opportunities: [...newOpps, ...existing] };
+      });
+    };
+
+    const onMsg = (e: MessageEvent) => {
+      if (e.source !== window || !e.data || e.data.source !== "farmhand-radar") return;
+      if (e.data.type === "present") {
+        setState((s) => (s.extensionConnected ? s : { ...s, extensionConnected: true }));
+        window.postMessage({ source: "farmhand-app", type: "hello" }, window.location.origin);
+      }
+      if (e.data.type === "queue" && Array.isArray(e.data.items) && e.data.items.length) {
+        ingest(e.data.items);
+        // ack every received key so the extension drains its queue
+        const keys = e.data.items.map((i: { key?: string }) => i.key).filter(Boolean);
+        window.postMessage({ source: "farmhand-app", type: "ack", keys }, window.location.origin);
+      }
+    };
+    window.addEventListener("message", onMsg);
+    // announce we're ready so an already-loaded bridge replies immediately
+    window.postMessage({ source: "farmhand-app", type: "hello" }, window.location.origin);
+    return () => window.removeEventListener("message", onMsg);
   }, []);
 
   // save on change (persisted fields only)

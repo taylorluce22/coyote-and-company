@@ -15,6 +15,7 @@ export interface Opportunity {
   status: "new" | "watching" | "engaged" | "skipped";
   capturedAt: string; // relative for demo
   firstTouch: boolean; // first engagement in this source → guardrails apply
+  extKey?: string; // dedup key when captured via the Radar extension bridge
 }
 
 /** Rule-based topic tagging for captured threads. */

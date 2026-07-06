@@ -67,10 +67,12 @@ function Radar({ onCapture }: { onCapture: (item: RadarItem) => void }) {
   return (
     <div className="fh-glass" style={{ borderRadius: 14, padding: "15px 17px", marginBottom: 16, border: "1px solid rgba(255,154,98,0.22)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#FF9A62", boxShadow: "0 0 8px #FF9A62", animation: "fh-pulse 2s ease infinite" }} />
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: state.extensionConnected ? "#41D98A" : "#FF9A62", boxShadow: `0 0 8px ${state.extensionConnected ? "#41D98A" : "#FF9A62"}`, animation: "fh-pulse 2s ease infinite" }} />
         <span className="fh-kicker" style={{ fontSize: 9.5 }}>Live radar</span>
-        <span style={{ fontSize: 10.5, color: "#77758C" }}>
-          Reddit scans from here · Facebook &amp; Nextdoor scan via the Radar extension while you browse
+        <span style={{ fontSize: 10.5, color: state.extensionConnected ? "#41D98A" : "#77758C" }}>
+          {state.extensionConnected
+            ? "● Extension connected — new matches appear here automatically as you browse"
+            : "Reddit scans from here · Facebook & Nextdoor scan via the Radar extension while you browse"}
         </span>
         <button
           onClick={scan}
