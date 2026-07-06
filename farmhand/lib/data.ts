@@ -309,12 +309,12 @@ export const DASH_INTEL = [
 
 /* 3D farm neighborhood clusters (also drives the iso fallback map) */
 export const FARM_CLUSTERS = [
-  { x: -3.6, z: -1.6, w: 3.0, d: 2.2, h: 1.6, c: 0x38bdf8, hex: "#38BDF8", name: "Val Vista Lakes", stat: "12 posts · warm", live: true },
-  { x: 0.6, z: -3.4, w: 2.6, d: 1.8, h: 1.1, c: 0x41d98a, hex: "#41D98A", name: "Agritopia", stat: "spotlight Jul 8", live: true },
-  { x: 0.4, z: -0.4, w: 2.0, d: 1.5, h: 2.1, c: 0xa855f7, hex: "#A855F7", name: "85234 Core", stat: "market posts", live: true },
-  { x: -2.4, z: 2.2, w: 2.7, d: 1.9, h: 1.35, c: 0x26e0c8, hex: "#26E0C8", name: "Heritage District", stat: "festival Jul 12", live: true },
-  { x: 2.9, z: 2.6, w: 2.9, d: 2.1, h: 0.85, c: 0xffc23d, hex: "#FFC23D", name: "Power Ranch", stat: "quiet · 3 wks", live: false },
-  { x: 4.0, z: -1.4, w: 3.1, d: 2.3, h: 1.5, c: 0xff5d8f, hex: "#FF5D8F", name: "Paradise Valley", stat: "golf-course luxury", live: true },
+  { slug: "val-vista-lakes", img: "/neighborhoods/val-vista-lakes.jpg", hex: "#38BDF8", name: "Val Vista Lakes", stat: "12 posts · warm", live: true },
+  { slug: "agritopia", img: "/neighborhoods/agritopia.jpg", hex: "#41D98A", name: "Agritopia", stat: "spotlight Jul 8", live: true },
+  { slug: "85234-core", img: "/neighborhoods/85234-core.jpg", hex: "#A855F7", name: "85234 Core", stat: "market posts", live: true },
+  { slug: "heritage-district", img: "/neighborhoods/heritage-district.jpg", hex: "#26E0C8", name: "Heritage District", stat: "festival Jul 12", live: true },
+  { slug: "power-ranch", img: "/neighborhoods/power-ranch.jpg", hex: "#FFC23D", name: "Power Ranch", stat: "quiet · 3 wks", live: false },
+  { slug: "paradise-valley", img: "/neighborhoods/paradise-valley.jpg", hex: "#FF5D8F", name: "Paradise Valley", stat: "golf-course luxury", live: true },
 ];
 
 export const NAV_DEFS = [

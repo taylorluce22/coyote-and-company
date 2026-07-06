@@ -11,6 +11,13 @@ import {
   DASH_STATS,
   DASH_INTEL,
 } from "@/lib/data";
+import {
+  fetchNeighborhoodFeed,
+  feedTime,
+  FEED_SOURCES,
+  KIND_META,
+  type FeedItem,
+} from "@/lib/feeds";
 
 function Sparkline() {
   return (
@@ -111,82 +118,329 @@ function MiniBars({ seedName, color, live }: { seedName: string; color: string; 
   );
 }
 
+function StatusBadge({ live }: { live: boolean }) {
+  return (
+    <span
+      style={{
+        fontSize: 8.5,
+        fontWeight: 800,
+        letterSpacing: "0.08em",
+        fontFamily: "var(--label)",
+        color: live ? "#41D98A" : "#FFC23D",
+        background: live ? "rgba(65,217,138,0.14)" : "rgba(255,194,61,0.14)",
+        border: `1px solid ${live ? "rgba(65,217,138,0.4)" : "rgba(255,194,61,0.4)"}`,
+        borderRadius: 999,
+        padding: "3px 8px",
+        backdropFilter: "blur(8px)",
+      }}
+    >
+      {live ? "ACTIVE" : "QUIET"}
+    </span>
+  );
+}
+
 function NeighborhoodCard({
   cluster,
-  onDraft,
+  onOpen,
 }: {
   cluster: (typeof FARM_CLUSTERS)[number];
-  onDraft: () => void;
+  onOpen: () => void;
 }) {
   return (
     <div
       className="fh-card3d"
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onOpen()}
       style={{
         borderRadius: 15,
-        padding: "16px 17px",
-        background: `linear-gradient(160deg, ${cluster.hex}17, rgba(255,255,255,0.02) 55%)`,
+        overflow: "hidden",
+        background: "rgba(255,255,255,0.03)",
         border: `1px solid ${cluster.hex}36`,
-        boxShadow: `0 16px 38px rgba(0,0,0,0.45), 0 6px 22px ${cluster.hex}1A, inset 0 1px 0 rgba(255,255,255,0.1)`,
+        boxShadow: `0 16px 38px rgba(0,0,0,0.45), 0 6px 22px ${cluster.hex}1A, inset 0 1px 0 rgba(255,255,255,0.08)`,
         display: "flex",
         flexDirection: "column",
+        cursor: "pointer",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span
-          style={{
-            width: 9,
-            height: 9,
-            borderRadius: "50%",
-            background: cluster.hex,
-            boxShadow: `0 0 9px ${cluster.hex}`,
-            animation: cluster.live ? "fh-pulse 2.4s ease infinite" : "none",
-            opacity: cluster.live ? 1 : 0.45,
-          }}
+      {/* image header */}
+      <div style={{ position: "relative", height: 108, background: `linear-gradient(160deg, ${cluster.hex}30, #0A0A14)` }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={cluster.img}
+          alt={cluster.name}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+          onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
         />
-        <span style={{ fontSize: 14.5, fontWeight: 700, color: "#F4F3F8", letterSpacing: "-0.01em" }}>
-          {cluster.name}
-        </span>
-        <span
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(6,6,13,0.05) 40%, rgba(6,6,13,0.88))" }} />
+        <div style={{ position: "absolute", top: 9, right: 9 }}>
+          <StatusBadge live={cluster.live} />
+        </div>
+        <div style={{ position: "absolute", left: 13, bottom: 9, display: "flex", alignItems: "center", gap: 7 }}>
+          <span
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: cluster.hex,
+              boxShadow: `0 0 9px ${cluster.hex}`,
+              animation: cluster.live ? "fh-pulse 2.4s ease infinite" : "none",
+            }}
+          />
+          <span style={{ fontSize: 14.5, fontWeight: 700, color: "#F4F3F8", letterSpacing: "-0.01em", textShadow: "0 2px 10px rgba(0,0,0,0.8)" }}>
+            {cluster.name}
+          </span>
+        </div>
+      </div>
+
+      {/* body */}
+      <div style={{ padding: "11px 14px 13px", display: "flex", flexDirection: "column", flex: 1 }}>
+        <div style={{ fontSize: 11.5, color: "#A6A4B8", fontFamily: "var(--mono)" }}>{cluster.stat}</div>
+        <MiniBars seedName={cluster.name} color={cluster.hex} live={cluster.live} />
+        <div style={{ display: "flex", alignItems: "center", marginTop: 11 }}>
+          <span style={{ fontSize: 10.5, color: "#77758C" }}>Open activity</span>
+          <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: cluster.hex }}>→</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NeighborhoodDetail({
+  cluster,
+  onBack,
+}: {
+  cluster: (typeof FARM_CLUSTERS)[number];
+  onBack: () => void;
+}) {
+  const { set } = useStore();
+  const [items, setItems] = useState<FeedItem[] | null>(null);
+
+  useEffect(() => {
+    let dead = false;
+    setItems(null);
+    fetchNeighborhoodFeed(cluster.slug).then((rows) => {
+      if (!dead) setItems(rows);
+    });
+    return () => {
+      dead = true;
+    };
+  }, [cluster.slug]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14, animation: "fh-rise 0.3s ease both" }}>
+      {/* banner */}
+      <div style={{ position: "relative", height: 168, borderRadius: 15, overflow: "hidden", border: `1px solid ${cluster.hex}3D` }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={cluster.img}
+          alt={cluster.name}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+          onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
+        />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(6,6,13,0.16) 30%, rgba(6,6,13,0.9))" }} />
+        <button
+          onClick={onBack}
           style={{
-            marginLeft: "auto",
-            fontSize: 8.5,
-            fontWeight: 800,
-            letterSpacing: "0.08em",
+            position: "absolute",
+            top: 12,
+            left: 12,
+            background: "rgba(8,8,18,0.66)",
+            border: "1px solid rgba(255,255,255,0.16)",
+            borderRadius: 8,
+            color: "#D8D6E6",
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.05em",
             fontFamily: "var(--label)",
-            color: cluster.live ? "#41D98A" : "#FFC23D",
-            background: cluster.live ? "rgba(65,217,138,0.1)" : "rgba(255,194,61,0.1)",
-            border: `1px solid ${cluster.live ? "rgba(65,217,138,0.35)" : "rgba(255,194,61,0.35)"}`,
-            borderRadius: 999,
-            padding: "3px 8px",
+            padding: "7px 12px",
+            cursor: "pointer",
+            backdropFilter: "blur(12px)",
           }}
         >
-          {cluster.live ? "ACTIVE" : "QUIET"}
-        </span>
+          ← ALL NEIGHBORHOODS
+        </button>
+        <div style={{ position: "absolute", top: 12, right: 12 }}>
+          <StatusBadge live={cluster.live} />
+        </div>
+        <div style={{ position: "absolute", left: 16, bottom: 13 }}>
+          <div className="fh-title" style={{ fontSize: 26, textShadow: "0 2px 14px rgba(0,0,0,0.8)" }}>
+            {cluster.name}
+          </div>
+          <div style={{ fontSize: 12, color: "#C9C7D6", fontFamily: "var(--mono)", marginTop: 2 }}>{cluster.stat}</div>
+        </div>
       </div>
 
-      <div style={{ fontSize: 12, color: "#A6A4B8", marginTop: 7, fontFamily: "var(--mono)" }}>
-        {cluster.stat}
+      {/* sources — flips live per-source once accounts are connected */}
+      <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
+        {FEED_SOURCES.map((s) => (
+          <span
+            key={s.key}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 10.5,
+              fontWeight: 700,
+              color: s.connected ? s.color : "#77758C",
+              background: "rgba(8,8,18,0.55)",
+              border: `1px solid ${s.connected ? s.color + "55" : "rgba(255,255,255,0.09)"}`,
+              borderRadius: 999,
+              padding: "5px 11px",
+            }}
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: s.connected ? s.color : "#4A4860",
+                boxShadow: s.connected ? `0 0 6px ${s.color}` : "none",
+              }}
+            />
+            {s.label}
+            {!s.connected && <span style={{ fontWeight: 600, color: "#5E5C72" }}>· not connected</span>}
+          </span>
+        ))}
+        <button
+          onClick={() => set({ tab: "settings" })}
+          style={{
+            marginLeft: "auto",
+            background: "transparent",
+            border: "none",
+            color: cluster.hex,
+            fontSize: 11,
+            fontWeight: 700,
+            cursor: "pointer",
+            padding: "5px 2px",
+          }}
+        >
+          Connect accounts →
+        </button>
       </div>
 
-      <MiniBars seedName={cluster.name} color={cluster.hex} live={cluster.live} />
-
-      <button
-        onClick={onDraft}
+      {/* feed */}
+      <div
         style={{
-          marginTop: 13,
-          width: "100%",
-          background: `${cluster.hex}14`,
-          color: cluster.hex,
-          border: `1px solid ${cluster.hex}44`,
-          borderRadius: 9,
-          padding: "8px 0",
-          fontSize: 12,
-          fontWeight: 700,
-          cursor: "pointer",
+          borderRadius: 14,
+          padding: "14px 16px",
+          background: "rgba(8,8,18,0.5)",
+          border: "1px solid rgba(255,255,255,0.08)",
         }}
       >
-        Draft a post →
-      </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 12 }}>
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              background: cluster.hex,
+              boxShadow: `0 0 7px ${cluster.hex}`,
+              animation: "fh-pulse 2s ease infinite",
+            }}
+          />
+          <span className="fh-kicker" style={{ fontSize: 9.5 }}>
+            Your activity here
+          </span>
+          <span style={{ marginLeft: "auto", fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", fontFamily: "var(--label)", color: "#FFC23D" }}>
+            DEMO FEED — GOES LIVE WHEN ACCOUNTS CONNECT
+          </span>
+        </div>
+
+        {items === null ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {[0, 1, 2].map((i) => (
+              <div key={i} style={{ height: 44, borderRadius: 10, background: "rgba(255,255,255,0.045)", animation: "fh-pulse 1.4s ease infinite", animationDelay: `${i * 0.15}s` }} />
+            ))}
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {items.map((it, i) => {
+              const meta = KIND_META[it.kind];
+              const t = feedTime(it.minsAgo);
+              return (
+                <div
+                  key={it.id}
+                  style={{
+                    display: "flex",
+                    gap: 11,
+                    alignItems: "flex-start",
+                    padding: "11px 2px",
+                    borderBottom: i < items.length - 1 ? "1px solid rgba(255,255,255,0.055)" : "none",
+                    animation: "fh-rise 0.3s ease both",
+                    animationDelay: `${i * 0.05}s`,
+                  }}
+                >
+                  <span
+                    style={{
+                      flexShrink: 0,
+                      width: 26,
+                      height: 26,
+                      borderRadius: 8,
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 12,
+                      color: meta.color,
+                      background: `${meta.color}16`,
+                      border: `1px solid ${meta.color}3D`,
+                    }}
+                  >
+                    {meta.icon}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 650, color: "#EDEBF6", lineHeight: 1.35 }}>{it.title}</div>
+                    <div style={{ fontSize: 11, color: "#8B89A0", marginTop: 2, lineHeight: 1.4 }}>{it.detail}</div>
+                  </div>
+                  <div style={{ flexShrink: 0, textAlign: "right" }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: meta.color, fontFamily: "var(--mono)" }}>{t.rel}</div>
+                    <div style={{ fontSize: 9.5, color: "#5E5C72", fontFamily: "var(--mono)", marginTop: 1 }}>
+                      {t.clock} · {it.source}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* actions */}
+      <div style={{ display: "flex", gap: 9 }}>
+        <button
+          onClick={() => set({ tab: "composer" })}
+          style={{
+            flex: 1,
+            background: `linear-gradient(180deg, ${cluster.hex}, ${cluster.hex}B8)`,
+            color: "#0A0A14",
+            border: "none",
+            borderRadius: 10,
+            padding: "10px 0",
+            fontSize: 12.5,
+            fontWeight: 800,
+            cursor: "pointer",
+            boxShadow: `0 8px 22px ${cluster.hex}55`,
+          }}
+        >
+          Draft a post for {cluster.name} →
+        </button>
+        <button
+          onClick={() => set({ tab: "planner" })}
+          style={{
+            flex: 1,
+            background: `${cluster.hex}12`,
+            color: cluster.hex,
+            border: `1px solid ${cluster.hex}44`,
+            borderRadius: 10,
+            padding: "10px 0",
+            fontSize: 12.5,
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          Plan this week
+        </button>
+      </div>
     </div>
   );
 }
@@ -219,6 +473,8 @@ function RailCard({
 
 export default function Dashboard() {
   const { state, set } = useStore();
+  const [selected, setSelected] = useState<string | null>(null);
+  const selCluster = FARM_CLUSTERS.find((c) => c.slug === selected) || null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -278,14 +534,18 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* neighborhood cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(225px, 1fr))", gap: 12 }}>
-            {FARM_CLUSTERS.map((cl) => (
-              <NeighborhoodCard key={cl.name} cluster={cl} onDraft={() => set({ tab: "composer" })} />
-            ))}
-          </div>
+          {/* neighborhood cards ⇄ drill-in activity feed */}
+          {selCluster ? (
+            <NeighborhoodDetail cluster={selCluster} onBack={() => setSelected(null)} />
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(225px, 1fr))", gap: 12 }}>
+              {FARM_CLUSTERS.map((cl) => (
+                <NeighborhoodCard key={cl.slug} cluster={cl} onOpen={() => setSelected(cl.slug)} />
+              ))}
+            </div>
+          )}
 
-          <LiveActivity />
+          {!selCluster && <LiveActivity />}
 
           {/* group chips */}
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
