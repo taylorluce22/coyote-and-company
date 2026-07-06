@@ -517,6 +517,84 @@ export default function Composer() {
           </span>
         </div>
 
+        {/* backgrounds & images — one scrollable strip under the preview */}
+        <div className="fh-glass" style={{ borderRadius: 14, padding: "12px 14px 8px", marginTop: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
+            <span className="fh-kicker" style={{ fontSize: 9.5 }}>Backgrounds &amp; images</span>
+            <span style={{ fontSize: 10, color: "#6E6C82" }}>
+              applies to {cur === 0 ? "cover" : applyAll ? "all body slides" : slide?.role || `slide ${cur + 1}`} · scroll →
+            </span>
+            <button
+              onClick={() => fileRef.current?.click()}
+              style={{ marginLeft: "auto", background: "rgba(65,217,138,0.12)", border: "1px dashed rgba(65,217,138,0.5)", color: "#41D98A", borderRadius: 8, padding: "4px 11px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}
+            >
+              ⬆ Upload
+            </button>
+          </div>
+          <div className="fh-hscroll" style={{ display: "flex", gap: 8, paddingBottom: 8 }}>
+            {/* solid & glow quick tiles */}
+            {([
+              ["gradient", "Cinematic", "linear-gradient(160deg,#1B1832,#0A0A14)"],
+              ["black", "Black", "#000"],
+              ["glow", "Glow", "radial-gradient(60% 60% at 50% 40%, rgba(255,93,143,0.5), #0A0A14)"],
+            ] as const).map(([id, label, bg]) => {
+              const on = activeBg.type === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => applyBg({ type: id } as Bg)}
+                  style={{ flexShrink: 0, width: 64, height: 80, borderRadius: 8, border: `2px solid ${on ? "#FF5D8F" : "rgba(255,255,255,0.1)"}`, cursor: "pointer", background: bg, position: "relative", overflow: "hidden", boxShadow: on ? "0 0 12px rgba(255,93,143,0.4)" : "none" }}
+                >
+                  <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, fontSize: 7.5, fontWeight: 700, color: "#D8D6E6", background: "rgba(0,0,0,0.55)", padding: "2px 0" }}>{label}</span>
+                </button>
+              );
+            })}
+            <span style={{ flexShrink: 0, width: 1, background: "rgba(255,255,255,0.1)", margin: "6px 2px" }} />
+            {/* cinematic textures */}
+            {texList.map((t) => {
+              const on = isActive({ type: "texture", tex: t.id });
+              return (
+                <button
+                  key={t.id}
+                  title={t.name}
+                  onClick={() => applyBg({ type: "texture", tex: t.id })}
+                  style={{ flexShrink: 0, width: 64, height: 80, borderRadius: 8, overflow: "hidden", position: "relative", border: `2px solid ${on ? "#FF5D8F" : "rgba(255,255,255,0.1)"}`, cursor: "pointer", background: `#111 url(${t.src}) center/cover`, boxShadow: on ? "0 0 12px rgba(255,93,143,0.4)" : "none", padding: 0 }}
+                >
+                  <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, fontSize: 7.5, fontWeight: 700, color: "#D8D6E6", background: "rgba(0,0,0,0.55)", padding: "2px 0" }}>{t.name}</span>
+                </button>
+              );
+            })}
+            {assets.length > 0 && <span style={{ flexShrink: 0, width: 1, background: "rgba(255,255,255,0.1)", margin: "6px 2px" }} />}
+            {/* your images */}
+            {assets.map((a) => {
+              const on = isActive({ type: "image", img: a.dataURL });
+              return (
+                <div key={a.id} style={{ position: "relative", flexShrink: 0 }}>
+                  <button
+                    title={a.name}
+                    onClick={() => applyBg({ type: "image", img: a.dataURL })}
+                    style={{ display: "block", width: 80, height: 80, padding: 0, borderRadius: 8, overflow: "hidden", border: `2px solid ${on ? "#FF5D8F" : "rgba(255,255,255,0.1)"}`, cursor: "pointer", background: `#111 url(${a.dataURL}) center/cover`, boxShadow: on ? "0 0 12px rgba(255,93,143,0.4)" : "none" }}
+                  />
+                  <button
+                    title="Remove"
+                    onClick={() => set((s) => ({ stAssets: s.stAssets.filter((x) => x.id !== a.id) }))}
+                    style={{ position: "absolute", top: -4, right: -4, width: 16, height: 16, borderRadius: "50%", border: "none", background: "rgba(255,93,143,0.9)", color: "#fff", fontSize: 8.5, cursor: "pointer", lineHeight: 1 }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            })}
+            {/* upload tile */}
+            <button
+              onClick={() => fileRef.current?.click()}
+              style={{ flexShrink: 0, width: 80, height: 80, borderRadius: 8, border: "1.5px dashed rgba(65,217,138,0.45)", background: "rgba(65,217,138,0.05)", color: "#41D98A", fontSize: 20, cursor: "pointer" }}
+            >
+              +
+            </button>
+          </div>
+        </div>
+
         {/* caption & hashtags */}
         <div className="fh-glass" style={{ borderRadius: 14, padding: 16, marginTop: 18 }}>
           <div className="fh-kicker" style={{ fontSize: 10, marginBottom: 12 }}>
@@ -581,36 +659,7 @@ export default function Composer() {
             </div>
           )}
 
-          <label style={FIELD_LABEL}>Cinematic textures</label>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 7, maxHeight: 210, overflowY: "auto", paddingRight: 2 }}>
-            {texList.map((t) => {
-              const on = isActive({ type: "texture", tex: t.id });
-              return (
-                <button
-                  key={t.id}
-                  title={t.name}
-                  onClick={() => applyBg({ type: "texture", tex: t.id })}
-                  style={{
-                    position: "relative",
-                    padding: 0,
-                    borderRadius: 8,
-                    overflow: "hidden",
-                    aspectRatio: "4/5",
-                    border: `2px solid ${on ? "#FF5D8F" : "rgba(255,255,255,0.1)"}`,
-                    cursor: "pointer",
-                    background: `#111 url(${t.src}) center/cover`,
-                    boxShadow: on ? "0 0 12px rgba(255,93,143,0.4)" : "none",
-                  }}
-                >
-                  <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, fontSize: 7.5, fontWeight: 700, color: "#D8D6E6", background: "rgba(0,0,0,0.55)", padding: "2px 0" }}>
-                    {t.name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <label style={{ ...FIELD_LABEL, marginTop: 14 }}>Solid &amp; glow</label>
+          <label style={FIELD_LABEL}>Solid &amp; glow</label>
           <Seg
             value={activeBg.type === "texture" || activeBg.type === "image" ? "" : activeBg.type}
             onChange={(v) => applyBg({ type: v } as Bg)}
@@ -620,55 +669,12 @@ export default function Composer() {
               { id: "glow", label: "Accent glow" },
             ]}
           />
-
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, marginBottom: 8 }}>
-            <label style={{ ...FIELD_LABEL, margin: 0 }}>Your images</label>
-            <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={onUpload} />
-            <button
-              onClick={() => fileRef.current?.click()}
-              style={{ background: "rgba(65,217,138,0.12)", border: "1px dashed rgba(65,217,138,0.5)", color: "#41D98A", borderRadius: 8, padding: "6px 11px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
-            >
-              ⬆ Upload batch
-            </button>
+          <div style={{ fontSize: 10.5, color: "#6E6C82", marginTop: 10, lineHeight: 1.45 }}>
+            Textures &amp; your image library live in the strip under the preview — scroll it sideways.
           </div>
-          {assets.length === 0 ? (
-            <div style={{ fontSize: 11.5, color: "#6E6C82", lineHeight: 1.45 }}>
-              Upload a batch of your own photos or b-roll at once — they&apos;re saved here and reused across every post. Auto-fill picks your darkest, cleanest shots so text stays readable.
-            </div>
-          ) : (
+          <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={onUpload} />
+          {assets.length > 0 && (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 7 }}>
-                {assets.map((a) => {
-                  const on = isActive({ type: "image", img: a.dataURL });
-                  return (
-                    <div key={a.id} style={{ position: "relative" }}>
-                      <button
-                        title={a.name}
-                        onClick={() => applyBg({ type: "image", img: a.dataURL })}
-                        style={{
-                          display: "block",
-                          width: "100%",
-                          padding: 0,
-                          borderRadius: 8,
-                          overflow: "hidden",
-                          aspectRatio: "1",
-                          border: `2px solid ${on ? "#FF5D8F" : "rgba(255,255,255,0.1)"}`,
-                          cursor: "pointer",
-                          background: `#111 url(${a.dataURL}) center/cover`,
-                          boxShadow: on ? "0 0 12px rgba(255,93,143,0.4)" : "none",
-                        }}
-                      />
-                      <button
-                        title="Remove"
-                        onClick={() => set((s) => ({ stAssets: s.stAssets.filter((x) => x.id !== a.id) }))}
-                        style={{ position: "absolute", top: -5, right: -5, width: 17, height: 17, borderRadius: "50%", border: "none", background: "rgba(255,93,143,0.9)", color: "#fff", fontSize: 9, cursor: "pointer", lineHeight: 1 }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                 <button
                   onClick={() => assignImages("cover")}
@@ -686,7 +692,7 @@ export default function Composer() {
                 )}
               </div>
               <div style={{ fontSize: 10.5, color: "#6E6C82", marginTop: 8, lineHeight: 1.4 }}>
-                {assets.length} of 40 saved · auto-fill picks your darkest, cleanest shots so text stays readable and keeps a carousel tonally consistent.
+                {assets.length} of 40 saved · auto-fill picks your darkest, cleanest shots so text stays readable.
               </div>
             </>
           )}
