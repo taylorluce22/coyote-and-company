@@ -68,9 +68,9 @@ function Radar({ onCapture }: { onCapture: (item: RadarItem) => void }) {
     <div className="fh-glass" style={{ borderRadius: 14, padding: "15px 17px", marginBottom: 16, border: "1px solid rgba(255,154,98,0.22)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#FF9A62", boxShadow: "0 0 8px #FF9A62", animation: "fh-pulse 2s ease infinite" }} />
-        <span className="fh-kicker" style={{ fontSize: 9.5 }}>Live radar · Reddit</span>
+        <span className="fh-kicker" style={{ fontSize: 9.5 }}>Live radar</span>
         <span style={{ fontSize: 10.5, color: "#77758C" }}>
-          real conversations mentioning {strategy.territories.map((t) => t.name).join(", ")}
+          Reddit scans from here · Facebook &amp; Nextdoor scan via the Radar extension while you browse
         </span>
         <button
           onClick={scan}
@@ -125,9 +125,13 @@ function Radar({ onCapture }: { onCapture: (item: RadarItem) => void }) {
         </div>
       )}
 
-      <div style={{ fontSize: 10, color: "#5E5C72", marginTop: 10, lineHeight: 1.5 }}>
-        Reddit is the one platform apps may read. Facebook Groups &amp; Nextdoor don&apos;t allow it (and scraping risks
-        your account) — capture those below, and turn on each group&apos;s keyword alerts so they come to you.
+      <div style={{ fontSize: 10, color: "#5E5C72", marginTop: 10, lineHeight: 1.55 }}>
+        Full three-platform coverage: <b style={{ color: "#8B89A0" }}>Reddit</b> scans from the server ·{" "}
+        <b style={{ color: "#8B89A0" }}>Facebook Groups &amp; Nextdoor</b> scan through the Farmhand Radar browser
+        extension as you browse them logged in as yourself (matched posts get flagged and land here in one click) —
+        the only account-safe way, since those platforms allow no server access. Extension install: the{" "}
+        <span style={{ fontFamily: "var(--mono)", fontSize: 9.5 }}>farmhand/extension</span> folder in your repo,
+        chrome://extensions → Load unpacked. Set your territory keywords in its popup.
       </div>
     </div>
   );

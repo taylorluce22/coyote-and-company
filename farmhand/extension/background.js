@@ -1,6 +1,4 @@
-// Farmhand Capture — background service worker.
-// Adds a right-click menu on any selected text; sends the selection (plus the
-// page title + URL as source context) to the Farmhand app's capture endpoint.
+// Farmhand Capture + Radar — background service worker.
 
 const DEFAULT_APP_URL = "https://coyote-and-company.vercel.app";
 
@@ -10,6 +8,7 @@ chrome.runtime.onInstalled.addListener(() => {
     title: "Send selection to Farmhand",
     contexts: ["selection"],
   });
+  updateBadge();
 });
 
 async function appUrl() {
@@ -30,4 +29,15 @@ async function sendToFarmhand(text, sourceTitle, pageUrl) {
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== "farmhand-capture") return;
   sendToFarmhand(info.selectionText, tab?.title, info.pageUrl || tab?.url);
+});
+
+// radar queue badge
+async function updateBadge() {
+  const { fhQueue = [] } = await chrome.storage.local.get("fhQueue");
+  chrome.action.setBadgeBackgroundColor({ color: "#0D9488" });
+  chrome.action.setBadgeText({ text: fhQueue.length ? String(fhQueue.length) : "" });
+}
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.fhQueue) updateBadge();
 });

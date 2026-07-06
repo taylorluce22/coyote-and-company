@@ -3,25 +3,54 @@
   <head>
     <meta charset="utf-8" />
     <style>
-      body { width: 300px; margin: 0; padding: 16px; background: #0a0a14; color: #f4f3f8; font: 13px/1.5 -apple-system, system-ui, sans-serif; }
+      body { width: 330px; margin: 0; padding: 16px; background: #0a0a14; color: #f4f3f8; font: 13px/1.5 -apple-system, system-ui, sans-serif; }
       h1 { font-size: 14px; margin: 0 0 4px; }
-      .sub { color: #8b89a0; font-size: 11.5px; margin-bottom: 14px; }
-      button { width: 100%; border: none; border-radius: 9px; padding: 10px; font-size: 13px; font-weight: 700; cursor: pointer; background: linear-gradient(180deg, #2dd4bf, #0d9488); color: #04110e; }
-      button:disabled { background: #2a2a3a; color: #6e6c82; cursor: default; }
-      .hint { color: #6e6c82; font-size: 10.5px; margin-top: 10px; line-height: 1.5; }
-      label { display: block; color: #8b89a0; font-size: 10.5px; margin: 14px 0 4px; letter-spacing: 0.04em; }
-      input { width: 100%; box-sizing: border-box; background: #14141f; border: 1px solid #2a2a3a; border-radius: 7px; color: #f4f3f8; font-size: 11.5px; padding: 8px 9px; outline: none; }
-      .ok { color: #41d98a; font-size: 10.5px; margin-top: 5px; display: none; }
+      .sub { color: #8b89a0; font-size: 11px; margin-bottom: 12px; }
+      button { width: 100%; border: none; border-radius: 9px; padding: 10px; font-size: 12.5px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+      .primary { background: linear-gradient(180deg, #2dd4bf, #0d9488); color: #04110e; }
+      .secondary { background: #1b1b2a; color: #a6a4b8; border: 1px solid #2a2a3a; }
+      .send { background: linear-gradient(180deg, #4ade80, #16a34a); color: #04110e; }
+      .row { display: flex; align-items: center; gap: 8px; margin: 12px 0 4px; }
+      .row label { flex: 1; color: #d8d6e6; font-size: 12px; font-weight: 600; }
+      .queue { background: #12121e; border: 1px solid #23233a; border-radius: 9px; padding: 9px 11px; margin-top: 10px; max-height: 130px; overflow-y: auto; }
+      .qitem { font-size: 10.5px; color: #a6a4b8; padding: 4px 0; border-bottom: 1px solid #1c1c2e; line-height: 1.4; }
+      .qitem:last-child { border-bottom: none; }
+      .qsrc { color: #2dd4bf; font-weight: 700; }
+      .hint { color: #6e6c82; font-size: 10px; margin-top: 9px; line-height: 1.5; }
+      .flabel { display: block; color: #8b89a0; font-size: 10px; margin: 12px 0 4px; letter-spacing: 0.04em; text-transform: uppercase; }
+      input, textarea { width: 100%; box-sizing: border-box; background: #14141f; border: 1px solid #2a2a3a; border-radius: 7px; color: #f4f3f8; font-size: 11px; padding: 8px 9px; outline: none; font-family: inherit; resize: vertical; }
+      .toggle { position: relative; width: 38px; height: 21px; border-radius: 999px; background: #2a2a3a; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
+      .toggle.on { background: #0d9488; }
+      .knob { position: absolute; top: 2.5px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left 0.2s; }
+      .toggle.on .knob { left: 19px; }
+      .count { color: #2dd4bf; font-weight: 800; }
+      .ok { color: #41d98a; font-size: 10.5px; margin-top: 4px; display: none; }
     </style>
   </head>
   <body>
-    <h1>🌵 Farmhand Capture</h1>
-    <div class="sub">Highlight a thread on this page, then:</div>
-    <button id="capture">Send selection to Farmhand →</button>
-    <div class="hint">Or right-click any selected text anywhere and choose <b>“Send selection to Farmhand.”</b> Works on Facebook groups, Nextdoor, Reddit — it only reads what you've selected.</div>
-    <label>Your Farmhand app URL</label>
+    <h1>🌵 Farmhand Radar</h1>
+    <div class="sub">Scans Facebook groups, Nextdoor & Reddit pages <b>as you browse them</b> — flags posts matching your territories.</div>
+
+    <div class="row">
+      <label>Radar on while I browse</label>
+      <div class="toggle" id="toggle"><div class="knob"></div></div>
+    </div>
+
+    <span class="flabel">My territory keywords (comma-separated)</span>
+    <textarea id="keywords" rows="2" placeholder="Paradise Valley, Buckeye, Verrado, Gilbert…"></textarea>
+
+    <button class="primary" id="scan">Scan this page now</button>
+    <div class="queue" id="queue" style="display:none"></div>
+    <button class="send" id="send" style="display:none">Send <span class="count" id="count">0</span> matches to Farmhand →</button>
+    <button class="secondary" id="clear" style="display:none">Clear queue</button>
+
+    <button class="secondary" id="capture">Send selected text instead</button>
+
+    <span class="flabel">Farmhand app URL</span>
     <input id="appurl" placeholder="https://your-app.vercel.app" />
     <div class="ok" id="saved">✓ Saved</div>
+
+    <div class="hint">Matched posts get a teal outline on the page and stack up here (badge = count). Radar only reads pages you're viewing, logged in as you — it never navigates or posts on its own.</div>
     <script src="popup.js"></script>
   </body>
 </html>
