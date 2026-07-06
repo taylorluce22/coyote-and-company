@@ -29,13 +29,13 @@ function Radar({ onCapture }: { onCapture: (item: RadarItem) => void }) {
   const strategy = state.strategy as StrategyProfile;
   const [items, setItems] = useState<RadarItem[] | null>(null);
   const [scanning, setScanning] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<"none" | "transient" | "needs-creds">("none");
   const [captured, setCaptured] = useState<Record<string, boolean>>({});
 
   const scan = async () => {
     if (scanning) return;
     setScanning(true);
-    setError(false);
+    setError("none");
     try {
       const results = await Promise.all(
         strategy.territories.slice(0, 4).map((t) =>
@@ -54,9 +54,11 @@ function Radar({ onCapture }: { onCapture: (item: RadarItem) => void }) {
       }));
       all.sort((a, b) => a.ageMins - b.ageMins);
       setItems(all.slice(0, 8));
-      if (!all.length && results.every((r) => r.error)) setError(true);
+      if (!all.length && results.every((r) => r.error)) {
+        setError(results.some((r) => r.needsCreds) ? "needs-creds" : "transient");
+      }
     } catch {
-      setError(true);
+      setError("transient");
       setItems([]);
     }
     setScanning(false);
@@ -82,10 +84,21 @@ function Radar({ onCapture }: { onCapture: (item: RadarItem) => void }) {
       {items !== null && (
         <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
           {items.length === 0 ? (
-            <div style={{ fontSize: 11.5, color: "#77758C", lineHeight: 1.55 }}>
-              {error
-                ? "Couldn't reach Reddit from this deployment right now — try again in a minute."
-                : "No fresh threads mentioning your territories this month. Rescan tomorrow — relocation questions come in waves."}
+            <div style={{ fontSize: 11.5, color: error === "needs-creds" ? "#FFC23D" : "#77758C", lineHeight: 1.6 }}>
+              {error === "needs-creds" ? (
+                <>
+                  Reddit blocks anonymous requests from cloud servers — the one-time fix is Reddit&apos;s free official
+                  app: <b>reddit.com/prefs/apps</b> → &ldquo;create another app&rdquo; → type <b>script</b> (any name,
+                  redirect uri http://localhost) → copy the ID (under the app name) and secret → add{" "}
+                  <span style={{ fontFamily: "var(--mono)", fontSize: 10.5 }}>REDDIT_CLIENT_ID</span> +{" "}
+                  <span style={{ fontFamily: "var(--mono)", fontSize: 10.5 }}>REDDIT_CLIENT_SECRET</span> in Vercel →
+                  Settings → Environment Variables, then redeploy. Radar goes live permanently.
+                </>
+              ) : error === "transient" ? (
+                "Couldn't reach Reddit right now — try again in a minute."
+              ) : (
+                "No fresh threads mentioning your territories this month. Rescan tomorrow — relocation questions come in waves."
+              )}
             </div>
           ) : (
             items.map((it) => (

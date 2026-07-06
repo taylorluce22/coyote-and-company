@@ -54,6 +54,7 @@ function TerritoryDetail({ t, onBack }: { t: Territory; onBack: () => void }) {
 
   const [items, setItems] = useState<FeedItem[] | null>(null);
   const [radar, setRadar] = useState<RadarItem[] | null>(null);
+  const [radarNeedsCreds, setRadarNeedsCreds] = useState(false);
   const [live, setLive] = useState<boolean | null>(null);
   const [briefLoading, setBriefLoading] = useState(false);
   const [captured, setCaptured] = useState<Record<string, boolean>>({});
@@ -76,7 +77,10 @@ function TerritoryDetail({ t, onBack }: { t: Territory; onBack: () => void }) {
     // live radar — real Reddit threads mentioning this territory
     fetch(`/api/radar?q=${encodeURIComponent(`"${t.name}"`)}`)
       .then((r) => r.json())
-      .then((d) => setRadar((d.items || []).slice(0, 5)))
+      .then((d) => {
+        setRadar((d.items || []).slice(0, 5));
+        setRadarNeedsCreds(!!d.needsCreds);
+      })
       .catch(() => setRadar([]));
 
     // live research configured? then auto-fetch the area brief (cached forever after)
@@ -267,8 +271,10 @@ function TerritoryDetail({ t, onBack }: { t: Territory; onBack: () => void }) {
           {radar === null ? (
             <div style={{ fontSize: 11.5, color: "#77758C" }}>Scanning for {t.name} threads…</div>
           ) : radar.length === 0 ? (
-            <div style={{ fontSize: 11.5, color: "#77758C", lineHeight: 1.5 }}>
-              No fresh Reddit threads mention {t.name} right now — check the communities above instead, or rescan from Engage.
+            <div style={{ fontSize: 11.5, color: radarNeedsCreds ? "#FFC23D" : "#77758C", lineHeight: 1.55 }}>
+              {radarNeedsCreds
+                ? "Reddit needs a free one-time connection to work from the cloud — open Engage → Live Radar for the 2-minute setup (REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET)."
+                : `No fresh Reddit threads mention ${t.name} right now — check the communities above instead, or rescan from Engage.`}
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
