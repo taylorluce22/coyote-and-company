@@ -517,22 +517,16 @@ export default function Composer() {
           </span>
         </div>
 
-        {/* backgrounds & images — one scrollable strip under the preview */}
-        <div className="fh-glass" style={{ borderRadius: 14, padding: "12px 14px 8px", marginTop: 14 }}>
+        {/* backgrounds & images — two stacked scrollable rows under the preview */}
+        <div className="fh-glass" style={{ borderRadius: 14, padding: "12px 14px 10px", marginTop: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
-            <span className="fh-kicker" style={{ fontSize: 9.5 }}>Backgrounds &amp; images</span>
+            <span className="fh-kicker" style={{ fontSize: 9.5 }}>Backgrounds</span>
             <span style={{ fontSize: 10, color: "#6E6C82" }}>
               applies to {cur === 0 ? "cover" : applyAll ? "all body slides" : slide?.role || `slide ${cur + 1}`} · scroll →
             </span>
-            <button
-              onClick={() => fileRef.current?.click()}
-              style={{ marginLeft: "auto", background: "rgba(65,217,138,0.12)", border: "1px dashed rgba(65,217,138,0.5)", color: "#41D98A", borderRadius: 8, padding: "4px 11px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}
-            >
-              ⬆ Upload
-            </button>
           </div>
+          {/* row 1 — backgrounds: solid/glow + cinematic textures */}
           <div className="fh-hscroll" style={{ display: "flex", gap: 8, paddingBottom: 8 }}>
-            {/* solid & glow quick tiles */}
             {([
               ["gradient", "Cinematic", "linear-gradient(160deg,#1B1832,#0A0A14)"],
               ["black", "Black", "#000"],
@@ -550,7 +544,6 @@ export default function Composer() {
               );
             })}
             <span style={{ flexShrink: 0, width: 1, background: "rgba(255,255,255,0.1)", margin: "6px 2px" }} />
-            {/* cinematic textures */}
             {texList.map((t) => {
               const on = isActive({ type: "texture", tex: t.id });
               return (
@@ -564,8 +557,20 @@ export default function Composer() {
                 </button>
               );
             })}
-            {assets.length > 0 && <span style={{ flexShrink: 0, width: 1, background: "rgba(255,255,255,0.1)", margin: "6px 2px" }} />}
-            {/* your images */}
+          </div>
+
+          {/* row 2 — your images (own row, underneath) */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "12px 0 9px", borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 12 }}>
+            <span className="fh-kicker" style={{ fontSize: 9.5 }}>Your images</span>
+            <span style={{ fontSize: 10, color: "#6E6C82" }}>{assets.length} saved · scroll →</span>
+            <button
+              onClick={() => fileRef.current?.click()}
+              style={{ marginLeft: "auto", background: "rgba(65,217,138,0.12)", border: "1px dashed rgba(65,217,138,0.5)", color: "#41D98A", borderRadius: 8, padding: "4px 11px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}
+            >
+              ⬆ Upload
+            </button>
+          </div>
+          <div className="fh-hscroll" style={{ display: "flex", gap: 8, paddingBottom: 8 }}>
             {assets.map((a) => {
               const on = isActive({ type: "image", img: a.dataURL });
               return (
@@ -592,6 +597,11 @@ export default function Composer() {
             >
               +
             </button>
+            {assets.length === 0 && (
+              <span style={{ alignSelf: "center", fontSize: 11, color: "#6E6C82", marginLeft: 4, lineHeight: 1.4 }}>
+                Upload your photos or b-roll — saved here and reused on every post.
+              </span>
+            )}
           </div>
         </div>
 
