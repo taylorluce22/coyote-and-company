@@ -16,6 +16,12 @@ export interface Opportunity {
   capturedAt: string; // relative for demo
   firstTouch: boolean; // first engagement in this source → guardrails apply
   extKey?: string; // dedup key when captured via the Radar extension bridge
+  // web-wide Lead Engine metadata (present on auto-hunted opportunities)
+  engineScore?: number; // 0-100 intent strength the engine assigned
+  platform?: string; // reddit | facebook | quora | forum | x | news | web…
+  intent?: string; // buyer | seller | relocation | investor | renter | referral
+  why?: string; // one line: why the engine flagged it
+  feedback?: "good" | "bad"; // agent's thumbs — trains the engine
 }
 
 /** Rule-based topic tagging for captured threads. */

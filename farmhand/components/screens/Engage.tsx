@@ -1,160 +1,199 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import SubTabs from "@/components/SubTabs";
 import Sources from "./Sources";
 import Assistant from "./Assistant";
 import { cadenceCap, type StrategyProfile } from "@/lib/strategy";
 import { draftReply, fairHousingLint, scoreOpportunity, tagOpportunity, type Opportunity } from "@/lib/engage";
+import { INTENT_COLOR, INTENT_OPTS, PLATFORM_LABEL, pushExemplar, type Lead, type LeadTraining } from "@/lib/hunt";
 
-interface RadarItem {
-  id: string;
-  title: string;
-  text: string;
-  subreddit: string;
-  author: string;
-  url: string;
-  ageMins: number;
-  comments: number;
-}
-
-function ageLabel(mins: number) {
-  return mins < 60 ? `${mins}m ago` : mins < 1440 ? `${Math.round(mins / 60)}h ago` : `${Math.round(mins / 1440)}d ago`;
-}
-
-/** Live Reddit radar — real conversations mentioning the agent's territories. */
-function Radar({ onCapture }: { onCapture: (item: RadarItem) => void }) {
-  const { state } = useStore();
+/**
+ * Lead Engine — the web-wide hunt.
+ * Searches the ENTIRE live web (Reddit, forums, Quora, public Facebook,
+ * Nextdoor, X, local news, relocation boards…) for real people with buying /
+ * selling / relocation / investing intent in the agent's territories, scores
+ * every hit, and drops qualified ones straight into the inbox. Zero clicks.
+ * It's TRAINABLE — the Teach panel + thumbs on each lead steer future hunts.
+ * Engine = Perplexity live web search server-side (/api/hunt).
+ */
+function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
+  const { state, set } = useStore();
   const strategy = state.strategy as StrategyProfile;
-  const [items, setItems] = useState<RadarItem[] | null>(null);
-  const [scanning, setScanning] = useState(false);
-  const [error, setError] = useState<"none" | "transient" | "needs-creds">("none");
-  const [extScanned, setExtScanned] = useState(false);
-  const [captured, setCaptured] = useState<Record<string, boolean>>({});
+  const training = state.leadTraining as LeadTraining;
+  const [status, setStatus] = useState<"idle" | "scanning" | "ok" | "transient" | "needs-creds">("idle");
+  const [lastAt, setLastAt] = useState<number | null>(null);
+  const [lastNew, setLastNew] = useState(0);
+  const [teach, setTeach] = useState(false);
+  const running = useRef(false);
 
-  const scan = async () => {
-    if (scanning) return;
-    // When the Radar extension is connected, drive IT from here: it opens
-    // Reddit in your browser (not blocked) and streams matches back via the
-    // bridge — no server, no API keys.
-    if (state.extensionConnected) {
-      window.postMessage(
-        { source: "farmhand-app", type: "scan-request", territories: strategy.territories.map((t) => t.name) },
-        window.location.origin
-      );
-      setError("none");
-      setExtScanned(true);
-      setTimeout(() => setExtScanned(false), 9000);
-      return;
-    }
-    setScanning(true);
-    setError("none");
+  const setTraining = (patch: Partial<LeadTraining>) =>
+    set((s) => ({ leadTraining: { ...(s.leadTraining as LeadTraining), ...patch } }));
+
+  const hunt = useCallback(async () => {
+    if (running.current) return;
+    running.current = true;
+    setStatus("scanning");
+    const t = state.leadTraining as LeadTraining;
     try {
-      const results = await Promise.all(
-        strategy.territories.slice(0, 4).map((t) =>
-          fetch(`/api/radar?q=${encodeURIComponent(`"${t.name}"`)}`)
-            .then((r) => r.json())
-            .catch(() => ({ items: [] }))
-        )
-      );
-      const seen = new Set<string>();
-      const all: RadarItem[] = [];
-      results.forEach((r) => (r.items || []).forEach((it: RadarItem) => {
-        if (!seen.has(it.id)) {
-          seen.add(it.id);
-          all.push(it);
-        }
-      }));
-      all.sort((a, b) => a.ageMins - b.ageMins);
-      setItems(all.slice(0, 8));
-      if (!all.length && results.every((r) => r.error)) {
-        setError(results.some((r) => r.needsCreds) ? "needs-creds" : "transient");
+      const res = await fetch("/api/hunt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          territories: strategy.territories.map((x) => x.name),
+          profession: "real estate agent",
+          city: strategy.homeBase,
+          idealClient: strategy.idealClient,
+          intents: t.intents,
+          guidance: t.guidance,
+          good: t.good,
+          bad: t.bad,
+          sinceDays: t.sinceDays,
+        }),
+      }).then((r) => r.json());
+
+      // supplementary: if the extension is live, let it feed FB/Nextdoor as you browse
+      if (state.extensionConnected) {
+        try {
+          window.postMessage(
+            { source: "farmhand-app", type: "scan-request", territories: strategy.territories.map((x) => x.name) },
+            window.location.origin
+          );
+        } catch {}
       }
+
+      const leads: Lead[] = Array.isArray(res.leads) ? res.leads : [];
+      const qualified = leads.filter((l) => l.score >= t.minScore);
+      const added = onAuto(qualified);
+      setLastNew(added);
+      setLastAt(Date.now());
+      if (res.needsCreds || res.configured === false) setStatus("needs-creds");
+      else if (!leads.length && res.error) setStatus("transient");
+      else setStatus("ok");
     } catch {
-      setError("transient");
-      setItems([]);
+      setStatus("transient");
     }
-    setScanning(false);
-  };
+    running.current = false;
+  }, [strategy.territories, strategy.homeBase, strategy.idealClient, state.extensionConnected, state.leadTraining, onAuto]);
+
+  // keep a live handle to the latest hunt so the interval never fires stale —
+  // and so editing training (guidance, sliders) doesn't retrigger a paid search
+  const huntRef = useRef(hunt);
+  huntRef.current = hunt;
+
+  // auto-run on open + every 6 minutes while the tab is open (if auto is on)
+  useEffect(() => {
+    if (!training.autoOn) return;
+    huntRef.current();
+    const id = setInterval(() => huntRef.current(), 6 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [training.autoOn]);
+
+  const rel = lastAt ? (Date.now() - lastAt < 60000 ? "just now" : `${Math.round((Date.now() - lastAt) / 60000)}m ago`) : "—";
+  const dot = status === "needs-creds" ? "#FFC23D" : status === "transient" ? "#FF5D8F" : "#41D98A";
+  const learned = training.good.length + training.bad.length;
 
   return (
-    <div className="fh-glass" style={{ borderRadius: 14, padding: "15px 17px", marginBottom: 16, border: "1px solid rgba(255,154,98,0.22)" }}>
+    <div className="fh-glass" style={{ borderRadius: 14, padding: "15px 17px", marginBottom: 16, border: `1px solid ${status === "needs-creds" ? "rgba(255,194,61,0.3)" : "rgba(65,217,138,0.25)"}` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ width: 7, height: 7, borderRadius: "50%", background: state.extensionConnected ? "#41D98A" : "#FF9A62", boxShadow: `0 0 8px ${state.extensionConnected ? "#41D98A" : "#FF9A62"}`, animation: "fh-pulse 2s ease infinite" }} />
-        <span className="fh-kicker" style={{ fontSize: 9.5 }}>Live radar</span>
-        <span style={{ fontSize: 10.5, color: state.extensionConnected ? "#41D98A" : "#77758C" }}>
-          {state.extensionConnected
-            ? "● Extension connected — new matches appear here automatically as you browse"
-            : "Reddit scans from here · Facebook & Nextdoor scan via the Radar extension while you browse"}
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: dot, boxShadow: `0 0 8px ${dot}`, animation: status === "scanning" ? "fh-pulse 1s ease infinite" : "fh-pulse 2.4s ease infinite" }} />
+        <span className="fh-kicker" style={{ fontSize: 9.5 }}>Lead engine · whole-web</span>
+        <span style={{ fontSize: 10.5, color: "#8B89A0" }}>
+          {status === "scanning"
+            ? `Hunting the web for ${strategy.territories.slice(0, 3).map((x) => x.name).join(", ")}…`
+            : status === "needs-creds"
+            ? "One key away from live — see below"
+            : `Auto-hunting the whole web · last run ${rel}${lastNew ? ` · +${lastNew} new` : ""}`}
         </span>
         <button
-          onClick={scan}
-          disabled={scanning}
-          style={{ marginLeft: "auto", background: scanning ? "rgba(255,255,255,0.05)" : state.extensionConnected ? "rgba(65,217,138,0.12)" : "rgba(255,154,98,0.12)", color: scanning ? "#8B89A0" : state.extensionConnected ? "#41D98A" : "#FF9A62", border: `1px solid ${state.extensionConnected ? "rgba(65,217,138,0.4)" : "rgba(255,154,98,0.4)"}`, borderRadius: 8, padding: "6px 15px", fontSize: 11.5, fontWeight: 700, cursor: scanning ? "default" : "pointer" }}
+          onClick={() => setTeach((v) => !v)}
+          style={{ marginLeft: "auto", background: teach ? "rgba(201,168,255,0.16)" : "rgba(201,168,255,0.09)", color: "#C9A8FF", border: "1px solid rgba(201,168,255,0.4)", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
         >
-          {scanning ? "Scanning…" : state.extensionConnected ? "⚡ Scan Reddit" : items === null ? "Scan now" : "↻ Rescan"}
+          {teach ? "Close" : `Teach${learned ? ` · ${learned}` : ""}`}
+        </button>
+        <button
+          onClick={hunt}
+          disabled={status === "scanning"}
+          style={{ background: "rgba(65,217,138,0.12)", color: "#41D98A", border: "1px solid rgba(65,217,138,0.4)", borderRadius: 8, padding: "6px 14px", fontSize: 11, fontWeight: 700, cursor: status === "scanning" ? "default" : "pointer" }}
+        >
+          {status === "scanning" ? "Hunting…" : "↻ Hunt now"}
         </button>
       </div>
 
-      {extScanned && (
-        <div style={{ marginTop: 10, fontSize: 11.5, color: "#41D98A", lineHeight: 1.5 }}>
-          ⚡ Opening Reddit in your browser and scanning for {strategy.territories.slice(0, 3).map((t) => t.name).join(" / ")} —
-          matches will drop in below on their own in a few seconds. (A couple of Reddit tabs will open; you can close them.)
+      {teach && (
+        <div style={{ marginTop: 12, background: "rgba(201,168,255,0.05)", border: "1px solid rgba(201,168,255,0.18)", borderRadius: 11, padding: "13px 14px" }}>
+          <div style={{ fontSize: 11.5, color: "#C9A8FF", fontWeight: 700, marginBottom: 8 }}>Teach the engine what a great lead looks like</div>
+          <textarea
+            value={training.guidance}
+            onChange={(e) => setTraining({ guidance: e.target.value })}
+            placeholder="In your words: who's a real lead for you? e.g. “People relocating to the East Valley for jobs, first-time buyers asking about Gilbert schools, anyone frustrated with their current agent. Skip investors and rentals.”"
+            rows={3}
+            style={{ width: "100%", fontSize: 12, color: "#F4F3F8", background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.11)", borderRadius: 9, padding: "9px 12px", outline: "none", resize: "vertical", fontFamily: "inherit" }}
+          />
+
+          <div style={{ fontSize: 10, color: "#8B89A0", margin: "12px 0 7px", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase" }}>Hunt for these intents</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {INTENT_OPTS.map((io) => {
+              const on = training.intents.includes(io.key);
+              return (
+                <button
+                  key={io.key}
+                  onClick={() => setTraining({ intents: on ? training.intents.filter((k) => k !== io.key) : [...training.intents, io.key] })}
+                  style={{ fontSize: 11, fontWeight: 700, color: on ? "#04110E" : INTENT_COLOR[io.key] || "#8B89A0", background: on ? INTENT_COLOR[io.key] || "#8B89A0" : `${INTENT_COLOR[io.key] || "#8B89A0"}14`, border: `1px solid ${INTENT_COLOR[io.key] || "#8B89A0"}59`, borderRadius: 999, padding: "4px 12px", cursor: "pointer" }}
+                >
+                  {io.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 10.5, color: "#8B89A0" }}>Only auto-add leads scoring</span>
+              <input type="range" min={30} max={90} step={5} value={training.minScore} onChange={(e) => setTraining({ minScore: Number(e.target.value) })} style={{ accentColor: "#26E0C8", width: 120 }} />
+              <span style={{ fontSize: 11.5, fontWeight: 800, fontFamily: "var(--mono)", color: "#26E0C8" }}>{training.minScore}+</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 10.5, color: "#8B89A0" }}>Recency</span>
+              <select value={training.sinceDays} onChange={(e) => setTraining({ sinceDays: Number(e.target.value) })} style={{ fontSize: 11, color: "#F4F3F8", background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 7, padding: "4px 8px", outline: "none" }}>
+                <option value={14}>2 weeks</option>
+                <option value={30}>1 month</option>
+                <option value={45}>6 weeks</option>
+                <option value={90}>3 months</option>
+              </select>
+            </div>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10.5, color: "#8B89A0", cursor: "pointer", marginLeft: "auto" }}>
+              <input type="checkbox" checked={training.autoOn} onChange={(e) => setTraining({ autoOn: e.target.checked })} style={{ accentColor: "#41D98A" }} />
+              Auto-hunt on open
+            </label>
+          </div>
+
+          {learned > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, fontSize: 10.5, color: "#77758C" }}>
+              <span>Learned from your feedback: <b style={{ color: "#41D98A" }}>{training.good.length} 👍</b> · <b style={{ color: "#FF5D8F" }}>{training.bad.length} 👎</b></span>
+              <button onClick={() => setTraining({ good: [], bad: [] })} style={{ background: "transparent", color: "#77758C", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7, padding: "3px 10px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>Reset learning</button>
+            </div>
+          )}
+          <div style={{ fontSize: 10, color: "#5E5C72", marginTop: 11, lineHeight: 1.55 }}>
+            Every 👍 / 👎 you give a lead below teaches the engine — it hunts for more like your 👍 and avoids your 👎.
+          </div>
         </div>
       )}
 
-      {items !== null && (
-        <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-          {items.length === 0 ? (
-            <div style={{ fontSize: 11.5, color: error === "needs-creds" ? "#FFC23D" : "#77758C", lineHeight: 1.6 }}>
-              {error === "needs-creds" ? (
-                <>
-                  Reddit blocks anonymous requests from cloud servers — the one-time fix is Reddit&apos;s free official
-                  app: <b>reddit.com/prefs/apps</b> → &ldquo;create another app&rdquo; → type <b>script</b> (any name,
-                  redirect uri http://localhost) → copy the ID (under the app name) and secret → add{" "}
-                  <span style={{ fontFamily: "var(--mono)", fontSize: 10.5 }}>REDDIT_CLIENT_ID</span> +{" "}
-                  <span style={{ fontFamily: "var(--mono)", fontSize: 10.5 }}>REDDIT_CLIENT_SECRET</span> in Vercel →
-                  Settings → Environment Variables, then redeploy. Radar goes live permanently.
-                </>
-              ) : error === "transient" ? (
-                "Couldn't reach Reddit right now — try again in a minute."
-              ) : (
-                "No fresh threads mentioning your territories this month. Rescan tomorrow — relocation questions come in waves."
-              )}
-            </div>
-          ) : (
-            items.map((it) => (
-              <div key={it.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "9px 10px", background: "rgba(0,0,0,0.24)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 650, color: "#EDEBF6", lineHeight: 1.4 }}>{it.title}</div>
-                  <div style={{ fontSize: 10, color: "#77758C", marginTop: 3, fontFamily: "var(--mono)" }}>
-                    r/{it.subreddit} · u/{it.author} · {ageLabel(it.ageMins)} · {it.comments} comments ·{" "}
-                    <a href={it.url} target="_blank" rel="noreferrer" style={{ color: "#7DD3FC", textDecoration: "none" }}>
-                      open thread ↗
-                    </a>
-                  </div>
-                </div>
-                <button
-                  onClick={() => { onCapture(it); setCaptured((c) => ({ ...c, [it.id]: true })); }}
-                  disabled={!!captured[it.id]}
-                  style={{ flexShrink: 0, background: captured[it.id] ? "transparent" : "rgba(38,224,200,0.12)", color: captured[it.id] ? "#41D98A" : "#26E0C8", border: captured[it.id] ? "none" : "1px solid rgba(38,224,200,0.4)", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: captured[it.id] ? "default" : "pointer" }}
-                >
-                  {captured[it.id] ? "✓ In inbox" : "→ Inbox"}
-                </button>
-              </div>
-            ))
-          )}
+      {status === "needs-creds" && (
+        <div style={{ marginTop: 11, fontSize: 11.5, color: "#FFC23D", lineHeight: 1.6, background: "rgba(255,194,61,0.06)", borderRadius: 10, padding: "10px 12px" }}>
+          <b>One key turns this fully live.</b> The engine searches the whole web through Perplexity. Add{" "}
+          <span style={{ fontFamily: "var(--mono)" }}>PERPLEXITY_API_KEY</span> in Vercel → Settings → Environment
+          Variables (grab it at <b>perplexity.ai/settings/api</b>) → redeploy. After that, real leads from across the web
+          land here on their own — no clicks, no extension, no manual searching.
         </div>
       )}
 
       <div style={{ fontSize: 10, color: "#5E5C72", marginTop: 10, lineHeight: 1.55 }}>
-        Full three-platform coverage: <b style={{ color: "#8B89A0" }}>Reddit</b> scans from the server ·{" "}
-        <b style={{ color: "#8B89A0" }}>Facebook Groups &amp; Nextdoor</b> scan through the Farmhand Radar browser
-        extension as you browse them logged in as yourself (matched posts get flagged and land here in one click) —
-        the only account-safe way, since those platforms allow no server access. Extension install: the{" "}
-        <span style={{ fontFamily: "var(--mono)", fontSize: 9.5 }}>farmhand/extension</span> folder in your repo,
-        chrome://extensions → Load unpacked. Set your territory keywords in its popup.
+        Searches the entire web automatically — Reddit, forums, Quora, public Facebook, Nextdoor, X, local news,
+        relocation boards — for real people with intent in your territories, scores each, and files the strong ones
+        below.{state.extensionConnected ? " Your connected extension also feeds Facebook & Nextdoor as you browse." : ""}
       </div>
     </div>
   );
@@ -203,27 +242,61 @@ function Opportunities() {
 
   const engagedThisWeek = opps.filter((o) => o.status === "engaged").length;
 
-  const captureFromRadar = (it: { title: string; text: string; subreddit: string; url: string }) => {
-    const full = `${it.title} ${it.text}`.trim();
+  // auto-capture web-wide hunt results into the inbox, deduped by source url
+  const autoCapture = (leads: Lead[]): number => {
     const territoryNames = strategy.territories.map((t) => t.name);
-    const matched = territoryNames.find((n) => full.toLowerCase().includes(n.toLowerCase()));
-    const opp: Opportunity = {
-      id: `opp-${Date.now()}-${Math.round(Math.random() * 1e6)}`,
-      sourceName: `r/${it.subreddit}`,
-      territory: matched || territoryNames[0] || "General",
-      excerpt: full.slice(0, 400),
-      url: it.url,
-      tags: tagOpportunity(full),
-      status: "new",
-      capturedAt: "just now",
-      firstTouch: !opps.some((o) => o.sourceName === `r/${it.subreddit}`),
-    };
-    set((s) => ({ opportunities: [opp, ...(s.opportunities as Opportunity[])] }));
+    let addedCount = 0;
+    set((s) => {
+      const existing = s.opportunities as Opportunity[];
+      const have = new Set(existing.map((o) => o.extKey).filter(Boolean));
+      const fresh: Opportunity[] = [];
+      leads.forEach((l, i) => {
+        const key = `web:${l.url.toLowerCase().replace(/[#?].*$/, "")}`;
+        if (have.has(key)) return;
+        have.add(key);
+        const full = `${l.title} ${l.snippet}`.trim();
+        const matched = l.territory && territoryNames.find((n) => l.territory.toLowerCase().includes(n.toLowerCase()));
+        fresh.push({
+          id: `opp-hunt-${Date.now()}-${i}`,
+          sourceName: l.source || PLATFORM_LABEL[l.platform] || "Web",
+          territory: matched || territoryNames.find((n) => full.toLowerCase().includes(n.toLowerCase())) || territoryNames[0] || "General",
+          excerpt: (l.snippet || l.title).slice(0, 400),
+          url: l.url,
+          tags: tagOpportunity(full),
+          status: "new",
+          capturedAt: l.postedAgo ? `${l.postedAgo} ago` : "just now",
+          firstTouch: !existing.some((o) => o.sourceName === (l.source || l.platform)),
+          extKey: key,
+          engineScore: l.score,
+          platform: l.platform,
+          intent: l.intent,
+          why: l.why,
+        });
+      });
+      addedCount = fresh.length;
+      if (!fresh.length) return s;
+      return { ...s, opportunities: [...fresh, ...existing] };
+    });
+    return addedCount;
   };
+
+  // thumbs feedback trains the engine: teach it to find more (or fewer) like this
+  const teachFromLead = (o: Opportunity, verdict: "good" | "bad") =>
+    set((s) => {
+      const t = s.leadTraining as LeadTraining;
+      const snippet = `${o.excerpt}`.slice(0, 200);
+      const list = pushExemplar(t[verdict], snippet);
+      // if flipping a verdict, drop it from the opposite list
+      const other = verdict === "good" ? "bad" : "good";
+      return {
+        leadTraining: { ...t, [verdict]: list, [other]: t[other].filter((x) => x !== snippet) },
+        opportunities: (s.opportunities as Opportunity[]).map((x) => (x.id === o.id ? { ...x, feedback: verdict } : x)),
+      };
+    });
 
   return (
     <div>
-      <Radar onCapture={captureFromRadar} />
+      <LeadEngine onAuto={autoCapture} />
       {/* cadence cap — visible, not secret */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, fontSize: 12, color: "#A6A4B8", background: "rgba(38,224,200,0.06)", border: "1px solid rgba(38,224,200,0.22)", borderRadius: 11, padding: "10px 14px" }}>
         <span style={{ color: "#26E0C8", fontWeight: 800, fontFamily: "var(--mono)", fontSize: 12.5 }}>
@@ -266,7 +339,7 @@ function Opportunities() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
           {opps.filter((o) => o.status !== "skipped").map((o) => {
-            const score = scoreOpportunity(o.excerpt, strategy.territories.map((t) => t.name));
+            const score = o.engineScore ?? scoreOpportunity(o.excerpt, strategy.territories.map((t) => t.name));
             const isDrafting = draftFor === o.id;
             const draft = isDrafting
               ? draftReply({ excerpt: o.excerpt, tags: o.tags, tone: strategy.tone, mode: strategy.prospectingMode, firstTouch: o.firstTouch, agentName: strategy.name, territory: o.territory })
@@ -275,13 +348,26 @@ function Opportunities() {
             return (
               <div key={o.id} className="fh-glass" style={{ borderRadius: 13, padding: "14px 16px", borderLeft: `3px solid ${o.status === "engaged" ? "#41D98A" : o.status === "watching" ? "#FFC23D" : "#26E0C8"}` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  {o.platform && (
+                    <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.06em", fontFamily: "var(--label)", color: "#04110E", background: INTENT_COLOR[o.intent || "signal"] || "#8B89A0", borderRadius: 999, padding: "2px 7px", textTransform: "uppercase" }}>
+                      {o.intent || "signal"}
+                    </span>
+                  )}
                   <span style={{ fontSize: 11.5, fontWeight: 700, color: "#D8D6E6" }}>{o.sourceName}</span>
                   <span style={{ fontSize: 10, color: "#77758C" }}>· {o.territory} · {o.capturedAt}</span>
                   <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 800, fontFamily: "var(--mono)", color: score >= 60 ? "#41D98A" : score >= 40 ? "#FFC23D" : "#8B89A0" }}>
-                    {score} match
+                    {score} {o.engineScore != null ? "intent" : "match"}
                   </span>
                 </div>
                 <div style={{ fontSize: 12.5, color: "#C9C7D6", marginTop: 7, lineHeight: 1.5 }}>&ldquo;{o.excerpt}&rdquo;</div>
+                {o.why && (
+                  <div style={{ fontSize: 10.5, color: "#26E0C8", marginTop: 6, lineHeight: 1.45 }}>→ {o.why}</div>
+                )}
+                {o.url && (
+                  <a href={o.url} target="_blank" rel="noreferrer" style={{ display: "inline-block", fontSize: 10.5, color: "#7DD3FC", textDecoration: "none", marginTop: 6, fontFamily: "var(--mono)" }}>
+                    open source ↗
+                  </a>
+                )}
                 <div style={{ display: "flex", gap: 6, marginTop: 9, flexWrap: "wrap" }}>
                   {o.tags.map((tg) => (
                     <span key={tg} style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.06em", fontFamily: "var(--label)", color: TAG_COLORS[tg] || "#8B89A0", background: `${TAG_COLORS[tg] || "#8B89A0"}14`, border: `1px solid ${TAG_COLORS[tg] || "#8B89A0"}3D`, borderRadius: 999, padding: "2px 8px", textTransform: "uppercase" }}>
@@ -291,6 +377,12 @@ function Opportunities() {
                   {o.firstTouch && (
                     <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.06em", fontFamily: "var(--label)", color: "#FF9A62", background: "rgba(255,154,98,0.1)", border: "1px solid rgba(255,154,98,0.35)", borderRadius: 999, padding: "2px 8px" }}>
                       FIRST TOUCH — VALUE ONLY, NO PITCH
+                    </span>
+                  )}
+                  {o.engineScore != null && (
+                    <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      <button title="Great lead — find more like this" onClick={() => teachFromLead(o, "good")} style={{ background: o.feedback === "good" ? "rgba(65,217,138,0.22)" : "transparent", color: o.feedback === "good" ? "#41D98A" : "#77758C", border: `1px solid ${o.feedback === "good" ? "rgba(65,217,138,0.5)" : "rgba(255,255,255,0.12)"}`, borderRadius: 7, padding: "2px 8px", fontSize: 11, cursor: "pointer" }}>👍</button>
+                      <button title="Not a lead — find fewer like this" onClick={() => teachFromLead(o, "bad")} style={{ background: o.feedback === "bad" ? "rgba(255,93,143,0.2)" : "transparent", color: o.feedback === "bad" ? "#FF5D8F" : "#77758C", border: `1px solid ${o.feedback === "bad" ? "rgba(255,93,143,0.5)" : "rgba(255,255,255,0.12)"}`, borderRadius: 7, padding: "2px 8px", fontSize: 11, cursor: "pointer" }}>👎</button>
                     </span>
                   )}
                 </div>
