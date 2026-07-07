@@ -41,3 +41,27 @@ async function updateBadge() {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && changes.fhQueue) updateBadge();
 });
+
+// App-triggered Reddit sweep: the Farmhand app's Rescan button relays here
+// (via bridge.js). We set the territory keywords the content script matches
+// on, then open Reddit search tabs it will scan automatically.
+const AZ_SUBS = "phoenix+arizona+MovingtoPhoenix+WestValleyAZ+Scottsdale+gilbert";
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg?.type === "fh-reddit-scan") {
+    const kws = (msg.territories || []).map((s) => String(s).trim()).filter(Boolean).slice(0, 3);
+    if (kws.length) {
+      // make sure the content script has these keywords to match against
+      chrome.storage.sync.get("fhKeywords").then(({ fhKeywords }) => {
+        const existing = (fhKeywords || "").split(",").map((s) => s.trim()).filter(Boolean);
+        const merged = Array.from(new Set([...existing, ...kws]));
+        chrome.storage.sync.set({ fhKeywords: merged.join(", "), fhRadarOn: true });
+      });
+      kws.forEach((k, i) => {
+        const url = `https://old.reddit.com/r/${AZ_SUBS}/search?q=${encodeURIComponent('"' + k + '"')}&restrict_sr=on&sort=new&t=month`;
+        setTimeout(() => chrome.tabs.create({ url, active: i === 0 }), i * 500);
+      });
+    }
+    sendResponse({ ok: true, opened: kws.length });
+  }
+  return true;
+});
