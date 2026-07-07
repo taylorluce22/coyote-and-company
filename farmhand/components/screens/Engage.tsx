@@ -30,10 +30,24 @@ function Radar({ onCapture }: { onCapture: (item: RadarItem) => void }) {
   const [items, setItems] = useState<RadarItem[] | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<"none" | "transient" | "needs-creds">("none");
+  const [extScanned, setExtScanned] = useState(false);
   const [captured, setCaptured] = useState<Record<string, boolean>>({});
 
   const scan = async () => {
     if (scanning) return;
+    // When the Radar extension is connected, drive IT from here: it opens
+    // Reddit in your browser (not blocked) and streams matches back via the
+    // bridge — no server, no API keys.
+    if (state.extensionConnected) {
+      window.postMessage(
+        { source: "farmhand-app", type: "scan-request", territories: strategy.territories.map((t) => t.name) },
+        window.location.origin
+      );
+      setError("none");
+      setExtScanned(true);
+      setTimeout(() => setExtScanned(false), 9000);
+      return;
+    }
     setScanning(true);
     setError("none");
     try {
@@ -77,11 +91,18 @@ function Radar({ onCapture }: { onCapture: (item: RadarItem) => void }) {
         <button
           onClick={scan}
           disabled={scanning}
-          style={{ marginLeft: "auto", background: scanning ? "rgba(255,255,255,0.05)" : "rgba(255,154,98,0.12)", color: scanning ? "#8B89A0" : "#FF9A62", border: "1px solid rgba(255,154,98,0.4)", borderRadius: 8, padding: "6px 15px", fontSize: 11.5, fontWeight: 700, cursor: scanning ? "default" : "pointer" }}
+          style={{ marginLeft: "auto", background: scanning ? "rgba(255,255,255,0.05)" : state.extensionConnected ? "rgba(65,217,138,0.12)" : "rgba(255,154,98,0.12)", color: scanning ? "#8B89A0" : state.extensionConnected ? "#41D98A" : "#FF9A62", border: `1px solid ${state.extensionConnected ? "rgba(65,217,138,0.4)" : "rgba(255,154,98,0.4)"}`, borderRadius: 8, padding: "6px 15px", fontSize: 11.5, fontWeight: 700, cursor: scanning ? "default" : "pointer" }}
         >
-          {scanning ? "Scanning…" : items === null ? "Scan now" : "↻ Rescan"}
+          {scanning ? "Scanning…" : state.extensionConnected ? "⚡ Scan Reddit" : items === null ? "Scan now" : "↻ Rescan"}
         </button>
       </div>
+
+      {extScanned && (
+        <div style={{ marginTop: 10, fontSize: 11.5, color: "#41D98A", lineHeight: 1.5 }}>
+          ⚡ Opening Reddit in your browser and scanning for {strategy.territories.slice(0, 3).map((t) => t.name).join(" / ")} —
+          matches will drop in below on their own in a few seconds. (A couple of Reddit tabs will open; you can close them.)
+        </div>
+      )}
 
       {items !== null && (
         <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
