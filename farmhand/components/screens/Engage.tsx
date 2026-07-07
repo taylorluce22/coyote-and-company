@@ -9,6 +9,11 @@ import { cadenceCap, type StrategyProfile } from "@/lib/strategy";
 import { draftReply, fairHousingLint, scoreOpportunity, tagOpportunity, type Opportunity } from "@/lib/engage";
 import { INTENT_COLOR, INTENT_OPTS, PLATFORM_LABEL, pushExemplar, type Lead, type LeadTraining } from "@/lib/hunt";
 
+function sinceLabel(ts: number): string {
+  const m = Math.round((Date.now() - ts) / 60000);
+  return m < 1 ? "just now" : m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`;
+}
+
 /**
  * Lead Engine — the web-wide hunt.
  * Searches the ENTIRE live web (Reddit, forums, Quora, public Facebook,
@@ -26,7 +31,10 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
   const [lastAt, setLastAt] = useState<number | null>(null);
   const [lastNew, setLastNew] = useState(0);
   const [teach, setTeach] = useState(false);
+  const [alwaysOn, setAlwaysOn] = useState(false);
+  const [serverMeta, setServerMeta] = useState<{ lastRunAt: number; lastCount: number; totalRuns: number } | null>(null);
   const running = useRef(false);
+  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const setTraining = (patch: Partial<LeadTraining>) =>
     set((s) => ({ leadTraining: { ...(s.leadTraining as LeadTraining), ...patch } }));
@@ -89,6 +97,50 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
     const id = setInterval(() => huntRef.current(), 6 * 60 * 1000);
     return () => clearInterval(id);
   }, [training.autoOn]);
+
+  // pull whatever the always-on background job found while the app was closed
+  useEffect(() => {
+    fetch("/api/leads")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.enabled) {
+          setAlwaysOn(true);
+          setServerMeta(d.meta || null);
+          if (Array.isArray(d.leads) && d.leads.length) onAuto(d.leads as Lead[]);
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // keep the background job's instructions current: push territories + training
+  // up (debounced) whenever they change, so overnight hunts use the latest
+  useEffect(() => {
+    if (!alwaysOn) return;
+    if (syncTimer.current) clearTimeout(syncTimer.current);
+    syncTimer.current = setTimeout(() => {
+      fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          config: {
+            territories: strategy.territories.map((x) => x.name),
+            profession: "real estate agent",
+            city: strategy.homeBase,
+            idealClient: strategy.idealClient,
+            intents: training.intents,
+            guidance: training.guidance,
+            good: training.good,
+            bad: training.bad,
+            sinceDays: training.sinceDays,
+          },
+        }),
+      }).catch(() => {});
+    }, 1500);
+    return () => {
+      if (syncTimer.current) clearTimeout(syncTimer.current);
+    };
+  }, [alwaysOn, strategy.territories, strategy.homeBase, strategy.idealClient, training.intents, training.guidance, training.good, training.bad, training.sinceDays]);
 
   const rel = lastAt ? (Date.now() - lastAt < 60000 ? "just now" : `${Math.round((Date.now() - lastAt) / 60000)}m ago`) : "—";
   const dot = status === "needs-creds" ? "#FFC23D" : status === "transient" ? "#FF5D8F" : "#41D98A";
@@ -190,10 +242,22 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
         </div>
       )}
 
+      {alwaysOn && (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, fontSize: 10.5, color: "#41D98A", fontWeight: 600 }}>
+          <span style={{ fontSize: 11 }}>⏱</span>
+          <span>
+            Always-on: hunting 24/7 in the background — leads keep arriving even when this is closed
+            {serverMeta?.lastRunAt ? ` · last background run ${sinceLabel(serverMeta.lastRunAt)}` : ""}
+            {serverMeta?.totalRuns ? ` · ${serverMeta.totalRuns} runs` : ""}
+          </span>
+        </div>
+      )}
+
       <div style={{ fontSize: 10, color: "#5E5C72", marginTop: 10, lineHeight: 1.55 }}>
         Searches the entire web automatically — Reddit, forums, Quora, public Facebook, Nextdoor, X, local news,
         relocation boards — for real people with intent in your territories, scores each, and files the strong ones
         below.{state.extensionConnected ? " Your connected extension also feeds Facebook & Nextdoor as you browse." : ""}
+        {!alwaysOn ? " Add a lead store (Vercel KV / Upstash) to keep it hunting 24/7 in the background." : ""}
       </div>
     </div>
   );
