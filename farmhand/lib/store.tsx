@@ -18,6 +18,7 @@ import { DEFAULT_STRATEGY, type StrategyProfile } from "./strategy";
 import { normalizeContact, SEED_CONTACTS, type Contact } from "./pipeline";
 import { tagOpportunity, type Opportunity } from "./engage";
 import type { SourceEntry } from "./sources";
+import { DEFAULT_TRAINING, type LeadTraining } from "./hunt";
 
 export interface Upload {
   id: string;
@@ -73,6 +74,7 @@ export interface AppState {
   contacts: Contact[];
   opportunities: Opportunity[];
   sources: SourceEntry[];
+  leadTraining: LeadTraining; // trainable memory for the web-wide lead engine
   extensionConnected: boolean; // Radar extension bridge live in this tab (transient)
   marketSel: string | null;
   doneActions: Record<string, boolean>;
@@ -129,6 +131,7 @@ const initialState: AppState = {
   contacts: SEED_CONTACTS,
   opportunities: [],
   sources: [],
+  leadTraining: DEFAULT_TRAINING,
   extensionConnected: false,
   marketSel: null,
   doneActions: {},
@@ -196,6 +199,7 @@ const PERSIST_FIELDS = [
   "contacts",
   "opportunities",
   "sources",
+  "leadTraining",
   "doneActions",
   "contentResponses",
   "briefs",
@@ -356,7 +360,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       PERSIST_FIELDS.forEach((k) => (out[k] = state[k]));
       localStorage.setItem(PERSIST_KEY, JSON.stringify(out));
     } catch {}
-  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.doneActions, state.contentResponses, state.briefs, state.demoMode, state.streak]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.leadTraining, state.doneActions, state.contentResponses, state.briefs, state.demoMode, state.streak]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = useCallback((patch: Patch) => {
     setState((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));
