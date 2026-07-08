@@ -322,10 +322,13 @@ function Opportunities() {
         have.add(key);
         const full = `${l.title} ${l.snippet}`.trim();
         const matched = l.territory && territoryNames.find((n) => l.territory.toLowerCase().includes(n.toLowerCase()));
+        // a general "moving to Arizona, where should I live" lead doesn't belong to one named
+        // territory — label it plainly rather than mislabeling it as the agent's first territory
+        const statewide = !matched && /arizona|\bAZ\b/i.test(l.territory || "");
         fresh.push({
           id: `opp-hunt-${Date.now()}-${i}`,
           sourceName: l.source || PLATFORM_LABEL[l.platform] || "Web",
-          territory: matched || territoryNames.find((n) => full.toLowerCase().includes(n.toLowerCase())) || territoryNames[0] || "General",
+          territory: matched || territoryNames.find((n) => full.toLowerCase().includes(n.toLowerCase())) || (statewide ? "Arizona (general)" : territoryNames[0] || "General"),
           excerpt: (l.snippet || l.title).slice(0, 400),
           url: l.url,
           tags: tagOpportunity(full),
