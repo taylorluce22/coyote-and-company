@@ -72,16 +72,29 @@ export function buildHuntPrompt(cfg: Required<Pick<HuntConfig, "territories">> &
     (good.length ? `\n\nEXAMPLES THEY MARKED AS GOOD LEADS — find more like these:\n- ${good.join("\n- ")}` : "") +
     (bad.length ? `\n\nEXAMPLES THEY MARKED AS BAD / NOT LEADS — avoid these:\n- ${bad.join("\n- ")}` : "");
 
+  const state = "Arizona";
+  const primaryFocus =
+    `\n\nPRIMARY TARGET (weight this highest): people asking for MOVING RECOMMENDATIONS and WHERE TO LIVE in ` +
+    `${state}. Look specifically for phrasing like "anyone recommend a good area", "where should I live in ` +
+    `Arizona/Phoenix/the Valley", "best neighborhoods/suburbs for families or young professionals", "moving to ` +
+    `${state} — where should we look", "relocating to AZ, need advice", "thinking about moving to Arizona, what ` +
+    `should I know". These posts do NOT need to name a specific neighborhood — someone new to the state usually ` +
+    `doesn't know neighborhood names yet, and that "undecided, doesn't have an agent yet" moment is exactly the ` +
+    `highest-value lead. Count these as strong matches even if they only mention the state, a region (Valley, ` +
+    `East Valley, West Valley, Phoenix metro), or a city broadly, not one of the specific territories below. ` +
+    `Secondary: posts naming the specific territories directly with buy/sell/rent/invest intent.`;
+
   return (
     `Search the live web right now for REAL, RECENT public posts (within the last ${sinceDays} days) written by ` +
     `individual people — not businesses, not agents, not news outlets — who are showing genuine intent that a ` +
-    `${profession} serving ${territories.join(", ")} (${city} area) could actually help with. ` +
-    `Intent types to hunt for: ${intents.join(", ")}. ` +
-    `Search broadly across the open web: Reddit, Quora, City-Data, BiggerPockets, local/community forums, X/Twitter, ` +
+    `${profession} serving ${territories.join(", ")} (${city} area, ${state}) could actually help with. ` +
+    `Intent types to hunt for: ${intents.join(", ")}.` +
+    primaryFocus +
+    `\n\nSearch broadly across the open web: Reddit, Quora, City-Data, BiggerPockets, local/community forums, X/Twitter, ` +
     `relocation and homebuying discussion boards, publicly indexed Facebook pages/posts, and local news comment ` +
     `threads. Do not favor one site — treat Reddit as only one source among many, weighted no higher than the rest. ` +
     `Each lead must be a real person asking for help, recommendations, opinions, or signaling they're about ` +
-    `to move, buy, sell, rent, or invest in or near these areas. ` +
+    `to move, buy, sell, rent, or invest in or near ${state}. ` +
     `Return ONLY genuinely actionable threads where a helpful local professional replying would add value — skip ` +
     `spam, ragebait, pure venting, old/closed threads, agent self-promo, and listing/ad pages.` +
     trainingBlock +
@@ -92,8 +105,10 @@ export function buildHuntPrompt(cfg: Required<Pick<HuntConfig, "territories">> &
     `"source": "the community or site name, e.g. r/phoenix or City-Data", ` +
     `"platform": "reddit|facebook|nextdoor|quora|forum|x|news|web", ` +
     `"intent": "buyer|seller|relocation|renter|investor|referral|signal", ` +
-    `"territory": "which of [${territories.join(", ")}] it relates to (closest match)", ` +
-    `"score": 0-100 how strong AND actionable the intent is (90+=explicitly ready & asking; 40=vague signal), ` +
+    `"territory": "which of [${territories.join(", ")}] it relates to (closest match), or '${state}' if the post ` +
+    `is a general moving/where-to-live question that doesn't name a specific one of those areas yet", ` +
+    `"score": 0-100 how strong AND actionable the intent is (90+=explicitly ready & asking; 40=vague signal — a ` +
+    `general "moving to ${state}, where should I live" post scores HIGH, 70+, even without a named neighborhood), ` +
     `"why": "one line on why it's worth a human reaching out", ` +
     `"postedAgo": "how long ago, e.g. 3d or 2w"}. ` +
     `Prefer fewer, higher-confidence leads over many weak ones. Only include posts whose links you can actually cite.`

@@ -29,11 +29,16 @@ export interface LeadTraining {
 }
 
 export const DEFAULT_TRAINING: LeadTraining = {
-  guidance: "",
+  guidance:
+    "The highest-value lead for me is someone asking for recommendations on where to live in Arizona — " +
+    "'anyone recommend a good area', 'where should I live', 'best neighborhoods/suburbs for families or " +
+    "professionals', or someone moving to Arizona (from out of state or relocating within AZ) who wants advice " +
+    "on where to settle. These people usually don't have an agent yet — that's what makes them valuable. " +
+    "Prioritize posts like this over generic market talk, price debates, or investor chatter.",
   good: [],
   bad: [],
   minScore: 55,
-  intents: ["relocation", "buyer", "seller", "investor"],
+  intents: ["relocation", "referral", "buyer"],
   sinceDays: 45,
   autoOn: true,
 };
