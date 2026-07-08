@@ -77,9 +77,10 @@ export function buildHuntPrompt(cfg: Required<Pick<HuntConfig, "territories">> &
     `individual people — not businesses, not agents, not news outlets — who are showing genuine intent that a ` +
     `${profession} serving ${territories.join(", ")} (${city} area) could actually help with. ` +
     `Intent types to hunt for: ${intents.join(", ")}. ` +
-    `Search EVERYWHERE, not one site: Reddit, Quora, City-Data, BiggerPockets, local/community forums, public ` +
-    `Facebook posts and groups, Nextdoor, X/Twitter, relocation and homebuying discussion boards, local news comment ` +
-    `threads. Each lead must be a real person asking for help, recommendations, opinions, or signaling they're about ` +
+    `Search broadly across the open web: Reddit, Quora, City-Data, BiggerPockets, local/community forums, X/Twitter, ` +
+    `relocation and homebuying discussion boards, publicly indexed Facebook pages/posts, and local news comment ` +
+    `threads. Do not favor one site — treat Reddit as only one source among many, weighted no higher than the rest. ` +
+    `Each lead must be a real person asking for help, recommendations, opinions, or signaling they're about ` +
     `to move, buy, sell, rent, or invest in or near these areas. ` +
     `Return ONLY genuinely actionable threads where a helpful local professional replying would add value — skip ` +
     `spam, ragebait, pure venting, old/closed threads, agent self-promo, and listing/ad pages.` +
@@ -106,36 +107,53 @@ export interface HuntResult {
   error?: string;
 }
 
-/** Run one hunt against the live web. Returns scored, deduped leads. */
-export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
-  const key = process.env.PERPLEXITY_API_KEY;
-  if (!key) return { configured: false, needsCreds: true, leads: [] };
-  const territories = (cfg.territories || []).map((t) => String(t)).filter(Boolean).slice(0, 6);
-  if (!territories.length) return { configured: true, leads: [] };
+/**
+ * One broad "search everywhere" prompt lets Perplexity's own ranking pick
+ * winners — and Reddit wins every time because it's the most crawlable,
+ * best-structured public forum content that matches this query shape. To get
+ * genuine multi-platform coverage we fan out several NARROWER, domain-scoped
+ * searches in parallel and merge the results — each lane can't drown the
+ * others out. `domains` uses Perplexity's search_domain_filter; prefix a
+ * domain with "-" to exclude it (used to force the open-web lane off Reddit).
+ */
+const HUNT_LANES: { label: string; domains?: string[] }[] = [
+  { label: "reddit", domains: ["reddit.com"] },
+  { label: "forums & investor boards", domains: ["quora.com", "city-data.com", "biggerpockets.com"] },
+  { label: "X / Twitter", domains: ["x.com", "twitter.com"] },
+  { label: "open web, no Reddit", domains: ["-reddit.com"] },
+];
 
-  const prompt = buildHuntPrompt({ ...cfg, territories });
+async function runLane(
+  key: string,
+  cfg: Required<Pick<HuntConfig, "territories">> & HuntConfig,
+  lane: { label: string; domains?: string[] }
+): Promise<Lead[]> {
+  const prompt = buildHuntPrompt(cfg);
+  const body: Record<string, unknown> = {
+    model: "sonar",
+    temperature: 0.2,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a precise lead-research engine for local sales professionals. You search the live web and " +
+          "return ONLY real, verifiable, recent posts by real individuals with genuine intent. Output ONLY valid " +
+          "JSON. Never invent posts or links. Never return listing pages, ads, or news articles as leads. " +
+          "Never characterize neighborhoods by the people who live there.",
+      },
+      { role: "user", content: prompt },
+    ],
+  };
+  if (lane.domains?.length) body.search_domain_filter = lane.domains;
+
   try {
     const r = await fetch("https://api.perplexity.ai/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "sonar",
-        temperature: 0.2,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a precise lead-research engine for local sales professionals. You search the live web and " +
-              "return ONLY real, verifiable, recent posts by real individuals with genuine intent. Output ONLY valid " +
-              "JSON. Never invent posts or links. Never return listing pages, ads, or news articles as leads. " +
-              "Never characterize neighborhoods by the people who live there.",
-          },
-          { role: "user", content: prompt },
-        ],
-      }),
+      body: JSON.stringify(body),
       signal: AbortSignal.timeout(30000),
     });
-    if (!r.ok) return { configured: true, leads: [], error: `hunt upstream ${r.status}` };
+    if (!r.ok) return [];
     const data = await r.json();
     let text: string = data?.choices?.[0]?.message?.content ?? "[]";
     text = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
@@ -148,8 +166,39 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
     } catch {
       parsed = [];
     }
-    return { configured: true, leads: coerceLeads(parsed) };
+    return coerceLeads(parsed);
   } catch {
-    return { configured: true, leads: [], error: "hunt request failed" };
+    return [];
   }
+}
+
+/**
+ * Run the hunt across all lanes in parallel and merge, deduped by url,
+ * highest score first. Returns scored, multi-platform leads — no single
+ * platform can dominate the result set.
+ */
+export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
+  const key = process.env.PERPLEXITY_API_KEY;
+  if (!key) return { configured: false, needsCreds: true, leads: [] };
+  const territories = (cfg.territories || []).map((t) => String(t)).filter(Boolean).slice(0, 6);
+  if (!territories.length) return { configured: true, leads: [] };
+
+  const full = { ...cfg, territories };
+  const settled = await Promise.allSettled(HUNT_LANES.map((lane) => runLane(key, full, lane)));
+  const anyOk = settled.some((s) => s.status === "fulfilled");
+  if (!anyOk) return { configured: true, leads: [], error: "hunt request failed" };
+
+  const seen = new Set<string>();
+  const merged: Lead[] = [];
+  for (const s of settled) {
+    if (s.status !== "fulfilled") continue;
+    for (const lead of s.value) {
+      const key2 = lead.url.toLowerCase().replace(/[#?].*$/, "");
+      if (seen.has(key2)) continue;
+      seen.add(key2);
+      merged.push(lead);
+    }
+  }
+  merged.sort((a, b) => b.score - a.score);
+  return { configured: true, leads: merged.slice(0, 16) };
 }

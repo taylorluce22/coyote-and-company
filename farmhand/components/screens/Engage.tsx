@@ -254,9 +254,11 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
       )}
 
       <div style={{ fontSize: 10, color: "#5E5C72", marginTop: 10, lineHeight: 1.55 }}>
-        Searches the entire web automatically — Reddit, forums, Quora, public Facebook, Nextdoor, X, local news,
-        relocation boards — for real people with intent in your territories, scores each, and files the strong ones
-        below.{state.extensionConnected ? " Your connected extension also feeds Facebook & Nextdoor as you browse." : ""}
+        Runs Reddit, Quora/City-Data/BiggerPockets, X, and the open web as separate parallel searches so no one
+        platform crowds out the rest, scores every hit, and files the strong ones below.{" "}
+        {state.extensionConnected
+          ? "Your connected extension also reads Facebook Groups & Nextdoor while you're logged in and browsing them — the only account-safe way in, since private groups aren't visible to any web search."
+          : "Facebook Groups and Nextdoor are login-walled — no web search (including this one) can see inside them. Connect the Radar extension to cover those two while you browse, logged in as yourself."}
         {!alwaysOn ? " Add a lead store (Vercel KV / Upstash) to keep it hunting 24/7 in the background." : ""}
       </div>
     </div>
