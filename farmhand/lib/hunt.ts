@@ -82,3 +82,19 @@ export function pushExemplar(list: string[], snippet: string, cap = 8): string[]
   const next = [s, ...list.filter((x) => x !== s)];
   return next.slice(0, cap);
 }
+
+/**
+ * Normalize a lead URL for dedup. A bare query-string strip isn't enough —
+ * the same Reddit thread comes back as old.reddit.com, www.reddit.com,
+ * m.reddit.com, or a trailing-slash variant depending on which search lane
+ * (or which run) found it, and those all pointed at the same post without
+ * deduping against each other.
+ */
+export function normalizeLeadUrl(url: string): string {
+  let u = url.trim().toLowerCase();
+  u = u.replace(/^https?:\/\//, "");
+  u = u.replace(/^(www\.|old\.|new\.|np\.|amp\.|m\.)/, "");
+  u = u.replace(/[#?].*$/, "");
+  u = u.replace(/\/+$/, "");
+  return u;
+}

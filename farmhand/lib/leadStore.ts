@@ -4,7 +4,7 @@
  * per-user layer can slot in later without a migration.
  */
 
-import type { Lead } from "./hunt";
+import { normalizeLeadUrl, type Lead } from "./hunt";
 import type { HuntConfig } from "./huntServer";
 import { kvEnabled, kvGetJSON, kvSetJSON } from "./kv";
 
@@ -26,7 +26,7 @@ export interface HuntMeta {
 }
 
 export function leadKey(l: Lead): string {
-  return l.url.toLowerCase().replace(/[#?].*$/, "");
+  return normalizeLeadUrl(l.url);
 }
 
 export async function getConfig(): Promise<HuntConfig | null> {

@@ -30,7 +30,11 @@ export function tagOpportunity(text: string): string[] {
   const tags: string[] = [];
   if (/(moving|relocat|out of state|from (chicago|california|seattle|denver|portland))/.test(t)) tags.push("relocation");
   if (/(worth|price|market|sell|value|equity|rates?)/.test(t)) tags.push("market-question");
-  if (/(recommend|looking for|anyone know|suggestions?)/.test(t)) tags.push("recommendation-ask");
+  // "recommend"/"looking for" alone is too broad — it tags salon and bar posts
+  // just as readily as neighborhood ones. Require housing context alongside it.
+  const asksForRecommendation = /(recommend|looking for|anyone know|suggestions?)/.test(t);
+  const housingContext = /(neighborhood|area|suburb|live|living|house|home|move|moving|relocat|rent|buy|realtor|agent|school|hoa|community)/.test(t);
+  if (asksForRecommendation && housingContext) tags.push("recommendation-ask");
   if (/(hoa|school|commute|neighborhood|community|park)/.test(t)) tags.push("neighborhood-chat");
   if (/(agent|realtor|broker)/.test(t)) tags.push("agent-mention");
   return tags.length ? tags : ["general"];

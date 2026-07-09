@@ -4,7 +4,7 @@
  * Perplexity live web search; key stays in the deployment env.
  */
 
-import type { Lead } from "./hunt";
+import { normalizeLeadUrl, type Lead } from "./hunt";
 
 export interface HuntConfig {
   territories: string[];
@@ -36,7 +36,7 @@ export function coerceLeads(raw: unknown): Lead[] {
     const o = r as Record<string, unknown>;
     const url = String(o.url ?? "").trim();
     if (!/^https?:\/\/.+\..+/i.test(url)) continue;
-    const key = url.toLowerCase().replace(/[#?].*$/, "");
+    const key = normalizeLeadUrl(url);
     if (seen.has(key)) continue;
     seen.add(key);
     const platform = String(o.platform ?? "web").toLowerCase();
@@ -100,19 +100,27 @@ export function buildHuntPrompt(cfg: Required<Pick<HuntConfig, "territories">> &
     `lead. Count these as strong matches even without a named territory. Secondary: posts naming the specific ` +
     `territories directly with buy/sell/rent/invest intent.`;
 
+  const hardExclude =
+    `\n\nHARD EXCLUDE — these are NEVER leads, no matter how well-written or how confident you are, and must score ` +
+    `under 20 or be dropped entirely: requests for a specific LOCAL BUSINESS OR SERVICE recommendation that has ` +
+    `nothing to do with housing — a salon, barber, restaurant, bar, dentist, doctor, mechanic, contractor, ` +
+    `plumber, lawyer, event/nightlife suggestion, "anyone know a good [X] near me", or any other everyday-life ` +
+    `recommendation ask. The word "recommend" alone does NOT make something a lead — it must specifically be about ` +
+    `a NEIGHBORHOOD, AREA, SUBURB, or WHERE TO LIVE (buy/rent/relocate), not about a business, product, or ` +
+    `activity. If you are not confident the post is about housing or relocation specifically, do not include it.`;
+
   return (
     `Search the live web right now for REAL, RECENT public posts (within the last ${sinceDays} days) written by ` +
     `individual people — not businesses, not agents, not news outlets — who are showing genuine intent that a ` +
     `${profession} serving ${territories.join(", ")} (${city} area, ${state}) could actually help with. ` +
     `Intent types to hunt for: ${intents.join(", ")}.` +
     primaryFocus +
-    `\n\nSearch broadly across the open web: Reddit, Quora, City-Data, BiggerPockets, local/community forums, X/Twitter, ` +
-    `relocation and homebuying discussion boards, publicly indexed Facebook pages/posts, and local news comment ` +
-    `threads. Do not favor one site — treat Reddit as only one source among many, weighted no higher than the rest. ` +
-    `Each lead must be a real person asking for help, recommendations, opinions, or signaling they're about ` +
-    `to move, buy, sell, rent, or invest in or near ${state}. ` +
-    `Return ONLY genuinely actionable threads where a helpful local professional replying would add value — skip ` +
-    `spam, ragebait, pure venting, old/closed threads, agent self-promo, and listing/ad pages.` +
+    hardExclude +
+    `\n\nEach lead must be a real person asking for help, recommendations, opinions, or signaling they're about ` +
+    `to move, buy, sell, rent, or invest in housing in or near ${state} — specifically about a place to live, not ` +
+    `a service or business. ` +
+    `Return ONLY genuinely actionable threads where a helpful local real estate professional replying would add ` +
+    `value — skip spam, ragebait, pure venting, old/closed threads, agent self-promo, and listing/ad pages.` +
     trainingBlock +
     `\n\nRespond with ONLY a JSON array (no prose, no markdown fences). Each element: ` +
     `{"title": "the post's title or first line", ` +
@@ -142,24 +150,77 @@ export interface HuntResult {
  * One broad "search everywhere" prompt lets Perplexity's own ranking pick
  * winners — and Reddit wins every time because it's the most crawlable,
  * best-structured public forum content that matches this query shape. To get
- * genuine multi-platform coverage we fan out several NARROWER, domain-scoped
- * searches in parallel and merge the results — each lane can't drown the
- * others out. `domains` uses Perplexity's search_domain_filter; prefix a
- * domain with "-" to exclude it (used to force the open-web lane off Reddit).
+ * genuine multi-platform coverage we fan out several NARROWER searches in
+ * parallel. Two layers of enforcement, because relying on either alone isn't
+ * reliable:
+ *   1. `focus` — plain-language instruction telling the model which
+ *      platform(s) to search and, for non-Reddit lanes, explicitly telling it
+ *      NOT to return Reddit (Reddit is covered by its own lane already).
+ *   2. `keep` — a deterministic code-level filter applied AFTER the response
+ *      comes back, so a lane's results are guaranteed to match its platform
+ *      even if the model ignores the instruction or search_domain_filter is
+ *      silently a no-op on this model tier.
+ * `search_domain_filter` is still sent as a best-effort hint on top of both.
+ * `keep` matches on the parsed HOSTNAME, not a raw substring — a substring
+ * check on the URL would false-positive ("netflix.com" contains "x.com").
  */
-const HUNT_LANES: { label: string; domains?: string[] }[] = [
-  { label: "reddit", domains: ["reddit.com"] },
-  { label: "forums & investor boards", domains: ["quora.com", "city-data.com", "biggerpockets.com"] },
-  { label: "X / Twitter", domains: ["x.com", "twitter.com"] },
-  { label: "open web, no Reddit", domains: ["-reddit.com"] },
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+function hostIsOneOf(url: string, domains: string[]): boolean {
+  const host = hostOf(url);
+  return domains.some((d) => host === d || host.endsWith(`.${d}`));
+}
+
+const HUNT_LANES: {
+  label: string;
+  focus: string;
+  domains?: string[];
+  keep: (url: string) => boolean;
+}[] = [
+  {
+    label: "reddit",
+    focus: "For this search, look specifically on Reddit (reddit.com) — subreddit threads and comments.",
+    domains: ["reddit.com"],
+    keep: (u) => hostIsOneOf(u, ["reddit.com"]),
+  },
+  {
+    label: "forums & investor boards",
+    focus:
+      "For this search, look specifically on Quora, City-Data forums, and BiggerPockets — NOT Reddit. Reddit is " +
+      "covered by a separate search already; do not return any reddit.com links here.",
+    domains: ["quora.com", "city-data.com", "biggerpockets.com"],
+    keep: (u) => hostIsOneOf(u, ["quora.com", "city-data.com", "biggerpockets.com"]),
+  },
+  {
+    label: "X / Twitter",
+    focus:
+      "For this search, look specifically on X (Twitter) — x.com or twitter.com posts and threads — NOT Reddit. " +
+      "Reddit is covered by a separate search already; do not return any reddit.com links here.",
+    domains: ["x.com", "twitter.com"],
+    keep: (u) => hostIsOneOf(u, ["x.com", "twitter.com"]),
+  },
+  {
+    label: "open web, no Reddit",
+    focus:
+      "For this search, look across the broader open web — local news sites, community blogs, relocation " +
+      "boards, publicly indexed Facebook pages, local government/chamber-of-commerce sites — NOT Reddit. Reddit " +
+      "is covered by a separate search already; do not return any reddit.com links here.",
+    domains: ["-reddit.com"],
+    keep: (u) => !hostIsOneOf(u, ["reddit.com"]),
+  },
 ];
 
 async function runLane(
   key: string,
   cfg: Required<Pick<HuntConfig, "territories">> & HuntConfig,
-  lane: { label: string; domains?: string[] }
+  lane: (typeof HUNT_LANES)[number]
 ): Promise<Lead[]> {
-  const prompt = buildHuntPrompt(cfg);
+  const prompt = `${buildHuntPrompt(cfg)}\n\nSEARCH FOCUS FOR THIS PASS: ${lane.focus}`;
   const body: Record<string, unknown> = {
     model: "sonar",
     temperature: 0.2,
@@ -197,7 +258,8 @@ async function runLane(
     } catch {
       parsed = [];
     }
-    return coerceLeads(parsed);
+    // deterministic enforcement — don't trust the model or the API param alone
+    return coerceLeads(parsed).filter((l) => lane.keep(l.url.toLowerCase()));
   } catch {
     return [];
   }
@@ -224,7 +286,7 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
   for (const s of settled) {
     if (s.status !== "fulfilled") continue;
     for (const lead of s.value) {
-      const key2 = lead.url.toLowerCase().replace(/[#?].*$/, "");
+      const key2 = normalizeLeadUrl(lead.url);
       if (seen.has(key2)) continue;
       seen.add(key2);
       merged.push(lead);
