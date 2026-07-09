@@ -73,16 +73,32 @@ export function buildHuntPrompt(cfg: Required<Pick<HuntConfig, "territories">> &
     (bad.length ? `\n\nEXAMPLES THEY MARKED AS BAD / NOT LEADS — avoid these:\n- ${bad.join("\n- ")}` : "");
 
   const state = "Arizona";
+
+  // literal, concrete search phrases per territory — anchors the model's actual
+  // web queries instead of leaving it to interpret a bare place name, which
+  // just surfaces every mention of that name (the mall, other states'
+  // "Paradise Valley"s, tangential chatter) instead of moving/relocation intent
+  const territoryQueries = territories
+    .map(
+      (name) =>
+        `${name}: "moving to ${name}", "relocating to ${name}", "just moved to ${name}", "new to ${name}", ` +
+        `"recommend a neighborhood near ${name}", "where should I live near ${name}"`
+    )
+    .join("\n");
+  const stateQueries =
+    `${state} (broad, no neighborhood named yet): "moving to Arizona", "relocating to Arizona", "moving to ` +
+    `Phoenix", "where should I live in Arizona", "anyone recommend a good area in Arizona/the Valley", "thinking ` +
+    `about moving to AZ"`;
+
   const primaryFocus =
     `\n\nPRIMARY TARGET (weight this highest): people asking for MOVING RECOMMENDATIONS and WHERE TO LIVE in ` +
-    `${state}. Look specifically for phrasing like "anyone recommend a good area", "where should I live in ` +
-    `Arizona/Phoenix/the Valley", "best neighborhoods/suburbs for families or young professionals", "moving to ` +
-    `${state} — where should we look", "relocating to AZ, need advice", "thinking about moving to Arizona, what ` +
-    `should I know". These posts do NOT need to name a specific neighborhood — someone new to the state usually ` +
-    `doesn't know neighborhood names yet, and that "undecided, doesn't have an agent yet" moment is exactly the ` +
-    `highest-value lead. Count these as strong matches even if they only mention the state, a region (Valley, ` +
-    `East Valley, West Valley, Phoenix metro), or a city broadly, not one of the specific territories below. ` +
-    `Secondary: posts naming the specific territories directly with buy/sell/rent/invest intent.`;
+    `${state}. Run searches using these literal phrases (and close variants — different tense, "we" vs "I", etc.), ` +
+    `not just the bare place name — a bare name like "${territories[0]}" alone surfaces noise (the mall, same-name ` +
+    `places in other states, unrelated chatter), not moving intent:\n${territoryQueries}\n${stateQueries}\n` +
+    `State-level hits do NOT need to name a specific neighborhood — someone new to the state usually doesn't know ` +
+    `neighborhood names yet, and that "undecided, doesn't have an agent yet" moment is exactly the highest-value ` +
+    `lead. Count these as strong matches even without a named territory. Secondary: posts naming the specific ` +
+    `territories directly with buy/sell/rent/invest intent.`;
 
   return (
     `Search the live web right now for REAL, RECENT public posts (within the last ${sinceDays} days) written by ` +
