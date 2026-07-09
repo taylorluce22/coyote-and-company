@@ -74,8 +74,11 @@ function TerritoryDetail({ t, onBack }: { t: Territory; onBack: () => void }) {
       return cur.some((e) => e.territorySlug === t.slug) ? {} : { sources: mergeSources(cur, bankFor(t)) };
     });
 
-    // live radar — real Reddit threads mentioning this territory
-    fetch(`/api/radar?q=${encodeURIComponent(`"${t.name}"`)}`)
+    // live radar — real Reddit threads showing actual moving/relocation intent,
+    // not just any mention of the name (bare "Paradise Valley" pulls in noise —
+    // the mall, other states' Paradise Valleys, anything tangential)
+    const relocationQuery = `"moving to ${t.name}" OR "relocating to ${t.name}" OR "new to ${t.name}" OR "just moved to ${t.name}"`;
+    fetch(`/api/radar?q=${encodeURIComponent(relocationQuery)}`)
       .then((r) => r.json())
       .then((d) => {
         setRadar((d.items || []).slice(0, 5));
