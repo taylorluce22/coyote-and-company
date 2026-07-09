@@ -7,7 +7,7 @@ import Sources from "./Sources";
 import Assistant from "./Assistant";
 import { cadenceCap, type StrategyProfile } from "@/lib/strategy";
 import { draftReply, fairHousingLint, scoreOpportunity, tagOpportunity, type Opportunity } from "@/lib/engage";
-import { INTENT_COLOR, INTENT_OPTS, PLATFORM_LABEL, pushExemplar, type Lead, type LeadTraining } from "@/lib/hunt";
+import { INTENT_COLOR, INTENT_OPTS, normalizeLeadUrl, PLATFORM_LABEL, pushExemplar, type Lead, type LeadTraining } from "@/lib/hunt";
 
 function sinceLabel(ts: number): string {
   const m = Math.round((Date.now() - ts) / 60000);
@@ -314,7 +314,7 @@ function Opportunities() {
       const have = new Set(existing.map((o) => o.extKey).filter(Boolean));
       const fresh: Opportunity[] = [];
       leads.forEach((l, i) => {
-        const key = `web:${l.url.toLowerCase().replace(/[#?].*$/, "")}`;
+        const key = `web:${normalizeLeadUrl(l.url)}`;
         if (have.has(key)) return;
         have.add(key);
         const full = `${l.title} ${l.snippet}`.trim();
