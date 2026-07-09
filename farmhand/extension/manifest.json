@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Farmhand Radar",
-  "version": "1.4.0",
-  "description": "Scans Facebook groups, Nextdoor and Reddit as you browse — flags posts matching your territories and auto-syncs them into your Farmhand inbox. The app's Scan button can drive it too.",
+  "version": "1.5.0",
+  "description": "Scans Facebook groups, Nextdoor and Reddit as you browse — flags posts matching your territories and auto-syncs them into your Farmhand inbox. Never opens tabs on its own; Reddit is also searched automatically server-side in the app.",
   "permissions": ["contextMenus", "activeTab", "scripting", "storage"],
   "content_scripts": [
     {
