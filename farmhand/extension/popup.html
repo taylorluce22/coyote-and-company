@@ -29,7 +29,7 @@
   </head>
   <body>
     <h1>🌵 Farmhand Radar</h1>
-    <div class="sub">Scans Facebook groups, Nextdoor & Reddit pages <b>as you browse them</b> — flags posts matching your territories. Reddit works with no API key — it's your browser reading public pages.</div>
+    <div class="sub">Scans Facebook groups, Nextdoor & Reddit pages <b>as you browse them</b> — flags posts matching your territories. Never opens tabs on its own; Reddit is also searched automatically server-side in the app.</div>
 
     <div class="row">
       <label>Radar on while I browse</label>
@@ -40,7 +40,6 @@
     <textarea id="keywords" rows="2" placeholder="Paradise Valley, Buckeye, Verrado, Gilbert…"></textarea>
 
     <button class="primary" id="scan">Scan this page now</button>
-    <button class="secondary" id="redditScan">Search Reddit for my territories →</button>
     <div class="queue" id="queue" style="display:none"></div>
     <button class="send" id="send" style="display:none">Send <span class="count" id="count">0</span> matches to Farmhand →</button>
     <button class="secondary" id="clear" style="display:none">Clear queue</button>

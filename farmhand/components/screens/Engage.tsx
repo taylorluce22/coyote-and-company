@@ -61,15 +61,12 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
         }),
       }).then((r) => r.json());
 
-      // supplementary: if the extension is live, let it feed FB/Nextdoor as you browse
-      if (state.extensionConnected) {
-        try {
-          window.postMessage(
-            { source: "farmhand-app", type: "scan-request", territories: strategy.territories.map((x) => x.name) },
-            window.location.origin
-          );
-        } catch {}
-      }
+      // Reddit is covered server-side now (see the multi-lane hunt) — the
+      // extension is NOT nudged automatically here anymore. It used to fire a
+      // "scan-request" on every auto-hunt cycle, which made the connected
+      // extension pop open a batch of Reddit tabs every 6 minutes. The
+      // extension still feeds Facebook Groups & Nextdoor passively (no tabs
+      // opened) while you're browsing them logged in as yourself.
 
       const leads: Lead[] = Array.isArray(res.leads) ? res.leads : [];
       const qualified = leads.filter((l) => l.score >= t.minScore);

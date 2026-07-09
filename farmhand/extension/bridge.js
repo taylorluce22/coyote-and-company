@@ -30,12 +30,6 @@
       announce();
       push();
     }
-    if (e.data.type === "scan-request") {
-      // app's Rescan button -> ask the background worker to sweep Reddit
-      try {
-        chrome.runtime.sendMessage({ type: "fh-reddit-scan", territories: e.data.territories || [] });
-      } catch {}
-    }
     if (e.data.type === "ack" && Array.isArray(e.data.keys) && e.data.keys.length) {
       try {
         const drop = new Set(e.data.keys);
