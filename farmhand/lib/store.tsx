@@ -223,6 +223,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const saved = JSON.parse(raw);
         // migrate any old-shape contact records to the current schema
         if (Array.isArray(saved.contacts)) saved.contacts = saved.contacts.map(normalizeContact);
+        // self-heal a profile persisted with no territories (possible via
+        // older onboarding builds) — an empty list silently gave the lead
+        // engine nothing to search, which looked like "hunt ran, found
+        // nothing" with no error anywhere
+        if (saved.strategy && (!Array.isArray(saved.strategy.territories) || saved.strategy.territories.length === 0)) {
+          saved.strategy = { ...saved.strategy, territories: DEFAULT_STRATEGY.territories };
+        }
         setState((s) => ({ ...s, ...saved }));
       }
     } catch {}

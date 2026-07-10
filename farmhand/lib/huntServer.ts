@@ -157,6 +157,14 @@ export interface LaneDiag {
   rawParsedCount: number; // how many items the model returned, before any filtering
   afterHousingFilterCount: number; // after isLikelyHousingLead + coerceLeads' own dedup
   afterLaneKeepCount: number; // after the deterministic platform/domain filter
+  parseFailed?: boolean; // model responded 200 but output wasn't a parseable JSON array
+  rawSample?: string; // first chars of the model's actual reply — distinguishes a refusal/prose answer from a genuine empty result
+}
+
+export interface HuntMeta {
+  commit?: string; // which deployment answered — kills "is this the new code?" ambiguity
+  territoriesReceived: number; // what the server actually got, not what the client thinks it sent
+  keyPresent: boolean;
 }
 
 export interface HuntResult {
@@ -164,11 +172,11 @@ export interface HuntResult {
   needsCreds?: boolean;
   leads: Lead[];
   error?: string;
-  // TEMPORARY diagnostics — surfaced in the API response so we can see exactly
-  // where the funnel drops to zero (Perplexity returning nothing at all vs.
-  // returning results that get filtered out) without needing direct API
-  // access. Safe to remove once the pipeline is confirmed healthy.
+  // Diagnostics — ALWAYS populated on every return path (including early
+  // returns), so an absent debug/meta field can only mean one thing: the
+  // response came from a deployment older than this code.
   debug?: LaneDiag[];
+  meta?: HuntMeta;
 }
 
 /**
@@ -284,15 +292,25 @@ async function runLane(
       return { leads: [], diag };
     }
     const data = await r.json();
-    let text: string = data?.choices?.[0]?.message?.content ?? "[]";
-    text = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+    const fullText: string = data?.choices?.[0]?.message?.content ?? "";
+    let text = fullText.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
     const start = text.indexOf("[");
     const end = text.lastIndexOf("]");
     if (start >= 0 && end > start) text = text.slice(start, end + 1);
     let parsed: unknown = [];
     try {
       parsed = JSON.parse(text);
+      if (!Array.isArray(parsed)) {
+        diag.parseFailed = true;
+        diag.rawSample = fullText.slice(0, 220);
+        parsed = [];
+      }
     } catch {
+      // a refusal, prose answer, or truncated reply all land here — capture
+      // what the model ACTUALLY said so this is distinguishable from a
+      // genuine "searched and found nothing" empty array
+      diag.parseFailed = true;
+      diag.rawSample = fullText.slice(0, 220);
       parsed = [];
     }
     diag.rawParsedCount = Array.isArray(parsed) ? parsed.length : 0;
@@ -315,13 +333,24 @@ async function runLane(
  */
 export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
   const key = process.env.PERPLEXITY_API_KEY;
-  if (!key) return { configured: false, needsCreds: true, leads: [] };
   const territories = (cfg.territories || []).map((t) => String(t)).filter(Boolean).slice(0, 6);
-  if (!territories.length) return { configured: true, leads: [] };
+  // meta rides on EVERY return path — commit answers "which deployment served
+  // this", territoriesReceived answers "did the config actually arrive". An
+  // absent meta in a response can then only mean a pre-this-code deployment.
+  const meta: HuntMeta = {
+    commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7),
+    territoriesReceived: territories.length,
+    keyPresent: !!key,
+  };
+  if (!key) return { configured: false, needsCreds: true, leads: [], debug: [], meta };
+  if (!territories.length) {
+    // this was a SILENT empty return before — the one path that produced
+    // "green status, zero leads, no diagnostics" with no way to tell why
+    return { configured: true, leads: [], error: "no territories configured — the hunt has nothing to search for", debug: [], meta };
+  }
 
   const full = { ...cfg, territories };
   const settled = await Promise.allSettled(HUNT_LANES.map((lane) => runLane(key, full, lane)));
-  const anyOk = settled.some((s) => s.status === "fulfilled");
   const debug: LaneDiag[] = settled.map((s, i) =>
     s.status === "fulfilled"
       ? s.value.diag
@@ -334,7 +363,14 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
           afterLaneKeepCount: 0,
         }
   );
-  if (!anyOk) return { configured: true, leads: [], error: "hunt request failed", debug };
+  // "fulfilled" alone is meaningless here — runLane catches everything
+  // internally and always resolves, so a 401 on all four lanes still looked
+  // like success. Genuine success = at least one lane actually got HTTP 200.
+  const anyOk = settled.some((s) => s.status === "fulfilled" && s.value.diag.httpStatus === 200);
+  if (!anyOk) {
+    const firstErr = debug.find((d) => d.httpError)?.httpError || `all lanes failed (statuses: ${debug.map((d) => d.httpStatus).join(", ")})`;
+    return { configured: true, leads: [], error: `hunt failed: ${firstErr.slice(0, 200)}`, debug, meta };
+  }
 
   const seenUrl = new Set<string>();
   const seenTitle = new Set<string>();
@@ -351,5 +387,5 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
     }
   }
   merged.sort((a, b) => b.score - a.score);
-  return { configured: true, leads: merged.slice(0, 16), debug };
+  return { configured: true, leads: merged.slice(0, 16), debug, meta };
 }
