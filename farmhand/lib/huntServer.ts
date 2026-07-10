@@ -146,7 +146,9 @@ export function buildHuntPrompt(cfg: Required<Pick<HuntConfig, "territories">> &
     `general "moving to ${state}, where should I live" post scores HIGH, 70+, even without a named neighborhood), ` +
     `"why": "one line on why it's worth a human reaching out", ` +
     `"postedAgo": "how long ago, e.g. 3d or 2w"}. ` +
-    `Prefer fewer, higher-confidence leads over many weak ones. Only include posts whose links you can actually cite.`
+    `Return up to 12 candidates. Include moderate-confidence leads (score them honestly, 40-60) rather than ` +
+    `omitting them — a quality threshold downstream decides what surfaces, so under-reporting loses real leads ` +
+    `while honest scoring costs nothing. Only include posts whose links you can actually cite.`
   );
 }
 
@@ -218,6 +220,17 @@ const HUNT_LANES: {
   {
     label: "reddit",
     focus: "For this search, look specifically on Reddit (reddit.com) — subreddit threads and comments.",
+    domains: ["reddit.com"],
+    keep: (u) => hostIsOneOf(u, ["reddit.com"]),
+  },
+  {
+    label: "reddit statewide",
+    focus:
+      "For this search, look specifically on Reddit (reddit.com) for STATE-LEVEL relocation questions — people " +
+      "who haven't picked a suburb yet: \"moving to Arizona\", \"moving to Phoenix\", \"relocating to AZ\", \"where " +
+      "should I live in Arizona / the Valley\", \"best Phoenix suburbs\". Check r/phoenix, r/arizona, " +
+      "r/MovingtoPhoenix, r/SameGrassButGreener and similar. These are the highest-value leads — undecided, no " +
+      "agent yet — so cast wide here.",
     domains: ["reddit.com"],
     keep: (u) => hostIsOneOf(u, ["reddit.com"]),
   },
@@ -387,5 +400,5 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
     }
   }
   merged.sort((a, b) => b.score - a.score);
-  return { configured: true, leads: merged.slice(0, 16), debug, meta };
+  return { configured: true, leads: merged.slice(0, 24), debug, meta };
 }
