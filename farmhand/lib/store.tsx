@@ -247,6 +247,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             tags: tagOpportunity(captured),
             status: "new",
             capturedAt: "just now",
+            capturedAtMs: Date.now(),
             firstTouch: !(s.opportunities as Opportunity[]).some((o) => o.sourceName === sourceName.slice(0, 80)),
           };
           return {
@@ -282,6 +283,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 tags: tagOpportunity(text),
                 status: "new",
                 capturedAt: "just now",
+                capturedAtMs: Date.now(),
                 firstTouch: !existing.some((o) => o.sourceName === srcName) && !newOpps.some((o) => o.sourceName === srcName),
               });
             });
@@ -324,6 +326,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             tags: tagOpportunity(text),
             status: "new",
             capturedAt: "just now",
+            capturedAtMs: Date.now(),
             firstTouch: !existing.some((o) => o.sourceName === srcName) && !newOpps.some((o) => o.sourceName === srcName),
             extKey: b.key,
           });
