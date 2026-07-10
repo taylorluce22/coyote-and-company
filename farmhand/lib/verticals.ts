@@ -134,9 +134,10 @@ const SOLAR: VerticalDef = {
   defaultGuidance:
     "The highest-value lead for me is an Arizona homeowner actively considering solar or already shopping — " +
     "'thinking about going solar', 'got a quote from X, is it fair', 'my APS/SRP bill is out of control', " +
-    "'anyone recommend a good solar company near me'. New homeowners planning solar and EV owners weighing a " +
-    "battery are strong too. Skip renters, anti-solar rants, DIY-only off-grid hobbyists, commercial/utility " +
-    "scale, and anyone recruiting for solar sales jobs.",
+    "'anyone recommend a good solar company near me'. APS customers are my PRIMARY target; SRP customers are " +
+    "second. New homeowners planning solar and EV owners weighing a battery are strong too. Skip renters, " +
+    "anti-solar rants, DIY-only off-grid hobbyists, commercial/utility scale, and anyone recruiting for solar " +
+    "sales jobs.",
   territoryPhrases: (name) =>
     `${name}: "going solar in ${name}", "solar quote ${name}", "solar company near ${name}", "solar installer ` +
     `${name}", "APS bill ${name}", "SRP bill ${name}"`,

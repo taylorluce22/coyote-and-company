@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import SubTabs from "@/components/SubTabs";
 import Composer from "./Composer";
@@ -8,14 +9,119 @@ import ContentEngine from "./ContentEngine";
 import { ideasFor } from "@/lib/strategy";
 import Performance from "@/components/Performance";
 import type { StrategyProfile } from "@/lib/strategy";
+import { verticalOf } from "@/lib/verticals";
+
+const UTILITY_COLOR: Record<string, string> = { APS: "#FFC23D", SRP: "#26E0C8", both: "#C9A8FF", general: "#8B89A0" };
+const INTEL_TTL_MS = 12 * 60 * 60 * 1000; // refresh live intel twice a day
+
+/**
+ * Live energy intel — real, current news (APS/SRP rates, data-center demand,
+ * grid infrastructure, national solar policy) pulled from national + local
+ * sources and turned into homeowner-facing post angles. Solar vertical only;
+ * APS customers are the primary audience, SRP second.
+ */
+function EnergyIntel() {
+  const { state, set, copy } = useStore();
+  const intel = state.energyIntel as { fetchedAt: number; items: { headline: string; summary: string; source: string; url: string; date: string; utility: string; angle: string }[] } | null;
+  const [loading, setLoading] = useState(false);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const fetching = useRef(false);
+
+  const refresh = async () => {
+    if (fetching.current) return;
+    fetching.current = true;
+    setLoading(true);
+    try {
+      const d = await fetch("/api/discover?mode=intel").then((r) => r.json());
+      if (Array.isArray(d.items) && d.items.length) {
+        set({ energyIntel: { fetchedAt: Date.now(), items: d.items } });
+      }
+    } catch {}
+    setLoading(false);
+    fetching.current = false;
+  };
+
+  // auto-fetch on open when the cache is empty or stale
+  useEffect(() => {
+    if (!intel || Date.now() - intel.fetchedAt > INTEL_TTL_MS) refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const ageH = intel ? Math.round((Date.now() - intel.fetchedAt) / 3600000) : null;
+
+  return (
+    <div className="fh-glass" style={{ borderRadius: 14, padding: "15px 17px", marginBottom: 18, border: "1px solid rgba(255,194,61,0.25)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#FFC23D", boxShadow: "0 0 8px #FFC23D", animation: loading ? "fh-pulse 1s ease infinite" : "fh-pulse 2.4s ease infinite" }} />
+        <span className="fh-kicker" style={{ fontSize: 9.5 }}>Live intel · AZ energy</span>
+        <span style={{ fontSize: 10.5, color: "#8B89A0" }}>
+          {loading
+            ? "Scanning national + local energy news…"
+            : intel
+            ? `APS & SRP rates · data centers · grid · policy — updated ${ageH === 0 ? "just now" : `${ageH}h ago`}`
+            : "Real news → post angles for your audience"}
+        </span>
+        <button
+          onClick={refresh}
+          disabled={loading}
+          style={{ marginLeft: "auto", background: "rgba(255,194,61,0.1)", color: "#FFC23D", border: "1px solid rgba(255,194,61,0.4)", borderRadius: 8, padding: "6px 14px", fontSize: 11, fontWeight: 700, cursor: loading ? "default" : "pointer" }}
+        >
+          {loading ? "Scanning…" : "↻ Refresh"}
+        </button>
+      </div>
+
+      {intel && intel.items.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 9, marginTop: 12 }}>
+          {intel.items.map((it, i) => {
+            const uc = UTILITY_COLOR[it.utility] || UTILITY_COLOR.general;
+            return (
+              <div key={`${it.url}-${i}`} style={{ padding: "11px 13px", background: "rgba(0,0,0,0.24)", borderRadius: 11, border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.06em", fontFamily: "var(--label)", color: "#04110E", background: uc, borderRadius: 999, padding: "2px 8px", textTransform: "uppercase" }}>
+                    {it.utility}
+                  </span>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: "#EDEBF6", lineHeight: 1.4 }}>{it.headline}</span>
+                </div>
+                <div style={{ fontSize: 11.5, color: "#A6A4B8", marginTop: 5, lineHeight: 1.5 }}>{it.summary}</div>
+                <div style={{ fontSize: 11, color: "#FFC23D", marginTop: 6, lineHeight: 1.45 }}>→ Post angle: {it.angle}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 7 }}>
+                  <span style={{ fontSize: 9.5, color: "#5E5C72", fontFamily: "var(--mono)" }}>{it.source}{it.date ? ` · ${it.date}` : ""}</span>
+                  <a href={it.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: "#7DD3FC", textDecoration: "none", fontFamily: "var(--mono)" }}>read ↗</a>
+                  <button
+                    onClick={() => { copy(`${it.headline}\n\nPost angle: ${it.angle}\n\nSource: ${it.url}`); setCopiedIdx(i); setTimeout(() => setCopiedIdx(null), 1400); }}
+                    style={{ marginLeft: "auto", background: "rgba(38,224,200,0.1)", color: "#26E0C8", border: "1px solid rgba(38,224,200,0.35)", borderRadius: 7, padding: "4px 11px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}
+                  >
+                    {copiedIdx === i ? "Copied ✓" : "Copy angle"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {intel && intel.items.length === 0 && !loading && (
+        <div style={{ fontSize: 11.5, color: "#77758C", marginTop: 10 }}>No fresh intel this cycle — try a refresh in a few hours.</div>
+      )}
+
+      <div style={{ fontSize: 10, color: "#5E5C72", marginTop: 10, lineHeight: 1.5 }}>
+        Sourced live from national and local coverage — utility rate cases, ACC decisions, data-center buildout,
+        grid capacity, and solar policy. Posting about what&apos;s actually happening is what makes a local account
+        the authority.
+      </div>
+    </div>
+  );
+}
 
 function Ideas() {
   const { state, set } = useStore();
   const strategy = state.strategy as StrategyProfile;
   const ideas = ideasFor(strategy);
+  const isSolar = verticalOf(strategy.vertical).id === "solar";
 
   return (
     <div>
+      {isSolar && <EnergyIntel />}
       <div style={{ fontSize: 13, color: "#A6A4B8", marginBottom: 16, lineHeight: 1.5 }}>
         Generated from your strategy profile — {strategy.territories.map((t) => t.name).join(" · ")} ·{" "}
         {strategy.positioning.join(" + ")} positioning. Pick one and it opens in the Studio.
