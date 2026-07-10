@@ -104,10 +104,38 @@ export function draftReply(opts: {
   firstTouch: boolean;
   agentName: string;
   territory: string;
+  vertical?: "realtor" | "solar";
 }): string {
   const { tags, mode, firstTouch, territory } = opts;
   const warm = opts.tone.includes("warm") || opts.tone.includes("neighborly");
   const data = opts.tone.includes("data-driven") || opts.tone.includes("sharp");
+
+  if (opts.vertical === "solar") {
+    let sbody = "";
+    if (tags.includes("quote-shopping")) {
+      sbody = `The two numbers that cut through quote confusion: price per watt (before incentives) and what the production estimate assumes. If two quotes differ a lot, it's almost always panel count or an inflated production model — happy to share what typical AZ numbers look like right now if that helps.`;
+    } else if (tags.includes("bill-pain")) {
+      sbody = data
+        ? `Worth pulling your last 12 months of usage before deciding anything — the on-peak/off-peak split matters more than the total. Some of that bill is fixable with a rate-plan change alone; the rest is where solar math starts. The utility's own usage export shows it.`
+        : `A lot of that is the summer on-peak rates doing the damage. Before anything else, it's worth checking you're on the right rate plan — that's free — and then the solar math gets a lot clearer from your actual usage.`;
+    } else if (tags.includes("considering")) {
+      sbody = warm
+        ? `Honest version from someone in the industry here in AZ: it pencils out for most homeowners with decent sun exposure and a bill over ~$150, and doesn't for everyone — shade, roof age, and how long you'll stay matter more than people expect. Happy to share the questions worth asking any installer.`
+        : `The three things that actually decide it in Arizona: your utility's export rate, your roof orientation, and how long you'll own the home. Get those three answered honestly and the decision usually makes itself.`;
+    } else if (tags.includes("battery-ev")) {
+      sbody = `If you're charging an EV at home, the math changes a lot — off-peak charging plus solar sized for the extra load is a different system than a standard install. Worth making sure any quote actually models the EV usage rather than last year's bill.`;
+    } else if (tags.includes("recommendation-ask")) {
+      sbody = `A few things worth checking on ANY installer before names even matter: their license/ROC number, whether they sub out the install, and what the workmanship warranty actually covers. Happy to share what separates the good ones — no stake in who you pick.`;
+    } else {
+      sbody = `Good thread — there's a lot of noise around solar in AZ and questions like this are how people avoid the expensive mistakes.`;
+    }
+    if (mode === "observer") sbody = sbody.split(". ").slice(0, 2).join(". ") + (sbody.includes(".") ? "." : "");
+    if (!firstTouch && mode === "connector" && !tags.includes("general")) {
+      sbody += ` If it'd ever help, I'm happy to sanity-check numbers — no pitch, I just do this all day.`;
+    }
+    // first-touch rule: value only — no CTA, no link, no company-drop. Enforced by construction above.
+    return sbody;
+  }
 
   let body = "";
   if (tags.includes("relocation")) {

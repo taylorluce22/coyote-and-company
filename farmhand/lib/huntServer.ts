@@ -4,10 +4,12 @@
  * Perplexity live web search; key stays in the deployment env.
  */
 
-import { isLikelyHousingLead, leadFingerprint, normalizeLeadUrl, type Lead } from "./hunt";
+import { leadFingerprint, normalizeLeadUrl, type Lead } from "./hunt";
+import { verticalOf, type VerticalDef } from "./verticals";
 
 export interface HuntConfig {
   territories: string[];
+  vertical?: string; // "realtor" (default) | "solar" — selects intent language, search phrases, relevance filter
   profession?: string;
   city?: string;
   idealClient?: string;
@@ -27,8 +29,10 @@ function clampScore(n: unknown): number {
   return Math.max(0, Math.min(100, v));
 }
 
-export function coerceLeads(raw: unknown): Lead[] {
+export function coerceLeads(raw: unknown, vertical?: VerticalDef): Lead[] {
   if (!Array.isArray(raw)) return [];
+  const v = vertical || verticalOf("realtor");
+  const validIntents = new Set([...INTENTS, ...v.intents.map((i) => i.key)]);
   const seenUrl = new Set<string>();
   const seenTitle = new Set<string>();
   const out: Lead[] = [];
@@ -44,10 +48,10 @@ export function coerceLeads(raw: unknown): Lead[] {
     const title = String(o.title ?? "").slice(0, 160);
     const snippet = String(o.snippet ?? o.summary ?? "").slice(0, 500);
     const source = String(o.source ?? o.community ?? "web").slice(0, 80);
-    // deterministic backstop: "recommend a salon/bar/mechanic" is never a
-    // lead, no matter how well the model scored it — don't trust the prompt
+    // deterministic backstop per vertical — an off-topic post is never a
+    // lead no matter how well the model scored it; don't trust the prompt
     // instruction alone to keep these out.
-    if (!isLikelyHousingLead(`${title} ${snippet}`)) continue;
+    if (!v.isRelevant(`${title} ${snippet}`)) continue;
     const titleKey = leadFingerprint({ title, source });
     if (seenTitle.has(titleKey)) continue;
     seenUrl.add(urlKey);
@@ -58,7 +62,7 @@ export function coerceLeads(raw: unknown): Lead[] {
       url: url.slice(0, 600),
       source,
       platform: PLATFORMS.has(platform) ? platform : "web",
-      intent: INTENTS.has(intent) ? intent : "signal",
+      intent: validIntents.has(intent) ? intent : "signal",
       score: clampScore(o.score),
       why: String(o.why ?? o.reason ?? "").slice(0, 240),
       territory: String(o.territory ?? "").slice(0, 80),
@@ -69,69 +73,49 @@ export function coerceLeads(raw: unknown): Lead[] {
 }
 
 export function buildHuntPrompt(cfg: Required<Pick<HuntConfig, "territories">> & HuntConfig): string {
+  const v = verticalOf(cfg.vertical);
   const territories = cfg.territories;
-  const profession = cfg.profession || "real estate agent";
+  const profession = cfg.profession || v.profession;
   const city = cfg.city || "Arizona";
-  const intents = cfg.intents?.length ? cfg.intents : ["relocation", "buyer", "seller", "investor"];
+  const intents = cfg.intents?.length ? cfg.intents : v.defaultIntents;
+  const intentEnum = [...v.intents.map((i) => i.key), "signal"].join("|");
   const sinceDays = Math.max(3, Math.min(120, cfg.sinceDays || 45));
   const good = (cfg.good || []).map((g) => String(g).slice(0, 200)).slice(0, 6);
   const bad = (cfg.bad || []).map((g) => String(g).slice(0, 200)).slice(0, 6);
   const guidance = (cfg.guidance || "").slice(0, 800);
 
   const trainingBlock =
-    (guidance ? `\n\nWHAT THIS AGENT COUNTS AS A GREAT LEAD (follow this closely):\n${guidance}` : "") +
+    (guidance ? `\n\nWHAT THIS USER COUNTS AS A GREAT LEAD (follow this closely):\n${guidance}` : "") +
     (good.length ? `\n\nEXAMPLES THEY MARKED AS GOOD LEADS — find more like these:\n- ${good.join("\n- ")}` : "") +
     (bad.length ? `\n\nEXAMPLES THEY MARKED AS BAD / NOT LEADS — avoid these:\n- ${bad.join("\n- ")}` : "");
 
   const state = "Arizona";
 
   // literal, concrete search phrases per territory — anchors the model's actual
-  // web queries instead of leaving it to interpret a bare place name, which
-  // just surfaces every mention of that name (the mall, other states'
-  // "Paradise Valley"s, tangential chatter) instead of moving/relocation intent
-  const territoryQueries = territories
-    .map(
-      (name) =>
-        `${name}: "moving to ${name}", "relocating to ${name}", "just moved to ${name}", "new to ${name}", ` +
-        `"recommend a neighborhood near ${name}", "where should I live near ${name}"`
-    )
-    .join("\n");
-  const stateQueries =
-    `${state} (broad, no neighborhood named yet): "moving to Arizona", "relocating to Arizona", "moving to ` +
-    `Phoenix", "where should I live in Arizona", "anyone recommend a good area in Arizona/the Valley", "thinking ` +
-    `about moving to AZ"`;
+  // web queries instead of leaving it to interpret a bare place name
+  const territoryQueries = territories.map((name) => v.territoryPhrases(name)).join("\n");
 
   const primaryFocus =
-    `\n\nPRIMARY TARGET (weight this highest): people asking for MOVING RECOMMENDATIONS and WHERE TO LIVE in ` +
-    `${state}. Run searches using these literal phrases (and close variants — different tense, "we" vs "I", etc.), ` +
-    `not just the bare place name — a bare name like "${territories[0]}" alone surfaces noise (the mall, same-name ` +
-    `places in other states, unrelated chatter), not moving intent:\n${territoryQueries}\n${stateQueries}\n` +
-    `State-level hits do NOT need to name a specific neighborhood — someone new to the state usually doesn't know ` +
-    `neighborhood names yet, and that "undecided, doesn't have an agent yet" moment is exactly the highest-value ` +
-    `lead. Count these as strong matches even without a named territory. Secondary: posts naming the specific ` +
-    `territories directly with buy/sell/rent/invest intent.`;
+    `\n\nPRIMARY TARGET (weight this highest): ${v.primaryTarget}\n` +
+    `Run searches using these literal phrases (and close variants — different tense, "we" vs "I", etc.), not ` +
+    `just bare place names:\n${territoryQueries}\n${v.statePhrases}`;
 
   const hardExclude =
     `\n\nHARD EXCLUDE — these are NEVER leads, no matter how well-written or how confident you are, and must score ` +
-    `under 20 or be dropped entirely: requests for a specific LOCAL BUSINESS OR SERVICE recommendation that has ` +
-    `nothing to do with housing — a salon, barber, restaurant, bar, dentist, doctor, mechanic, contractor, ` +
-    `plumber, lawyer, event/nightlife suggestion, "anyone know a good [X] near me", or any other everyday-life ` +
-    `recommendation ask. The word "recommend" alone does NOT make something a lead — it must specifically be about ` +
-    `a NEIGHBORHOOD, AREA, SUBURB, or WHERE TO LIVE (buy/rent/relocate), not about a business, product, or ` +
-    `activity. If you are not confident the post is about housing or relocation specifically, do not include it.`;
+    `under 20 or be dropped entirely: ${v.hardExclude} If you are not confident the post genuinely fits the ` +
+    `primary target above, do not include it.`;
 
   return (
     `Search the live web right now for REAL, RECENT public posts (within the last ${sinceDays} days) written by ` +
-    `individual people — not businesses, not agents, not news outlets — who are showing genuine intent that a ` +
-    `${profession} serving ${territories.join(", ")} (${city} area, ${state}) could actually help with. ` +
-    `Intent types to hunt for: ${intents.join(", ")}.` +
+    `individual people — not businesses, not industry professionals, not news outlets — who are showing genuine ` +
+    `intent that a ${profession} serving ${territories.join(", ")} (${city} area, ${state}) could actually help ` +
+    `with. Intent types to hunt for: ${intents.join(", ")}.` +
     primaryFocus +
     hardExclude +
-    `\n\nEach lead must be a real person asking for help, recommendations, opinions, or signaling they're about ` +
-    `to move, buy, sell, rent, or invest in housing in or near ${state} — specifically about a place to live, not ` +
-    `a service or business. ` +
-    `Return ONLY genuinely actionable threads where a helpful local real estate professional replying would add ` +
-    `value — skip spam, ragebait, pure venting, old/closed threads, agent self-promo, and listing/ad pages.` +
+    `\n\nEach lead must be a real person asking for help, recommendations, or opinions, or signaling genuine ` +
+    `intent a ${profession} can act on. ` +
+    `Return ONLY genuinely actionable threads where a helpful local professional replying would add value — ` +
+    `skip spam, ragebait, pure venting, old/closed threads, self-promo by other professionals, and listing/ad pages.` +
     trainingBlock +
     `\n\nRespond with ONLY a JSON array (no prose, no markdown fences). Each element: ` +
     `{"title": "the post's title or first line", ` +
@@ -139,11 +123,11 @@ export function buildHuntPrompt(cfg: Required<Pick<HuntConfig, "territories">> &
     `"url": "the exact direct link to that specific post/thread (required, must resolve)", ` +
     `"source": "the community or site name, e.g. r/phoenix or City-Data", ` +
     `"platform": "reddit|facebook|nextdoor|quora|forum|x|news|web", ` +
-    `"intent": "buyer|seller|relocation|renter|investor|referral|signal", ` +
+    `"intent": "${intentEnum}", ` +
     `"territory": "which of [${territories.join(", ")}] it relates to (closest match), or '${state}' if the post ` +
-    `is a general moving/where-to-live question that doesn't name a specific one of those areas yet", ` +
+    `is a broader ${state}-level ask that doesn't name a specific one of those areas", ` +
     `"score": 0-100 how strong AND actionable the intent is (90+=explicitly ready & asking; 40=vague signal — a ` +
-    `general "moving to ${state}, where should I live" post scores HIGH, 70+, even without a named neighborhood), ` +
+    `broad state-level ask that fits the primary target scores HIGH, 70+, even without a named territory), ` +
     `"why": "one line on why it's worth a human reaching out", ` +
     `"postedAgo": "how long ago, e.g. 3d or 2w"}. ` +
     `Return up to 12 candidates. Include moderate-confidence leads (score them honestly, 40-60) rather than ` +
@@ -214,6 +198,7 @@ function hostIsOneOf(url: string, domains: string[]): boolean {
 const HUNT_LANES: {
   label: string;
   focus: string;
+  focusFromVertical?: boolean; // resolve focus from the vertical def at runtime
   domains?: string[];
   keep: (url: string) => boolean;
 }[] = [
@@ -225,17 +210,15 @@ const HUNT_LANES: {
   },
   {
     label: "reddit statewide",
-    focus:
-      "For this search, look specifically on Reddit (reddit.com) for STATE-LEVEL relocation questions — people " +
-      "who haven't picked a suburb yet: \"moving to Arizona\", \"moving to Phoenix\", \"relocating to AZ\", \"where " +
-      "should I live in Arizona / the Valley\", \"best Phoenix suburbs\". Check r/phoenix, r/arizona, " +
-      "r/MovingtoPhoenix, r/SameGrassButGreener and similar. These are the highest-value leads — undecided, no " +
-      "agent yet — so cast wide here.",
+    // vertical-specific: the realtor version hunts statewide relocation asks,
+    // the solar version hunts homeowner solar/bill questions — set at runtime
+    focus: "",
+    focusFromVertical: true,
     domains: ["reddit.com"],
     keep: (u) => hostIsOneOf(u, ["reddit.com"]),
   },
   {
-    label: "forums & investor boards",
+    label: "forums & boards",
     focus:
       "For this search, look specifically on Quora, City-Data forums, and BiggerPockets — NOT Reddit. Reddit is " +
       "covered by a separate search already; do not return any reddit.com links here.",
@@ -266,7 +249,9 @@ async function runLane(
   cfg: Required<Pick<HuntConfig, "territories">> & HuntConfig,
   lane: (typeof HUNT_LANES)[number]
 ): Promise<{ leads: Lead[]; diag: LaneDiag }> {
-  const prompt = `${buildHuntPrompt(cfg)}\n\nSEARCH FOCUS FOR THIS PASS: ${lane.focus}`;
+  const v = verticalOf(cfg.vertical);
+  const laneFocus = lane.focusFromVertical ? v.statewideLaneFocus : lane.focus;
+  const prompt = `${buildHuntPrompt(cfg)}\n\nSEARCH FOCUS FOR THIS PASS: ${laneFocus}`;
   const body: Record<string, unknown> = {
     model: "sonar",
     temperature: 0.2,
@@ -327,7 +312,7 @@ async function runLane(
       parsed = [];
     }
     diag.rawParsedCount = Array.isArray(parsed) ? parsed.length : 0;
-    const afterHousing = coerceLeads(parsed);
+    const afterHousing = coerceLeads(parsed, v);
     diag.afterHousingFilterCount = afterHousing.length;
     // deterministic enforcement — don't trust the model or the API param alone
     const kept = afterHousing.filter((l) => lane.keep(l.url.toLowerCase()));

@@ -19,6 +19,7 @@ import { normalizeContact, SEED_CONTACTS, type Contact } from "./pipeline";
 import { tagOpportunity, type Opportunity } from "./engage";
 import type { SourceEntry } from "./sources";
 import { DEFAULT_TRAINING, type LeadTraining } from "./hunt";
+import { VERTICALS } from "./verticals";
 
 export interface Upload {
   id: string;
@@ -176,16 +177,32 @@ export function restoreDemo(): Partial<AppState> {
 
 type Patch = Partial<AppState> | ((s: AppState) => Partial<AppState>);
 
+/**
+ * Workspaces — separate accounts in one app (the admin/test setup: a realtor
+ * test user and the owner's real solar business). Each workspace persists to
+ * its own localStorage key; "default" keeps the original key so the existing
+ * realtor account is untouched. Switching swaps the whole working state.
+ */
+export type WorkspaceId = "default" | "solar";
+export const WORKSPACES: { id: WorkspaceId; label: string; emoji: string }[] = [
+  { id: "default", label: "Realtor · test user", emoji: "🏠" },
+  { id: "solar", label: "My Solar · real", emoji: "☀️" },
+];
+
 interface Store {
   state: AppState;
   set: (patch: Patch) => void;
   copy: (text: string) => void;
   dragId: React.MutableRefObject<string | null>;
+  workspace: WorkspaceId;
+  switchWorkspace: (ws: WorkspaceId) => void;
 }
 
 const StoreContext = createContext<Store | null>(null);
 
 const PERSIST_KEY = "farmhand-studio-v1";
+const WS_ACTIVE_KEY = "farmhand-ws-active";
+const persistKeyFor = (ws: WorkspaceId) => (ws === "default" ? PERSIST_KEY : `${PERSIST_KEY}::${ws}`);
 const PERSIST_FIELDS = [
   "stStudio",
   "stAssets",
@@ -207,30 +224,71 @@ const PERSIST_FIELDS = [
   "streak",
 ] as const;
 
+/** Parse + migrate a persisted snapshot. Shared by hydrate and switching. */
+function parseSaved(raw: string): Partial<AppState> {
+  const saved = JSON.parse(raw);
+  // migrate any old-shape contact records to the current schema
+  if (Array.isArray(saved.contacts)) saved.contacts = saved.contacts.map(normalizeContact);
+  // self-heal a profile persisted with no territories (possible via older
+  // onboarding builds) — an empty list silently gave the lead engine nothing
+  // to search, which looked like "hunt ran, found nothing" with no error
+  if (saved.strategy && (!Array.isArray(saved.strategy.territories) || saved.strategy.territories.length === 0)) {
+    saved.strategy = { ...saved.strategy, territories: DEFAULT_STRATEGY.territories };
+  }
+  return saved;
+}
+
+/**
+ * Fresh state for the owner's real solar workspace: solar vertical, solar
+ * engine training, Instagram-first, and NO demo data — this account exists
+ * to scale a real business, so every number starts earned.
+ */
+function solarSeed(): AppState {
+  const v = VERTICALS.solar;
+  return {
+    ...initialState,
+    onboarded: true,
+    demoMode: false,
+    streak: 0,
+    contacts: [],
+    plannedPosts: [],
+    opportunities: [],
+    strategy: {
+      ...DEFAULT_STRATEGY,
+      vertical: "solar",
+      name: "Taylor",
+      brokerage: "",
+      licenseNo: "",
+      homeBase: "Scottsdale",
+      platforms: ["instagram"],
+      positioning: ["generalist"],
+      idealClient: "both",
+    },
+    leadTraining: { ...DEFAULT_TRAINING, guidance: v.defaultGuidance, intents: v.defaultIntents },
+  };
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppState>(initialState);
+  const [workspace, setWorkspace] = useState<WorkspaceId>("default");
+  const workspaceRef = useRef<WorkspaceId>("default");
   const hydrated = useRef(false);
   const dragId = useMemo(
     () => ({ current: null as string | null }),
     []
   ) as React.MutableRefObject<string | null>;
 
-  // hydrate persisted studio state (library, looks, statuses, API key)
+  // hydrate the active workspace's persisted state
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(PERSIST_KEY);
+      const ws = (localStorage.getItem(WS_ACTIVE_KEY) as WorkspaceId) === "solar" ? "solar" : "default";
+      workspaceRef.current = ws;
+      setWorkspace(ws);
+      const raw = localStorage.getItem(persistKeyFor(ws));
       if (raw) {
-        const saved = JSON.parse(raw);
-        // migrate any old-shape contact records to the current schema
-        if (Array.isArray(saved.contacts)) saved.contacts = saved.contacts.map(normalizeContact);
-        // self-heal a profile persisted with no territories (possible via
-        // older onboarding builds) — an empty list silently gave the lead
-        // engine nothing to search, which looked like "hunt ran, found
-        // nothing" with no error anywhere
-        if (saved.strategy && (!Array.isArray(saved.strategy.territories) || saved.strategy.territories.length === 0)) {
-          saved.strategy = { ...saved.strategy, territories: DEFAULT_STRATEGY.territories };
-        }
-        setState((s) => ({ ...s, ...saved }));
+        setState((s) => ({ ...s, ...parseSaved(raw) }));
+      } else if (ws === "solar") {
+        setState(solarSeed());
       }
     } catch {}
     hydrated.current = true;
@@ -362,15 +420,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("message", onMsg);
   }, []);
 
-  // save on change (persisted fields only)
+  // save on change (persisted fields only) — always to the ACTIVE workspace's key
   useEffect(() => {
     if (!hydrated.current) return;
     try {
       const out: Record<string, unknown> = {};
       PERSIST_FIELDS.forEach((k) => (out[k] = state[k]));
-      localStorage.setItem(PERSIST_KEY, JSON.stringify(out));
+      localStorage.setItem(persistKeyFor(workspaceRef.current), JSON.stringify(out));
     } catch {}
   }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.leadTraining, state.doneActions, state.contentResponses, state.briefs, state.demoMode, state.streak]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // switch between workspaces (test users / the owner's real solar account).
+  // Current state is already persisted on every change, so no flush needed —
+  // just point at the target key and load (or seed) it.
+  const switchWorkspace = useCallback((target: WorkspaceId) => {
+    if (target === workspaceRef.current) return;
+    try {
+      localStorage.setItem(WS_ACTIVE_KEY, target);
+    } catch {}
+    let next: AppState;
+    try {
+      const raw = localStorage.getItem(persistKeyFor(target));
+      next = raw ? { ...initialState, ...parseSaved(raw) } : target === "solar" ? solarSeed() : { ...initialState };
+    } catch {
+      next = target === "solar" ? solarSeed() : { ...initialState };
+    }
+    workspaceRef.current = target;
+    setWorkspace(target);
+    setState(next);
+  }, []);
 
   const set = useCallback((patch: Patch) => {
     setState((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));
@@ -383,8 +461,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ state, set, copy, dragId }),
-    [state, set, copy, dragId]
+    () => ({ state, set, copy, dragId, workspace, switchWorkspace }),
+    [state, set, copy, dragId, workspace, switchWorkspace]
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

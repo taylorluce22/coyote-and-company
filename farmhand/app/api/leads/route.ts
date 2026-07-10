@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
 
   const config: HuntConfig = {
     territories,
-    profession: c.profession ? String(c.profession) : "real estate agent",
+    vertical: c.vertical ? String(c.vertical) : "realtor",
+    profession: c.profession ? String(c.profession) : undefined,
     city: c.city ? String(c.city) : "Arizona",
     idealClient: c.idealClient ? String(c.idealClient) : "both",
     intents: Array.isArray(c.intents) ? c.intents.map(String).slice(0, 6) : undefined,

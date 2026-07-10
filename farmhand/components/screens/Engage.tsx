@@ -7,7 +7,8 @@ import Sources from "./Sources";
 import Assistant from "./Assistant";
 import { cadenceCap, DEFAULT_STRATEGY, type StrategyProfile } from "@/lib/strategy";
 import { capturedAtLabel, draftReply, fairHousingLint, scoreOpportunity, tagOpportunity, type Opportunity } from "@/lib/engage";
-import { INTENT_COLOR, INTENT_OPTS, isLikelyHousingLead, leadFingerprint, normalizeLeadUrl, PLATFORM_LABEL, pushExemplar, type Lead, type LeadTraining } from "@/lib/hunt";
+import { leadFingerprint, normalizeLeadUrl, PLATFORM_LABEL, pushExemplar, type Lead, type LeadTraining } from "@/lib/hunt";
+import { intentColor, tagFor, verticalOf } from "@/lib/verticals";
 
 function sinceLabel(ts: number): string {
   const m = Math.round((Date.now() - ts) / 60000);
@@ -26,6 +27,7 @@ function sinceLabel(ts: number): string {
 function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
   const { state, set } = useStore();
   const strategy = state.strategy as StrategyProfile;
+  const vert = verticalOf(strategy.vertical);
   const training = state.leadTraining as LeadTraining;
   const [status, setStatus] = useState<"idle" | "scanning" | "ok" | "filtered" | "transient" | "needs-creds">("idle");
   const [lastAt, setLastAt] = useState<number | null>(null);
@@ -62,7 +64,7 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           territories: territoryNames,
-          profession: "real estate agent",
+          vertical: strategy.vertical || "realtor",
           city: strategy.homeBase,
           idealClient: strategy.idealClient,
           intents: t.intents,
@@ -139,7 +141,7 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
         body: JSON.stringify({
           config: {
             territories: strategy.territories.map((x) => x.name),
-            profession: "real estate agent",
+            vertical: strategy.vertical || "realtor",
             city: strategy.homeBase,
             idealClient: strategy.idealClient,
             intents: training.intents,
@@ -154,7 +156,7 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
     return () => {
       if (syncTimer.current) clearTimeout(syncTimer.current);
     };
-  }, [alwaysOn, strategy.territories, strategy.homeBase, strategy.idealClient, training.intents, training.guidance, training.good, training.bad, training.sinceDays]);
+  }, [alwaysOn, strategy.territories, strategy.homeBase, strategy.idealClient, strategy.vertical, training.intents, training.guidance, training.good, training.bad, training.sinceDays]);
 
   const rel = lastAt ? (Date.now() - lastAt < 60000 ? "just now" : `${Math.round((Date.now() - lastAt) / 60000)}m ago`) : "—";
   const dot = status === "needs-creds" || status === "filtered" ? "#FFC23D" : status === "transient" ? "#FF5D8F" : "#41D98A";
@@ -230,13 +232,13 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
 
           <div style={{ fontSize: 10, color: "#8B89A0", margin: "12px 0 7px", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase" }}>Hunt for these intents</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {INTENT_OPTS.map((io) => {
+            {vert.intents.map((io) => {
               const on = training.intents.includes(io.key);
               return (
                 <button
                   key={io.key}
                   onClick={() => setTraining({ intents: on ? training.intents.filter((k) => k !== io.key) : [...training.intents, io.key] })}
-                  style={{ fontSize: 11, fontWeight: 700, color: on ? "#04110E" : INTENT_COLOR[io.key] || "#8B89A0", background: on ? INTENT_COLOR[io.key] || "#8B89A0" : `${INTENT_COLOR[io.key] || "#8B89A0"}14`, border: `1px solid ${INTENT_COLOR[io.key] || "#8B89A0"}59`, borderRadius: 999, padding: "4px 12px", cursor: "pointer" }}
+                  style={{ fontSize: 11, fontWeight: 700, color: on ? "#04110E" : io.color, background: on ? io.color : `${io.color}14`, border: `1px solid ${io.color}59`, borderRadius: 999, padding: "4px 12px", cursor: "pointer" }}
                 >
                   {io.label}
                 </button>
@@ -309,18 +311,11 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
   );
 }
 
-const TAG_COLORS: Record<string, string> = {
-  relocation: "#7DD3FC",
-  "market-question": "#FFC23D",
-  "recommendation-ask": "#41D98A",
-  "neighborhood-chat": "#C9A8FF",
-  "agent-mention": "#FF9A62",
-  general: "#8B89A0",
-};
-
 function Opportunities() {
   const { state, set, copy } = useStore();
   const strategy = state.strategy as StrategyProfile;
+  const vert = verticalOf(strategy.vertical);
+  const TAG_COLORS = vert.tagColors;
   const opps = state.opportunities as Opportunity[];
   const cap = cadenceCap(strategy.prospectingMode);
   const [text, setText] = useState("");
@@ -337,7 +332,7 @@ function Opportunities() {
       sourceName: source.trim() || "Pasted thread",
       territory: matched || territoryNames[0] || "General",
       excerpt: text.trim().slice(0, 400),
-      tags: tagOpportunity(text),
+      tags: tagFor(vert, text),
       status: "new",
       capturedAt: "just now",
       capturedAtMs: Date.now(),
@@ -369,7 +364,7 @@ function Opportunities() {
       leads.forEach((l, i) => {
         const key = `web:${normalizeLeadUrl(l.url)}`;
         const full = `${l.title} ${l.snippet}`.trim();
-        if (!isLikelyHousingLead(full)) return;
+        if (!vert.isRelevant(full)) return;
         const titleKey = leadFingerprint({ title: l.title, source: l.source || PLATFORM_LABEL[l.platform] || "Web" });
         if (have.has(key) || haveTitle.has(titleKey)) return;
         have.add(key);
@@ -384,7 +379,7 @@ function Opportunities() {
           territory: matched || territoryNames.find((n) => full.toLowerCase().includes(n.toLowerCase())) || (statewide ? "Arizona (general)" : territoryNames[0] || "General"),
           excerpt: (l.snippet || l.title).slice(0, 400),
           url: l.url,
-          tags: tagOpportunity(full),
+          tags: tagFor(vert, full),
           status: "new",
           // capturedAt tracks when FARMHAND found it, not the source post's own
           // age (that's a different fact — shown separately as l.postedAgo /
@@ -470,14 +465,15 @@ function Opportunities() {
             const score = o.engineScore ?? scoreOpportunity(o.excerpt, strategy.territories.map((t) => t.name));
             const isDrafting = draftFor === o.id;
             const draft = isDrafting
-              ? draftReply({ excerpt: o.excerpt, tags: o.tags, tone: strategy.tone, mode: strategy.prospectingMode, firstTouch: o.firstTouch, agentName: strategy.name, territory: o.territory })
+              ? draftReply({ excerpt: o.excerpt, tags: o.tags, tone: strategy.tone, mode: strategy.prospectingMode, firstTouch: o.firstTouch, agentName: strategy.name, territory: o.territory, vertical: vert.id })
               : "";
-            const lint = isDrafting ? fairHousingLint(draft) : null;
+            // fair-housing lint is a real-estate compliance rule — solar drafts skip it
+            const lint = isDrafting && vert.id === "realtor" ? fairHousingLint(draft) : null;
             return (
               <div key={o.id} className="fh-glass" style={{ borderRadius: 13, padding: "14px 16px", borderLeft: `3px solid ${o.status === "engaged" ? "#41D98A" : o.status === "watching" ? "#FFC23D" : "#26E0C8"}` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   {o.platform && (
-                    <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.06em", fontFamily: "var(--label)", color: "#04110E", background: INTENT_COLOR[o.intent || "signal"] || "#8B89A0", borderRadius: 999, padding: "2px 7px", textTransform: "uppercase" }}>
+                    <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.06em", fontFamily: "var(--label)", color: "#04110E", background: intentColor(vert, o.intent), borderRadius: 999, padding: "2px 7px", textTransform: "uppercase" }}>
                       {o.intent || "signal"}
                     </span>
                   )}
