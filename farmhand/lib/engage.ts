@@ -13,7 +13,8 @@ export interface Opportunity {
   url?: string;
   tags: string[];
   status: "new" | "watching" | "engaged" | "skipped";
-  capturedAt: string; // relative for demo
+  capturedAt: string; // legacy relative-string fallback for records with no capturedAtMs
+  capturedAtMs?: number; // epoch ms — when Farmhand actually captured it; display is computed live from this
   firstTouch: boolean; // first engagement in this source → guardrails apply
   extKey?: string; // dedup key when captured via the Radar extension bridge
   // web-wide Lead Engine metadata (present on auto-hunted opportunities)
@@ -22,6 +23,21 @@ export interface Opportunity {
   intent?: string; // buyer | seller | relocation | investor | renter | referral
   why?: string; // one line: why the engine flagged it
   feedback?: "good" | "bad"; // agent's thumbs — trains the engine
+}
+
+/**
+ * Live relative-time label for when this was captured — computed at render
+ * time from capturedAtMs, not frozen as a literal string at capture time.
+ * ("just now" used to get baked in permanently for any lead whose source
+ * didn't report its own age, making old captures look freshly found.)
+ */
+export function capturedAtLabel(o: Pick<Opportunity, "capturedAt" | "capturedAtMs">): string {
+  if (o.capturedAtMs == null) return o.capturedAt;
+  const mins = Math.max(0, Math.round((Date.now() - o.capturedAtMs) / 60000));
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1440) return `${Math.round(mins / 60)}h ago`;
+  return `${Math.round(mins / 1440)}d ago`;
 }
 
 /** Rule-based topic tagging for captured threads. */

@@ -3,7 +3,7 @@
 import { useStore } from "@/lib/store";
 import { CountUp, MagneticButton } from "@/components/ui";
 import { RESULTS_STATS, RESULTS_LOG } from "@/lib/data";
-import type { Opportunity } from "@/lib/engage";
+import { capturedAtLabel, type Opportunity } from "@/lib/engage";
 import type { Contact } from "@/lib/pipeline";
 import type { PlannedPost } from "@/lib/planner";
 
@@ -29,7 +29,7 @@ export default function Results() {
       : []),
     ...(demo
       ? RESULTS_LOG
-      : engaged.map((o) => ({ channel: o.sourceName.slice(0, 18), note: o.excerpt.slice(0, 90), when: o.capturedAt, col: "#26E0C8" }))),
+      : engaged.map((o) => ({ channel: o.sourceName.slice(0, 18), note: o.excerpt.slice(0, 90), when: capturedAtLabel(o), col: "#26E0C8" }))),
   ];
 
   return (

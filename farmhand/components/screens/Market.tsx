@@ -141,6 +141,7 @@ function TerritoryDetail({ t, onBack }: { t: Territory; onBack: () => void }) {
       tags: tagOpportunity(full),
       status: "new",
       capturedAt: "just now",
+      capturedAtMs: Date.now(),
       firstTouch: !opps.some((o) => o.sourceName === `r/${it.subreddit}`),
     };
     set((s) => ({ opportunities: [opp, ...(s.opportunities as Opportunity[])] }));

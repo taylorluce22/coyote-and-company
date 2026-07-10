@@ -6,7 +6,7 @@ import SubTabs from "@/components/SubTabs";
 import Sources from "./Sources";
 import Assistant from "./Assistant";
 import { cadenceCap, type StrategyProfile } from "@/lib/strategy";
-import { draftReply, fairHousingLint, scoreOpportunity, tagOpportunity, type Opportunity } from "@/lib/engage";
+import { capturedAtLabel, draftReply, fairHousingLint, scoreOpportunity, tagOpportunity, type Opportunity } from "@/lib/engage";
 import { INTENT_COLOR, INTENT_OPTS, normalizeLeadUrl, PLATFORM_LABEL, pushExemplar, type Lead, type LeadTraining } from "@/lib/hunt";
 
 function sinceLabel(ts: number): string {
@@ -293,6 +293,7 @@ function Opportunities() {
       tags: tagOpportunity(text),
       status: "new",
       capturedAt: "just now",
+      capturedAtMs: Date.now(),
       firstTouch: !opps.some((o) => o.sourceName === (source.trim() || "Pasted thread")),
     };
     set((s) => ({ opportunities: [opp, ...(s.opportunities as Opportunity[])] }));
@@ -330,7 +331,12 @@ function Opportunities() {
           url: l.url,
           tags: tagOpportunity(full),
           status: "new",
-          capturedAt: l.postedAgo ? `${l.postedAgo} ago` : "just now",
+          // capturedAt tracks when FARMHAND found it, not the source post's own
+          // age (that's a different fact — shown separately as l.postedAgo /
+          // "why"). Always a real timestamp so the label updates live instead
+          // of freezing at "just now" forever.
+          capturedAt: "just now",
+          capturedAtMs: Date.now(),
           firstTouch: !existing.some((o) => o.sourceName === (l.source || l.platform)),
           extKey: key,
           engineScore: l.score,
@@ -420,7 +426,7 @@ function Opportunities() {
                     </span>
                   )}
                   <span style={{ fontSize: 11.5, fontWeight: 700, color: "#D8D6E6" }}>{o.sourceName}</span>
-                  <span style={{ fontSize: 10, color: "#77758C" }}>· {o.territory} · {o.capturedAt}</span>
+                  <span style={{ fontSize: 10, color: "#77758C" }}>· {o.territory} · {capturedAtLabel(o)}</span>
                   <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 800, fontFamily: "var(--mono)", color: score >= 60 ? "#41D98A" : score >= 40 ? "#FFC23D" : "#8B89A0" }}>
                     {score} {o.engineScore != null ? "intent" : "match"}
                   </span>
