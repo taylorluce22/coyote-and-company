@@ -127,6 +127,30 @@ const CONVERSION_BANK: { title: string; angle: string; format: "carousel" | "ree
   { title: "Know someone moving to {n}? Here's what I send them", angle: "referral prompt disguised as a resource — highly shareable", format: "carousel", theme: "referral" },
 ];
 
+/* --------- solar content banks — AZ homeowner education, Instagram-first ---------- */
+
+const SOLAR_IDEA_BANK: { title: string; angle: string; format: "carousel" | "reel" | "story" | "text"; theme: string }[] = [
+  { title: "What a $320 APS bill looks like after solar in {n}", angle: "real before/after bill breakdown — screenshots get shared and saved", format: "carousel", theme: "bill-breakdown" },
+  { title: "The 3 questions to ask ANY solar company before you talk price", angle: "authority through generosity — protects people from bad installs, builds trust in you", format: "carousel", theme: "buyer-education" },
+  { title: "Monsoon season vs. your panels: what actually happens", angle: "reel: wind/dust/hail myths answered in 60 seconds — seasonal, timely, local", format: "reel", theme: "myth-busting" },
+  { title: "Why Arizona's 'free solar' ads aren't free — the honest version", angle: "call out your own industry's worst pitch; honesty is the differentiator", format: "text", theme: "myth-busting" },
+  { title: "The rate-plan check that saves {n} homeowners money BEFORE solar", angle: "on-peak vs off-peak explained — free value first, no pitch", format: "carousel", theme: "bill-breakdown" },
+  { title: "How much roof a real 10kW system needs in {n}", angle: "reel: pace out a roof on camera — concrete beats abstract", format: "reel", theme: "buyer-education" },
+  { title: "West-facing vs. south-facing in AZ: what the production data says", angle: "counterintuitive local knowledge (west wins on-peak) — instant credibility", format: "text", theme: "authority" },
+  { title: "Buying a new build in {n}? Read this before the builder's solar offer", angle: "new-homeowner moment — they're deciding NOW and nobody's helping them", format: "carousel", theme: "new-homeowner" },
+  { title: "EV + solar in {n}: the real math for charging at home", angle: "the EV crowd runs the numbers — give them numbers worth running", format: "carousel", theme: "battery-ev" },
+  { title: "How to read your neighbor's solar brag post", angle: "kWh vs. savings vs. offset — decode the jargon people actually see on Nextdoor", format: "text", theme: "myth-busting" },
+];
+
+const SOLAR_CONVERSION_BANK: { title: string; angle: string; format: "carousel" | "reel" | "story" | "text"; theme: string }[] = [
+  { title: "What my last {n} install actually cost per watt", angle: "radical transparency — real numbers are rare in solar and get remembered", format: "carousel", theme: "social-proof" },
+  { title: "3 red flags I found in a quote someone sent me this week", angle: "story of advocacy — position as the person who reviews quotes, not sells them", format: "story", theme: "authority" },
+  { title: "“We'll wait for the tech to get better” — the honest math on waiting", angle: "objection-handling with real payback numbers, zero pressure", format: "carousel", theme: "objection-handling" },
+  { title: "What happened when I told a {n} homeowner NOT to go solar", angle: "the anti-pitch — nothing builds trust faster than a no", format: "text", theme: "social-proof" },
+  { title: "Know someone with a $300+ summer bill? Here's what I send them", angle: "referral prompt disguised as a resource — highly shareable", format: "carousel", theme: "referral" },
+  { title: "The free quote review I do (and why confusing quotes are on purpose)", angle: "a service offer that's genuinely useful — the softest possible CTA", format: "text", theme: "referral" },
+];
+
 export interface Idea {
   id: string;
   territory: Territory;
@@ -139,7 +163,10 @@ export interface Idea {
 export function ideasFor(profile: StrategyProfile): Idea[] {
   const out: Idea[] = [];
   profile.territories.forEach((t, ti) => {
-    const bank = [...(IDEA_BANK[t.segment] ?? IDEA_BANK.growth), ...CONVERSION_BANK.slice(ti % 2, (ti % 2) + 4)];
+    const bank =
+      profile.vertical === "solar"
+        ? [...SOLAR_IDEA_BANK.slice(ti % 3, (ti % 3) + 6), ...SOLAR_CONVERSION_BANK.slice(ti % 2, (ti % 2) + 4)]
+        : [...(IDEA_BANK[t.segment] ?? IDEA_BANK.growth), ...CONVERSION_BANK.slice(ti % 2, (ti % 2) + 4)];
     const price = t.segment === "luxury" ? "2M" : t.segment === "growth" ? "450K" : "350K";
     bank.forEach((b, i) => {
       out.push({
@@ -169,14 +196,24 @@ export function suggestedSources(profile: StrategyProfile): { name: string; kind
   profile.territories.forEach((t) => {
     out.push(
       { name: `${t.name} Neighbors`, kind: "fb_group", territory: t.name },
-      { name: `${t.city} Buy Nothing / Community`, kind: "fb_group", territory: t.name },
+      { name: `${t.city} ${profile.vertical === "solar" ? "Homeowners" : "Buy Nothing / Community"}`, kind: "fb_group", territory: t.name },
       { name: `Nextdoor · ${t.name}`, kind: "nextdoor", territory: t.name }
     );
   });
-  out.push(
-    { name: "r/phoenix", kind: "subreddit", territory: "All AZ" },
-    { name: "r/arizona", kind: "subreddit", territory: "All AZ" },
-    { name: "r/MovingtoPhoenix", kind: "subreddit", territory: "Relocation" }
-  );
+  if (profile.vertical === "solar") {
+    out.push(
+      { name: "r/solar", kind: "subreddit", territory: "All solar" },
+      { name: "r/phoenix", kind: "subreddit", territory: "All AZ" },
+      { name: "r/arizona", kind: "subreddit", territory: "All AZ" },
+      { name: "r/TeslaSolar", kind: "subreddit", territory: "Battery / EV" },
+      { name: "r/electricvehicles", kind: "subreddit", territory: "Battery / EV" }
+    );
+  } else {
+    out.push(
+      { name: "r/phoenix", kind: "subreddit", territory: "All AZ" },
+      { name: "r/arizona", kind: "subreddit", territory: "All AZ" },
+      { name: "r/MovingtoPhoenix", kind: "subreddit", territory: "Relocation" }
+    );
+  }
   return out;
 }
