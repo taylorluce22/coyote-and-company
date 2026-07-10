@@ -4,7 +4,7 @@
  * Perplexity live web search; key stays in the deployment env.
  */
 
-import { normalizeLeadUrl, type Lead } from "./hunt";
+import { isLikelyHousingLead, leadFingerprint, normalizeLeadUrl, type Lead } from "./hunt";
 
 export interface HuntConfig {
   territories: string[];
@@ -29,23 +29,34 @@ function clampScore(n: unknown): number {
 
 export function coerceLeads(raw: unknown): Lead[] {
   if (!Array.isArray(raw)) return [];
-  const seen = new Set<string>();
+  const seenUrl = new Set<string>();
+  const seenTitle = new Set<string>();
   const out: Lead[] = [];
   for (const r of raw) {
     if (!r || typeof r !== "object") continue;
     const o = r as Record<string, unknown>;
     const url = String(o.url ?? "").trim();
     if (!/^https?:\/\/.+\..+/i.test(url)) continue;
-    const key = normalizeLeadUrl(url);
-    if (seen.has(key)) continue;
-    seen.add(key);
+    const urlKey = normalizeLeadUrl(url);
+    if (seenUrl.has(urlKey)) continue;
     const platform = String(o.platform ?? "web").toLowerCase();
     const intent = String(o.intent ?? "signal").toLowerCase();
+    const title = String(o.title ?? "").slice(0, 160);
+    const snippet = String(o.snippet ?? o.summary ?? "").slice(0, 500);
+    const source = String(o.source ?? o.community ?? "web").slice(0, 80);
+    // deterministic backstop: "recommend a salon/bar/mechanic" is never a
+    // lead, no matter how well the model scored it — don't trust the prompt
+    // instruction alone to keep these out.
+    if (!isLikelyHousingLead(`${title} ${snippet}`)) continue;
+    const titleKey = leadFingerprint({ title, source });
+    if (seenTitle.has(titleKey)) continue;
+    seenUrl.add(urlKey);
+    seenTitle.add(titleKey);
     out.push({
-      title: String(o.title ?? "").slice(0, 160),
-      snippet: String(o.snippet ?? o.summary ?? "").slice(0, 500),
+      title,
+      snippet,
       url: url.slice(0, 600),
-      source: String(o.source ?? o.community ?? "web").slice(0, 80),
+      source,
       platform: PLATFORMS.has(platform) ? platform : "web",
       intent: INTENTS.has(intent) ? intent : "signal",
       score: clampScore(o.score),
@@ -281,14 +292,17 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
   const anyOk = settled.some((s) => s.status === "fulfilled");
   if (!anyOk) return { configured: true, leads: [], error: "hunt request failed" };
 
-  const seen = new Set<string>();
+  const seenUrl = new Set<string>();
+  const seenTitle = new Set<string>();
   const merged: Lead[] = [];
   for (const s of settled) {
     if (s.status !== "fulfilled") continue;
     for (const lead of s.value) {
-      const key2 = normalizeLeadUrl(lead.url);
-      if (seen.has(key2)) continue;
-      seen.add(key2);
+      const urlKey = normalizeLeadUrl(lead.url);
+      const titleKey = leadFingerprint(lead);
+      if (seenUrl.has(urlKey) || seenTitle.has(titleKey)) continue;
+      seenUrl.add(urlKey);
+      seenTitle.add(titleKey);
       merged.push(lead);
     }
   }

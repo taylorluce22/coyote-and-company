@@ -4,7 +4,7 @@
  * per-user layer can slot in later without a migration.
  */
 
-import { normalizeLeadUrl, type Lead } from "./hunt";
+import { leadFingerprint, normalizeLeadUrl, type Lead } from "./hunt";
 import type { HuntConfig } from "./huntServer";
 import { kvEnabled, kvGetJSON, kvSetJSON } from "./kv";
 
@@ -46,19 +46,25 @@ export async function getMeta(): Promise<HuntMeta | null> {
 }
 
 /**
- * Merge freshly-hunted leads into the store, deduped by normalized url.
- * Newest first, capped. Returns how many were genuinely new. `now` is passed
- * in so callers control the clock (routes have Date; libs stay pure).
+ * Merge freshly-hunted leads into the store, deduped by normalized url AND by
+ * title fingerprint — Perplexity can re-cite the same real post under a
+ * genuinely different URL form (a crosspost, a share-link wrapper) across
+ * separate scheduled runs, and a URL-only check misses that. Newest first,
+ * capped. Returns how many were genuinely new. `now` is passed in so callers
+ * control the clock (routes have Date; libs stay pure).
  */
 export async function mergeLeads(fresh: Lead[], now: number): Promise<number> {
   if (!kvEnabled()) return 0;
   const existing = await getLeads();
-  const have = new Set(existing.map((l) => l.key));
+  const haveUrl = new Set(existing.map((l) => l.key));
+  const haveTitle = new Set(existing.map((l) => leadFingerprint(l)));
   const added: StoredLead[] = [];
   for (const l of fresh) {
     const key = leadKey(l);
-    if (!key || have.has(key)) continue;
-    have.add(key);
+    const titleKey = leadFingerprint(l);
+    if (!key || haveUrl.has(key) || haveTitle.has(titleKey)) continue;
+    haveUrl.add(key);
+    haveTitle.add(titleKey);
     added.push({ ...l, key, foundAt: now });
   }
   if (added.length) {
