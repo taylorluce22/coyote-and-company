@@ -31,6 +31,9 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
   const [lastAt, setLastAt] = useState<number | null>(null);
   const [lastNew, setLastNew] = useState(0);
   const [teach, setTeach] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<
+    { label: string; httpStatus: number | "error"; httpError?: string; rawParsedCount: number; afterHousingFilterCount: number; afterLaneKeepCount: number }[] | null
+  >(null);
   const [alwaysOn, setAlwaysOn] = useState(false);
   const [serverMeta, setServerMeta] = useState<{ lastRunAt: number; lastCount: number; totalRuns: number } | null>(null);
   const running = useRef(false);
@@ -73,6 +76,7 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
       const added = onAuto(qualified);
       setLastNew(added);
       setLastAt(Date.now());
+      setDebugInfo(Array.isArray(res.debug) ? res.debug : null);
       if (res.needsCreds || res.configured === false) setStatus("needs-creds");
       else if (!leads.length && res.error) setStatus("transient");
       else setStatus("ok");
@@ -169,6 +173,23 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
           {status === "scanning" ? "Hunting…" : "↻ Hunt now"}
         </button>
       </div>
+
+      {debugInfo && (
+        <div style={{ marginTop: 11, background: "rgba(0,0,0,0.28)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px 12px" }}>
+          <div style={{ fontSize: 9.5, color: "#5E5C72", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 7 }}>
+            Last run, by search lane (temporary diagnostic)
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {debugInfo.map((d) => (
+              <div key={d.label} style={{ fontSize: 10.5, color: d.httpStatus !== 200 ? "#FF5D8F" : "#A6A4B8", fontFamily: "var(--mono)" }}>
+                <b style={{ color: "#D8D6E6" }}>{d.label}</b> · http {d.httpStatus}
+                {d.httpError ? ` · ${d.httpError.slice(0, 120)}` : ""}
+                {d.httpStatus === 200 ? ` · found ${d.rawParsedCount} → housing-relevant ${d.afterHousingFilterCount} → on-platform ${d.afterLaneKeepCount}` : ""}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {teach && (
         <div style={{ marginTop: 12, background: "rgba(201,168,255,0.05)", border: "1px solid rgba(201,168,255,0.18)", borderRadius: 11, padding: "13px 14px" }}>
