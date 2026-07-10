@@ -19,6 +19,7 @@ export interface Territory {
 }
 
 export interface StrategyProfile {
+  vertical?: "realtor" | "solar"; // which LocalOS vertical this account runs (default realtor)
   name: string;
   brokerage: string;
   licenseNo: string;
