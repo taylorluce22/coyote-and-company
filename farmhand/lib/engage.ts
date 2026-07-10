@@ -17,6 +17,7 @@ export interface Opportunity {
   capturedAtMs?: number; // epoch ms — when Farmhand actually captured it; display is computed live from this
   firstTouch: boolean; // first engagement in this source → guardrails apply
   extKey?: string; // dedup key when captured via the Radar extension bridge
+  titleFingerprint?: string; // secondary dedup — catches the same real post re-cited under a different URL
   // web-wide Lead Engine metadata (present on auto-hunted opportunities)
   engineScore?: number; // 0-100 intent strength the engine assigned
   platform?: string; // reddit | facebook | quora | forum | x | news | web…

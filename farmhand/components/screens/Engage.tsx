@@ -7,7 +7,7 @@ import Sources from "./Sources";
 import Assistant from "./Assistant";
 import { cadenceCap, type StrategyProfile } from "@/lib/strategy";
 import { capturedAtLabel, draftReply, fairHousingLint, scoreOpportunity, tagOpportunity, type Opportunity } from "@/lib/engage";
-import { INTENT_COLOR, INTENT_OPTS, normalizeLeadUrl, PLATFORM_LABEL, pushExemplar, type Lead, type LeadTraining } from "@/lib/hunt";
+import { INTENT_COLOR, INTENT_OPTS, isLikelyHousingLead, leadFingerprint, normalizeLeadUrl, PLATFORM_LABEL, pushExemplar, type Lead, type LeadTraining } from "@/lib/hunt";
 
 function sinceLabel(ts: number): string {
   const m = Math.round((Date.now() - ts) / 60000);
@@ -306,19 +306,27 @@ function Opportunities() {
 
   const engagedThisWeek = opps.filter((o) => o.status === "engaged").length;
 
-  // auto-capture web-wide hunt results into the inbox, deduped by source url
+  // auto-capture web-wide hunt results into the inbox, deduped by source url,
+  // title fingerprint (catches the same real post re-cited under a different
+  // URL), and a deterministic housing-relevance filter (the prompt tells the
+  // engine to skip salon/bar/service-recommendation posts, but that's an
+  // instruction, not a guarantee — this is the backstop that actually enforces it)
   const autoCapture = (leads: Lead[]): number => {
     const territoryNames = strategy.territories.map((t) => t.name);
     let addedCount = 0;
     set((s) => {
       const existing = s.opportunities as Opportunity[];
       const have = new Set(existing.map((o) => o.extKey).filter(Boolean));
+      const haveTitle = new Set(existing.map((o) => o.titleFingerprint).filter(Boolean));
       const fresh: Opportunity[] = [];
       leads.forEach((l, i) => {
         const key = `web:${normalizeLeadUrl(l.url)}`;
-        if (have.has(key)) return;
-        have.add(key);
         const full = `${l.title} ${l.snippet}`.trim();
+        if (!isLikelyHousingLead(full)) return;
+        const titleKey = leadFingerprint({ title: l.title, source: l.source || PLATFORM_LABEL[l.platform] || "Web" });
+        if (have.has(key) || haveTitle.has(titleKey)) return;
+        have.add(key);
+        haveTitle.add(titleKey);
         const matched = l.territory && territoryNames.find((n) => l.territory.toLowerCase().includes(n.toLowerCase()));
         // a general "moving to Arizona, where should I live" lead doesn't belong to one named
         // territory — label it plainly rather than mislabeling it as the agent's first territory
@@ -339,6 +347,7 @@ function Opportunities() {
           capturedAtMs: Date.now(),
           firstTouch: !existing.some((o) => o.sourceName === (l.source || l.platform)),
           extKey: key,
+          titleFingerprint: titleKey,
           engineScore: l.score,
           platform: l.platform,
           intent: l.intent,

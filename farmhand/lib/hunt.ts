@@ -98,3 +98,38 @@ export function normalizeLeadUrl(url: string): string {
   u = u.replace(/\/+$/, "");
   return u;
 }
+
+/**
+ * Fingerprint a lead by its title, not just its URL. The same real post can
+ * come back under genuinely different URL forms across search lanes/runs
+ * (a different permalink shape, a crosspost, a share-link wrapper) — a pure
+ * URL dedup misses those. This catches "the same story again" even when the
+ * link itself isn't byte-identical.
+ */
+export function leadFingerprint(l: Pick<Lead, "title" | "source">): string {
+  const t = l.title
+    .toLowerCase()
+    .replace(/[^\w\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+  return `${l.source.toLowerCase().trim()}::${t}`;
+}
+
+/**
+ * Deterministic backstop for the "salon/bar/nightlife counted as a lead"
+ * failure mode — the prompt tells the model to exclude these, but an LLM
+ * following an instruction isn't a guarantee the way a code check is. If the
+ * text names a non-housing local service/activity AND has no real housing
+ * signal alongside it, it's not a lead, full stop.
+ */
+const NON_HOUSING_SERVICE =
+  /\b(salon|barber|hair ?dresser|nail salon|day ?spa|restaurant|\bbars?\b|nightlife|\bdj\b|night ?club|dentist|orthodontist|doctor|physician|mechanic|auto shop|plumber|electrician|contractor|handyman|lawyer|attorney|veterinarian|\bvet\b|therapist|tattoo|gym|yoga studio|day ?care|babysitter|hair salon)\b/i;
+const HOUSING_SIGNAL =
+  /\b(neighborhood|neighbourhood|\bhoa\b|school district|moving to|relocat\w*|renting|rent an? (apartment|house|home|place)|buy(ing)? a (house|home)|realtor|real estate|housing market|where (should|to) (i|we) live|subdivision|down ?payment|closing costs|listing agent|open house)\b/i;
+
+export function isLikelyHousingLead(text: string): boolean {
+  const t = text.toLowerCase();
+  if (NON_HOUSING_SERVICE.test(t) && !HOUSING_SIGNAL.test(t)) return false;
+  return true;
+}
