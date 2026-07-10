@@ -150,11 +150,25 @@ export function buildHuntPrompt(cfg: Required<Pick<HuntConfig, "territories">> &
   );
 }
 
+export interface LaneDiag {
+  label: string;
+  httpStatus: number | "error";
+  httpError?: string; // truncated response body when httpStatus is not ok
+  rawParsedCount: number; // how many items the model returned, before any filtering
+  afterHousingFilterCount: number; // after isLikelyHousingLead + coerceLeads' own dedup
+  afterLaneKeepCount: number; // after the deterministic platform/domain filter
+}
+
 export interface HuntResult {
   configured: boolean;
   needsCreds?: boolean;
   leads: Lead[];
   error?: string;
+  // TEMPORARY diagnostics — surfaced in the API response so we can see exactly
+  // where the funnel drops to zero (Perplexity returning nothing at all vs.
+  // returning results that get filtered out) without needing direct API
+  // access. Safe to remove once the pipeline is confirmed healthy.
+  debug?: LaneDiag[];
 }
 
 /**
@@ -230,7 +244,7 @@ async function runLane(
   key: string,
   cfg: Required<Pick<HuntConfig, "territories">> & HuntConfig,
   lane: (typeof HUNT_LANES)[number]
-): Promise<Lead[]> {
+): Promise<{ leads: Lead[]; diag: LaneDiag }> {
   const prompt = `${buildHuntPrompt(cfg)}\n\nSEARCH FOCUS FOR THIS PASS: ${lane.focus}`;
   const body: Record<string, unknown> = {
     model: "sonar",
@@ -249,6 +263,14 @@ async function runLane(
   };
   if (lane.domains?.length) body.search_domain_filter = lane.domains;
 
+  const diag: LaneDiag = {
+    label: lane.label,
+    httpStatus: "error",
+    rawParsedCount: 0,
+    afterHousingFilterCount: 0,
+    afterLaneKeepCount: 0,
+  };
+
   try {
     const r = await fetch("https://api.perplexity.ai/chat/completions", {
       method: "POST",
@@ -256,7 +278,11 @@ async function runLane(
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(30000),
     });
-    if (!r.ok) return [];
+    diag.httpStatus = r.status;
+    if (!r.ok) {
+      diag.httpError = (await r.text().catch(() => "")).slice(0, 300);
+      return { leads: [], diag };
+    }
     const data = await r.json();
     let text: string = data?.choices?.[0]?.message?.content ?? "[]";
     text = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
@@ -269,10 +295,16 @@ async function runLane(
     } catch {
       parsed = [];
     }
+    diag.rawParsedCount = Array.isArray(parsed) ? parsed.length : 0;
+    const afterHousing = coerceLeads(parsed);
+    diag.afterHousingFilterCount = afterHousing.length;
     // deterministic enforcement — don't trust the model or the API param alone
-    return coerceLeads(parsed).filter((l) => lane.keep(l.url.toLowerCase()));
-  } catch {
-    return [];
+    const kept = afterHousing.filter((l) => lane.keep(l.url.toLowerCase()));
+    diag.afterLaneKeepCount = kept.length;
+    return { leads: kept, diag };
+  } catch (e) {
+    diag.httpError = e instanceof Error ? e.message.slice(0, 300) : "unknown error";
+    return { leads: [], diag };
   }
 }
 
@@ -290,14 +322,26 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
   const full = { ...cfg, territories };
   const settled = await Promise.allSettled(HUNT_LANES.map((lane) => runLane(key, full, lane)));
   const anyOk = settled.some((s) => s.status === "fulfilled");
-  if (!anyOk) return { configured: true, leads: [], error: "hunt request failed" };
+  const debug: LaneDiag[] = settled.map((s, i) =>
+    s.status === "fulfilled"
+      ? s.value.diag
+      : {
+          label: HUNT_LANES[i].label,
+          httpStatus: "error",
+          httpError: s.reason instanceof Error ? s.reason.message.slice(0, 300) : "lane rejected",
+          rawParsedCount: 0,
+          afterHousingFilterCount: 0,
+          afterLaneKeepCount: 0,
+        }
+  );
+  if (!anyOk) return { configured: true, leads: [], error: "hunt request failed", debug };
 
   const seenUrl = new Set<string>();
   const seenTitle = new Set<string>();
   const merged: Lead[] = [];
   for (const s of settled) {
     if (s.status !== "fulfilled") continue;
-    for (const lead of s.value) {
+    for (const lead of s.value.leads) {
       const urlKey = normalizeLeadUrl(lead.url);
       const titleKey = leadFingerprint(lead);
       if (seenUrl.has(urlKey) || seenTitle.has(titleKey)) continue;
@@ -307,5 +351,5 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
     }
   }
   merged.sort((a, b) => b.score - a.score);
-  return { configured: true, leads: merged.slice(0, 16) };
+  return { configured: true, leads: merged.slice(0, 16), debug };
 }
