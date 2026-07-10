@@ -5,7 +5,7 @@ import { useStore } from "@/lib/store";
 import SubTabs from "@/components/SubTabs";
 import Sources from "./Sources";
 import Assistant from "./Assistant";
-import { cadenceCap, type StrategyProfile } from "@/lib/strategy";
+import { cadenceCap, DEFAULT_STRATEGY, type StrategyProfile } from "@/lib/strategy";
 import { capturedAtLabel, draftReply, fairHousingLint, scoreOpportunity, tagOpportunity, type Opportunity } from "@/lib/engage";
 import { INTENT_COLOR, INTENT_OPTS, isLikelyHousingLead, leadFingerprint, normalizeLeadUrl, PLATFORM_LABEL, pushExemplar, type Lead, type LeadTraining } from "@/lib/hunt";
 
@@ -27,13 +27,16 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
   const { state, set } = useStore();
   const strategy = state.strategy as StrategyProfile;
   const training = state.leadTraining as LeadTraining;
-  const [status, setStatus] = useState<"idle" | "scanning" | "ok" | "transient" | "needs-creds">("idle");
+  const [status, setStatus] = useState<"idle" | "scanning" | "ok" | "filtered" | "transient" | "needs-creds">("idle");
   const [lastAt, setLastAt] = useState<number | null>(null);
   const [lastNew, setLastNew] = useState(0);
+  const [lastFound, setLastFound] = useState(0);
   const [teach, setTeach] = useState(false);
   const [debugInfo, setDebugInfo] = useState<
-    { label: string; httpStatus: number | "error"; httpError?: string; rawParsedCount: number; afterHousingFilterCount: number; afterLaneKeepCount: number }[] | null
+    { label: string; httpStatus: number | "error"; httpError?: string; rawParsedCount: number; afterHousingFilterCount: number; afterLaneKeepCount: number; parseFailed?: boolean; rawSample?: string }[] | null
   >(null);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [huntMeta, setHuntMeta] = useState<{ commit?: string; territoriesReceived: number; keyPresent: boolean } | null>(null);
   const [alwaysOn, setAlwaysOn] = useState(false);
   const [serverMeta, setServerMeta] = useState<{ lastRunAt: number; lastCount: number; totalRuns: number } | null>(null);
   const running = useRef(false);
@@ -47,12 +50,18 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
     running.current = true;
     setStatus("scanning");
     const t = state.leadTraining as LeadTraining;
+    // never hunt with an empty territory list — the store self-heals persisted
+    // profiles on load, but if anything still slips through, fall back to the
+    // defaults rather than silently searching for nothing
+    const territoryNames = strategy.territories.length
+      ? strategy.territories.map((x) => x.name)
+      : DEFAULT_STRATEGY.territories.map((x) => x.name);
     try {
       const res = await fetch("/api/hunt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          territories: strategy.territories.map((x) => x.name),
+          territories: territoryNames,
           profession: "real estate agent",
           city: strategy.homeBase,
           idealClient: strategy.idealClient,
@@ -75,10 +84,14 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
       const qualified = leads.filter((l) => l.score >= t.minScore);
       const added = onAuto(qualified);
       setLastNew(added);
+      setLastFound(leads.length);
       setLastAt(Date.now());
       setDebugInfo(Array.isArray(res.debug) ? res.debug : null);
+      setServerError(typeof res.error === "string" ? res.error : null);
+      setHuntMeta(res.meta && typeof res.meta === "object" ? res.meta : null);
       if (res.needsCreds || res.configured === false) setStatus("needs-creds");
-      else if (!leads.length && res.error) setStatus("transient");
+      else if (res.error) setStatus("transient");
+      else if (leads.length && !qualified.length) setStatus("filtered");
       else setStatus("ok");
     } catch {
       setStatus("transient");
@@ -144,7 +157,7 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
   }, [alwaysOn, strategy.territories, strategy.homeBase, strategy.idealClient, training.intents, training.guidance, training.good, training.bad, training.sinceDays]);
 
   const rel = lastAt ? (Date.now() - lastAt < 60000 ? "just now" : `${Math.round((Date.now() - lastAt) / 60000)}m ago`) : "—";
-  const dot = status === "needs-creds" ? "#FFC23D" : status === "transient" ? "#FF5D8F" : "#41D98A";
+  const dot = status === "needs-creds" || status === "filtered" ? "#FFC23D" : status === "transient" ? "#FF5D8F" : "#41D98A";
   const learned = training.good.length + training.bad.length;
 
   return (
@@ -157,6 +170,10 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
             ? `Hunting the web for ${strategy.territories.slice(0, 3).map((x) => x.name).join(", ")}…`
             : status === "needs-creds"
             ? "One key away from live — see below"
+            : status === "filtered"
+            ? `Found ${lastFound} lead${lastFound === 1 ? "" : "s"} — all below your ${training.minScore}+ quality bar (lower it in Teach to see them)`
+            : status === "transient"
+            ? `Last run hit a problem — details below`
             : `Auto-hunting the whole web · last run ${rel}${lastNew ? ` · +${lastNew} new` : ""}`}
         </span>
         <button
@@ -174,20 +191,29 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
         </button>
       </div>
 
-      {debugInfo && (
+      {(debugInfo || serverError || huntMeta) && (
         <div style={{ marginTop: 11, background: "rgba(0,0,0,0.28)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px 12px" }}>
           <div style={{ fontSize: 9.5, color: "#5E5C72", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 7 }}>
             Last run, by search lane (temporary diagnostic)
           </div>
+          {serverError && (
+            <div style={{ fontSize: 10.5, color: "#FF5D8F", fontFamily: "var(--mono)", marginBottom: 6 }}>server: {serverError.slice(0, 200)}</div>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {debugInfo.map((d) => (
-              <div key={d.label} style={{ fontSize: 10.5, color: d.httpStatus !== 200 ? "#FF5D8F" : "#A6A4B8", fontFamily: "var(--mono)" }}>
+            {(debugInfo || []).map((d) => (
+              <div key={d.label} style={{ fontSize: 10.5, color: d.httpStatus !== 200 || d.parseFailed ? "#FF5D8F" : "#A6A4B8", fontFamily: "var(--mono)" }}>
                 <b style={{ color: "#D8D6E6" }}>{d.label}</b> · http {d.httpStatus}
                 {d.httpError ? ` · ${d.httpError.slice(0, 120)}` : ""}
                 {d.httpStatus === 200 ? ` · found ${d.rawParsedCount} → housing-relevant ${d.afterHousingFilterCount} → on-platform ${d.afterLaneKeepCount}` : ""}
+                {d.parseFailed ? ` · UNPARSEABLE REPLY: "${(d.rawSample || "").slice(0, 100)}…"` : ""}
               </div>
             ))}
           </div>
+          {huntMeta && (
+            <div style={{ fontSize: 9.5, color: "#5E5C72", fontFamily: "var(--mono)", marginTop: 6 }}>
+              deploy {huntMeta.commit || "unknown"} · territories received: {huntMeta.territoriesReceived} · key: {huntMeta.keyPresent ? "present" : "MISSING"}
+            </div>
+          )}
         </div>
       )}
 
