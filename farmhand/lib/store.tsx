@@ -81,6 +81,7 @@ export interface AppState {
   doneActions: Record<string, boolean>;
   contentResponses: Record<string, { pillar: string; dm: number; comment: number; inquiry: number }>;
   briefs: Record<string, { summary: string; facts: string[] }>; // live area briefs, cached per territory
+  energyIntel: { fetchedAt: number; items: { headline: string; summary: string; source: string; url: string; date: string; utility: string; angle: string }[] } | null; // live AZ energy news → post angles (solar vertical)
   demoMode: boolean; // true = example data visible; false = every number is real
 
 
@@ -138,6 +139,7 @@ const initialState: AppState = {
   doneActions: {},
   contentResponses: {},
   briefs: {},
+  energyIntel: null,
   demoMode: true,
   asstInput:
     "Anyone know a good realtor in Gilbert? Just moved to Val Vista and looking to buy in the spring — no idea where to start with this market.",
@@ -220,6 +222,7 @@ const PERSIST_FIELDS = [
   "doneActions",
   "contentResponses",
   "briefs",
+  "energyIntel",
   "demoMode",
   "streak",
 ] as const;
@@ -428,7 +431,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       PERSIST_FIELDS.forEach((k) => (out[k] = state[k]));
       localStorage.setItem(persistKeyFor(workspaceRef.current), JSON.stringify(out));
     } catch {}
-  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.leadTraining, state.doneActions, state.contentResponses, state.briefs, state.demoMode, state.streak]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.leadTraining, state.doneActions, state.contentResponses, state.briefs, state.energyIntel, state.demoMode, state.streak]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // switch between workspaces (test users / the owner's real solar account).
   // Current state is already persisted on every change, so no flush needed —
