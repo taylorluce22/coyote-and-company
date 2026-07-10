@@ -31,8 +31,8 @@ export default function TopBar() {
       }}
     >
       <div>
-        <div className="fh-kicker" style={{ letterSpacing: "0.14em" }}>
-          Friday, July 3
+        <div className="fh-kicker" style={{ letterSpacing: "0.14em" }} suppressHydrationWarning>
+          {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
         </div>
         <h1
           className="fh-title fh-shimmer-text"
