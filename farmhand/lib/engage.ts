@@ -15,6 +15,7 @@ export interface Opportunity {
   status: "new" | "watching" | "engaged" | "skipped";
   capturedAt: string; // legacy relative-string fallback for records with no capturedAtMs
   capturedAtMs?: number; // epoch ms — when Farmhand actually captured it; display is computed live from this
+  postedAgo?: string; // the SOURCE POST's own age as reported by the engine ("3d") — distinct from when we found it
   firstTouch: boolean; // first engagement in this source → guardrails apply
   extKey?: string; // dedup key when captured via the Radar extension bridge
   titleFingerprint?: string; // secondary dedup — catches the same real post re-cited under a different URL
