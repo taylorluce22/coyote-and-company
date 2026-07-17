@@ -141,10 +141,11 @@ export interface LaneDiag {
   httpStatus: number | "error";
   httpError?: string; // truncated response body when httpStatus is not ok
   rawParsedCount: number; // how many items the model returned, before any filtering
-  afterHousingFilterCount: number; // after isLikelyHousingLead + coerceLeads' own dedup
+  afterHousingFilterCount: number; // after the vertical relevance filter + coerceLeads' own dedup
   afterLaneKeepCount: number; // after the deterministic platform/domain filter
   parseFailed?: boolean; // model responded 200 but output wasn't a parseable JSON array
-  rawSample?: string; // first chars of the model's actual reply — distinguishes a refusal/prose answer from a genuine empty result
+  rawSample?: string; // first chars of the model's actual reply — captured whenever the lane yields nothing, so an empty [] vs a refusal vs prose is visible
+  citations?: number; // how many web sources Perplexity's search actually surfaced — 0 means the SEARCH found nothing; >0 with rawParsedCount 0 means the model saw sources but declined to include them
 }
 
 export interface HuntMeta {
@@ -163,6 +164,32 @@ export interface HuntResult {
   // response came from a deployment older than this code.
   debug?: LaneDiag[];
   meta?: HuntMeta;
+}
+
+/**
+ * Compact prompt for the broad fallback pass. The full prompt stacks literal
+ * phrase lists, hard excludes, and lane focus on top of a strict JSON format —
+ * and a lightweight search model's safest fully-compliant answer to an
+ * over-constrained request is an empty array. When every lane returns zero,
+ * we re-run ONE search with this minimal prompt and no domain filter, and let
+ * the deterministic code-side relevance filter do the policing the long
+ * prompt was attempting.
+ */
+export function buildFallbackPrompt(cfg: Required<Pick<HuntConfig, "territories">> & HuntConfig): string {
+  const v = verticalOf(cfg.vertical);
+  const intentEnum = [...v.intents.map((i) => i.key), "signal"].join("|");
+  const sinceDays = Math.max(3, Math.min(120, cfg.sinceDays || 45));
+  return (
+    `Find recent public posts (last ${sinceDays} days) by real individuals that a ${cfg.profession || v.profession} ` +
+    `serving ${cfg.territories.join(", ")} (Arizona) would want to reply to. Target: ${v.primaryTarget} ` +
+    `Search Reddit, Quora, forums, X, and the open web. ` +
+    `Respond with ONLY a JSON array. Each element: {"title": string, "snippet": "1-2 sentences of what they said", ` +
+    `"url": "direct link to the post", "source": "community/site name", ` +
+    `"platform": "reddit|facebook|nextdoor|quora|forum|x|news|web", "intent": "${intentEnum}", ` +
+    `"territory": "closest match from [${cfg.territories.join(", ")}] or 'Arizona'", ` +
+    `"score": 0-100 intent strength, "why": "one line", "postedAgo": "e.g. 3d"}. ` +
+    `Up to 12 items. Real posts with real links only.`
+  );
 }
 
 /**
@@ -195,13 +222,23 @@ function hostIsOneOf(url: string, domains: string[]): boolean {
   return domains.some((d) => host === d || host.endsWith(`.${d}`));
 }
 
-const HUNT_LANES: {
+type HuntLane = {
   label: string;
   focus: string;
   focusFromVertical?: boolean; // resolve focus from the vertical def at runtime
+  useFallbackPrompt?: boolean; // compact prompt, no stacked constraints (recall-rescue pass)
   domains?: string[];
   keep: (url: string) => boolean;
-}[] = [
+};
+
+const FALLBACK_LANE: HuntLane = {
+  label: "broad fallback",
+  focus: "",
+  useFallbackPrompt: true,
+  keep: () => true, // the vertical relevance filter in coerceLeads still applies
+};
+
+const HUNT_LANES: HuntLane[] = [
   {
     label: "reddit",
     focus: "For this search, look specifically on Reddit (reddit.com) — subreddit threads and comments.",
@@ -251,7 +288,9 @@ async function runLane(
 ): Promise<{ leads: Lead[]; diag: LaneDiag }> {
   const v = verticalOf(cfg.vertical);
   const laneFocus = lane.focusFromVertical ? v.statewideLaneFocus : lane.focus;
-  const prompt = `${buildHuntPrompt(cfg)}\n\nSEARCH FOCUS FOR THIS PASS: ${laneFocus}`;
+  const prompt = lane.useFallbackPrompt
+    ? buildFallbackPrompt(cfg)
+    : `${buildHuntPrompt(cfg)}\n\nSEARCH FOCUS FOR THIS PASS: ${laneFocus}`;
   const body: Record<string, unknown> = {
     model: "sonar",
     temperature: 0.2,
@@ -291,6 +330,11 @@ async function runLane(
     }
     const data = await r.json();
     const fullText: string = data?.choices?.[0]?.message?.content ?? "";
+    // how many sources the SEARCH surfaced, independent of what the model
+    // chose to return — separates "search found nothing" from "model
+    // discarded everything it saw"
+    const sr = data?.search_results ?? data?.citations;
+    diag.citations = Array.isArray(sr) ? sr.length : undefined;
     let text = fullText.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
     const start = text.indexOf("[");
     const end = text.lastIndexOf("]");
@@ -300,7 +344,6 @@ async function runLane(
       parsed = JSON.parse(text);
       if (!Array.isArray(parsed)) {
         diag.parseFailed = true;
-        diag.rawSample = fullText.slice(0, 220);
         parsed = [];
       }
     } catch {
@@ -308,10 +351,12 @@ async function runLane(
       // what the model ACTUALLY said so this is distinguishable from a
       // genuine "searched and found nothing" empty array
       diag.parseFailed = true;
-      diag.rawSample = fullText.slice(0, 220);
       parsed = [];
     }
     diag.rawParsedCount = Array.isArray(parsed) ? parsed.length : 0;
+    // capture the reply head whenever the lane yields nothing — a clean "[]"
+    // and a hedging prose answer look identical without this
+    if (diag.parseFailed || diag.rawParsedCount === 0) diag.rawSample = fullText.slice(0, 220);
     const afterHousing = coerceLeads(parsed, v);
     diag.afterHousingFilterCount = afterHousing.length;
     // deterministic enforcement — don't trust the model or the API param alone
@@ -373,9 +418,8 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
   const seenUrl = new Set<string>();
   const seenTitle = new Set<string>();
   const merged: Lead[] = [];
-  for (const s of settled) {
-    if (s.status !== "fulfilled") continue;
-    for (const lead of s.value.leads) {
+  const mergeIn = (leads: Lead[]) => {
+    for (const lead of leads) {
       const urlKey = normalizeLeadUrl(lead.url);
       const titleKey = leadFingerprint(lead);
       if (seenUrl.has(urlKey) || seenTitle.has(titleKey)) continue;
@@ -383,7 +427,21 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
       seenTitle.add(titleKey);
       merged.push(lead);
     }
+  };
+  for (const s of settled) {
+    if (s.status === "fulfilled") mergeIn(s.value.leads);
   }
+
+  // Recall rescue: if every constrained lane came back empty, re-run ONE broad
+  // pass with the compact prompt and no domain filter. The code-side relevance
+  // filter still applies, so this can't reintroduce off-topic leads — it only
+  // recovers real ones the over-constrained lanes scared the model out of.
+  if (merged.length === 0) {
+    const fb = await runLane(key, full, FALLBACK_LANE);
+    debug.push(fb.diag);
+    mergeIn(fb.leads);
+  }
+
   merged.sort((a, b) => b.score - a.score);
   return { configured: true, leads: merged.slice(0, 24), debug, meta };
 }
