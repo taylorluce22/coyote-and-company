@@ -4,7 +4,8 @@
  * Perplexity live web search; key stays in the deployment env.
  */
 
-import { isTooOld, leadFingerprint, normalizeLeadUrl, type Lead } from "./hunt";
+import { isTooOld, leadFingerprint, normalizeLeadUrl, postAgeDays, type Lead } from "./hunt";
+import { ageLabelFromDays, verifyAge } from "./postAge";
 import { verticalOf, type VerticalDef } from "./verticals";
 
 export interface HuntConfig {
@@ -453,6 +454,32 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
     mergeIn(fb.leads);
   }
 
-  merged.sort((a, b) => b.score - a.score);
-  return { configured: true, leads: merged.slice(0, 24), debug, meta };
+  // Age VERIFICATION — establish each post's real age instead of trusting the
+  // model's claim: exact for X (snowflake IDs), page publish-date fetch for
+  // open web, sequential-ID era estimate for Reddit (rejects archived-era
+  // threads). Runs in parallel; a verified-stale lead is dropped here even if
+  // it survived every upstream filter.
+  const now = Date.now();
+  const sinceDaysClamped = Math.max(3, Math.min(120, cfg.sinceDays || 45));
+  const checked = await Promise.all(
+    merged.map(async (lead) => {
+      const check = await verifyAge(lead.url, postAgeDays(lead.postedAgo), sinceDaysClamped, now);
+      if (check.ageDays != null && (check.source === "exact" || check.source === "page" || check.source === "estimated")) {
+        lead.postedAgo = ageLabelFromDays(check.ageDays);
+      }
+      lead.ageVerified = check.source;
+      return { lead, keep: check.keep };
+    })
+  );
+  const verified = checked.filter((c) => c.keep).map((c) => c.lead);
+  debug.push({
+    label: "age verification",
+    httpStatus: 200,
+    rawParsedCount: merged.length,
+    afterHousingFilterCount: verified.length,
+    afterLaneKeepCount: verified.length,
+  });
+
+  verified.sort((a, b) => b.score - a.score);
+  return { configured: true, leads: verified.slice(0, 24), debug, meta };
 }
