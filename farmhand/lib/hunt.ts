@@ -133,3 +133,51 @@ export function isLikelyHousingLead(text: string): boolean {
   if (NON_HOUSING_SERVICE.test(t) && !HOUSING_SIGNAL.test(t)) return false;
   return true;
 }
+
+/**
+ * Parse a "postedAgo" string ("15m", "3h", "2d", "3w", "6mo", "4y", "2021",
+ * "Jul 2") into approximate days. Returns null when unparseable.
+ */
+export function postAgeDays(postedAgo: string | undefined | null): number | null {
+  if (!postedAgo) return null;
+  const s = postedAgo.trim().toLowerCase();
+  const m = s.match(/(\d+(?:\.\d+)?)\s*(minute|min|m\b|hour|hr|h\b|day|d\b|week|wk|w\b|month|mo\b|year|yr|y\b)/);
+  if (m) {
+    const n = parseFloat(m[1]);
+    const u = m[2][0] === "m" && m[2].startsWith("mo") ? "mo" : m[2][0];
+    if (u === "m" && !m[2].startsWith("mo")) return n / (24 * 60); // minutes
+    if (u === "h") return n / 24;
+    if (u === "d") return n;
+    if (u === "w") return n * 7;
+    if (u === "mo") return n * 30;
+    if (u === "y") return n * 365;
+  }
+  // a bare year like "2021" — treat as very old if it's not the current era
+  const y = s.match(/^(20\d\d)$/);
+  if (y) return 365; // any bare-year answer is at minimum months old
+  return null;
+}
+
+/**
+ * Deterministic staleness check for Reddit links — no API needed. Reddit post
+ * IDs are sequential base36; 6-character IDs ran out in early 2023, so any
+ * /comments/<id>/ with an ID of 6 chars or fewer is YEARS old — and Reddit
+ * archives posts after 6 months, so it can't even be replied to. This is the
+ * exact failure that surfaced live: a 4-year-old archived thread presented as
+ * a fresh lead.
+ */
+export function isAncientRedditUrl(url: string): boolean {
+  const m = url.toLowerCase().match(/reddit\.com\/r\/[^/]+\/comments\/([a-z0-9]+)/);
+  if (!m) return false;
+  return m[1].length <= 6;
+}
+
+/** Combined recency gate: too old by its own reported age, or provably ancient by URL. */
+export function isTooOld(lead: Pick<Lead, "url" | "postedAgo">, sinceDays: number): boolean {
+  if (isAncientRedditUrl(lead.url)) return true;
+  const age = postAgeDays(lead.postedAgo);
+  // allow 2x slack on the reported age — "recent-ish" beats losing real leads
+  // to fuzzy model dating; provably-ancient is handled by the URL check above
+  if (age != null && age > sinceDays * 2) return true;
+  return false;
+}

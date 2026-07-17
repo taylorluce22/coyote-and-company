@@ -4,7 +4,7 @@
  * Perplexity live web search; key stays in the deployment env.
  */
 
-import { leadFingerprint, normalizeLeadUrl, type Lead } from "./hunt";
+import { isTooOld, leadFingerprint, normalizeLeadUrl, type Lead } from "./hunt";
 import { verticalOf, type VerticalDef } from "./verticals";
 
 export interface HuntConfig {
@@ -29,7 +29,7 @@ function clampScore(n: unknown): number {
   return Math.max(0, Math.min(100, v));
 }
 
-export function coerceLeads(raw: unknown, vertical?: VerticalDef): Lead[] {
+export function coerceLeads(raw: unknown, vertical?: VerticalDef, sinceDays = 45): Lead[] {
   if (!Array.isArray(raw)) return [];
   const v = vertical || verticalOf("realtor");
   const validIntents = new Set([...INTENTS, ...v.intents.map((i) => i.key)]);
@@ -52,6 +52,11 @@ export function coerceLeads(raw: unknown, vertical?: VerticalDef): Lead[] {
     // lead no matter how well the model scored it; don't trust the prompt
     // instruction alone to keep these out.
     if (!v.isRelevant(`${title} ${snippet}`)) continue;
+    const postedAgo = o.postedAgo ? String(o.postedAgo).slice(0, 12) : undefined;
+    // recency gate: a years-old (or archived — Reddit locks after 6 months)
+    // thread is unactionable no matter how on-topic it reads. The Reddit URL
+    // check is deterministic; the reported-age check gets 2x slack.
+    if (isTooOld({ url, postedAgo }, sinceDays)) continue;
     const titleKey = leadFingerprint({ title, source });
     if (seenTitle.has(titleKey)) continue;
     seenUrl.add(urlKey);
@@ -66,7 +71,7 @@ export function coerceLeads(raw: unknown, vertical?: VerticalDef): Lead[] {
       score: clampScore(o.score),
       why: String(o.why ?? o.reason ?? "").slice(0, 240),
       territory: String(o.territory ?? "").slice(0, 80),
-      postedAgo: o.postedAgo ? String(o.postedAgo).slice(0, 12) : undefined,
+      postedAgo,
     });
   }
   return out.sort((a, b) => b.score - a.score).slice(0, 12);
@@ -129,7 +134,10 @@ export function buildHuntPrompt(cfg: Required<Pick<HuntConfig, "territories">> &
     `"score": 0-100 how strong AND actionable the intent is (90+=explicitly ready & asking; 40=vague signal — a ` +
     `broad state-level ask that fits the primary target scores HIGH, 70+, even without a named territory), ` +
     `"why": "one line on why it's worth a human reaching out", ` +
-    `"postedAgo": "how long ago, e.g. 3d or 2w"}. ` +
+    `"postedAgo": "REQUIRED — how long ago the post was actually made, e.g. 3d or 2w. Verify the real post date; ` +
+    `if you cannot confirm it is within the last ${sinceDays} days, EXCLUDE the post entirely"}. ` +
+    `RECENCY IS A HARD REQUIREMENT: an old thread is worthless — the person has already decided, and Reddit ` +
+    `archives posts after 6 months so they cannot even be replied to. Never include archived or locked threads. ` +
     `Return up to 12 candidates. Include moderate-confidence leads (score them honestly, 40-60) rather than ` +
     `omitting them — a quality threshold downstream decides what surfaces, so under-reporting loses real leads ` +
     `while honest scoring costs nothing. Only include posts whose links you can actually cite.`
@@ -187,7 +195,10 @@ export function buildFallbackPrompt(cfg: Required<Pick<HuntConfig, "territories"
     `"url": "direct link to the post", "source": "community/site name", ` +
     `"platform": "reddit|facebook|nextdoor|quora|forum|x|news|web", "intent": "${intentEnum}", ` +
     `"territory": "closest match from [${cfg.territories.join(", ")}] or 'Arizona'", ` +
-    `"score": 0-100 intent strength, "why": "one line", "postedAgo": "e.g. 3d"}. ` +
+    `"score": 0-100 intent strength, "why": "one line", ` +
+    `"postedAgo": "REQUIRED — verified post age, e.g. 3d; exclude the post if you cannot confirm it is within ` +
+    `the last ${sinceDays} days"}. ` +
+    `Never include old, archived, or locked threads — they cannot be replied to and are worthless. ` +
     `Up to 12 items. Real posts with real links only.`
   );
 }
@@ -357,7 +368,7 @@ async function runLane(
     // capture the reply head whenever the lane yields nothing — a clean "[]"
     // and a hedging prose answer look identical without this
     if (diag.parseFailed || diag.rawParsedCount === 0) diag.rawSample = fullText.slice(0, 220);
-    const afterHousing = coerceLeads(parsed, v);
+    const afterHousing = coerceLeads(parsed, v, Math.max(3, Math.min(120, cfg.sinceDays || 45)));
     diag.afterHousingFilterCount = afterHousing.length;
     // deterministic enforcement — don't trust the model or the API param alone
     const kept = afterHousing.filter((l) => lane.keep(l.url.toLowerCase()));

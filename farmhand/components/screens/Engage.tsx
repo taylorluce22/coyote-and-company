@@ -390,6 +390,7 @@ function Opportunities() {
           firstTouch: !existing.some((o) => o.sourceName === (l.source || l.platform)),
           extKey: key,
           titleFingerprint: titleKey,
+          postedAgo: l.postedAgo,
           engineScore: l.score,
           platform: l.platform,
           intent: l.intent,
@@ -478,7 +479,12 @@ function Opportunities() {
                     </span>
                   )}
                   <span style={{ fontSize: 11.5, fontWeight: 700, color: "#D8D6E6" }}>{o.sourceName}</span>
-                  <span style={{ fontSize: 10, color: "#77758C" }}>· {o.territory} · {capturedAtLabel(o)}</span>
+                  <span style={{ fontSize: 10, color: "#77758C" }}>
+                    · {o.territory} ·{" "}
+                    {o.engineScore != null
+                      ? `posted ${o.postedAgo ? `${o.postedAgo} ago` : "— age unverified"} · found ${capturedAtLabel(o)}`
+                      : capturedAtLabel(o)}
+                  </span>
                   <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 800, fontFamily: "var(--mono)", color: score >= 60 ? "#41D98A" : score >= 40 ? "#FFC23D" : "#8B89A0" }}>
                     {score} {o.engineScore != null ? "intent" : "match"}
                   </span>
