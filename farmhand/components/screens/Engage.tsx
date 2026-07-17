@@ -35,7 +35,7 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
   const [lastFound, setLastFound] = useState(0);
   const [teach, setTeach] = useState(false);
   const [debugInfo, setDebugInfo] = useState<
-    { label: string; httpStatus: number | "error"; httpError?: string; rawParsedCount: number; afterHousingFilterCount: number; afterLaneKeepCount: number; parseFailed?: boolean; rawSample?: string }[] | null
+    { label: string; httpStatus: number | "error"; httpError?: string; rawParsedCount: number; afterHousingFilterCount: number; afterLaneKeepCount: number; parseFailed?: boolean; rawSample?: string; citations?: number }[] | null
   >(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [huntMeta, setHuntMeta] = useState<{ commit?: string; territoriesReceived: number; keyPresent: boolean } | null>(null);
@@ -206,8 +206,8 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
               <div key={d.label} style={{ fontSize: 10.5, color: d.httpStatus !== 200 || d.parseFailed ? "#FF5D8F" : "#A6A4B8", fontFamily: "var(--mono)" }}>
                 <b style={{ color: "#D8D6E6" }}>{d.label}</b> · http {d.httpStatus}
                 {d.httpError ? ` · ${d.httpError.slice(0, 120)}` : ""}
-                {d.httpStatus === 200 ? ` · found ${d.rawParsedCount} → housing-relevant ${d.afterHousingFilterCount} → on-platform ${d.afterLaneKeepCount}` : ""}
-                {d.parseFailed ? ` · UNPARSEABLE REPLY: "${(d.rawSample || "").slice(0, 100)}…"` : ""}
+                {d.httpStatus === 200 ? ` · sources seen ${d.citations ?? "?"} · returned ${d.rawParsedCount} → relevant ${d.afterHousingFilterCount} → on-platform ${d.afterLaneKeepCount}` : ""}
+                {d.rawSample ? ` · reply: "${d.rawSample.slice(0, 100)}"` : ""}
               </div>
             ))}
           </div>
