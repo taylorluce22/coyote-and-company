@@ -16,6 +16,7 @@ export interface Lead {
   why: string;
   territory: string;
   postedAgo?: string;
+  ageVerified?: "exact" | "page" | "estimated" | "reported" | "unverified"; // HOW postedAgo was established (see lib/postAge)
 }
 
 export interface LeadTraining {
