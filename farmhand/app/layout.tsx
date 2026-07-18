@@ -57,6 +57,19 @@ export const metadata: Metadata = {
   title: "Farmhand — Local Presence OS",
   description:
     "Your photos and your neighborhood do the selling. We handle everything else. Farmhand automates owned-channel content and preps community-channel actions for commission-based local professionals.",
+  // OG/Twitter cards so shared links render with real branding instead of a
+  // bare URL (10K-site checklist: meta tags for social sharing)
+  openGraph: {
+    title: "Farmhand — Local Presence OS",
+    description: "The lead engine, content studio, and local-presence system for commission-based professionals.",
+    siteName: "Farmhand",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Farmhand — Local Presence OS",
+    description: "The lead engine, content studio, and local-presence system for commission-based professionals.",
+  },
 };
 
 export const viewport: Viewport = {
