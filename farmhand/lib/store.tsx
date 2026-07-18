@@ -240,6 +240,7 @@ function parseSaved(raw: string): Partial<AppState> {
     saved.leadTraining = { ...DEFAULT_TRAINING, ...saved.leadTraining };
     if (!Array.isArray(saved.leadTraining.good)) saved.leadTraining.good = [];
     if (!Array.isArray(saved.leadTraining.bad)) saved.leadTraining.bad = [];
+    if (!Array.isArray(saved.leadTraining.avoid)) saved.leadTraining.avoid = [];
     if (!Array.isArray(saved.leadTraining.intents)) saved.leadTraining.intents = DEFAULT_TRAINING.intents;
   }
   if (saved.strategy && typeof saved.strategy === "object") {

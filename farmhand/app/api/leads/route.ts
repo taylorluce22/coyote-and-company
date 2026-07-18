@@ -40,6 +40,13 @@ export async function POST(req: NextRequest) {
     guidance: c.guidance ? String(c.guidance).slice(0, 800) : "",
     good: Array.isArray(c.good) ? c.good.map(String).slice(0, 6) : [],
     bad: Array.isArray(c.bad) ? c.bad.map(String).slice(0, 6) : [],
+    avoid: Array.isArray(c.avoid)
+      ? c.avoid
+          .filter((a) => !!a && typeof a === "object")
+          .map((a) => ({ snippet: String(a.snippet || ""), reason: String(a.reason || "") }))
+          .filter((a) => a.reason.trim())
+          .slice(0, 15)
+      : [],
     sinceDays: c.sinceDays != null ? Number(c.sinceDays) : 45,
   };
   await setConfig(config);

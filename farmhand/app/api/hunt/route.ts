@@ -33,6 +33,13 @@ export async function POST(req: NextRequest) {
     guidance: body.guidance ? String(body.guidance) : undefined,
     good: Array.isArray(body.good) ? (body.good as unknown[]).map(String) : undefined,
     bad: Array.isArray(body.bad) ? (body.bad as unknown[]).map(String) : undefined,
+    avoid: Array.isArray(body.avoid)
+      ? (body.avoid as unknown[])
+          .filter((a): a is { snippet?: unknown; reason?: unknown } => !!a && typeof a === "object")
+          .map((a) => ({ snippet: String(a.snippet || ""), reason: String(a.reason || "") }))
+          .filter((a) => a.reason.trim())
+          .slice(0, 15)
+      : undefined,
     sinceDays: body.sinceDays != null ? Number(body.sinceDays) : undefined,
   });
 
