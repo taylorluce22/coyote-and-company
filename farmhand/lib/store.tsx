@@ -14,7 +14,7 @@ import type { TabId } from "./data";
 import type { Asset, Bg, StudioDesign } from "./studio";
 import { DEFAULT_DESIGN } from "./studio";
 import { SEED_POSTS, type Integrations, type PlannedPost } from "./planner";
-import { DEFAULT_STRATEGY, SOLAR_TERRITORIES, type StrategyProfile } from "./strategy";
+import { DEFAULT_STRATEGY, SOLAR_TERRITORIES, type Idea, type StrategyProfile } from "./strategy";
 import { normalizeContact, SEED_CONTACTS, type Contact } from "./pipeline";
 import { tagOpportunity, type Opportunity } from "./engage";
 import type { SourceEntry } from "./sources";
@@ -50,6 +50,8 @@ export interface AppState {
 
   // composer / post studio
   compChannel: "ig" | "fb" | "nd";
+  // the idea the Studio is currently composing from (null = channel demo copy)
+  compIdea: Idea | null;
   compImg: string;
   compRatio: string;
   compBgMode: string;
@@ -112,6 +114,7 @@ const initialState: AppState = {
   studioAccents: {},
   stSlide: 0,
   compChannel: "ig",
+  compIdea: null,
   compImg: "",
   compRatio: "portrait",
   compBgMode: "photo",
@@ -209,6 +212,7 @@ const PERSIST_FIELDS = [
   "stStudio",
   "stAssets",
   "compStatus",
+  "compIdea",
   "pexelsKey",
   "plannedPosts",
   "weekBrief",
@@ -470,7 +474,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       PERSIST_FIELDS.forEach((k) => (out[k] = state[k]));
       localStorage.setItem(persistKeyFor(workspaceRef.current), JSON.stringify(out));
     } catch {}
-  }, [state.stStudio, state.stAssets, state.compStatus, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.leadTraining, state.doneActions, state.contentResponses, state.briefs, state.energyIntel, state.demoMode, state.streak]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.stStudio, state.stAssets, state.compStatus, state.compIdea, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.leadTraining, state.doneActions, state.contentResponses, state.briefs, state.energyIntel, state.demoMode, state.streak]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // switch between workspaces (test users / the owner's real solar account).
   // Current state is already persisted on every change, so no flush needed —

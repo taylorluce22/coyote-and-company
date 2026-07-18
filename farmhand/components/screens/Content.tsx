@@ -144,7 +144,7 @@ function Ideas() {
             <div style={{ fontSize: 14.5, fontWeight: 700, color: "#F4F3F8", marginTop: 7, lineHeight: 1.4 }}>{idea.title}</div>
             <div style={{ fontSize: 12, color: "#8B89A0", marginTop: 6, lineHeight: 1.5 }}>{idea.angle}</div>
             <button
-              onClick={() => set({ contentTab: "studio" })}
+              onClick={() => set({ contentTab: "studio", compIdea: idea, compRegen: false, compShort: false })}
               style={{
                 marginTop: 13,
                 background: `${idea.territory.hex}14`,
