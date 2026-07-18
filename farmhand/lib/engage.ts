@@ -132,16 +132,18 @@ export function draftReply(opts: {
       sbody = `Good thread — there's a lot of noise around solar in AZ and questions like this are how people avoid the expensive mistakes.`;
     }
     if (mode === "observer") sbody = sbody.split(". ").slice(0, 2).join(". ") + (sbody.includes(".") ? "." : "");
-    // soft CTA on every solar draft (owner's call): value first, then an easy
-    // no-pressure opener. Deliberately generic — no company name, no links —
-    // so it reads as a neighbor offering help, not solicitation.
+    // soft CTA on every solar draft (owner's call): identity + credibility
+    // ("15-year Valley resident, solar consultations"), then a fit-focused,
+    // no-pressure offer. Still no company name or links — a neighbor who
+    // does this for a living, not an ad.
+    const who = "I've been a Valley resident for 15 years and do solar consultations for homeowners here";
     const softCta = tags.includes("quote-shopping")
-      ? " If you want a second set of eyes on any quotes, my DMs are open — no strings."
+      ? ` ${who} — happy to be a second set of eyes on any quotes and tell you straight if the numbers make sense. DMs open, no strings.`
       : tags.includes("bill-pain")
-      ? " Happy to walk through your usage export with you if it'd help — feel free to DM me."
+      ? ` ${who} — if you want, I can help you look at your actual usage and see whether solar would genuinely be a good fit for your situation. Feel free to DM me.`
       : tags.includes("recommendation-ask")
-      ? " PM me if you want recommendations — glad to point you the right way, no strings."
-      : " If I can help point you in the right direction, my DMs are open.";
+      ? ` ${who} — PM me if you'd like help figuring out whether solar's a good fit for your situation, no strings attached.`
+      : ` ${who} — if you'd like help seeing whether solar would be a good fit for your situation, my DMs are open.`;
     sbody += softCta;
     return sbody;
   }
