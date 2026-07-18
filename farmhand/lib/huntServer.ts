@@ -77,7 +77,7 @@ export function coerceLeads(raw: unknown, vertical?: VerticalDef, sinceDays = 45
       postedAgo,
     });
   }
-  return out.sort((a, b) => b.score - a.score).slice(0, 12);
+  return out.sort((a, b) => b.score - a.score).slice(0, 15);
 }
 
 export function buildHuntPrompt(cfg: Required<Pick<HuntConfig, "territories">> & HuntConfig): string {
@@ -552,5 +552,5 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
   });
 
   verified.sort((a, b) => b.score - a.score);
-  return { configured: true, leads: verified.slice(0, 24), debug, meta };
+  return { configured: true, leads: verified.slice(0, 40), debug, meta };
 }

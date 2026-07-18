@@ -108,7 +108,7 @@ export async function runRedditNative(
   let anyOk = false;
 
   const results = await Promise.allSettled(
-    v.redditTerms.slice(0, 7).map(async (term) => {
+    v.redditTerms.slice(0, 10).map(async (term) => {
       const params = new URLSearchParams({ q: `"${term}"`, restrict_sr: "1", sort: "new", t: "month", limit: "25" });
       const r = await fetch(`https://oauth.reddit.com/r/${v.redditSubs}/search?${params}`, {
         headers: { Authorization: `Bearer ${token}`, "User-Agent": UA },
@@ -180,5 +180,5 @@ export async function runRedditNative(
   diag.afterHousingFilterCount = leads.length;
   diag.afterLaneKeepCount = leads.length;
   leads.sort((a, b) => b.score - a.score);
-  return { leads: leads.slice(0, 20), diag, needsCreds: false };
+  return { leads: leads.slice(0, 30), diag, needsCreds: false };
 }
