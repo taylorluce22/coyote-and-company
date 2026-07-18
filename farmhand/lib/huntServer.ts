@@ -6,6 +6,7 @@
 
 import { isTooOld, leadFingerprint, normalizeLeadUrl, postAgeDays, type Lead } from "./hunt";
 import { ageLabelFromDays, verifyAge } from "./postAge";
+import { runRedditNative } from "./redditHunt";
 import { verticalOf, type VerticalDef } from "./verticals";
 
 export interface HuntConfig {
@@ -384,6 +385,12 @@ async function runLane(
     if (diag.parseFailed || diag.rawParsedCount === 0) diag.rawSample = fullText.slice(0, 220);
     const afterHousing = coerceLeads(parsed, v, Math.max(3, Math.min(120, cfg.sinceDays || 45)));
     diag.afterHousingFilterCount = afterHousing.length;
+    // when the model returned candidates but our filters killed them ALL,
+    // show what got dropped — otherwise "returned 1 → relevant 0" is opaque
+    if (diag.rawParsedCount > 0 && afterHousing.length === 0) {
+      const first = (parsed as Record<string, unknown>[])[0] || {};
+      diag.rawSample = `filtered out — first: "${String(first.title ?? "").slice(0, 80)}" postedAgo=${String(first.postedAgo ?? "?")} url=${String(first.url ?? "").slice(0, 80)}`;
+    }
     // deterministic enforcement — don't trust the model or the API param alone
     const kept = afterHousing.filter((l) => lane.keep(l.url.toLowerCase()));
     diag.afterLaneKeepCount = kept.length;
@@ -453,6 +460,9 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
     lanes = HUNT_LANES;
   }
 
+  // deep mode also fires the native Reddit lane in parallel — the
+  // deterministic, exact-timestamp source Perplexity's index can't match
+  const nativePromise = cfg.deep ? runRedditNative(full, sinceDaysWindow) : null;
   const settled = await Promise.allSettled(lanes.map((lane) => runLane(key, full, lane)));
   const debug: LaneDiag[] = settled.map((s, i) =>
     s.status === "fulfilled"
@@ -492,6 +502,17 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
     if (s.status === "fulfilled") mergeIn(s.value.leads);
   }
 
+  // native Reddit results merge FIRST-CLASS (they're the most trustworthy:
+  // real posts, exact ages) — but after the dedup sets are warm so the same
+  // thread found by both paths lands once
+  if (nativePromise) {
+    try {
+      const native = await nativePromise;
+      debug.push(native.diag);
+      mergeIn(native.leads);
+    } catch {}
+  }
+
   // Recall rescue: if every constrained lane came back empty, re-run ONE broad
   // pass with the compact prompt and no domain filter. The code-side relevance
   // filter still applies, so this can't reintroduce off-topic leads — it only
@@ -511,6 +532,8 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
   const sinceDaysClamped = Math.max(3, Math.min(120, cfg.sinceDays || 45));
   const checked = await Promise.all(
     merged.map(async (lead) => {
+      // natively-fetched leads carry Reddit's own created_utc — already exact
+      if (lead.ageVerified === "exact") return { lead, keep: true };
       const check = await verifyAge(lead.url, postAgeDays(lead.postedAgo), sinceDaysClamped, now);
       if (check.ageDays != null && (check.source === "exact" || check.source === "page" || check.source === "estimated")) {
         lead.postedAgo = ageLabelFromDays(check.ageDays);

@@ -40,6 +40,11 @@ export interface VerticalDef {
    * engine's deep mode.
    */
   queryMatrix: (territories: string[]) => string[];
+  /** Native Reddit search: multireddit ("a+b+c") + literal search terms. */
+  redditSubs: string;
+  redditTerms: string[];
+  /** Map an inbox tag to an intent key for natively-fetched posts. */
+  tagToIntent: Record<string, string>;
   /** rule-based inbox tags */
   tagRules: { re: RegExp; tag: string }[];
   tagColors: Record<string, string>;
@@ -115,6 +120,16 @@ const REALTOR: VerticalDef = {
     `"first time buyer" Phoenix area advice`,
     `Phoenix suburbs families question reddit`,
   ],
+  redditSubs: "phoenix+arizona+MovingtoPhoenix+SameGrassButGreener+Scottsdale+gilbert",
+  redditTerms: ["moving to", "relocating", "where should I live", "neighborhood recommendation", "first time buyer", "which suburb"],
+  tagToIntent: {
+    relocation: "relocation",
+    "market-question": "seller",
+    "recommendation-ask": "referral",
+    "neighborhood-chat": "relocation",
+    "agent-mention": "referral",
+    general: "signal",
+  },
   tagRules: [
     { re: /(moving|relocat|out of state|from (chicago|california|seattle|denver|portland))/i, tag: "relocation" },
     { re: /(worth|price|market|sell|value|equity|rates?)/i, tag: "market-question" },
@@ -208,6 +223,17 @@ const SOLAR: VerticalDef = {
     `Powerwall Arizona worth it question`,
     `EV charging home solar Phoenix`,
   ],
+  redditSubs: "solar+phoenix+arizona+TeslaSolar+SolarDIY+electricvehicles",
+  redditTerms: ["quote", "worth it in Arizona", "APS", "SRP", "installer recommendation", "going solar", "powerwall"],
+  tagToIntent: {
+    "quote-shopping": "quote-shopping",
+    "bill-pain": "bill-pain",
+    considering: "considering",
+    "battery-ev": "battery-ev",
+    "new-homeowner": "new-homeowner",
+    "recommendation-ask": "referral",
+    general: "signal",
+  },
   tagRules: [
     { re: /(quote|bid|proposal|per watt|\$\/?w\b|financ|lease|ppa\b)/i, tag: "quote-shopping" },
     { re: /(\baps\b|\bsrp\b|\btep\b|electric bill|power bill|rate plan|on-?peak|bill (is|was|s) (insane|crazy|huge|high))/i, tag: "bill-pain" },
