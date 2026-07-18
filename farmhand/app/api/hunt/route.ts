@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
   const result = await runHunt({
     territories: Array.isArray(body.territories) ? (body.territories as unknown[]).map(String) : [],
     vertical: body.vertical ? String(body.vertical) : undefined,
+    deep: body.deep === true,
     profession: body.profession ? String(body.profession) : undefined,
     city: body.city ? String(body.city) : undefined,
     idealClient: body.idealClient ? String(body.idealClient) : undefined,

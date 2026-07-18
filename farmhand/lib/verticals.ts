@@ -34,6 +34,12 @@ export interface VerticalDef {
   statewideLaneFocus: string;
   /** deterministic relevance backstop — code, not a prompt instruction */
   isRelevant: (text: string) => boolean;
+  /**
+   * Deep-hunt query matrix — the concrete, literal web searches a human
+   * prospector would actually run, one by one. Fanned out in batches by the
+   * engine's deep mode.
+   */
+  queryMatrix: (territories: string[]) => string[];
   /** rule-based inbox tags */
   tagRules: { re: RegExp; tag: string }[];
   tagColors: Record<string, string>;
@@ -95,6 +101,20 @@ const REALTOR: VerticalDef = {
     if (NON_HOUSING_SERVICE.test(t) && !HOUSING_SIGNAL.test(t)) return false;
     return true;
   },
+  queryMatrix: (territories) => [
+    ...territories.flatMap((n) => [
+      `"moving to ${n}" advice`,
+      `"${n}" neighborhood recommendation moving`,
+    ]),
+    `site:reddit.com/r/phoenix moving where to live`,
+    `site:reddit.com/r/arizona relocating advice`,
+    `site:reddit.com/r/MovingtoPhoenix suburbs`,
+    `"moving to Arizona" "where should" live`,
+    `"moving to Phoenix" neighborhoods advice`,
+    `relocating to Arizona need advice forum`,
+    `"first time buyer" Phoenix area advice`,
+    `Phoenix suburbs families question reddit`,
+  ],
   tagRules: [
     { re: /(moving|relocat|out of state|from (chicago|california|seattle|denver|portland))/i, tag: "relocation" },
     { re: /(worth|price|market|sell|value|equity|rates?)/i, tag: "market-question" },
@@ -169,6 +189,25 @@ const SOLAR: VerticalDef = {
     if (SOLAR_NOISE.test(t)) return false;
     return true;
   },
+  queryMatrix: (territories) => [
+    ...territories.slice(0, 3).flatMap((n) => [
+      `solar quote "${n}"`,
+      `solar installer recommendation "${n}"`,
+    ]),
+    `site:reddit.com/r/solar Arizona quote`,
+    `site:reddit.com/r/solar Phoenix worth it`,
+    `site:reddit.com/r/phoenix solar`,
+    `site:reddit.com/r/arizona solar panels`,
+    `site:reddit.com/r/TeslaSolar Arizona`,
+    `"got a quote" solar Arizona`,
+    `"is solar worth it" Phoenix`,
+    `"APS bill" solar reddit`,
+    `"SRP" solar plan question`,
+    `"going solar" Arizona advice`,
+    `new build solar Phoenix builder offer`,
+    `Powerwall Arizona worth it question`,
+    `EV charging home solar Phoenix`,
+  ],
   tagRules: [
     { re: /(quote|bid|proposal|per watt|\$\/?w\b|financ|lease|ppa\b)/i, tag: "quote-shopping" },
     { re: /(\baps\b|\bsrp\b|\btep\b|electric bill|power bill|rate plan|on-?peak|bill (is|was|s) (insane|crazy|huge|high))/i, tag: "bill-pain" },
