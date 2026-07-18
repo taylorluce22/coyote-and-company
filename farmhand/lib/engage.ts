@@ -132,10 +132,17 @@ export function draftReply(opts: {
       sbody = `Good thread — there's a lot of noise around solar in AZ and questions like this are how people avoid the expensive mistakes.`;
     }
     if (mode === "observer") sbody = sbody.split(". ").slice(0, 2).join(". ") + (sbody.includes(".") ? "." : "");
-    if (!firstTouch && mode === "connector" && !tags.includes("general")) {
-      sbody += ` If it'd ever help, I'm happy to sanity-check numbers — no pitch, I just do this all day.`;
-    }
-    // first-touch rule: value only — no CTA, no link, no company-drop. Enforced by construction above.
+    // soft CTA on every solar draft (owner's call): value first, then an easy
+    // no-pressure opener. Deliberately generic — no company name, no links —
+    // so it reads as a neighbor offering help, not solicitation.
+    const softCta = tags.includes("quote-shopping")
+      ? " If you want a second set of eyes on any quotes, my DMs are open — no strings."
+      : tags.includes("bill-pain")
+      ? " Happy to walk through your usage export with you if it'd help — feel free to DM me."
+      : tags.includes("recommendation-ask")
+      ? " PM me if you want recommendations — glad to point you the right way, no strings."
+      : " If I can help point you in the right direction, my DMs are open.";
+    sbody += softCta;
     return sbody;
   }
 

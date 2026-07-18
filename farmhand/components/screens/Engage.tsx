@@ -503,7 +503,7 @@ function Opportunities() {
                   ))}
                   {o.firstTouch && (
                     <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.06em", fontFamily: "var(--label)", color: "#FF9A62", background: "rgba(255,154,98,0.1)", border: "1px solid rgba(255,154,98,0.35)", borderRadius: 999, padding: "2px 8px" }}>
-                      FIRST TOUCH — VALUE ONLY, NO PITCH
+                      {vert.id === "solar" ? "FIRST TOUCH — VALUE FIRST, SOFT ASK OK" : "FIRST TOUCH — VALUE ONLY, NO PITCH"}
                     </span>
                   )}
                   {o.engineScore != null && (
