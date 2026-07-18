@@ -501,11 +501,6 @@ function Opportunities() {
                 {o.why && (
                   <div style={{ fontSize: 10.5, color: "#26E0C8", marginTop: 6, lineHeight: 1.45 }}>→ {o.why}</div>
                 )}
-                {o.url && (
-                  <a href={o.url} target="_blank" rel="noreferrer" style={{ display: "inline-block", fontSize: 10.5, color: "#7DD3FC", textDecoration: "none", marginTop: 6, fontFamily: "var(--mono)" }}>
-                    open source ↗
-                  </a>
-                )}
                 <div style={{ display: "flex", gap: 6, marginTop: 9, flexWrap: "wrap" }}>
                   {o.tags.map((tg) => (
                     <span key={tg} style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.06em", fontFamily: "var(--label)", color: TAG_COLORS[tg] || "#8B89A0", background: `${TAG_COLORS[tg] || "#8B89A0"}14`, border: `1px solid ${TAG_COLORS[tg] || "#8B89A0"}3D`, borderRadius: 999, padding: "2px 8px", textTransform: "uppercase" }}>
@@ -555,10 +550,15 @@ function Opportunities() {
                 )}
 
                 {!isDrafting && o.status !== "engaged" && (
-                  <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                  <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
                     <button onClick={() => setDraftFor(o.id)} style={{ background: "rgba(38,224,200,0.12)", color: "#26E0C8", border: "1px solid rgba(38,224,200,0.4)", borderRadius: 8, padding: "7px 15px", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>
                       Draft reply
                     </button>
+                    {o.url && (
+                      <a href={o.url} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", background: "rgba(125,211,252,0.1)", color: "#7DD3FC", border: "1px solid rgba(125,211,252,0.35)", borderRadius: 8, padding: "7px 15px", fontSize: 11.5, fontWeight: 700, textDecoration: "none" }}>
+                        Open source ↗
+                      </a>
+                    )}
                     <button onClick={() => setStatus(o.id, "watching")} style={{ background: "transparent", color: "#FFC23D", border: "1px solid rgba(255,194,61,0.35)", borderRadius: 8, padding: "7px 15px", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>
                       Watch
                     </button>
@@ -568,8 +568,13 @@ function Opportunities() {
                   </div>
                 )}
                 {o.status === "engaged" && !isDrafting && (
-                  <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 11, fontWeight: 700, color: "#41D98A" }}>✓ Engaged — logged to this source</span>
+                    {o.url && (
+                      <a href={o.url} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", background: "rgba(125,211,252,0.1)", color: "#7DD3FC", border: "1px solid rgba(125,211,252,0.3)", borderRadius: 7, padding: "3px 11px", fontSize: 10.5, fontWeight: 700, textDecoration: "none" }}>
+                        Open source ↗
+                      </a>
+                    )}
                     <button
                       onClick={() => setStatus(o.id, "skipped")}
                       style={{ background: "transparent", color: "#77758C", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, padding: "3px 11px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}
