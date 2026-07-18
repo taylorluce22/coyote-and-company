@@ -177,7 +177,7 @@ export default function Dashboard() {
   const contacts = (state.contacts as Contact[]) || [];
   const planned = (state.plannedPosts as PlannedPost[]) || [];
   const actions = deriveActions(state);
-  const pulse = pulseFor(strategy.territories, 3);
+  const pulse = pulseFor(strategy.territories, 3, strategy.vertical);
 
   const warm = contacts.filter((c) => c.warmth === "warm" || c.warmth === "hot").length;
   const due = contacts.filter(isOverdue).length;
