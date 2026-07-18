@@ -434,28 +434,55 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
   // every matching recent post; the shared filters downstream still apply.
   let lanes: HuntLane[];
   if (cfg.deep) {
-    const queries = v.queryMatrix(territories);
-    const batches: string[][] = [];
-    for (let i = 0; i < queries.length; i += 5) batches.push(queries.slice(i, i + 5));
     const intentEnum = [...v.intents.map((i) => i.key), "signal"].join("|");
-    lanes = batches.map((qs, i) => ({
-      label: `deep ${i + 1}/${batches.length}`,
-      focus: "",
-      keep: () => true,
-      promptOverride:
-        `You are prospecting for a ${cfg.profession || v.profession} serving ${territories.join(", ")} (Arizona). ` +
-        `Execute EACH of these web searches and comb the results:\n` +
-        qs.map((q, j) => `${j + 1}. ${q}`).join("\n") +
-        `\n\nFrom everything found, extract EVERY distinct RECENT post (last ${sinceDaysWindow} days) written by a ` +
-        `real individual matching this target: ${v.primaryTarget}\n` +
-        `Respond with ONLY a JSON array. Each element: {"title": string, "snippet": "1-2 sentences of what they ` +
-        `said", "url": "direct link to the post", "source": "community/site name", ` +
-        `"platform": "reddit|facebook|nextdoor|quora|forum|x|news|web", "intent": "${intentEnum}", ` +
-        `"territory": "closest match from [${territories.join(", ")}] or 'Arizona'", ` +
-        `"score": 0-100 intent strength, "why": "one line", ` +
-        `"postedAgo": "REQUIRED verified post age, e.g. 3d; exclude if unconfirmable or older than ${sinceDaysWindow} days"}. ` +
-        `Never include archived or locked threads. Up to 12 items per batch. Real posts with real links only.`,
-    }));
+    const deepPrompt = (qs: string[], extra: string) =>
+      `You are prospecting for a ${cfg.profession || v.profession} serving ${territories.join(", ")} (Arizona). ` +
+      `Execute EACH of these web searches and comb the results:\n` +
+      qs.map((q, j) => `${j + 1}. ${q}`).join("\n") +
+      `\n\nFrom everything found, extract EVERY distinct RECENT post (last ${sinceDaysWindow} days) written by a ` +
+      `real individual matching this target: ${v.primaryTarget}\n${extra}` +
+      `Respond with ONLY a JSON array. Each element: {"title": string, "snippet": "1-2 sentences of what they ` +
+      `said", "url": "direct link to the post", "source": "community/site name", ` +
+      `"platform": "reddit|facebook|nextdoor|quora|forum|x|news|web", "intent": "${intentEnum}", ` +
+      `"territory": "closest match from [${territories.join(", ")}] or 'Arizona'", ` +
+      `"score": 0-100 intent strength, "why": "one line", ` +
+      `"postedAgo": "REQUIRED verified post age, e.g. 3d; exclude if unconfirmable or older than ${sinceDaysWindow} days"}. ` +
+      `Never include archived or locked threads. Up to 12 items per batch. Real posts with real links only.`;
+
+    // Partition: Reddit-targeted queries get their own batches; everything
+    // else runs in Reddit-FORBIDDEN batches — instructed AND code-enforced —
+    // so Quora/City-Data/forums/X/Nextdoor coverage can't be crowded out by
+    // Reddit results satisfying a mixed batch.
+    const queries = v.queryMatrix(territories);
+    const redditQ = queries.filter((q) => /reddit/i.test(q));
+    const webQ = queries.filter((q) => !/reddit/i.test(q));
+    const chunk = (arr: string[], n: number) => {
+      const out: string[][] = [];
+      for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+      return out;
+    };
+    const redditBatches = chunk(redditQ, 5);
+    const webBatches = chunk(webQ, 5);
+    lanes = [
+      ...redditBatches.map((qs, i) => ({
+        label: `deep reddit ${i + 1}/${redditBatches.length}`,
+        focus: "",
+        keep: () => true,
+        promptOverride: deepPrompt(qs, ""),
+      })),
+      ...webBatches.map((qs, i) => ({
+        label: `deep web ${i + 1}/${webBatches.length}`,
+        focus: "",
+        // code-enforced: this batch may not return reddit links at all
+        keep: (u: string) => !hostIsOneOf(u, ["reddit.com"]),
+        promptOverride: deepPrompt(
+          qs,
+          `Do NOT return any reddit.com links in this pass — Reddit is covered by a separate search. Focus on ` +
+            `Quora, City-Data, DIY/enthusiast forums, X, publicly indexed Nextdoor and Facebook posts, and other ` +
+            `community sites.\n`
+        ),
+      })),
+    ];
   } else {
     lanes = HUNT_LANES;
   }
