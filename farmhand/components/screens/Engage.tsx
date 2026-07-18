@@ -336,7 +336,18 @@ function Opportunities() {
   };
 
   const setStatus = (id: string, status: Opportunity["status"]) =>
-    set((s) => ({ opportunities: (s.opportunities as Opportunity[]).map((o) => (o.id === id ? { ...o, status } : o)) }));
+    set((s) => ({
+      opportunities: (s.opportunities as Opportunity[]).map((o) =>
+        o.id === id
+          ? {
+              ...o,
+              status,
+              // engaging or watching starts a tracked conversation
+              engagedAtMs: (status === "engaged" || status === "watching") && !o.engagedAtMs ? Date.now() : o.engagedAtMs,
+            }
+          : o
+      ),
+    }));
 
   const engagedThisWeek = opps.filter((o) => o.status === "engaged").length;
 
@@ -587,14 +598,156 @@ function Opportunities() {
   );
 }
 
+const CONVO_STALE_MS = 30 * 60 * 1000;
+
+/**
+ * Conversations — every opportunity the user engaged or is watching becomes a
+ * tracked thread. Refreshes are on-demand only (a click, or ONE automatic
+ * check when returning to the app after 30+ min) — never a polling loop.
+ * Checking a thread is a cheap read of its comments, not a paid search.
+ */
+function Conversations() {
+  const { state, set } = useStore();
+  const opps = state.opportunities as Opportunity[];
+  const convos = opps.filter((o) => o.status === "engaged" || o.status === "watching");
+  const [checking, setChecking] = useState(false);
+  const checkedOnce = useRef(false);
+
+  const setStatus = (id: string, status: Opportunity["status"]) =>
+    set((s) => ({ opportunities: (s.opportunities as Opportunity[]).map((o) => (o.id === id ? { ...o, status } : o)) }));
+
+  const refresh = async (onlyId?: string) => {
+    const targets = convos.filter((o) => (!onlyId || o.id === onlyId) && o.url);
+    if (!targets.length || checking) return;
+    setChecking(true);
+    try {
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: targets.map((o) => ({
+            id: o.id,
+            url: o.url,
+            sinceMs: o.engagedAtMs || o.capturedAtMs || Date.now() - 7 * 86400000,
+          })),
+        }),
+      }).then((r) => r.json());
+      const results = (res?.results || {}) as Record<string, { ok: boolean; totalComments?: number; newSince?: number; needsCreds?: boolean }>;
+      set((s) => ({
+        opportunities: (s.opportunities as Opportunity[]).map((o) =>
+          results[o.id]
+            ? { ...o, convo: { lastCheckedMs: Date.now(), totalComments: results[o.id].totalComments, newSince: results[o.id].newSince, ok: !!results[o.id].ok, needsCreds: results[o.id].needsCreds } }
+            : o
+        ),
+      }));
+    } catch {}
+    setChecking(false);
+  };
+
+  // one automatic refresh when you come back to the app after a while —
+  // exactly one check per visit, then everything is manual
+  useEffect(() => {
+    if (checkedOnce.current) return;
+    checkedOnce.current = true;
+    if (!convos.length) return;
+    const newest = Math.max(0, ...convos.map((o) => o.convo?.lastCheckedMs || 0));
+    if (Date.now() - newest > CONVO_STALE_MS) refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const lastChecked = Math.max(0, ...convos.map((o) => o.convo?.lastCheckedMs || 0));
+
+  return (
+    <div>
+      <div className="fh-glass" style={{ borderRadius: 14, padding: "13px 17px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <span className="fh-kicker" style={{ fontSize: 9.5 }}>Active conversations</span>
+        <span style={{ fontSize: 10.5, color: "#8B89A0" }}>
+          {convos.length === 0
+            ? "Engage or watch an opportunity and it lands here for tracking"
+            : `${convos.length} tracked · checked ${lastChecked ? capturedAtLabel({ capturedAt: "—", capturedAtMs: lastChecked }) : "never"} · checks run only when you ask or when you return to the app`}
+        </span>
+        <button
+          onClick={() => refresh()}
+          disabled={checking || !convos.length}
+          style={{ marginLeft: "auto", background: "rgba(38,224,200,0.12)", color: "#26E0C8", border: "1px solid rgba(38,224,200,0.4)", borderRadius: 8, padding: "6px 14px", fontSize: 11, fontWeight: 700, cursor: checking || !convos.length ? "default" : "pointer" }}
+        >
+          {checking ? "Checking…" : "↻ Check all now"}
+        </button>
+      </div>
+
+      {convos.length === 0 ? (
+        <div style={{ padding: "26px 10px", textAlign: "center", fontSize: 12.5, color: "#77758C", lineHeight: 1.7 }}>
+          No active conversations yet. When you hit <b>Draft reply → Copy &amp; mark engaged</b> or <b>Watch</b> on an
+          opportunity, it moves here so you never lose track of a thread you&apos;re working.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+          {convos.map((o) => {
+            const active = o.convo?.ok && (o.convo.newSince || 0) > 0;
+            const quietDays = o.engagedAtMs ? (Date.now() - o.engagedAtMs) / 86400000 : 0;
+            const border = active ? "#FFC23D" : o.status === "engaged" ? "#41D98A" : "#26E0C8";
+            return (
+              <div key={o.id} className="fh-glass" style={{ borderRadius: 13, padding: "14px 16px", borderLeft: `3px solid ${border}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.06em", fontFamily: "var(--label)", color: "#04110E", background: border, borderRadius: 999, padding: "2px 8px", textTransform: "uppercase" }}>
+                    {active ? "⚡ New activity" : o.status === "engaged" ? "Engaged" : "Watching"}
+                  </span>
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: "#D8D6E6" }}>{o.sourceName}</span>
+                  <span style={{ fontSize: 10, color: "#77758C" }}>
+                    · engaged {o.engagedAtMs ? capturedAtLabel({ capturedAt: "—", capturedAtMs: o.engagedAtMs }) : "—"}
+                    {o.convo ? ` · checked ${capturedAtLabel({ capturedAt: "—", capturedAtMs: o.convo.lastCheckedMs })}` : " · not checked yet"}
+                  </span>
+                </div>
+                <div style={{ fontSize: 12, color: "#C9C7D6", marginTop: 7, lineHeight: 1.5 }}>&ldquo;{o.excerpt.slice(0, 180)}{o.excerpt.length > 180 ? "…" : ""}&rdquo;</div>
+
+                <div style={{ fontSize: 11, marginTop: 8, lineHeight: 1.5, color: active ? "#FFC23D" : "#8B89A0" }}>
+                  {active
+                    ? `⚡ ${o.convo!.newSince} new comment${o.convo!.newSince === 1 ? "" : "s"} since you engaged — open the thread; if one's aimed at you, reply while it's warm.`
+                    : o.convo?.ok
+                    ? quietDays > 3 && o.status === "watching"
+                      ? "Quiet for 3+ days — consider one value-add follow-up, or mark it done and move on."
+                      : `Quiet so far (${o.convo.totalComments ?? 0} total comments) — nothing needed right now.`
+                    : o.convo?.needsCreds
+                    ? "Auto-check needs the free Reddit keys — until then, open the thread to check manually."
+                    : o.convo
+                    ? "This platform can't be auto-checked — open the thread to check manually."
+                    : "Not checked yet — hit Check now."}
+                </div>
+
+                <div style={{ display: "flex", gap: 8, marginTop: 11, flexWrap: "wrap" }}>
+                  <button onClick={() => refresh(o.id)} disabled={checking} style={{ background: "rgba(38,224,200,0.1)", color: "#26E0C8", border: "1px solid rgba(38,224,200,0.35)", borderRadius: 8, padding: "6px 13px", fontSize: 11, fontWeight: 700, cursor: checking ? "default" : "pointer" }}>
+                    ↻ Check now
+                  </button>
+                  {o.url && (
+                    <a href={o.url} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", background: "rgba(125,211,252,0.1)", color: "#7DD3FC", border: "1px solid rgba(125,211,252,0.35)", borderRadius: 8, padding: "6px 13px", fontSize: 11, fontWeight: 700, textDecoration: "none" }}>
+                      Open thread ↗
+                    </a>
+                  )}
+                  <button onClick={() => setStatus(o.id, "skipped")} style={{ background: "transparent", color: "#77758C", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "6px 13px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                    Done
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Engage() {
   const { state, set } = useStore();
   const tab = state.engageTab;
+  const opps = (state.opportunities as Opportunity[]) || [];
+  const tracked = opps.filter((o) => o.status === "engaged" || o.status === "watching");
+  const attention = tracked.filter((o) => o.convo?.ok && (o.convo.newSince || 0) > 0).length;
   return (
     <div>
       <SubTabs
         tabs={[
           { id: "opportunities" as const, label: "Opportunities" },
+          { id: "conversations" as const, label: attention ? `Conversations ⚡${attention}` : tracked.length ? `Conversations · ${tracked.length}` : "Conversations" },
           { id: "sources" as const, label: "Sources" },
           { id: "drafts" as const, label: "Reply Desk" },
         ]}
@@ -602,7 +755,7 @@ export default function Engage() {
         color="#26E0C8"
         onPick={(id) => set({ engageTab: id })}
       />
-      {tab === "opportunities" ? <Opportunities /> : tab === "sources" ? <Sources /> : <Assistant />}
+      {tab === "opportunities" ? <Opportunities /> : tab === "conversations" ? <Conversations /> : tab === "sources" ? <Sources /> : <Assistant />}
     </div>
   );
 }

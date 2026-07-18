@@ -17,6 +17,16 @@ export interface Opportunity {
   capturedAtMs?: number; // epoch ms — when Farmhand actually captured it; display is computed live from this
   postedAgo?: string; // the SOURCE POST's own age as reported by the engine ("3d") — distinct from when we found it
   ageVerified?: string; // how postedAgo was established: exact | page | estimated | reported | unverified
+  // conversation tracking — set when the user engages/watches; refreshed on
+  // demand (never on a polling loop)
+  engagedAtMs?: number; // when the user engaged or started watching
+  convo?: {
+    lastCheckedMs: number;
+    totalComments?: number; // thread's comment count at last check
+    newSince?: number; // comments newer than engagedAtMs at last check
+    ok: boolean; // false = couldn't auto-check (non-reddit, or no creds)
+    needsCreds?: boolean;
+  };
   firstTouch: boolean; // first engagement in this source → guardrails apply
   extKey?: string; // dedup key when captured via the Radar extension bridge
   titleFingerprint?: string; // secondary dedup — catches the same real post re-cited under a different URL
