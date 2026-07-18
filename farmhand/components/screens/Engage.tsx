@@ -565,7 +565,15 @@ function Opportunities() {
                   </div>
                 )}
                 {o.status === "engaged" && !isDrafting && (
-                  <div style={{ marginTop: 10, fontSize: 11, fontWeight: 700, color: "#41D98A" }}>✓ Engaged — logged to this source</div>
+                  <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#41D98A" }}>✓ Engaged — logged to this source</span>
+                    <button
+                      onClick={() => setStatus(o.id, "skipped")}
+                      style={{ background: "transparent", color: "#77758C", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, padding: "3px 11px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
                 )}
               </div>
             );
