@@ -18,7 +18,7 @@ import { DEFAULT_STRATEGY, type StrategyProfile } from "./strategy";
 import { normalizeContact, SEED_CONTACTS, type Contact } from "./pipeline";
 import { tagOpportunity, type Opportunity } from "./engage";
 import type { SourceEntry } from "./sources";
-import { DEFAULT_TRAINING, type LeadTraining } from "./hunt";
+import { DEFAULT_TRAINING, isProvablyStaleLead, type LeadTraining } from "./hunt";
 import { VERTICALS } from "./verticals";
 
 export interface Upload {
@@ -237,6 +237,12 @@ function parseSaved(raw: string): Partial<AppState> {
   // to search, which looked like "hunt ran, found nothing" with no error
   if (saved.strategy && (!Array.isArray(saved.strategy.territories) || saved.strategy.territories.length === 0)) {
     saved.strategy = { ...saved.strategy, territories: DEFAULT_STRATEGY.territories };
+  }
+  // inbox hygiene: auto-purge engine captures that are provably stale
+  // (captured before the recency/age-verification gates existed). Untouched
+  // "new" items only — anything the user engaged/watched is theirs to keep.
+  if (Array.isArray(saved.opportunities)) {
+    saved.opportunities = saved.opportunities.filter((o: { url?: string; postedAgo?: string; extKey?: string; status?: string }) => !isProvablyStaleLead(o));
   }
   return saved;
 }

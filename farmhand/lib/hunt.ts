@@ -182,3 +182,22 @@ export function isTooOld(lead: Pick<Lead, "url" | "postedAgo">, sinceDays: numbe
   if (age != null && age > sinceDays * 2) return true;
   return false;
 }
+
+/**
+ * Inbox hygiene: the recency/age gates filter NEW captures, but the inbox is
+ * a persisted list — anything captured before those gates shipped stays
+ * displayed until manually skipped. This decides whether an already-stored
+ * engine capture is provably stale and should be auto-purged on load.
+ * Deliberately conservative: only engine-captured items (extKey "web:"), only
+ * untouched ones (never anything the user engaged with or is watching), and
+ * only when staleness is provable (ancient Reddit URL, or an age the engine
+ * itself recorded as ~8 months+).
+ */
+export function isProvablyStaleLead(o: { url?: string; postedAgo?: string; extKey?: string; status?: string }): boolean {
+  if (!o.extKey || !o.extKey.startsWith("web:")) return false;
+  if (o.status === "engaged" || o.status === "watching") return false;
+  if (o.url && isAncientRedditUrl(o.url)) return true;
+  const age = postAgeDays(o.postedAgo);
+  if (age != null && age > 240) return true;
+  return false;
+}
