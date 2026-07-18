@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import SubTabs from "@/components/SubTabs";
 import Composer from "./Composer";
@@ -41,12 +41,9 @@ function EnergyIntel() {
     fetching.current = false;
   };
 
-  // auto-fetch on open when the cache is empty or stale
-  useEffect(() => {
-    if (!intel || Date.now() - intel.fetchedAt > INTEL_TTL_MS) refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+  // ON-DEMAND ONLY: no auto-fetch — a search runs only when Refresh is
+  // clicked. Cached intel from the last pull still renders immediately.
+  const stale = intel ? Date.now() - intel.fetchedAt > INTEL_TTL_MS : false;
   const ageH = intel ? Math.round((Date.now() - intel.fetchedAt) / 3600000) : null;
 
   return (
@@ -58,8 +55,8 @@ function EnergyIntel() {
           {loading
             ? "Scanning national + local energy news…"
             : intel
-            ? `APS & SRP rates · data centers · grid · policy — updated ${ageH === 0 ? "just now" : `${ageH}h ago`}`
-            : "Real news → post angles for your audience"}
+            ? `APS & SRP rates · data centers · grid · policy — updated ${ageH === 0 ? "just now" : `${ageH}h ago`}${stale ? " · hit Refresh for today's" : ""}`
+            : "Hit Refresh to pull real news → post angles (searches only on demand)"}
         </span>
         <button
           onClick={refresh}
