@@ -45,6 +45,7 @@ export default function Settings() {
         intents: v.defaultIntents,
         good: [],
         bad: [],
+        minScore: id === "solar" ? 35 : 55,
       },
     }));
   };

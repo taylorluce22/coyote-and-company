@@ -47,7 +47,7 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
   const setTraining = (patch: Partial<LeadTraining>) =>
     set((s) => ({ leadTraining: { ...(s.leadTraining as LeadTraining), ...patch } }));
 
-  const hunt = useCallback(async () => {
+  const hunt = useCallback(async (deep = false) => {
     if (running.current) return;
     running.current = true;
     setStatus("scanning");
@@ -65,6 +65,7 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
         body: JSON.stringify({
           territories: territoryNames,
           vertical: strategy.vertical || "realtor",
+          deep,
           city: strategy.homeBase,
           idealClient: strategy.idealClient,
           intents: t.intents,
@@ -185,11 +186,11 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
           {teach ? "Close" : `Teach${learned ? ` · ${learned}` : ""}`}
         </button>
         <button
-          onClick={hunt}
+          onClick={() => hunt(true)}
           disabled={status === "scanning"}
           style={{ background: "rgba(65,217,138,0.12)", color: "#41D98A", border: "1px solid rgba(65,217,138,0.4)", borderRadius: 8, padding: "6px 14px", fontSize: 11, fontWeight: 700, cursor: status === "scanning" ? "default" : "pointer" }}
         >
-          {status === "scanning" ? "Hunting…" : "↻ Hunt now"}
+          {status === "scanning" ? "Hunting…" : "🔍 Deep hunt"}
         </button>
       </div>
 

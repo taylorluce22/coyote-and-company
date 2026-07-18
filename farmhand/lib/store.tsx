@@ -273,7 +273,9 @@ function solarSeed(): AppState {
       positioning: ["generalist"],
       idealClient: "both",
     },
-    leadTraining: { ...DEFAULT_TRAINING, guidance: v.defaultGuidance, intents: v.defaultIntents },
+    // low auto-add bar: the owner judges lead quality themselves (thumbs
+    // train the engine); the machine only screens provable junk
+    leadTraining: { ...DEFAULT_TRAINING, guidance: v.defaultGuidance, intents: v.defaultIntents, minScore: 35 },
   };
 }
 

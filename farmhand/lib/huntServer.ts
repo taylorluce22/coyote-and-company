@@ -11,6 +11,7 @@ import { verticalOf, type VerticalDef } from "./verticals";
 export interface HuntConfig {
   territories: string[];
   vertical?: string; // "realtor" (default) | "solar" — selects intent language, search phrases, relevance filter
+  deep?: boolean; // deep mode: fan out the vertical's literal query matrix instead of the 6 broad lanes
   profession?: string;
   city?: string;
   idealClient?: string;
@@ -239,6 +240,7 @@ type HuntLane = {
   focus: string;
   focusFromVertical?: boolean; // resolve focus from the vertical def at runtime
   useFallbackPrompt?: boolean; // compact prompt, no stacked constraints (recall-rescue pass)
+  promptOverride?: string; // fully custom prompt (deep-hunt query batches)
   domains?: string[];
   keep: (url: string) => boolean;
 };
@@ -300,9 +302,11 @@ async function runLane(
 ): Promise<{ leads: Lead[]; diag: LaneDiag }> {
   const v = verticalOf(cfg.vertical);
   const laneFocus = lane.focusFromVertical ? v.statewideLaneFocus : lane.focus;
-  const prompt = lane.useFallbackPrompt
-    ? buildFallbackPrompt(cfg)
-    : `${buildHuntPrompt(cfg)}\n\nSEARCH FOCUS FOR THIS PASS: ${laneFocus}`;
+  const prompt =
+    lane.promptOverride ??
+    (lane.useFallbackPrompt
+      ? buildFallbackPrompt(cfg)
+      : `${buildHuntPrompt(cfg)}\n\nSEARCH FOCUS FOR THIS PASS: ${laneFocus}`);
   const sinceDays = Math.max(3, Math.min(120, cfg.sinceDays || 45));
   const body: Record<string, unknown> = {
     model: "sonar",
@@ -325,7 +329,7 @@ async function runLane(
     // model (correctly) returned [] under our recency rules.
     search_recency_filter: sinceDays <= 10 ? "week" : "month",
     // pull more sources per query — several lanes were retrieving only 1
-    web_search_options: { search_context_size: lane.useFallbackPrompt ? "high" : "medium" },
+    web_search_options: { search_context_size: lane.useFallbackPrompt || lane.promptOverride ? "high" : "medium" },
   };
   if (lane.domains?.length) body.search_domain_filter = lane.domains;
 
@@ -414,12 +418,47 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
   }
 
   const full = { ...cfg, territories };
-  const settled = await Promise.allSettled(HUNT_LANES.map((lane) => runLane(key, full, lane)));
+  const v = verticalOf(cfg.vertical);
+  const sinceDaysWindow = Math.max(3, Math.min(120, cfg.sinceDays || 45));
+
+  // Deep mode: instead of 6 broad lanes, fan out the vertical's literal query
+  // matrix — the concrete searches a human prospector would run one by one —
+  // in batches of 5 per call. Each batch executes its searches and extracts
+  // every matching recent post; the shared filters downstream still apply.
+  let lanes: HuntLane[];
+  if (cfg.deep) {
+    const queries = v.queryMatrix(territories);
+    const batches: string[][] = [];
+    for (let i = 0; i < queries.length; i += 5) batches.push(queries.slice(i, i + 5));
+    const intentEnum = [...v.intents.map((i) => i.key), "signal"].join("|");
+    lanes = batches.map((qs, i) => ({
+      label: `deep ${i + 1}/${batches.length}`,
+      focus: "",
+      keep: () => true,
+      promptOverride:
+        `You are prospecting for a ${cfg.profession || v.profession} serving ${territories.join(", ")} (Arizona). ` +
+        `Execute EACH of these web searches and comb the results:\n` +
+        qs.map((q, j) => `${j + 1}. ${q}`).join("\n") +
+        `\n\nFrom everything found, extract EVERY distinct RECENT post (last ${sinceDaysWindow} days) written by a ` +
+        `real individual matching this target: ${v.primaryTarget}\n` +
+        `Respond with ONLY a JSON array. Each element: {"title": string, "snippet": "1-2 sentences of what they ` +
+        `said", "url": "direct link to the post", "source": "community/site name", ` +
+        `"platform": "reddit|facebook|nextdoor|quora|forum|x|news|web", "intent": "${intentEnum}", ` +
+        `"territory": "closest match from [${territories.join(", ")}] or 'Arizona'", ` +
+        `"score": 0-100 intent strength, "why": "one line", ` +
+        `"postedAgo": "REQUIRED verified post age, e.g. 3d; exclude if unconfirmable or older than ${sinceDaysWindow} days"}. ` +
+        `Never include archived or locked threads. Up to 12 items per batch. Real posts with real links only.`,
+    }));
+  } else {
+    lanes = HUNT_LANES;
+  }
+
+  const settled = await Promise.allSettled(lanes.map((lane) => runLane(key, full, lane)));
   const debug: LaneDiag[] = settled.map((s, i) =>
     s.status === "fulfilled"
       ? s.value.diag
       : {
-          label: HUNT_LANES[i].label,
+          label: lanes[i].label,
           httpStatus: "error",
           httpError: s.reason instanceof Error ? s.reason.message.slice(0, 300) : "lane rejected",
           rawParsedCount: 0,
