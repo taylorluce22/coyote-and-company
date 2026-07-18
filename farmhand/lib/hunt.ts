@@ -25,10 +25,27 @@ export interface LeadTraining {
   guidance: string; // "what a great lead looks like" — the agent's own words
   good: string[]; // snippets the agent gave a thumbs up (find more like these)
   bad: string[]; // snippets the agent gave a thumbs down (avoid these)
+  // WHY each rejected lead was rejected — the reason is what the engine can
+  // actually generalize from (a bare bad snippet only teaches "not this exact
+  // post"; "not this exact post BECAUSE it's a news article" teaches a rule)
+  avoid: AvoidEntry[];
   minScore: number; // auto-capture threshold (0-100)
   intents: string[]; // which intent types to hunt for
   sinceDays: number; // recency window
   autoOn: boolean; // auto-run on open + on interval
+}
+
+export interface AvoidEntry {
+  snippet: string; // first ~140 chars of the rejected lead
+  reason: string; // the agent's stated reason it wasn't a lead
+}
+
+/** Add a thumbs-down reason; newest first, deduped by snippet, capped. */
+export function pushAvoid(list: AvoidEntry[], entry: AvoidEntry, cap = 15): AvoidEntry[] {
+  const snippet = entry.snippet.trim().slice(0, 140);
+  const reason = entry.reason.trim().slice(0, 120);
+  if (!snippet || !reason) return list;
+  return [{ snippet, reason }, ...list.filter((x) => x.snippet !== snippet)].slice(0, cap);
 }
 
 export const DEFAULT_TRAINING: LeadTraining = {
@@ -40,6 +57,7 @@ export const DEFAULT_TRAINING: LeadTraining = {
     "Prioritize posts like this over generic market talk, price debates, or investor chatter.",
   good: [],
   bad: [],
+  avoid: [],
   minScore: 55,
   intents: ["relocation", "referral", "buyer"],
   sinceDays: 45,

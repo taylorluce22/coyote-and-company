@@ -7,7 +7,7 @@ import Sources from "./Sources";
 import Assistant from "./Assistant";
 import { cadenceCap, DEFAULT_STRATEGY, type StrategyProfile } from "@/lib/strategy";
 import { capturedAtLabel, draftReply, fairHousingLint, scoreOpportunity, tagOpportunity, type Opportunity } from "@/lib/engage";
-import { leadFingerprint, normalizeLeadUrl, PLATFORM_LABEL, pushExemplar, type Lead, type LeadTraining } from "@/lib/hunt";
+import { leadFingerprint, normalizeLeadUrl, PLATFORM_LABEL, pushAvoid, pushExemplar, type Lead, type LeadTraining } from "@/lib/hunt";
 import { intentColor, tagFor, verticalOf } from "@/lib/verticals";
 
 function sinceLabel(ts: number): string {
@@ -78,6 +78,7 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
           guidance: t.guidance,
           good: t.good,
           bad: t.bad,
+          avoid: t.avoid,
           sinceDays: t.sinceDays,
         }),
       }).then((r) => r.json());
@@ -148,6 +149,7 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
             guidance: training.guidance,
             good: training.good,
             bad: training.bad,
+            avoid: training.avoid,
             sinceDays: training.sinceDays,
           },
         }),
@@ -269,7 +271,27 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
           {learned > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, fontSize: 10.5, color: "#77758C" }}>
               <span>Learned from your feedback: <b style={{ color: "#41D98A" }}>{training.good.length} 👍</b> · <b style={{ color: "#FF5D8F" }}>{training.bad.length} 👎</b></span>
-              <button onClick={() => setTraining({ good: [], bad: [] })} style={{ background: "transparent", color: "#77758C", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7, padding: "3px 10px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>Reset learning</button>
+              <button onClick={() => setTraining({ good: [], bad: [], avoid: [] })} style={{ background: "transparent", color: "#77758C", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7, padding: "3px 10px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>Reset learning</button>
+            </div>
+          )}
+          {training.avoid.length > 0 && (
+            <div style={{ marginTop: 11 }}>
+              <div className="fh-kicker" style={{ fontSize: 9, marginBottom: 7 }}>What it&apos;s learned to avoid — from your 👎 reasons</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                {training.avoid.map((a, i) => (
+                  <div key={`${a.snippet}-${i}`} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10.5, color: "#C9C7D6", background: "rgba(255,93,143,0.05)", border: "1px solid rgba(255,93,143,0.18)", borderRadius: 8, padding: "6px 10px" }}>
+                    <span style={{ color: "#FF9DB8", fontWeight: 700, flexShrink: 0 }}>✕ {a.reason}</span>
+                    <span style={{ color: "#77758C", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>“{a.snippet}”</span>
+                    <button
+                      onClick={() => setTraining({ avoid: training.avoid.filter((_, j) => j !== i) })}
+                      title="Forget this rule"
+                      style={{ marginLeft: "auto", flexShrink: 0, background: "transparent", color: "#77758C", border: "none", fontSize: 12, cursor: "pointer", padding: "0 2px" }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           <div style={{ fontSize: 10, color: "#5E5C72", marginTop: 11, lineHeight: 1.55 }}>
@@ -321,6 +343,9 @@ function Opportunities() {
   const [source, setSource] = useState("");
   const [draftFor, setDraftFor] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // thumbs-down reason capture: which card is asking "why not?", and the typed reason
+  const [reasonFor, setReasonFor] = useState<string | null>(null);
+  const [reasonText, setReasonText] = useState("");
 
   const capture = () => {
     if (!text.trim()) return;
@@ -416,7 +441,7 @@ function Opportunities() {
   };
 
   // thumbs feedback trains the engine: teach it to find more (or fewer) like this
-  const teachFromLead = (o: Opportunity, verdict: "good" | "bad") =>
+  const teachFromLead = (o: Opportunity, verdict: "good" | "bad") => {
     set((s) => {
       const t = s.leadTraining as LeadTraining;
       const snippet = `${o.excerpt}`.slice(0, 200);
@@ -424,10 +449,47 @@ function Opportunities() {
       // if flipping a verdict, drop it from the opposite list
       const other = verdict === "good" ? "bad" : "good";
       return {
-        leadTraining: { ...t, [verdict]: list, [other]: t[other].filter((x) => x !== snippet) },
+        leadTraining: {
+          ...t,
+          [verdict]: list,
+          [other]: t[other].filter((x) => x !== snippet),
+          // flipping 👎 → 👍 also retracts any avoid-rule this card created
+          avoid: verdict === "good" ? t.avoid.filter((a) => !o.excerpt.startsWith(a.snippet)) : t.avoid,
+        },
         opportunities: (s.opportunities as Opportunity[]).map((x) => (x.id === o.id ? { ...x, feedback: verdict } : x)),
       };
     });
+    // a 👎 opens the "why?" prompt — the reason becomes a standing exclusion
+    // rule the engine applies on every future hunt (this is what actually
+    // teaches it what NOT to search for, beyond "not this exact post")
+    if (verdict === "bad") {
+      setReasonFor(o.id);
+      setReasonText("");
+    } else if (reasonFor === o.id) {
+      setReasonFor(null);
+    }
+  };
+
+  const saveAvoidReason = (o: Opportunity, reason: string) => {
+    const r = reason.trim();
+    if (r) {
+      set((s) => {
+        const t = s.leadTraining as LeadTraining;
+        return { leadTraining: { ...t, avoid: pushAvoid(t.avoid, { snippet: o.excerpt, reason: r }) } };
+      });
+    }
+    setReasonFor(null);
+    setReasonText("");
+  };
+
+  // one-tap reasons covering the rejections that actually happen; free text for the rest
+  const QUICK_REASONS = [
+    "Post is too old",
+    "Wrong area — not my territory",
+    "Not a real person (news / ad / company)",
+    "No real intent — just venting or chatter",
+    "Wrong topic entirely",
+  ];
 
   return (
     <div>
@@ -526,6 +588,49 @@ function Opportunities() {
                     </span>
                   )}
                 </div>
+
+                {/* why-not panel — a 👎's reason becomes a standing exclusion
+                    rule the engine applies to every future hunt */}
+                {reasonFor === o.id && (
+                  <div style={{ marginTop: 10, background: "rgba(255,93,143,0.05)", border: "1px solid rgba(255,93,143,0.25)", borderRadius: 11, padding: "11px 13px" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#FF9DB8", marginBottom: 8 }}>
+                      Why isn&apos;t this a lead? The engine will avoid results like it from now on.
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                      {QUICK_REASONS.map((r) => (
+                        <button
+                          key={r}
+                          onClick={() => saveAvoidReason(o, r)}
+                          style={{ background: "transparent", color: "#C9C7D6", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 999, padding: "5px 11px", fontSize: 10.5, fontWeight: 650, cursor: "pointer" }}
+                        >
+                          {r}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+                      <input
+                        value={reasonText}
+                        onChange={(e) => setReasonText(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && saveAvoidReason(o, reasonText)}
+                        placeholder="…or type your own reason"
+                        style={{ flex: 1, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "7px 10px", fontSize: 11.5, color: "#F4F3F8", outline: "none" }}
+                      />
+                      <button
+                        onClick={() => saveAvoidReason(o, reasonText)}
+                        disabled={!reasonText.trim()}
+                        style={{ background: reasonText.trim() ? "rgba(255,93,143,0.18)" : "transparent", color: reasonText.trim() ? "#FF9DB8" : "#5E5C72", border: "1px solid rgba(255,93,143,0.35)", borderRadius: 8, padding: "7px 13px", fontSize: 11, fontWeight: 700, cursor: reasonText.trim() ? "pointer" : "default" }}
+                      >
+                        Teach it
+                      </button>
+                      <button
+                        onClick={() => { setReasonFor(null); setReasonText(""); }}
+                        style={{ background: "transparent", color: "#77758C", border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer", padding: "7px 4px" }}
+                      >
+                        Skip
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {isDrafting && (
                   <div style={{ marginTop: 12, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 11, padding: "12px 14px" }}>

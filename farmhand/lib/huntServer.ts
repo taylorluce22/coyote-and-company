@@ -20,6 +20,9 @@ export interface HuntConfig {
   guidance?: string;
   good?: string[];
   bad?: string[];
+  // thumbs-down reasons: WHY past results were rejected. Turned into explicit
+  // "never return posts like this because…" rules in every hunt prompt.
+  avoid?: { snippet: string; reason: string }[];
   sinceDays?: number;
 }
 
@@ -80,6 +83,25 @@ export function coerceLeads(raw: unknown, vertical?: VerticalDef, sinceDays = 45
   return out.sort((a, b) => b.score - a.score).slice(0, 15);
 }
 
+/**
+ * Thumbs-down REASONS become standing exclusion rules. A bare bad example
+ * only tells the model "not this exact post"; the reason is what generalizes
+ * ("that was a news article" → skip news articles entirely). Shared by the
+ * full prompt, the deep-mode batches, and the fallback pass so the learning
+ * applies everywhere the engine searches.
+ */
+export function avoidRulesBlock(cfg: HuntConfig): string {
+  const entries = (cfg.avoid || [])
+    .filter((a) => a && typeof a.reason === "string" && a.reason.trim())
+    .slice(0, 12)
+    .map((a) => `- ${String(a.reason).slice(0, 120)}${a.snippet ? ` (rejected example: "${String(a.snippet).slice(0, 100)}")` : ""}`);
+  if (!entries.length) return "";
+  return (
+    `\n\nSTANDING EXCLUSION RULES — the user rejected past results for these reasons. ` +
+    `Treat each as a hard rule about what NOT to return, not just a one-off example:\n${entries.join("\n")}`
+  );
+}
+
 export function buildHuntPrompt(cfg: Required<Pick<HuntConfig, "territories">> & HuntConfig): string {
   const v = verticalOf(cfg.vertical);
   const territories = cfg.territories;
@@ -95,7 +117,8 @@ export function buildHuntPrompt(cfg: Required<Pick<HuntConfig, "territories">> &
   const trainingBlock =
     (guidance ? `\n\nWHAT THIS USER COUNTS AS A GREAT LEAD (follow this closely):\n${guidance}` : "") +
     (good.length ? `\n\nEXAMPLES THEY MARKED AS GOOD LEADS — find more like these:\n- ${good.join("\n- ")}` : "") +
-    (bad.length ? `\n\nEXAMPLES THEY MARKED AS BAD / NOT LEADS — avoid these:\n- ${bad.join("\n- ")}` : "");
+    (bad.length ? `\n\nEXAMPLES THEY MARKED AS BAD / NOT LEADS — avoid these:\n- ${bad.join("\n- ")}` : "") +
+    avoidRulesBlock(cfg);
 
   const state = "Arizona";
 
@@ -202,7 +225,8 @@ export function buildFallbackPrompt(cfg: Required<Pick<HuntConfig, "territories"
     `"postedAgo": "REQUIRED — verified post age, e.g. 3d; exclude the post if you cannot confirm it is within ` +
     `the last ${sinceDays} days"}. ` +
     `Never include old, archived, or locked threads — they cannot be replied to and are worthless. ` +
-    `Up to 12 items. Real posts with real links only.`
+    `Up to 12 items. Real posts with real links only.` +
+    avoidRulesBlock(cfg)
   );
 }
 
@@ -447,7 +471,8 @@ export async function runHunt(cfg: HuntConfig): Promise<HuntResult> {
       `"territory": "closest match from [${territories.join(", ")}] or 'Arizona'", ` +
       `"score": 0-100 intent strength, "why": "one line", ` +
       `"postedAgo": "REQUIRED verified post age, e.g. 3d; exclude if unconfirmable or older than ${sinceDaysWindow} days"}. ` +
-      `Never include archived or locked threads. Up to 12 items per batch. Real posts with real links only.`;
+      `Never include archived or locked threads. Up to 12 items per batch. Real posts with real links only.` +
+      avoidRulesBlock(cfg);
 
     // Partition: Reddit-targeted queries get their own batches; everything
     // else runs in Reddit-FORBIDDEN batches — instructed AND code-enforced —
