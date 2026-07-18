@@ -62,6 +62,12 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
       const res = await fetch("/api/hunt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // a deep hunt fans out dozens of searches server-side and can
+        // legitimately run a couple of minutes — but never forever. Without
+        // this, a dropped connection left the button on "Hunting…"
+        // permanently (the guard ref stayed locked, so further clicks were
+        // silently ignored — the app looked stuck).
+        signal: AbortSignal.timeout(170000),
         body: JSON.stringify({
           territories: territoryNames,
           vertical: strategy.vertical || "realtor",
@@ -98,8 +104,9 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
       else setStatus("ok");
     } catch {
       setStatus("transient");
+    } finally {
+      running.current = false;
     }
-    running.current = false;
   }, [strategy.territories, strategy.homeBase, strategy.idealClient, state.extensionConnected, state.leadTraining, onAuto]);
 
   // ON-DEMAND ONLY: no auto-hunt on open, no interval. Every hunt is a paid
@@ -162,7 +169,7 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
         <span className="fh-kicker" style={{ fontSize: 9.5 }}>Lead engine · whole-web</span>
         <span style={{ fontSize: 10.5, color: "#8B89A0" }}>
           {status === "scanning"
-            ? `Hunting the web for ${strategy.territories.slice(0, 3).map((x) => x.name).join(", ")}…`
+            ? `Hunting the web for ${strategy.territories.slice(0, 3).map((x) => x.name).join(", ")}… (deep hunts run dozens of searches — up to a couple of minutes)`
             : status === "needs-creds"
             ? "One key away from live — see below"
             : status === "filtered"
@@ -633,6 +640,7 @@ function Conversations() {
       const res = await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(45000),
         body: JSON.stringify({
           items: targets.map((o) => ({
             id: o.id,

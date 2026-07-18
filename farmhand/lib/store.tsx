@@ -232,10 +232,29 @@ function parseSaved(raw: string): Partial<AppState> {
   const saved = JSON.parse(raw);
   // migrate any old-shape contact records to the current schema
   if (Array.isArray(saved.contacts)) saved.contacts = saved.contacts.map(normalizeContact);
+  // a snapshot written by an older build can be missing fields newer code
+  // reads unconditionally (training.good.length crashed the whole app to a
+  // black "Application error" screen) — every nested persisted object is
+  // merged over its current defaults so no field is ever undefined
+  if (saved.leadTraining && typeof saved.leadTraining === "object") {
+    saved.leadTraining = { ...DEFAULT_TRAINING, ...saved.leadTraining };
+    if (!Array.isArray(saved.leadTraining.good)) saved.leadTraining.good = [];
+    if (!Array.isArray(saved.leadTraining.bad)) saved.leadTraining.bad = [];
+    if (!Array.isArray(saved.leadTraining.intents)) saved.leadTraining.intents = DEFAULT_TRAINING.intents;
+  }
+  if (saved.strategy && typeof saved.strategy === "object") {
+    saved.strategy = { ...DEFAULT_STRATEGY, ...saved.strategy };
+    for (const k of ["territories", "positioning", "platforms", "tone"] as const) {
+      if (!Array.isArray(saved.strategy[k])) saved.strategy[k] = DEFAULT_STRATEGY[k];
+    }
+  }
+  for (const k of ["opportunities", "contacts", "sources", "plannedPosts"] as const) {
+    if (saved[k] != null && !Array.isArray(saved[k])) delete saved[k];
+  }
   // self-heal a profile persisted with no territories (possible via older
   // onboarding builds) — an empty list silently gave the lead engine nothing
   // to search, which looked like "hunt ran, found nothing" with no error
-  if (saved.strategy && (!Array.isArray(saved.strategy.territories) || saved.strategy.territories.length === 0)) {
+  if (saved.strategy && saved.strategy.territories.length === 0) {
     saved.strategy = { ...saved.strategy, territories: DEFAULT_STRATEGY.territories };
   }
   // inbox hygiene: auto-purge engine captures that are provably stale

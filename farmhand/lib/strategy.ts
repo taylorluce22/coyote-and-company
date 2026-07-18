@@ -4,6 +4,8 @@
  * Persisted in the app store (localStorage today, Supabase adapter later).
  */
 
+import { SOLAR_KB_CONTENT } from "./azEnergyKb";
+
 export type ProspectingMode = "observer" | "participant" | "connector";
 export type Segment = "luxury" | "growth" | "entry" | "custom";
 
@@ -165,7 +167,13 @@ export function ideasFor(profile: StrategyProfile): Idea[] {
   profile.territories.forEach((t, ti) => {
     const bank =
       profile.vertical === "solar"
-        ? [...SOLAR_IDEA_BANK.slice(ti % 3, (ti % 3) + 6), ...SOLAR_CONVERSION_BANK.slice(ti % 2, (ti % 2) + 4)]
+        ? [
+            // knowledge-base ideas lead: real AZ numbers (rates, export step-downs,
+            // demand-charge math, VPP pay) beat generic solar content every time
+            ...SOLAR_KB_CONTENT.slice(ti % 4, (ti % 4) + 5),
+            ...SOLAR_IDEA_BANK.slice(ti % 3, (ti % 3) + 4),
+            ...SOLAR_CONVERSION_BANK.slice(ti % 2, (ti % 2) + 3),
+          ]
         : [...(IDEA_BANK[t.segment] ?? IDEA_BANK.growth), ...CONVERSION_BANK.slice(ti % 2, (ti % 2) + 4)];
     const price = t.segment === "luxury" ? "2M" : t.segment === "growth" ? "450K" : "350K";
     bank.forEach((b, i) => {
