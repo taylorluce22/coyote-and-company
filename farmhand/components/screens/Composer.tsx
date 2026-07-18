@@ -19,6 +19,8 @@ import {
 } from "@/lib/studio";
 import { textures } from "@/lib/textures";
 import { COMP_COPY, type CompCh } from "@/lib/data";
+import { ideaCopy } from "@/lib/ideaCopy";
+import { ideasFor, type Idea, type StrategyProfile } from "@/lib/strategy";
 
 /* ---- content model (Farmhand): per-channel variants of the post ---- */
 const CHANNELS: [CompCh, string][] = [
@@ -171,12 +173,26 @@ const FIELD_LABEL: React.CSSProperties = {
 export default function Composer() {
   const { state, set } = useStore();
   const ch = state.compChannel;
-  const variant = COMP_COPY[ch];
+  const strategy = state.strategy as StrategyProfile;
+  // idea mode: copy generated from the idea engine + knowledge base (what
+  // "Open in Studio" and "New idea" load). Null = the channel demo copy.
+  const idea = state.compIdea as Idea | null;
+  const ideaPack = useMemo(() => (idea ? ideaCopy(idea, strategy, ch) : null), [idea, strategy, ch]);
+  const variant = ideaPack ?? COMP_COPY[ch];
   const copyText = state.compShort ? variant.short : state.compRegen ? variant.alt : variant.long;
   const accent = ACCENTS[state.compAccent] || ACCENTS.cyan;
 
+  // pull the next proposal from the content generator — cycles through the
+  // full idea bank (KB-driven for solar) so every click is a fresh post
+  const nextIdea = () => {
+    const bank = ideasFor(strategy);
+    if (!bank.length) return;
+    const at = idea ? bank.findIndex((b) => b.id === idea.id) : -1;
+    set({ compIdea: bank[(at + 1) % bank.length], compRegen: false, compShort: false });
+  };
+
   /* slides derived from the live copy (cover / body / CTA) */
-  const slides = useMemo(() => copyToSlides(copyText, CTAS[ch]), [copyText, ch]);
+  const slides = useMemo(() => copyToSlides(copyText, ideaPack ? ideaPack.cta : CTAS[ch]), [copyText, ideaPack, ch]);
   const total = slides.length;
   const [idx, setIdx] = useState(0);
   const cur = Math.min(idx, total - 1);
@@ -352,7 +368,8 @@ export default function Composer() {
   const setStatus = (v: string) => set((s) => ({ compStatus: { ...s.compStatus, [ch]: v } }));
 
   const texList = typeof window !== "undefined" ? textures.all() : [];
-  const tags = HASHTAGS[ch].map((h) => "#" + h).join(" ");
+  const tagList = ideaPack ? ideaPack.hashtags : HASHTAGS[ch];
+  const tags = tagList.map((h) => "#" + h).join(" ");
 
   return (
     <div
@@ -371,6 +388,18 @@ export default function Composer() {
             }}
             options={CHANNELS.map(([id, label]) => ({ id, label }))}
           />
+          <button
+            onClick={nextIdea}
+            title="Pull the next post proposal from your idea engine"
+            style={{ background: "rgba(65,217,138,0.12)", color: "#41D98A", border: "1px solid rgba(65,217,138,0.4)", borderRadius: 9, padding: "7px 13px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+          >
+            ↻ New idea
+          </button>
+          {idea && (
+            <span title={idea.title} style={{ display: "inline-flex", alignItems: "center", gap: 6, maxWidth: 260, fontSize: 10.5, fontWeight: 700, color: idea.territory.hex, background: `${idea.territory.hex}12`, border: `1px solid ${idea.territory.hex}44`, borderRadius: 999, padding: "5px 11px" }}>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{idea.territory.name} · {idea.title}</span>
+            </span>
+          )}
           <button
             onClick={() => set({ compRegen: !state.compRegen, compShort: false })}
             style={{ background: "rgba(168,85,247,0.14)", color: "#C9A8FF", border: "1px solid rgba(168,85,247,0.4)", borderRadius: 9, padding: "7px 13px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
@@ -463,8 +492,8 @@ export default function Composer() {
                   design={design}
                   bg={activeBg}
                   accent={accent}
-                  pillar={PILLAR}
-                  handle="@jess.sells.gilbert"
+                  pillar={idea ? { short: idea.theme.replace(/-/g, " "), color: idea.territory.hex } : PILLAR}
+                  handle={ideaPack ? `@${ideaPack.handle}` : "@jess.sells.gilbert"}
                 />
               )}
             </div>
@@ -623,7 +652,7 @@ export default function Composer() {
               <CopyBtn text={tags} />
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {HASHTAGS[ch].map((h) => (
+              {tagList.map((h) => (
                 <span key={h} style={{ fontSize: 11.5, fontFamily: "var(--mono)", color: "#7DD3FC", background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.22)", borderRadius: 999, padding: "3px 9px" }}>
                   #{h}
                 </span>
