@@ -232,3 +232,23 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .fh-hscroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); border-radius: 4px; }
 .fh-hscroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.16); border-radius: 4px; }
 .fh-hscroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.28); }
+
+/* ---------- micro-interactions: hover lift, press, focus glow ----------
+   The tiny animations users feel but never name. Hover = slight lift +
+   brighten; press = compress; inputs get a warm focus ring. Kept subtle and
+   transform-only so nothing reflows; disabled with prefers-reduced-motion
+   via the global rule above. */
+button:not(:disabled) {
+  transition: transform 0.16s ease, filter 0.16s ease, box-shadow 0.16s ease,
+    background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+button:not(:disabled):hover { transform: translateY(-1px); filter: brightness(1.09); }
+button:not(:disabled):active { transform: translateY(0) scale(0.965); filter: brightness(0.97); }
+
+input, textarea, select {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: rgba(255, 154, 98, 0.55) !important;
+  box-shadow: 0 0 0 3px rgba(255, 154, 98, 0.14);
+}
