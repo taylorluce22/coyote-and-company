@@ -613,8 +613,12 @@ function Conversations() {
   const [checking, setChecking] = useState(false);
   const checkedOnce = useRef(false);
 
-  const setStatus = (id: string, status: Opportunity["status"]) =>
-    set((s) => ({ opportunities: (s.opportunities as Opportunity[]).map((o) => (o.id === id ? { ...o, status } : o)) }));
+  const toggleLead = (id: string) =>
+    set((s) => ({ opportunities: (s.opportunities as Opportunity[]).map((o) => (o.id === id ? { ...o, isLead: !o.isLead } : o)) }));
+
+  // Delete is permanent removal — distinct from Skip in the inbox
+  const deleteConvo = (id: string) =>
+    set((s) => ({ opportunities: (s.opportunities as Opportunity[]).filter((o) => o.id !== id) }));
 
   const refresh = async (onlyId?: string) => {
     const targets = convos.filter((o) => (!onlyId || o.id === onlyId) && o.url);
@@ -682,14 +686,35 @@ function Conversations() {
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
-          {convos.map((o) => {
+          {[...convos]
+            .sort((a, b) => Number(!!b.isLead) - Number(!!a.isLead) || (b.convo?.newSince || 0) - (a.convo?.newSince || 0))
+            .map((o) => {
             const active = o.convo?.ok && (o.convo.newSince || 0) > 0;
             const quietDays = o.engagedAtMs ? (Date.now() - o.engagedAtMs) / 86400000 : 0;
-            const border = active ? "#FFC23D" : o.status === "engaged" ? "#41D98A" : "#26E0C8";
+            const border = o.isLead ? "#6EE7B7" : active ? "#FFC23D" : o.status === "engaged" ? "#41D98A" : "#26E0C8";
             return (
-              <div key={o.id} className="fh-glass" style={{ borderRadius: 13, padding: "14px 16px", borderLeft: `3px solid ${border}` }}>
+              <div
+                key={o.id}
+                className="fh-glass"
+                style={{
+                  borderRadius: 13,
+                  padding: "14px 16px",
+                  borderLeft: `3px solid ${border}`,
+                  // active leads read light green at a glance
+                  background: o.isLead ? "linear-gradient(180deg, rgba(110,231,183,0.12), rgba(110,231,183,0.05))" : undefined,
+                  border: o.isLead ? "1px solid rgba(110,231,183,0.35)" : undefined,
+                  borderLeftWidth: 3,
+                  borderLeftStyle: "solid",
+                  borderLeftColor: border,
+                }}
+              >
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.06em", fontFamily: "var(--label)", color: "#04110E", background: border, borderRadius: 999, padding: "2px 8px", textTransform: "uppercase" }}>
+                  {o.isLead && (
+                    <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.06em", fontFamily: "var(--label)", color: "#04110E", background: "#6EE7B7", borderRadius: 999, padding: "2px 8px", textTransform: "uppercase" }}>
+                      ★ Active lead
+                    </span>
+                  )}
+                  <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.06em", fontFamily: "var(--label)", color: "#04110E", background: active ? "#FFC23D" : o.status === "engaged" ? "#41D98A" : "#26E0C8", borderRadius: 999, padding: "2px 8px", textTransform: "uppercase" }}>
                     {active ? "⚡ New activity" : o.status === "engaged" ? "Engaged" : "Watching"}
                   </span>
                   <span style={{ fontSize: 11.5, fontWeight: 700, color: "#D8D6E6" }}>{o.sourceName}</span>
@@ -723,8 +748,14 @@ function Conversations() {
                       Open thread ↗
                     </a>
                   )}
-                  <button onClick={() => setStatus(o.id, "skipped")} style={{ background: "transparent", color: "#77758C", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "6px 13px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                    Done
+                  <button
+                    onClick={() => toggleLead(o.id)}
+                    style={{ background: o.isLead ? "#6EE7B7" : "rgba(110,231,183,0.1)", color: o.isLead ? "#04110E" : "#6EE7B7", border: "1px solid rgba(110,231,183,0.45)", borderRadius: 8, padding: "6px 13px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}
+                  >
+                    {o.isLead ? "★ Lead ✓" : "☆ Mark as lead"}
+                  </button>
+                  <button onClick={() => deleteConvo(o.id)} style={{ background: "transparent", color: "#FF5D8F", border: "1px solid rgba(255,93,143,0.3)", borderRadius: 8, padding: "6px 13px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                    Delete
                   </button>
                 </div>
               </div>
