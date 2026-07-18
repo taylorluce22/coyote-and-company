@@ -20,6 +20,7 @@ export interface Opportunity {
   // conversation tracking — set when the user engages/watches; refreshed on
   // demand (never on a polling loop)
   engagedAtMs?: number; // when the user engaged or started watching
+  isLead?: boolean; // user promoted this conversation to an active lead
   convo?: {
     lastCheckedMs: number;
     totalComments?: number; // thread's comment count at last check
