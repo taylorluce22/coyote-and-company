@@ -73,6 +73,20 @@ export const PLATFORM_OPTS = [
   { key: "reddit", label: "Reddit" },
 ];
 
+/**
+ * Solar-vertical default territories — metro Valley cities picked for utility
+ * coverage (Phoenix/Scottsdale lean APS, Mesa is SRP country), not realtor
+ * farm neighborhoods. City-level names matter: hunts search these as literal
+ * place words and content titles read "…in Phoenix", so hyper-local realtor
+ * neighborhoods like "Val Vista Lakes" are both too narrow to find solar
+ * leads and wrong-sounding on a solar account.
+ */
+export const SOLAR_TERRITORIES: Territory[] = [
+  { slug: "phoenix", name: "Phoenix", city: "Phoenix", segment: "growth", hex: "#FF9A62", status: "building" },
+  { slug: "scottsdale", name: "Scottsdale", city: "Scottsdale", segment: "growth", hex: "#C9A8FF", status: "building" },
+  { slug: "mesa", name: "Mesa", city: "Mesa", segment: "growth", hex: "#26E0C8", status: "building" },
+];
+
 export const DEFAULT_STRATEGY: StrategyProfile = {
   name: "Jess",
   brokerage: "Desert Sky Realty",

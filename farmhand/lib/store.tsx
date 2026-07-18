@@ -14,7 +14,7 @@ import type { TabId } from "./data";
 import type { Asset, Bg, StudioDesign } from "./studio";
 import { DEFAULT_DESIGN } from "./studio";
 import { SEED_POSTS, type Integrations, type PlannedPost } from "./planner";
-import { DEFAULT_STRATEGY, type StrategyProfile } from "./strategy";
+import { DEFAULT_STRATEGY, SOLAR_TERRITORIES, type StrategyProfile } from "./strategy";
 import { normalizeContact, SEED_CONTACTS, type Contact } from "./pipeline";
 import { tagOpportunity, type Opportunity } from "./engage";
 import type { SourceEntry } from "./sources";
@@ -258,6 +258,16 @@ function parseSaved(raw: string): Partial<AppState> {
   if (saved.strategy && saved.strategy.territories.length === 0) {
     saved.strategy = { ...saved.strategy, territories: DEFAULT_STRATEGY.territories };
   }
+  // a solar profile still carrying the realtor demo's Gilbert farm
+  // neighborhoods (Val Vista Lakes etc.) inherited them by accident at
+  // workspace creation — every content card and hunt was labeled with a
+  // realtor micro-neighborhood. Swap in the solar city territories, but ONLY
+  // when it's exactly the demo signature, never a set the user chose.
+  if (saved.strategy?.vertical === "solar" && saved.strategy.territories.length) {
+    const demoSlugs = new Set(DEFAULT_STRATEGY.territories.map((t) => t.slug));
+    const allDemo = saved.strategy.territories.every((t: { slug?: string }) => t.slug && demoSlugs.has(t.slug));
+    if (allDemo) saved.strategy = { ...saved.strategy, territories: SOLAR_TERRITORIES };
+  }
   // inbox hygiene: auto-purge engine captures that are provably stale
   // (captured before the recency/age-verification gates existed). Untouched
   // "new" items only — anything the user engaged/watched is theirs to keep.
@@ -289,6 +299,7 @@ function solarSeed(): AppState {
       brokerage: "",
       licenseNo: "",
       homeBase: "Scottsdale",
+      territories: SOLAR_TERRITORIES,
       platforms: ["instagram"],
       positioning: ["generalist"],
       idealClient: "both",
