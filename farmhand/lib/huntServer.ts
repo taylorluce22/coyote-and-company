@@ -303,6 +303,7 @@ async function runLane(
   const prompt = lane.useFallbackPrompt
     ? buildFallbackPrompt(cfg)
     : `${buildHuntPrompt(cfg)}\n\nSEARCH FOCUS FOR THIS PASS: ${laneFocus}`;
+  const sinceDays = Math.max(3, Math.min(120, cfg.sinceDays || 45));
   const body: Record<string, unknown> = {
     model: "sonar",
     temperature: 0.2,
@@ -317,6 +318,14 @@ async function runLane(
       },
       { role: "user", content: prompt },
     ],
+    // THE decisive lever for the stale-results failure seen live: restrict
+    // Perplexity's RETRIEVAL layer to recent content, so the model never even
+    // sees the archived megathreads and evergreen guides that dominate
+    // ranking. Without this, every lane's sources skewed years old and the
+    // model (correctly) returned [] under our recency rules.
+    search_recency_filter: sinceDays <= 10 ? "week" : "month",
+    // pull more sources per query — several lanes were retrieving only 1
+    web_search_options: { search_context_size: lane.useFallbackPrompt ? "high" : "medium" },
   };
   if (lane.domains?.length) body.search_domain_filter = lane.domains;
 
