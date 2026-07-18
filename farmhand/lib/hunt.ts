@@ -5,6 +5,8 @@
  * gives feeds back into `good` / `bad`, so it sharpens with use.
  */
 
+import { redditEstimatedMs } from "./postAge";
+
 export interface Lead {
   title: string;
   snippet: string;
@@ -197,6 +199,13 @@ export function isProvablyStaleLead(o: { url?: string; postedAgo?: string; extKe
   if (!o.extKey || !o.extKey.startsWith("web:")) return false;
   if (o.status === "engaged" || o.status === "watching") return false;
   if (o.url && isAncientRedditUrl(o.url)) return true;
+  // era-estimate ANY reddit URL from its sequential ID (offline, no network) —
+  // catches 2023+ posts that are past Reddit's ~6-month archive line, which
+  // the coarse 6-char check above can't see
+  if (o.url) {
+    const est = redditEstimatedMs(o.url);
+    if (est != null && (Date.now() - est) / 86_400_000 > 240) return true;
+  }
   const age = postAgeDays(o.postedAgo);
   if (age != null && age > 240) return true;
   return false;
