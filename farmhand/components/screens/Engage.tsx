@@ -102,18 +102,10 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
     running.current = false;
   }, [strategy.territories, strategy.homeBase, strategy.idealClient, state.extensionConnected, state.leadTraining, onAuto]);
 
-  // keep a live handle to the latest hunt so the interval never fires stale —
-  // and so editing training (guidance, sliders) doesn't retrigger a paid search
-  const huntRef = useRef(hunt);
-  huntRef.current = hunt;
-
-  // auto-run on open + every 6 minutes while the tab is open (if auto is on)
-  useEffect(() => {
-    if (!training.autoOn) return;
-    huntRef.current();
-    const id = setInterval(() => huntRef.current(), 6 * 60 * 1000);
-    return () => clearInterval(id);
-  }, [training.autoOn]);
+  // ON-DEMAND ONLY: no auto-hunt on open, no interval. Every hunt is a paid
+  // batch of web searches — they run exclusively when the user clicks the
+  // button. (The /api/leads pull below is just a cheap store read, not a
+  // search.)
 
   // pull whatever the always-on background job found while the app was closed
   useEffect(() => {
@@ -177,7 +169,9 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
             ? `Found ${lastFound} lead${lastFound === 1 ? "" : "s"} — all below your ${training.minScore}+ quality bar (lower it in Teach to see them)`
             : status === "transient"
             ? `Last run hit a problem — details below`
-            : `Auto-hunting the whole web · last run ${rel}${lastNew ? ` · +${lastNew} new` : ""}`}
+            : lastAt
+            ? `On-demand · last hunt ${rel}${lastNew ? ` · +${lastNew} new` : ""}`
+            : "Ready — searches only when you hit Deep hunt"}
         </span>
         <button
           onClick={() => setTeach((v) => !v)}
@@ -262,10 +256,7 @@ function LeadEngine({ onAuto }: { onAuto: (leads: Lead[]) => number }) {
                 <option value={90}>3 months</option>
               </select>
             </div>
-            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10.5, color: "#8B89A0", cursor: "pointer", marginLeft: "auto" }}>
-              <input type="checkbox" checked={training.autoOn} onChange={(e) => setTraining({ autoOn: e.target.checked })} style={{ accentColor: "#41D98A" }} />
-              Auto-hunt on open
-            </label>
+            <span style={{ fontSize: 10, color: "#5E5C72", marginLeft: "auto" }}>Searches run only when you hit Deep hunt</span>
           </div>
 
           {learned > 0 && (
