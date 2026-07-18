@@ -2,7 +2,9 @@
 
 import { useStore } from "@/lib/store";
 import { MagneticButton } from "@/components/ui";
-import { assistantReplies } from "@/lib/data";
+import { draftReply } from "@/lib/engage";
+import { tagFor, verticalOf } from "@/lib/verticals";
+import type { StrategyProfile } from "@/lib/strategy";
 
 const TONES: [string, string][] = [
   ["warm", "Warm"],
@@ -10,11 +12,40 @@ const TONES: [string, string][] = [
   ["brief", "Brief"],
 ];
 
+/**
+ * Draft from the ACTUAL pasted text through the real reply engine —
+ * vertical-aware (solar accounts get solar replies + the identity CTA),
+ * tag-driven, first-touch safe. Replaces the old canned demo strings that
+ * ignored the input entirely.
+ */
+function buildReply(input: string, strategy: StrategyProfile, tone: string, variant: number): string {
+  const vert = verticalOf(strategy.vertical);
+  const tags = tagFor(vert, input);
+  const territoryNames = strategy.territories.map((t) => t.name);
+  const territory =
+    territoryNames.find((n) => input.toLowerCase().includes(n.toLowerCase())) ||
+    (vert.id === "solar" ? "the Valley" : territoryNames[0] || strategy.homeBase || "Arizona");
+  const toneArr =
+    variant === 1 ? ["warm", "neighborly"] : tone === "warm" ? ["warm", "neighborly"] : tone === "expert" ? ["data-driven", "sharp"] : ["direct"];
+  const mode: "observer" | "participant" = variant === 2 || tone === "brief" ? "observer" : "participant";
+  return draftReply({
+    excerpt: input,
+    tags,
+    tone: toneArr,
+    mode,
+    firstTouch: true,
+    agentName: strategy.name,
+    territory,
+    vertical: vert.id,
+  });
+}
+
 export default function Assistant() {
   const { state, set, copy } = useStore();
+  const strategy = state.strategy as StrategyProfile;
   const tone = state.asstTone;
   const reply = state.asstShown
-    ? assistantReplies(tone)[state.asstVariant]
+    ? buildReply(state.asstInput, strategy, tone, state.asstVariant)
     : "Your drafted reply will appear here — helpful, human, and never salesy. Paste a thread, pick a tone, and hit Draft reply.";
 
   return (
@@ -120,7 +151,7 @@ export default function Assistant() {
           </button>
           <button
             onClick={() => {
-              copy(assistantReplies(tone)[state.asstVariant]);
+              copy(buildReply(state.asstInput, strategy, tone, state.asstVariant));
               set({ asstCopied: true });
             }}
             disabled={!state.asstShown}
