@@ -23,6 +23,10 @@ const UA = "web:farmhand-localos:v2.0 (lead engine, native search)";
 
 let cachedToken: { token: string; exp: number } | null = null;
 
+export async function getRedditToken(): Promise<string | null> {
+  return getToken();
+}
+
 async function getToken(): Promise<string | null> {
   const id = process.env.REDDIT_CLIENT_ID;
   const secret = process.env.REDDIT_CLIENT_SECRET;
