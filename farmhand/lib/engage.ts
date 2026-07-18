@@ -5,6 +5,8 @@
  * automated source and will feed the same Opportunity shape.
  */
 
+import { azUtilityIn, KB } from "./azEnergyKb";
+
 export interface Opportunity {
   id: string;
   sourceName: string;
@@ -124,23 +126,27 @@ export function draftReply(opts: {
   const data = opts.tone.includes("data-driven") || opts.tone.includes("sharp");
 
   if (opts.vertical === "solar") {
+    // utility-aware knowledge: detect APS vs SRP from the thread and pull the
+    // matching real numbers (rates, export credits, demand charges, VPP pay)
+    // so the reply reads like local expertise, not a generic solar pitch
+    const u = azUtilityIn(opts.excerpt);
     let sbody = "";
     if (tags.includes("quote-shopping")) {
-      sbody = `The two numbers that cut through quote confusion: price per watt (before incentives) and what the production estimate assumes. If two quotes differ a lot, it's almost always panel count or an inflated production model — happy to share what typical AZ numbers look like right now if that helps.`;
+      sbody = `The two numbers that cut through quote confusion: price per watt (before incentives) and what the production estimate assumes. Also check which export rate the quote is modeling — ${KB.export[u]}. If two quotes differ a lot, it's almost always panel count or an inflated production model.`;
     } else if (tags.includes("bill-pain")) {
       sbody = data
-        ? `Worth pulling your last 12 months of usage before deciding anything — the on-peak/off-peak split matters more than the total. Some of that bill is fixable with a rate-plan change alone; the rest is where solar math starts. The utility's own usage export shows it.`
-        : `A lot of that is the summer on-peak rates doing the damage. Before anything else, it's worth checking you're on the right rate plan — that's free — and then the solar math gets a lot clearer from your actual usage.`;
+        ? `Worth pulling your last 12 months of usage before deciding anything — ${KB.rates[u]}. Some of that is fixable with a rate-plan change alone: ${KB.ratePlanCheck[u]}. The rest is where the solar math starts.`
+        : `A lot of that is the summer on-peak pricing doing the damage — ${KB.rates[u]}. Before anything else, ${KB.ratePlanCheck[u]}. Then the solar math gets a lot clearer from your actual usage.`;
     } else if (tags.includes("considering")) {
       sbody = warm
-        ? `Honest version from someone in the industry here in AZ: it pencils out for most homeowners with decent sun exposure and a bill over ~$150, and doesn't for everyone — shade, roof age, and how long you'll stay matter more than people expect. Happy to share the questions worth asking any installer.`
-        : `The three things that actually decide it in Arizona: your utility's export rate, your roof orientation, and how long you'll own the home. Get those three answered honestly and the decision usually makes itself.`;
+        ? `Honest version from someone in the industry here in AZ: ${KB.honestPayback.any}. Also worth knowing ${KB.tax.any}. Happy to share the questions worth asking any installer.`
+        : `The things that actually decide it in Arizona: your utility's export rate (${KB.export[u]}), your roof, and how long you'll own the home. And the incentive picture changed — ${KB.tax.any}.`;
     } else if (tags.includes("battery-ev")) {
-      sbody = `If you're charging an EV at home, the math changes a lot — off-peak charging plus solar sized for the extra load is a different system than a standard install. Worth making sure any quote actually models the EV usage rather than last year's bill.`;
+      sbody = `The battery/EV math changed a lot here recently — ${KB.battery[u]}. Worth making sure any quote actually models that (and your EV charging) rather than just last year's bill.`;
     } else if (tags.includes("recommendation-ask")) {
       sbody = `A few things worth checking on ANY installer before names even matter: their license/ROC number, whether they sub out the install, and what the workmanship warranty actually covers. Happy to share what separates the good ones — no stake in who you pick.`;
     } else {
-      sbody = `Good thread — there's a lot of noise around solar in AZ and questions like this are how people avoid the expensive mistakes.`;
+      sbody = `Good thread — there's a lot of noise around solar in AZ and questions like this are how people avoid the expensive mistakes. For context, ${KB.rates[u]}.`;
     }
     if (mode === "observer") sbody = sbody.split(". ").slice(0, 2).join(". ") + (sbody.includes(".") ? "." : "");
     // soft CTA on every solar draft (owner's call): identity + credibility
