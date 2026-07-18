@@ -18,6 +18,9 @@ export interface Territory {
   img?: string;
   hex: string;
   kind?: "neighborhood" | "zip" | "subdivision" | "school-zone";
+  // solar vertical: which electric utility serves this territory (aps | srp |
+  // ed3 | ed2 | verify). Drives which rate math the pulse/content/replies use.
+  utility?: string;
 }
 
 export interface StrategyProfile {
@@ -82,9 +85,9 @@ export const PLATFORM_OPTS = [
  * leads and wrong-sounding on a solar account.
  */
 export const SOLAR_TERRITORIES: Territory[] = [
-  { slug: "phoenix", name: "Phoenix", city: "Phoenix", segment: "growth", hex: "#FF9A62", status: "building" },
-  { slug: "scottsdale", name: "Scottsdale", city: "Scottsdale", segment: "growth", hex: "#C9A8FF", status: "building" },
-  { slug: "mesa", name: "Mesa", city: "Mesa", segment: "growth", hex: "#26E0C8", status: "building" },
+  { slug: "phoenix", name: "Phoenix", city: "Phoenix", segment: "growth", hex: "#FF9A62", status: "building", utility: "aps" },
+  { slug: "scottsdale", name: "Scottsdale", city: "Scottsdale", segment: "growth", hex: "#C9A8FF", status: "building", utility: "aps" },
+  { slug: "mesa", name: "Mesa", city: "Mesa", segment: "growth", hex: "#26E0C8", status: "building", utility: "srp" },
 ];
 
 export const DEFAULT_STRATEGY: StrategyProfile = {

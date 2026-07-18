@@ -60,7 +60,7 @@ function TerritoryDetail({ t, onBack }: { t: Territory; onBack: () => void }) {
   const [captured, setCaptured] = useState<Record<string, boolean>>({});
   const booted = useRef(false);
 
-  const signals = signalsFor(t);
+  const signals = signalsFor(t, strategy.vertical);
   const tSources = allSources.filter((s) => s.territorySlug === t.slug && s.status !== "dismissed").slice(0, 6);
 
   // one boot per territory: seed sources, check live research, scan radar, fetch brief

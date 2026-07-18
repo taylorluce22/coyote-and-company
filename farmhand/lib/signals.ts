@@ -45,16 +45,62 @@ const BY_SEGMENT: Record<string, Omit<MarketSignal, "id" | "territorySlug" | "te
 };
 
 import type { Territory } from "./strategy";
+import { utilityForTerritory } from "./azTerritories";
+
+/**
+ * Solar pulse packs — built from the AZ energy knowledge base (real tariff
+ * numbers, rate-case status, VPP pay), selected by the territory's UTILITY so
+ * an APS neighborhood never gets an SRP angle. The realtor packs above were
+ * showing "family relocation season" on a solar account — wrong business.
+ */
+type SignalSeed = Omit<MarketSignal, "id" | "territorySlug" | "territoryName" | "color">;
+
+const SOLAR_APS: SignalSeed[] = [
+  { kind: "news", headline: "APS is asking for ~16% more on residential bills", detail: "Rate-case decision due by Dec 31, 2026; new rates likely early 2027 — on top of 2024's 8%", angle: "“What the APS rate case means for {n} bills” — neutral explainer, locals share these" },
+  { kind: "price", headline: "The 4–7pm window runs ~34¢/kWh all summer", detail: "APS on-peak vs ~12¢ off-peak — a 3x spread most homeowners never look at", angle: "“The 4–7pm rule every APS home should know” — save-worthy carousel" },
+  { kind: "news", headline: "APS's solar export rate drops again September 1", detail: "6.2¢/kWh today, stepped down ~10% every year since 2017 (started at 12.9¢)", angle: "“Waiting on solar has a literal price in {n}” — the export step-down explained" },
+  { kind: "development", headline: "APS now pays home batteries — $110 per avg kW each summer", detail: "Storage Rewards: a typical battery earns $330–660/season sharing capacity during grid events", angle: "“Your battery can earn ~$660 a summer from APS” — VPP explainer for {n}" },
+];
+
+const SOLAR_SRP: SignalSeed[] = [
+  { kind: "price", headline: "July/August 6–9pm hits ~40¢/kWh on SRP's new plans", detail: "E-28 summer-peak on-peak — among the highest retail power prices in Arizona", angle: "“Why your July SRP bill spiked: the 40¢ window nobody explains” — for {n}" },
+  { kind: "price", headline: "SRP demand plans bill your single worst 30 minutes", detail: "A battery shaving an 8kW evening spike to 2kW saves ~$40–112/month (~$800+/yr)", angle: "“The $800/year battery move for SRP demand-plan homes in {n}” — worked math" },
+  { kind: "news", headline: "SRP's plan overhaul is live — old plans sunset by Nov 2029", detail: "New $20–40 tiered monthly charge, new time-of-day plans, net metering retired", angle: "“Which new SRP plan actually fits your {n} home” — the honest guide" },
+  { kind: "development", headline: "SRP pays exports just 3.45¢/kWh — half of APS", detail: "SRP solar lives or dies on self-consumption and batteries, not selling power back", angle: "“Why SRP solar is a battery story, not an export story” — position as the expert" },
+];
+
+const SOLAR_OTHER: SignalSeed[] = [
+  { kind: "news", headline: "This area is NOT on APS or SRP rates", detail: "ED3/ED2 territories have their own export rules and fees — never quote APS/SRP numbers here", angle: "“The rate-plan mistake solar companies make in {n}” — instant local credibility" },
+];
+
+const SOLAR_GENERAL: SignalSeed[] = [
+  { kind: "development", headline: "~20 GW of data centers want onto Arizona's grid", detail: "APS's own filings; 76% of its projected sales growth is data centers + large industrial", angle: "“What data centers mean (and honestly don't) for {n} power bills”" },
+  { kind: "news", headline: "The 30% federal solar credit is gone for purchases", detail: "Installs completed after Dec 31, 2025 get $0 federal; AZ's $1,000 credit + tax exemptions remain", angle: "“The honest 2026 solar math for {n}” — objection-handling with real numbers" },
+];
+
+function solarSignalsFor(t: Territory): SignalSeed[] {
+  const u = utilityForTerritory(t);
+  const bank = u === "aps" ? SOLAR_APS : u === "srp" ? SOLAR_SRP : SOLAR_OTHER;
+  // deterministic rotation per territory so different cards show different
+  // angles instead of three copies of the same headline
+  const off = Math.abs([...t.slug].reduce((a, ch) => a + ch.charCodeAt(0), 0));
+  const rotated = [...bank.slice(off % bank.length), ...bank.slice(0, off % bank.length)];
+  return [...rotated, SOLAR_GENERAL[off % SOLAR_GENERAL.length]].map((s) => ({
+    ...s,
+    detail: s.detail.replace(/\{n\}/g, t.name),
+    angle: s.angle.replace(/\{n\}/g, t.name),
+  }));
+}
 
 /** Full signal pack for one territory. */
-export function signalsFor(t: Territory): MarketSignal[] {
-  const pack = PACKS[t.slug] ?? [BY_SEGMENT[t.segment] ?? BY_SEGMENT.custom];
+export function signalsFor(t: Territory, vertical?: string): MarketSignal[] {
+  const pack = vertical === "solar" ? solarSignalsFor(t) : PACKS[t.slug] ?? [BY_SEGMENT[t.segment] ?? BY_SEGMENT.custom];
   return pack.map((p, i) => ({ ...p, id: `${t.slug}-sig-${i}`, territorySlug: t.slug, territoryName: t.name, color: t.hex }));
 }
 
-export function pulseFor(territories: Territory[], max = 3): MarketSignal[] {
+export function pulseFor(territories: Territory[], max = 3, vertical?: string): MarketSignal[] {
   const out: MarketSignal[] = [];
-  territories.forEach((t) => out.push(...signalsFor(t)));
+  territories.forEach((t) => out.push(...signalsFor(t, vertical)));
   // round-robin so every territory gets representation before any repeats
   const bySlug = new Map<string, MarketSignal[]>();
   out.forEach((s) => bySlug.set(s.territorySlug, [...(bySlug.get(s.territorySlug) || []), s]));

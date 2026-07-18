@@ -3,7 +3,8 @@
 import { cleanSlate, restoreDemo, useStore, WORKSPACES } from "@/lib/store";
 import { Switch } from "@/components/ui";
 import { SET_VOICE, SET_IMG_PREFS, SET_CONNECTIONS } from "@/lib/data";
-import { DEFAULT_STRATEGY, SOLAR_TERRITORIES, type StrategyProfile } from "@/lib/strategy";
+import { DEFAULT_STRATEGY, SOLAR_TERRITORIES, type StrategyProfile, type Territory } from "@/lib/strategy";
+import { AZ_TERRITORY_CATALOG, TERRITORY_HEXES, UTILITY_COLOR, UTILITY_LABEL, type AzTerritoryDef, type TerritoryUtility } from "@/lib/azTerritories";
 import type { LeadTraining } from "@/lib/hunt";
 import { VERTICALS, verticalOf, type VerticalId } from "@/lib/verticals";
 
@@ -22,6 +23,118 @@ function Row({ label, on, color, onToggle }: { label: string; on: boolean; color
       <span style={{ flex: 1, fontSize: 13.5, color: "#D8D6E6" }}>{label}</span>
       <Switch on={on} color={color} onToggle={onToggle} label={label} />
     </div>
+  );
+}
+
+const MAX_TERRITORIES = 6;
+
+/**
+ * Solar territory picker — the July 2026 metro-Phoenix new-construction
+ * research as selectable cards, grouped by utility. Selections become the
+ * live strategy.territories: territory names double as hunt search keywords
+ * and content labels, and the utility tag picks which rate math the pulse,
+ * content, and replies use.
+ */
+function SolarTerritoryPicker() {
+  const { state, set } = useStore();
+  const strategy = state.strategy as StrategyProfile;
+  const selected = new Set(strategy.territories.map((t) => t.slug));
+
+  const toggle = (def: AzTerritoryDef) => {
+    set((s) => {
+      const st = s.strategy as StrategyProfile;
+      const has = st.territories.some((t) => t.slug === def.slug);
+      let territories: Territory[];
+      if (has) {
+        territories = st.territories.filter((t) => t.slug !== def.slug);
+      } else {
+        if (st.territories.length >= MAX_TERRITORIES) return s;
+        territories = [
+          ...st.territories,
+          { slug: def.slug, name: def.name, city: def.city, segment: "growth", status: "building", hex: TERRITORY_HEXES[st.territories.length % TERRITORY_HEXES.length], utility: def.utility },
+        ];
+      }
+      if (!territories.length) return s; // never allow an empty list — the engine needs somewhere to hunt
+      return { ...s, strategy: { ...st, territories } };
+    });
+  };
+
+  const removeCustom = (slug: string) =>
+    set((s) => {
+      const st = s.strategy as StrategyProfile;
+      if (st.territories.length <= 1) return s;
+      return { ...s, strategy: { ...st, territories: st.territories.filter((t) => t.slug !== slug) } };
+    });
+
+  const groups: { key: TerritoryUtility[]; title: string; note: string }[] = [
+    { key: ["aps"], title: "APS territories · West Valley + North Phoenix", note: "Pitch: export-rate lock (6.2¢, drops each Sept), 4–7pm TOU math, Storage Rewards" },
+    { key: ["srp"], title: "SRP territories · East Valley", note: "Pitch: demand management, batteries, self-consumption — exports pay only 3.45¢" },
+    { key: ["ed3", "ed2", "verify"], title: "Other utilities · verify rates first", note: "ED3/ED2 have their own tariffs — never quote APS or SRP numbers here" },
+  ];
+
+  const catalogSlugs = new Set(AZ_TERRITORY_CATALOG.map((c) => c.slug));
+  const customPicks = strategy.territories.filter((t) => !catalogSlugs.has(t.slug));
+
+  return (
+    <Card title="Solar territories · pick where you build presence">
+      <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.55, marginBottom: 6 }}>
+        Metro Phoenix new-construction hot spots from the territory research, grouped by electric utility. Pick up to{" "}
+        {MAX_TERRITORIES} — each becomes a live territory: hunts search its name, content gets written for it, and
+        replies use the right utility&apos;s rate math.
+      </div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: strategy.territories.length >= MAX_TERRITORIES ? "#FFC23D" : "#41D98A", marginBottom: 10 }}>
+        {strategy.territories.length}/{MAX_TERRITORIES} selected
+      </div>
+      {customPicks.length > 0 && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+          {customPicks.map((t) => (
+            <span key={t.slug} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 10.5, fontWeight: 700, color: "#D8D6E6", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 999, padding: "4px 10px" }}>
+              {t.name}
+              <button onClick={() => removeCustom(t.slug)} title="Remove" style={{ background: "none", border: "none", color: "#77758C", cursor: "pointer", fontSize: 12, padding: 0 }}>×</button>
+            </span>
+          ))}
+        </div>
+      )}
+      {groups.map((g) => {
+        const items = AZ_TERRITORY_CATALOG.filter((c) => g.key.includes(c.utility));
+        return (
+          <div key={g.title} style={{ marginBottom: 14 }}>
+            <div className="fh-kicker" style={{ fontSize: 9, marginBottom: 3 }}>{g.title}</div>
+            <div style={{ fontSize: 10, color: "#5E5C72", marginBottom: 8, lineHeight: 1.45 }}>{g.note}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {items.map((def) => {
+                const on = selected.has(def.slug);
+                const full = !on && strategy.territories.length >= MAX_TERRITORIES;
+                const uc = UTILITY_COLOR[def.utility];
+                return (
+                  <button
+                    key={def.slug}
+                    onClick={() => toggle(def)}
+                    disabled={full}
+                    style={{ display: "flex", alignItems: "flex-start", gap: 9, textAlign: "left", padding: "9px 11px", borderRadius: 10, cursor: full ? "default" : "pointer", opacity: full ? 0.45 : 1, background: on ? "rgba(65,217,138,0.08)" : "rgba(255,255,255,0.03)", border: `1px solid ${on ? "rgba(65,217,138,0.45)" : "rgba(255,255,255,0.09)"}` }}
+                  >
+                    <span style={{ flexShrink: 0, marginTop: 1, fontSize: 12, color: on ? "#41D98A" : "#3F3D52" }}>{on ? "✓" : "○"}</span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 800, color: "#EDEBF6" }}>{def.name}</span>
+                        <span style={{ fontSize: 10, color: "#77758C" }}>{def.city}</span>
+                        <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: "0.07em", color: "#04110E", background: uc, borderRadius: 999, padding: "1.5px 7px" }}>{UTILITY_LABEL[def.utility]}</span>
+                        {def.tier === 1 && <span style={{ fontSize: 8.5, fontWeight: 900, color: "#FFC23D" }}>★ TOP TARGET</span>}
+                      </span>
+                      <span style={{ display: "block", fontSize: 10.5, color: "#8B89A0", lineHeight: 1.45, marginTop: 2 }}>{def.label}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      <div style={{ fontSize: 10, color: "#5E5C72", lineHeight: 1.5 }}>
+        Utility boundaries can split streets (Goodyear, Glendale, Avondale, San Tan Valley) — always verify the exact
+        address before quoting a rate plan.
+      </div>
+    </Card>
   );
 }
 
@@ -116,6 +229,8 @@ export default function Settings() {
           in {strategy.territories.map((t) => t.name).slice(0, 3).join(", ")}.
         </div>
       </Card>
+
+      {activeVertical === "solar" && <SolarTerritoryPicker />}
 
       <Card title="Voice profile">
         {SET_VOICE.map((v) => {
