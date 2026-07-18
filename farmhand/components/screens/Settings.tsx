@@ -3,7 +3,7 @@
 import { cleanSlate, restoreDemo, useStore, WORKSPACES } from "@/lib/store";
 import { Switch } from "@/components/ui";
 import { SET_VOICE, SET_IMG_PREFS, SET_CONNECTIONS } from "@/lib/data";
-import type { StrategyProfile } from "@/lib/strategy";
+import { DEFAULT_STRATEGY, SOLAR_TERRITORIES, type StrategyProfile } from "@/lib/strategy";
 import type { LeadTraining } from "@/lib/hunt";
 import { VERTICALS, verticalOf, type VerticalId } from "@/lib/verticals";
 
@@ -34,20 +34,32 @@ export default function Settings() {
   const switchVertical = (id: VerticalId) => {
     if (id === activeVertical) return;
     const v = VERTICALS[id];
-    set((s) => ({
-      strategy: { ...(s.strategy as StrategyProfile), vertical: id },
-      // the engine's training is vertical-specific — carrying realtor guidance
-      // and thumbs history into solar (or back) would steer the hunt wrong,
-      // so switching resets it to the new vertical's defaults
-      leadTraining: {
-        ...(s.leadTraining as LeadTraining),
-        guidance: v.defaultGuidance,
-        intents: v.defaultIntents,
-        good: [],
-        bad: [],
-        minScore: id === "solar" ? 35 : 55,
-      },
-    }));
+    set((s) => {
+      const prev = s.strategy as StrategyProfile;
+      // territories are vertical-specific too: realtor farms micro-neighborhoods
+      // (Val Vista Lakes), solar hunts whole utility cities (Phoenix/Mesa).
+      // Swap only when the current set is a stock default — never a chosen one.
+      const demoSlugs = new Set(DEFAULT_STRATEGY.territories.map((t) => t.slug));
+      const solarSlugs = new Set(SOLAR_TERRITORIES.map((t) => t.slug));
+      let territories = prev.territories;
+      if (id === "solar" && territories.every((t) => demoSlugs.has(t.slug))) territories = SOLAR_TERRITORIES;
+      if (id === "realtor" && territories.every((t) => solarSlugs.has(t.slug))) territories = DEFAULT_STRATEGY.territories;
+      return {
+        strategy: { ...prev, vertical: id, territories },
+        // the engine's training is vertical-specific — carrying realtor guidance
+        // and thumbs history into solar (or back) would steer the hunt wrong,
+        // so switching resets it to the new vertical's defaults
+        leadTraining: {
+          ...(s.leadTraining as LeadTraining),
+          guidance: v.defaultGuidance,
+          intents: v.defaultIntents,
+          good: [],
+          bad: [],
+          avoid: [],
+          minScore: id === "solar" ? 35 : 55,
+        },
+      };
+    });
   };
 
   return (
