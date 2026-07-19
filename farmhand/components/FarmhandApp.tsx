@@ -1,6 +1,6 @@
 "use client";
 
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Component, useEffect, type ErrorInfo, type ReactNode } from "react";
 import { StoreProvider, useStore } from "@/lib/store";
 import BackgroundFx from "./BackgroundFx";
 import Rail from "./Rail";
@@ -63,6 +63,40 @@ function Shell() {
 /** A stale tab straddling two deployments fails loading old chunk files. */
 const isStaleDeployError = (msg: string) => /loading chunk|chunkloaderror|failed to fetch dynamically imported|importing a module script failed/i.test(msg);
 
+/** One-shot reload for the stale-deploy case; the flag prevents any loop. */
+function healStaleDeploy() {
+  try {
+    if (!sessionStorage.getItem("fh-deploy-reload")) {
+      sessionStorage.setItem("fh-deploy-reload", "1");
+      window.location.reload();
+    }
+  } catch {}
+}
+
+/**
+ * Chunk failures during client-side navigation can surface as unhandled
+ * rejections OUTSIDE React's error boundary — CrashGuard never sees those,
+ * so the tab just wedges. These window-level listeners close that gap.
+ */
+function DeployHealListener() {
+  useEffect(() => {
+    const onErr = (e: ErrorEvent) => {
+      if (isStaleDeployError(e.message || "")) healStaleDeploy();
+    };
+    const onRej = (e: PromiseRejectionEvent) => {
+      const msg = e.reason instanceof Error ? e.reason.message : String(e.reason ?? "");
+      if (isStaleDeployError(msg)) healStaleDeploy();
+    };
+    window.addEventListener("error", onErr);
+    window.addEventListener("unhandledrejection", onRej);
+    return () => {
+      window.removeEventListener("error", onErr);
+      window.removeEventListener("unhandledrejection", onRej);
+    };
+  }, []);
+  return null;
+}
+
 class CrashGuard extends Component<{ children: ReactNode }, { error: string | null }> {
   state = { error: null as string | null };
   static getDerivedStateFromError(e: Error) {
@@ -74,14 +108,7 @@ class CrashGuard extends Component<{ children: ReactNode }, { error: string | nu
     // from the server, so a reload (once — the flag prevents a loop) fetches
     // the new build and everything works. Without this the tab just "won't
     // load" until the user hard-refreshes by hand.
-    if (isStaleDeployError(e?.message || "")) {
-      try {
-        if (!sessionStorage.getItem("fh-deploy-reload")) {
-          sessionStorage.setItem("fh-deploy-reload", "1");
-          window.location.reload();
-        }
-      } catch {}
-    }
+    if (isStaleDeployError(e?.message || "")) healStaleDeploy();
   }
   render() {
     if (this.state.error && isStaleDeployError(this.state.error)) {
@@ -118,6 +145,7 @@ class CrashGuard extends Component<{ children: ReactNode }, { error: string | nu
 export default function FarmhandApp() {
   return (
     <CrashGuard>
+      <DeployHealListener />
       <StoreProvider>
         <Shell />
       </StoreProvider>
