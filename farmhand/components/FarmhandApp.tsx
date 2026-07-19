@@ -2,7 +2,6 @@
 
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { StoreProvider, useStore } from "@/lib/store";
-import CursorFx from "./CursorFx";
 import BackgroundFx from "./BackgroundFx";
 import Rail from "./Rail";
 import TopBar from "./TopBar";
@@ -120,7 +119,6 @@ export default function FarmhandApp() {
   return (
     <CrashGuard>
       <StoreProvider>
-        <CursorFx />
         <Shell />
       </StoreProvider>
     </CrashGuard>
