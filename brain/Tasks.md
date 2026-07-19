@@ -4,6 +4,10 @@ Operational task board (system work — content work lives in [[Content Queue]])
 Orchestrator triages this every run. Newest on top within each section.
 
 ## Needs Taylor
+- [ ] **Run the deep-research prompt** (provided in chat 2026-07-19): AZ
+  electricity price trajectory + how solar is sold in metro Phoenix. Paste
+  results back to a Claude session → it distills them into
+  `farmhand/docs/` and refines [[Editorial Direction]] + the idea banks
 - [ ] **A/B decision**: realistic-lane faces — (A) real photos of you for
   identity + AI for scenes, or (B) a consistent stylized character via Soul
   ID. Record the answer in [[Visual Style]]. *(Recommendation: A)*

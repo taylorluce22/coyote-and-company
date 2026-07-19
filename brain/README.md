@@ -28,9 +28,10 @@ which means:
 - [[Home]] — the Command Center: agent status board + what needs Taylor
 - [[Tasks]] · [[Schedule]] · [[Tools]] — the OS layer (the Schedule is LIVE:
   a cloud Routine runs the Orchestrator Mon/Thu/Fri 9 AM Phoenix)
-- `Brand/` — [[Voice]] and [[Visual Style]]: the taste the agents must match
-- `Agents/` — [[Orchestrator]] + specialist charters (Creative Director,
-  Copywriter, Art Director, Analyst)
+- `Brand/` — [[Voice]], [[Visual Style]], and [[Editorial Direction]]
+  (owner priorities: rising prices, real pain points, soft CTAs)
+- `Agents/` — [[Orchestrator]] + specialists (Creative Director, Copywriter,
+  Art Director, [[Fact Checker]] — the accuracy gate — and Analyst)
 - `Queue/` — [[Content Queue]]: the production pipeline you approve from
 - `Pipelines/` · `Analytics/` — [[Lead Pipeline]] and [[Content Analytics]]
 - [[Log]] — every agent run appends what it did and why
