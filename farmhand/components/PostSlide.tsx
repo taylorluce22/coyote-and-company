@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 import {
   HEAD_FONTS,
   STUDIO_RATIOS,
@@ -34,12 +34,43 @@ interface Props {
   accent: string; // signature accent color
   pillar?: PillarInfo | null;
   handle: string;
+  /** when set, the headline is click-to-edit right on the slide */
+  onEdit?: (text: string) => void;
 }
 
 const PostSlide = forwardRef<HTMLDivElement, Props>(function PostSlide(
-  { slide, index, total, design, bg, accent, pillar, handle },
+  { slide, index, total, design, bg, accent, pillar, handle, onEdit },
   ref
 ) {
+  /* inline editing: click the headline, type in place, commit on blur/Esc.
+     While editing we render a plain contentEditable with identical
+     typography (no punchline spans) so the caret behaves; the styled
+     version returns on commit. */
+  const [editing, setEditing] = useState(false);
+  const [hover, setHover] = useState(false);
+  const editRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!editing || !editRef.current) return;
+    const el = editRef.current;
+    el.textContent = slide.text || "";
+    el.focus();
+    // caret at the end
+    const sel = window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing]);
+  const commit = () => {
+    if (!editing) return;
+    const text = (editRef.current?.innerText ?? "").replace(/\n+$/, "");
+    setEditing(false);
+    if (onEdit && text !== slide.text) onEdit(text);
+  };
   const ratio = STUDIO_RATIOS.find((r) => r.id === design.ratio) || STUDIO_RATIOS[0];
   const W = ratio.w,
     H = ratio.h;
@@ -214,21 +245,51 @@ const PostSlide = forwardRef<HTMLDivElement, Props>(function PostSlide(
           />
         )}
         <div
+          ref={editing ? editRef : undefined}
+          contentEditable={editing}
+          suppressContentEditableWarning
+          spellCheck={false}
+          onClick={onEdit && !editing ? () => setEditing(true) : undefined}
+          onMouseEnter={onEdit ? () => setHover(true) : undefined}
+          onMouseLeave={onEdit ? () => setHover(false) : undefined}
+          onBlur={commit}
+          onKeyDown={
+            editing
+              ? (e) => {
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    commit();
+                  }
+                }
+              : undefined
+          }
+          title={onEdit && !editing ? "Click to edit this text right here" : undefined}
           style={{
             fontFamily: head.family,
             fontWeight: head.weight,
             fontSize: fs,
             lineHeight: (slide.text || "").length < 56 ? head.leading : head.leading + 0.1,
             letterSpacing: head.track,
-            textTransform: design.upper ? "uppercase" : "none",
+            // while editing, show the true case — the uppercase transform
+            // would otherwise leak into innerText and get committed as CAPS
+            textTransform: !editing && design.upper ? "uppercase" : "none",
             maxWidth: "100%",
+            minWidth: editing ? "60%" : undefined,
             whiteSpace: "pre-wrap",
             overflowWrap: "break-word",
             color: textColor,
             textShadow: scrim ? "0 2px 34px rgba(0,0,0,0.7)" : "none",
+            cursor: onEdit && !editing ? "text" : undefined,
+            outline: editing
+              ? `3px solid ${rgba(accent, 0.75)}`
+              : hover && onEdit
+                ? `3px dashed ${rgba(accent, 0.45)}`
+                : "none",
+            outlineOffset: 10,
+            borderRadius: 4,
           }}
         >
-          {useAccent ? (
+          {editing ? null : useAccent ? (
             <>
               {hook[0] ? <span>{hook[0]}</span> : null}
               <span style={accentStyle}>{hook[1]}</span>

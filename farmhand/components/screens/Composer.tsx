@@ -882,6 +882,7 @@ export default function Composer() {
                   accent={accent}
                   pillar={idea ? { short: idea.theme.replace(/-/g, " "), color: idea.territory.hex } : PILLAR}
                   handle={ideaPack ? `@${ideaPack.handle}` : "@jess.sells.gilbert"}
+                  onEdit={editSlide}
                 />
               )}
             </div>
