@@ -880,7 +880,7 @@ export default function Composer() {
                   design={design}
                   bg={activeBg}
                   accent={accent}
-                  pillar={idea ? { short: idea.theme.replace(/-/g, " "), color: idea.territory.hex } : PILLAR}
+                  pillar={idea ? null : PILLAR}
                   handle={ideaPack ? `@${ideaPack.handle}` : "@jess.sells.gilbert"}
                   onEdit={editSlide}
                 />
@@ -1259,7 +1259,9 @@ export default function Composer() {
           <Toggle label="Uppercase headline" on={design.upper} onClick={() => setD("upper", !design.upper)} />
           <Toggle label="Accent line" on={design.accent} onClick={() => setD("accent", !design.accent)} />
           <Toggle label="Brand handle" on={design.handle} onClick={() => setD("handle", !design.handle)} />
-          <Toggle label="Pillar tag" on={design.pillarTag} onClick={() => setD("pillarTag", !design.pillarTag)} />
+          {/* internal theme names (authority, objection-handling…) are workflow
+              labels, not audience copy — idea posts never show a pillar tag */}
+          {!idea && <Toggle label="Pillar tag" on={design.pillarTag} onClick={() => setD("pillarTag", !design.pillarTag)} />}
           <div style={{ height: 6, borderBottom: "1px solid rgba(255,255,255,0.07)", margin: "8px 0 10px" }} />
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
             <label style={{ ...FIELD_LABEL, margin: 0 }}>Background dimness</label>
