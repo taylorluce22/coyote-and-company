@@ -61,6 +61,9 @@ function Shell() {
  * A crash now lands on a recovery card instead, and reloading always works
  * because the current tab is never persisted.
  */
+/** A stale tab straddling two deployments fails loading old chunk files. */
+const isStaleDeployError = (msg: string) => /loading chunk|chunkloaderror|failed to fetch dynamically imported|importing a module script failed/i.test(msg);
+
 class CrashGuard extends Component<{ children: ReactNode }, { error: string | null }> {
   state = { error: null as string | null };
   static getDerivedStateFromError(e: Error) {
@@ -68,8 +71,27 @@ class CrashGuard extends Component<{ children: ReactNode }, { error: string | nu
   }
   componentDidCatch(e: Error, info: ErrorInfo) {
     console.error("Farmhand crashed:", e, info?.componentStack);
+    // Self-heal the mid-deploy stale-tab case: the old build's files are gone
+    // from the server, so a reload (once — the flag prevents a loop) fetches
+    // the new build and everything works. Without this the tab just "won't
+    // load" until the user hard-refreshes by hand.
+    if (isStaleDeployError(e?.message || "")) {
+      try {
+        if (!sessionStorage.getItem("fh-deploy-reload")) {
+          sessionStorage.setItem("fh-deploy-reload", "1");
+          window.location.reload();
+        }
+      } catch {}
+    }
   }
   render() {
+    if (this.state.error && isStaleDeployError(this.state.error)) {
+      return (
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ fontSize: 13.5, color: "#A6A4B8" }}>New version available — refreshing…</div>
+        </div>
+      );
+    }
     if (!this.state.error) return this.props.children;
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
