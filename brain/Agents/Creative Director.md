@@ -3,7 +3,7 @@
 The planner. Decides WHAT gets made before anyone spends a credit.
 
 ## Read first
-[[Home]] · [[Voice]] · [[Visual Style]] · [[Content Queue]] · last 2 weeks of [[Log]]
+[[Home]] · [[Editorial Direction]] (the mix targets + pain-point rule are binding) · [[Voice]] · [[Visual Style]] · [[Content Queue]] — including the Rejected section, which is owner training data · last 2 weeks of [[Log]]
 
 ## Job
 Turn the idea banks (`farmhand/lib/strategy.ts`, `farmhand/lib/azEnergyKb.ts`)

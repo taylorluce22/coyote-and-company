@@ -10,6 +10,7 @@ The one-screen view of the operation. Agents: read this first, every run.
 | [[Creative Director]] | 5 open briefs | 2026-07-19 | when queue < 3 open |
 | [[Copywriter]] | queued — briefs are `idea` | — | next scheduled run |
 | [[Art Director]] | waiting on `drafted` briefs | — | after Copywriter |
+| [[Fact Checker]] | gate armed — nothing reaches Taylor unverified | — | after Art Director |
 | [[Analyst]] | idle — no post data yet | — | first Friday after posts ship |
 
 ## Current state
@@ -21,9 +22,11 @@ The one-screen view of the operation. Agents: read this first, every run.
 
 ## Needs Taylor (mirror of [[Tasks]])
 
+- Run the deep-research prompt (rising prices + solar sales craft) and
+  paste results back — refines the whole content engine
 - Face decision for the realistic lane → record in [[Visual Style]]
 - Reference photos → `brain/Brand/refs/`
-- Review the 5 briefs in [[Content Queue]]
+- Review the 5 open briefs in [[Content Queue]] (2 rejected per your direction)
 - `ANTHROPIC_API_KEY` in Vercel · Higgsfield key rotation
 
 ## Map

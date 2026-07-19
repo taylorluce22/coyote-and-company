@@ -9,6 +9,19 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-19 · owner direction + accuracy gate
+Taylor set new editorial priorities → [[Editorial Direction]]: rising
+prices / supply-and-demand as the lead pillar (APS-first), homeowner-
+resource stance, expired-credit content demoted to myth-busting-only,
+pain-point rule (real pains, treated lightly, always a soft CTA). Queue
+re-planned: monsoon brief rejected (owner: not a real pain point),
+federal-credit brief rejected (redirected focus), two rising-prices briefs
+added (bill-climbing explainer · new-construction demand). New agent:
+[[Fact Checker]] — every claim verified verbatim against the KB before
+Taylor sees a brief; new status `fact-checked` gates `approved`. Deep-
+research prompt issued to Taylor (price trajectory + solar sales craft).
+Nothing spent.
+
 ## 2026-07-19 · Orchestrator (manual, in-session)
 Scheduled Routine ARMED: "Farmhand Brain — Orchestrator", Mon/Thu/Fri
 9:00 AM Phoenix, fresh session per run, push notification on completion,
