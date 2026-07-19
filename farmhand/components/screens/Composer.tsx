@@ -12,6 +12,7 @@ import {
   downloadDataUrl,
   pickTextures,
   processImageFile,
+  processImageURL,
   slugify,
   uid,
   type Bg,
@@ -21,6 +22,7 @@ import { textures } from "@/lib/textures";
 import { COMP_COPY, type CompCh } from "@/lib/data";
 import { ideaCopy } from "@/lib/ideaCopy";
 import { ideasFor, type Idea, type StrategyProfile } from "@/lib/strategy";
+import { buildSlidePrompts } from "@/lib/postVisuals";
 
 /* ---- content model (Farmhand): per-channel variants of the post ---- */
 const CHANNELS: [CompCh, string][] = [
@@ -277,6 +279,69 @@ export default function Composer() {
       } catch {}
     }
   }
+  /* ---- whole-post AI visuals: one Higgsfield image per slide, shared
+     seed + shared style language so the carousel reads as one piece ---- */
+  const [genBusy, setGenBusy] = useState(false);
+  const [genMsg, setGenMsg] = useState<string | null>(null);
+  async function generateVisuals() {
+    if (genBusy || !slides.length) return;
+    setGenBusy(true);
+    setGenMsg(null);
+    try {
+      const prompts = buildSlidePrompts(slides.slice(0, 6), {
+        theme: idea?.theme,
+        territoryName: idea?.territory.name,
+        city: idea?.territory.city,
+      });
+      const seed = 1 + Math.floor(Math.random() * 999_999);
+      const r = await fetch("/api/higgsfield", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompts, seed, aspect: "3:4" }),
+        signal: AbortSignal.timeout(150000),
+      });
+      const j = await r.json();
+      if (j.needsCreds) {
+        setGenMsg("Add your Higgsfield API keys first — see the image panel on the right.");
+        return;
+      }
+      const urls: (string | null)[] = Array.isArray(j.images) ? j.images : [];
+      if (!urls.some(Boolean)) {
+        setGenMsg(j.error || "Generation returned no images — try again.");
+        return;
+      }
+      // process each result through the same canvas pipeline as uploads so
+      // legibility auto-fill and export keep working, then save to the library
+      const nb: Record<number, Bg> = { ...slideBg };
+      let coverImg: Bg | null = null;
+      const newAssets: { id: string; name: string; dataURL: string; lum?: number; busy?: number; source?: string }[] = [];
+      for (let i = 0; i < urls.length && i < total; i++) {
+        const u = urls[i];
+        if (!u) continue;
+        const p = await processImageURL(`/api/higgsfield?img=${encodeURIComponent(u)}`, 1200, 0.85);
+        if (!p) continue;
+        const b: Bg = { type: "image", img: p.dataURL };
+        if (i === 0) {
+          coverImg = b;
+          delete nb[0]; // cover lives in its own slot
+        } else nb[i] = b;
+        newAssets.push({ id: uid(), name: `${slides[i]?.role || "slide " + (i + 1)} visual`, dataURL: p.dataURL, lum: p.lum, busy: p.busy, source: "higgsfield" });
+      }
+      if (!newAssets.length) {
+        setGenMsg("Couldn't load the generated images — try again.");
+        return;
+      }
+      set((s) => ({ stAssets: [...s.stAssets, ...newAssets].slice(-40) }));
+      saveStudio({ slideBg: nb, ...(coverImg ? { coverBg: coverImg } : {}) });
+      const missing = urls.slice(0, total).filter((u) => !u).length;
+      setGenMsg(missing ? `✓ ${newAssets.length} slides styled — ${missing} didn't finish, hit the button again to retry.` : `✓ All ${newAssets.length} slides styled in one matching look.`);
+    } catch {
+      setGenMsg("Generation timed out — try again in a minute.");
+    } finally {
+      setGenBusy(false);
+    }
+  }
+
   function assignImages(mode: "cover" | "all") {
     const pool = coordinatedPool(assets);
     if (!pool.length) return;
@@ -401,6 +466,14 @@ export default function Composer() {
             </span>
           )}
           <button
+            onClick={generateVisuals}
+            disabled={genBusy}
+            title={`Generate one matching AI image per slide with Higgsfield (~${Math.min(total, 6)} credits)`}
+            style={{ background: "rgba(255,154,98,0.14)", color: "#FF9A62", border: "1px solid rgba(255,154,98,0.4)", borderRadius: 9, padding: "7px 13px", fontSize: 12, fontWeight: 700, cursor: genBusy ? "wait" : "pointer", opacity: genBusy ? 0.7 : 1 }}
+          >
+            {genBusy ? "✨ Directing…" : "✨ Post visuals"}
+          </button>
+          <button
             onClick={() => set({ compRegen: !state.compRegen, compShort: false })}
             style={{ background: "rgba(168,85,247,0.14)", color: "#C9A8FF", border: "1px solid rgba(168,85,247,0.4)", borderRadius: 9, padding: "7px 13px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
           >
@@ -458,6 +531,11 @@ export default function Composer() {
             </button>
           </div>
         </div>
+        {(genBusy || genMsg) && (
+          <div style={{ fontSize: 11.5, color: genMsg?.startsWith("✓") ? "#41D98A" : "#FFC23D", margin: "-4px 0 12px", lineHeight: 1.45 }}>
+            {genBusy ? `✨ Art-directing ${Math.min(total, 6)} slide visuals in one style — this takes about a minute…` : genMsg}
+          </div>
+        )}
 
         {/* stage */}
         <div
