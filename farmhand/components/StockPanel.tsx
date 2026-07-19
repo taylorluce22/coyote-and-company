@@ -141,6 +141,121 @@ function interleave(lists: StockPhoto[][]): StockPhoto[] {
   return out;
 }
 
+
+/* ============================================================
+   Higgsfield AI generation — custom on-brand visuals instead of
+   hoping stock has the shot. Server route holds the keys and
+   polls the async Soul job; results land in the same asset
+   library as stock photos (proxied so canvas processing works).
+   ============================================================ */
+const HF_SEEDS: Record<string, string> = {
+  solar:
+    "Golden hour photo of a modern Arizona suburban home with rooftop solar panels, saguaro and desert landscaping, warm editorial photography, no text",
+  realtor:
+    "Golden hour photo of a welcoming Arizona suburban neighborhood street, desert landscaping, warm editorial photography, no text",
+};
+
+function HiggsfieldGen({ addAsset }: { addAsset: (a: Omit<Asset, "id">) => void }) {
+  const { state } = useStore();
+  const vertical = ((state.strategy as { vertical?: string })?.vertical) === "solar" ? "solar" : "realtor";
+  const [configured, setConfigured] = useState<boolean | null>(null);
+  const [prompt, setPrompt] = useState(HF_SEEDS[vertical]);
+  const [busy, setBusy] = useState(false);
+  const [gErr, setGErr] = useState("");
+  const [images, setImages] = useState<string[]>([]);
+  const [saving, setSaving] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/higgsfield")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => setConfigured(!!j?.configured))
+      .catch(() => setConfigured(false));
+  }, []);
+
+  const generate = async () => {
+    if (busy || !prompt.trim()) return;
+    setBusy(true);
+    setGErr("");
+    setImages([]);
+    try {
+      const r = await fetch("/api/higgsfield", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+        signal: AbortSignal.timeout(120000),
+      });
+      const d = await r.json();
+      if (d.error) setGErr(String(d.error));
+      setImages(Array.isArray(d.images) ? d.images : []);
+    } catch {
+      setGErr("generation request failed — try again");
+    }
+    setBusy(false);
+  };
+
+  const save = async (url: string) => {
+    setSaving(url);
+    // proxy through our API so the canvas pipeline isn't CORS-tainted
+    const p = await processImageURL(`/api/higgsfield?img=${encodeURIComponent(url)}`, 1200, 0.85);
+    if (p) addAsset({ name: "higgsfield-" + Date.now(), dataURL: p.dataURL, lum: p.lum, busy: p.busy, source: "higgsfield" });
+    setSaving(null);
+  };
+
+  return (
+    <div style={{ marginBottom: 12, background: "rgba(201,168,255,0.05)", border: "1px solid rgba(201,168,255,0.25)", borderRadius: 11, padding: "11px 12px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
+        <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.07em", fontFamily: "var(--label)", color: "#C9A8FF" }}>✨ AI GENERATE · HIGGSFIELD</span>
+        {configured === false && <span style={{ fontSize: 9.5, color: "#FFC23D", fontWeight: 700 }}>needs keys</span>}
+      </div>
+      {configured === false ? (
+        <div style={{ fontSize: 10.5, color: "#8B89A0", lineHeight: 1.55 }}>
+          Create an API key at <b style={{ color: "#C9A8FF" }}>cloud.higgsfield.ai/api-keys</b>, then add{" "}
+          <span style={{ fontFamily: "var(--mono)", fontSize: 10 }}>HIGGSFIELD_API_KEY</span> and{" "}
+          <span style={{ fontFamily: "var(--mono)", fontSize: 10 }}>HIGGSFIELD_API_SECRET</span> in Vercel → Settings →
+          Environment Variables → redeploy. After that, custom on-brand images generate right here.
+        </div>
+      ) : (
+        <>
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            rows={2}
+            style={{ width: "100%", resize: "vertical", fontFamily: "var(--body)", fontSize: 11.5, lineHeight: 1.5, color: "#F4F3F8", background: "rgba(0,0,0,0.28)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "8px 10px", outline: "none" }}
+          />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 7 }}>
+            <button
+              onClick={generate}
+              disabled={busy || configured === null}
+              style={{ background: busy ? "rgba(255,255,255,0.06)" : "rgba(201,168,255,0.16)", color: busy ? "#8B89A0" : "#C9A8FF", border: "1px solid rgba(201,168,255,0.4)", borderRadius: 8, padding: "7px 14px", fontSize: 11.5, fontWeight: 700, cursor: busy ? "default" : "pointer" }}
+            >
+              {busy ? "Generating… ~30–60s" : "✨ Generate image"}
+            </button>
+            <button
+              onClick={() => setPrompt(HF_SEEDS[vertical])}
+              style={{ background: "none", border: "none", color: "#77758C", fontSize: 10.5, fontWeight: 600, cursor: "pointer" }}
+            >
+              reset prompt
+            </button>
+          </div>
+          {gErr && <div style={{ fontSize: 10.5, color: "#FF5D8F", marginTop: 7 }}>{gErr}</div>}
+          {images.length > 0 && (
+            <div style={{ display: "flex", gap: 8, marginTop: 9, flexWrap: "wrap" }}>
+              {images.map((u) => (
+                <button key={u} onClick={() => save(u)} disabled={!!saving} title="Add to your image library" style={{ position: "relative", width: 92, height: 92, borderRadius: 9, overflow: "hidden", border: "1px solid rgba(201,168,255,0.35)", padding: 0, cursor: "pointer", background: "#0B0B16" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/api/higgsfield?img=${encodeURIComponent(u)}`} alt="generated" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: saving === u ? 0.4 : 1 }} />
+                  {saving === u && <span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", fontSize: 9.5, color: "#C9A8FF", fontWeight: 700 }}>adding…</span>}
+                </button>
+              ))}
+            </div>
+          )}
+          {images.length > 0 && <div style={{ fontSize: 9.5, color: "#77758C", marginTop: 6 }}>Tap an image to add it to your library — it then works like any photo below.</div>}
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function StockPanel({ pillar }: { pillar: string }) {
   const { state, set } = useStore();
   const pexelsKey = state.pexelsKey;
@@ -344,6 +459,8 @@ export default function StockPanel({ pillar }: { pillar: string }) {
           {showKeys ? "hide sources" : "manage sources"}
         </button>
       </div>
+
+      <HiggsfieldGen addAsset={addAsset} />
 
       {/* source chips */}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
