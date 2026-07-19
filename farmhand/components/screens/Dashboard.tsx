@@ -203,14 +203,15 @@ export default function Dashboard() {
           <div style={{ display: "flex", alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                <span className="fh-kicker" style={{ fontSize: 10 }}>Your Farm</span>
+                {/* "farm" is realtor jargon (farming a neighborhood) — solar gets territory language */}
+                <span className="fh-kicker" style={{ fontSize: 10 }}>{strategy.vertical === "solar" ? "Your Territory" : "Your Farm"}</span>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 10, color: "#41D98A", fontWeight: 700 }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#41D98A", boxShadow: "0 0 8px #41D98A", animation: "fh-pulse 2s ease infinite" }} />
                   LIVE
                 </span>
               </div>
               <div className="fh-title fh-shimmer-text" style={{ fontSize: 34, marginTop: 2 }}>
-                {strategy.homeBase || "Your Market"}
+                {strategy.vertical === "solar" ? "The Valley" : strategy.homeBase || "Your Market"}
               </div>
               <div style={{ fontSize: 12.5, color: "#A6A4B8", marginTop: 1 }}>
                 {strategy.territories.length} territories · {actions.length} action{actions.length === 1 ? "" : "s"} waiting
