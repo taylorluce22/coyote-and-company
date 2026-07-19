@@ -21,9 +21,24 @@ function creds(): string | null {
   return id && secret ? `Key ${id}:${secret}` : null;
 }
 
-/** Pull every image URL out of an arbitrary response payload. */
+/**
+ * Pull result image URLs out of a response payload. The API returns them as
+ * `images[].url` (per the official SDK) and they can be signed URLs with no
+ * file extension — so collect the value of every `url`-named field, plus any
+ * extension-bearing image links as a fallback. Videos are excluded.
+ */
 function imageUrls(payload: unknown): string[] {
   const urls = new Set<string>();
+  const walk = (o: unknown) => {
+    if (Array.isArray(o)) return o.forEach(walk);
+    if (o && typeof o === "object") {
+      for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+        if (k === "url" && typeof v === "string" && v.startsWith("https://") && !/\.(mp4|webm|mov)(\?|$)/i.test(v)) urls.add(v);
+        else walk(v);
+      }
+    }
+  };
+  walk(payload);
   const re = /https?:\/\/[^\s"']+\.(?:png|jpe?g|webp)(?:\?[^\s"']*)?/gi;
   for (const m of JSON.stringify(payload ?? "").matchAll(re)) urls.add(m[0]);
   return [...urls];
@@ -86,7 +101,9 @@ export async function POST(req: NextRequest) {
     const start = await fetch(`${BASE}/v1/text2image/soul`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ prompt, width_and_height: "1536x1536" }),
+      // the API requires generation parameters wrapped in a `params` object
+      // (422 "missing body.params" otherwise — confirmed against the live API)
+      body: JSON.stringify({ params: { prompt, width_and_height: "1536x1536" } }),
       signal: AbortSignal.timeout(30000),
     });
     const startText = await start.text();
