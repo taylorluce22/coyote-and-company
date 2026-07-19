@@ -25,10 +25,14 @@ which means:
 
 ## Map
 
-- [[Home]] — start here; live dashboard of what's in flight
+- [[Home]] — the Command Center: agent status board + what needs Taylor
+- [[Tasks]] · [[Schedule]] · [[Tools]] — the OS layer (the Schedule is LIVE:
+  a cloud Routine runs the Orchestrator Mon/Thu/Fri 9 AM Phoenix)
 - `Brand/` — [[Voice]] and [[Visual Style]]: the taste the agents must match
-- `Agents/` — one charter per agent role; an agent reads its charter first
+- `Agents/` — [[Orchestrator]] + specialist charters (Creative Director,
+  Copywriter, Art Director, Analyst)
 - `Queue/` — [[Content Queue]]: the production pipeline you approve from
+- `Pipelines/` · `Analytics/` — [[Lead Pipeline]] and [[Content Analytics]]
 - [[Log]] — every agent run appends what it did and why
 
 Knowledge bases (same vault, app-facing):
