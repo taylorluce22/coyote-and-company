@@ -182,9 +182,9 @@ export default function Composer() {
   const idea = state.compIdea as Idea | null;
   const ideaPack = useMemo(() => (idea ? ideaCopy(idea, strategy, ch) : null), [idea, strategy, ch]);
   const variant = ideaPack ?? COMP_COPY[ch];
-  // AI-written copy (from /api/copy) wins when it matches the current
+  // AI-written OR hand-edited copy wins when it matches the current
   // idea+channel — switching idea or channel falls back to template copy
-  const aiKey = idea ? `${idea.id}:${ch}` : "";
+  const aiKey = `${idea?.id ?? "demo"}:${ch}`;
   const aiRaw = state.compAiCopy;
   const ai = aiRaw && aiRaw.key === aiKey && typeof aiRaw.long === "string" && aiRaw.long ? aiRaw : null;
   const copyText = ai
@@ -338,6 +338,31 @@ export default function Composer() {
     } finally {
       setCopyBusy(false);
     }
+  }
+
+  /* ---- direct text editing: typing into the current slide materializes
+     the whole deck into the persisted copy override (same slot AI copy
+     uses), so hand edits survive reloads and win over the template ---- */
+  function editSlide(text: string) {
+    let newLong: string;
+    let newCta = ctaText;
+    if (total <= 1) {
+      newLong = text;
+    } else if (cur === total - 1) {
+      // the closing CTA slide edits the CTA itself
+      newCta = text;
+      newLong = slides.slice(0, -1).map((s) => s.text).join("\n\n");
+    } else {
+      newLong = slides
+        .slice(0, -1)
+        .map((s, i) => (i === cur ? text : s.text))
+        .join("\n\n");
+    }
+    set({
+      compAiCopy: { key: aiKey, long: newLong, short: ai?.short || variant.short, cta: newCta },
+      compShort: false,
+      compRegen: false,
+    });
   }
 
   /* ---- image vault: every generated image is kept permanently ---- */
@@ -752,6 +777,35 @@ export default function Composer() {
           <span>
             {ratio.label} · {ratio.w}×{ratio.h}
           </span>
+        </div>
+
+        {/* direct slide text editing — type straight into the post */}
+        <div className="fh-glass" style={{ borderRadius: 14, padding: "12px 14px", marginTop: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+            <span className="fh-kicker" style={{ fontSize: 9.5 }}>Slide text</span>
+            <span style={{ fontSize: 10, color: "#6E6C82" }}>
+              editing {slide?.role || "slide"} · saves as you type
+              {total > 1 && cur > 0 && cur < total - 1 ? " · blank line splits the slide · clear all text to drop it" : ""}
+            </span>
+          </div>
+          <textarea
+            value={slide?.text || ""}
+            onChange={(e) => editSlide(e.target.value)}
+            rows={Math.min(8, Math.max(2, ((slide?.text || "").match(/\n/g) || []).length + 2))}
+            placeholder={cur === 0 ? "Your hook — the cover headline" : "This slide's text"}
+            style={{
+              width: "100%",
+              background: "rgba(0,0,0,0.28)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 10,
+              padding: "10px 12px",
+              fontSize: 13,
+              lineHeight: 1.55,
+              color: "#F4F3F8",
+              fontFamily: "var(--body)",
+              resize: "vertical",
+            }}
+          />
         </div>
 
         {/* backgrounds & images — two stacked scrollable rows under the preview */}
