@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { processImageURL, uid, type Asset } from "@/lib/studio";
 import { vaultAdd } from "@/lib/vault";
+import { AESTHETIC_PACKS, singlePrompt } from "@/lib/postVisuals";
 
 /* ============================================================
    Multi-source stock connectors — ALL FREE:
@@ -221,6 +222,19 @@ function HiggsfieldGen({ addAsset }: { addAsset: (a: Omit<Asset, "id">) => void 
         </div>
       ) : (
         <>
+          {/* aesthetic packs — preset first, short prompt second (craft playbook) */}
+          <div className="fh-hscroll" style={{ display: "flex", gap: 5, marginBottom: 7, paddingBottom: 2 }}>
+            {AESTHETIC_PACKS.map((p) => (
+              <button
+                key={p.id}
+                title={p.style}
+                onClick={() => setPrompt(singlePrompt(vertical, p))}
+                style={{ flexShrink: 0, background: "rgba(201,168,255,0.08)", border: "1px solid rgba(201,168,255,0.25)", color: "#C9A8FF", borderRadius: 999, padding: "3px 9px", fontSize: 9.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
