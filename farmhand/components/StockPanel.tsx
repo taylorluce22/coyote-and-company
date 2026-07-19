@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { processImageURL, uid, type Asset } from "@/lib/studio";
+import { vaultAdd } from "@/lib/vault";
 
 /* ============================================================
    Multi-source stock connectors — ALL FREE:
@@ -197,7 +198,11 @@ function HiggsfieldGen({ addAsset }: { addAsset: (a: Omit<Asset, "id">) => void 
     setSaving(url);
     // proxy through our API so the canvas pipeline isn't CORS-tainted
     const p = await processImageURL(`/api/higgsfield?img=${encodeURIComponent(url)}`, 1200, 0.85);
-    if (p) addAsset({ name: "higgsfield-" + Date.now(), dataURL: p.dataURL, lum: p.lum, busy: p.busy, source: "higgsfield" });
+    if (p) {
+      addAsset({ name: "higgsfield-" + Date.now(), dataURL: p.dataURL, lum: p.lum, busy: p.busy, source: "higgsfield" });
+      // permanent vault copy — generated images cost credits, never lose them
+      vaultAdd({ id: uid(), dataURL: p.dataURL, lum: p.lum, busy: p.busy, prompt, label: "Single image", createdAt: Date.now() });
+    }
     setSaving(null);
   };
 

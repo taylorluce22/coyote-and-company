@@ -45,19 +45,28 @@ function factsFor(theme: string, u: "aps" | "srp" | "unknown"): [string, string]
   }
 }
 
+/** Resolve an idea's utility + its two same-subject KB facts (for the AI writer). */
+export function ideaFactPair(idea: Idea): { utility: "aps" | "srp" | "unknown"; facts: [string, string] } {
+  const rawU = utilityForTerritory(idea.territory);
+  const u: "aps" | "srp" | "unknown" = rawU === "aps" || rawU === "srp" ? rawU : "unknown";
+  return { utility: u, facts: factsFor(idea.theme, u) };
+}
+
 export function ideaCopy(idea: Idea, strategy: StrategyProfile, channel: "ig" | "fb" | "nd"): IdeaCopyPack {
   const t = idea.territory;
-  const rawU = utilityForTerritory(t);
-  const u: "aps" | "srp" | "unknown" = rawU === "aps" || rawU === "srp" ? rawU : "unknown";
-  const [fact, altFact] = factsFor(idea.theme, u);
-  const who = `I've been in the Valley 15 years — this is exactly what I walk ${t.name} homeowners through.`;
+  const { utility: u, facts } = ideaFactPair(idea);
+  const [fact, altFact] = facts;
+  // honest local close — never a fabricated credential
+  const who = `If you're in ${t.name}, this is the first thing I'd check before signing anything.`;
   const cta =
     channel === "nd"
       ? `Happy to run the numbers for your address, neighbors — just ask below.`
       : `Save this — and DM me if you want the math for your house.`;
 
-  const long = `${idea.title}\n\n${cap(fact)}.\n\n${who}`;
-  const alt = `${idea.title}\n\n${cap(altFact)}.\n\n${who}`;
+  // both facts come from the same theme family, so the post stays on ONE
+  // subject while having enough substance for a real carousel
+  const long = `${idea.title}\n\n${cap(fact)}.\n\n${cap(altFact)}.\n\n${who}`;
+  const alt = `${idea.title}\n\n${cap(altFact)}.\n\n${cap(fact)}.\n\n${who}`;
   const short = `${idea.title} — ${fact.split(" — ")[0]}. DM me for the numbers on your house.`;
 
   const cityTag = t.city.toLowerCase().replace(/[^a-z]/g, "");

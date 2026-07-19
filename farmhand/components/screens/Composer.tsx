@@ -20,9 +20,10 @@ import {
 } from "@/lib/studio";
 import { textures } from "@/lib/textures";
 import { COMP_COPY, type CompCh } from "@/lib/data";
-import { ideaCopy } from "@/lib/ideaCopy";
+import { ideaCopy, ideaFactPair } from "@/lib/ideaCopy";
 import { ideasFor, type Idea, type StrategyProfile } from "@/lib/strategy";
 import { buildSlidePrompts } from "@/lib/postVisuals";
+import { vaultAdd, vaultAll, vaultDelete, type VaultImage } from "@/lib/vault";
 
 /* ---- content model (Farmhand): per-channel variants of the post ---- */
 const CHANNELS: [CompCh, string][] = [
@@ -181,7 +182,20 @@ export default function Composer() {
   const idea = state.compIdea as Idea | null;
   const ideaPack = useMemo(() => (idea ? ideaCopy(idea, strategy, ch) : null), [idea, strategy, ch]);
   const variant = ideaPack ?? COMP_COPY[ch];
-  const copyText = state.compShort ? variant.short : state.compRegen ? variant.alt : variant.long;
+  // AI-written copy (from /api/copy) wins when it matches the current
+  // idea+channel — switching idea or channel falls back to template copy
+  const aiKey = idea ? `${idea.id}:${ch}` : "";
+  const aiRaw = state.compAiCopy;
+  const ai = aiRaw && aiRaw.key === aiKey && typeof aiRaw.long === "string" && aiRaw.long ? aiRaw : null;
+  const copyText = ai
+    ? state.compShort
+      ? ai.short
+      : ai.long
+    : state.compShort
+      ? variant.short
+      : state.compRegen
+        ? variant.alt
+        : variant.long;
   const accent = ACCENTS[state.compAccent] || ACCENTS.cyan;
 
   // pull the next proposal from the content generator — cycles through the
@@ -194,7 +208,8 @@ export default function Composer() {
   };
 
   /* slides derived from the live copy (cover / body / CTA) */
-  const slides = useMemo(() => copyToSlides(copyText, ideaPack ? ideaPack.cta : CTAS[ch]), [copyText, ideaPack, ch]);
+  const ctaText = ai?.cta || (ideaPack ? ideaPack.cta : CTAS[ch]);
+  const slides = useMemo(() => copyToSlides(copyText, ctaText), [copyText, ctaText]);
   const total = slides.length;
   const [idx, setIdx] = useState(0);
   const cur = Math.min(idx, total - 1);
@@ -279,10 +294,70 @@ export default function Composer() {
       } catch {}
     }
   }
+  /* ---- AI copywriter: Perplexity writes single-subject, KB-grounded copy
+     so the post text is on point BEFORE any image credits get spent ---- */
+  const [copyBusy, setCopyBusy] = useState(false);
+  const [copyErr, setCopyErr] = useState<string | null>(null);
+  async function sharpenCopy() {
+    if (!idea || copyBusy) return;
+    setCopyBusy(true);
+    setCopyErr(null);
+    try {
+      const fp = ideaFactPair(idea);
+      const r = await fetch("/api/copy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: idea.title,
+          theme: idea.theme,
+          angle: idea.angle,
+          territory: idea.territory.name,
+          city: idea.territory.city,
+          utility: fp.utility,
+          facts: fp.facts,
+          channel: ch,
+        }),
+        signal: AbortSignal.timeout(50000),
+      });
+      const j = await r.json();
+      if (!j.configured) {
+        setCopyErr("The AI writer needs the Perplexity key — it's the same one the lead engine uses.");
+        return;
+      }
+      if (!j.long) {
+        setCopyErr(j.error || "Writer came back empty — try again.");
+        return;
+      }
+      set({
+        compAiCopy: { key: aiKey, long: j.long, short: j.short || j.long, cta: j.cta || ctaText },
+        compShort: false,
+        compRegen: false,
+      });
+    } catch {
+      setCopyErr("Writer timed out — try again.");
+    } finally {
+      setCopyBusy(false);
+    }
+  }
+
+  /* ---- image vault: every generated image is kept permanently ---- */
+  const [vault, setVault] = useState<VaultImage[]>([]);
+  useEffect(() => {
+    vaultAll().then(setVault);
+  }, []);
+
   /* ---- whole-post AI visuals: one Higgsfield image per slide, shared
      seed + shared style language so the carousel reads as one piece ---- */
   const [genBusy, setGenBusy] = useState(false);
   const [genMsg, setGenMsg] = useState<string | null>(null);
+  // two-step trigger: first click arms with the credit cost, second confirms —
+  // so credits are only spent once the copy is locked
+  const [genArm, setGenArm] = useState(false);
+  useEffect(() => {
+    if (!genArm) return;
+    const t = setTimeout(() => setGenArm(false), 10000);
+    return () => clearTimeout(t);
+  }, [genArm]);
   async function generateVisuals() {
     if (genBusy || !slides.length) return;
     setGenBusy(true);
@@ -326,6 +401,17 @@ export default function Composer() {
           delete nb[0]; // cover lives in its own slot
         } else nb[i] = b;
         newAssets.push({ id: uid(), name: `${slides[i]?.role || "slide " + (i + 1)} visual`, dataURL: p.dataURL, lum: p.lum, busy: p.busy, source: "higgsfield" });
+        // permanent copy in the vault — survives the 40-asset cap, reusable
+        // on any later post even if this one never ships
+        await vaultAdd({
+          id: uid(),
+          dataURL: p.dataURL,
+          lum: p.lum,
+          busy: p.busy,
+          prompt: prompts[i],
+          label: `${(idea?.title || "Post").slice(0, 48)} · ${slides[i]?.role || "slide " + (i + 1)}`,
+          createdAt: Date.now(),
+        });
       }
       if (!newAssets.length) {
         setGenMsg("Couldn't load the generated images — try again.");
@@ -333,6 +419,7 @@ export default function Composer() {
       }
       set((s) => ({ stAssets: [...s.stAssets, ...newAssets].slice(-40) }));
       saveStudio({ slideBg: nb, ...(coverImg ? { coverBg: coverImg } : {}) });
+      vaultAll().then(setVault);
       const missing = urls.slice(0, total).filter((u) => !u).length;
       setGenMsg(missing ? `✓ ${newAssets.length} slides styled — ${missing} didn't finish, hit the button again to retry.` : `✓ All ${newAssets.length} slides styled in one matching look.`);
     } catch {
@@ -465,20 +552,59 @@ export default function Composer() {
               <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{idea.territory.name} · {idea.title}</span>
             </span>
           )}
+          {idea && (
+            <button
+              onClick={sharpenCopy}
+              disabled={copyBusy}
+              title="Have the AI writer turn this idea + your knowledge base into tight, single-subject copy"
+              style={{ background: "rgba(125,211,252,0.12)", color: "#7DD3FC", border: "1px solid rgba(125,211,252,0.4)", borderRadius: 9, padding: "7px 13px", fontSize: 12, fontWeight: 700, cursor: copyBusy ? "wait" : "pointer", opacity: copyBusy ? 0.7 : 1 }}
+            >
+              {copyBusy ? "✍️ Writing…" : ai ? "✍️ Re-write" : "✍️ Sharpen copy"}
+            </button>
+          )}
           <button
-            onClick={generateVisuals}
+            onClick={() => {
+              if (genBusy) return;
+              if (!genArm) {
+                setGenArm(true);
+                return;
+              }
+              setGenArm(false);
+              generateVisuals();
+            }}
             disabled={genBusy}
             title={`Generate one matching AI image per slide with Higgsfield (~${Math.min(total, 6)} credits)`}
-            style={{ background: "rgba(255,154,98,0.14)", color: "#FF9A62", border: "1px solid rgba(255,154,98,0.4)", borderRadius: 9, padding: "7px 13px", fontSize: 12, fontWeight: 700, cursor: genBusy ? "wait" : "pointer", opacity: genBusy ? 0.7 : 1 }}
+            style={{
+              background: genArm ? "rgba(255,154,98,0.3)" : "rgba(255,154,98,0.14)",
+              color: "#FF9A62",
+              border: `1px solid rgba(255,154,98,${genArm ? 0.85 : 0.4})`,
+              borderRadius: 9,
+              padding: "7px 13px",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: genBusy ? "wait" : "pointer",
+              opacity: genBusy ? 0.7 : 1,
+              boxShadow: genArm ? "0 0 14px rgba(255,154,98,0.35)" : "none",
+            }}
           >
-            {genBusy ? "✨ Directing…" : "✨ Post visuals"}
+            {genBusy ? "✨ Directing…" : genArm ? `✓ Confirm — ~${Math.min(total, 6)} credits` : "✨ Post visuals"}
           </button>
-          <button
-            onClick={() => set({ compRegen: !state.compRegen, compShort: false })}
-            style={{ background: "rgba(168,85,247,0.14)", color: "#C9A8FF", border: "1px solid rgba(168,85,247,0.4)", borderRadius: 9, padding: "7px 13px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
-          >
-            {state.compRegen ? "Original" : "Regenerate"}
-          </button>
+          {ai ? (
+            <button
+              onClick={() => set({ compAiCopy: null, compRegen: false, compShort: false })}
+              title="Discard the AI copy and go back to the template version"
+              style={{ background: "none", border: "1px solid rgba(255,255,255,0.14)", color: "#A6A4B8", borderRadius: 9, padding: "7px 13px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+            >
+              ↺ Template
+            </button>
+          ) : (
+            <button
+              onClick={() => set({ compRegen: !state.compRegen, compShort: false })}
+              style={{ background: "rgba(168,85,247,0.14)", color: "#C9A8FF", border: "1px solid rgba(168,85,247,0.4)", borderRadius: 9, padding: "7px 13px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+            >
+              {state.compRegen ? "Original" : "Regenerate"}
+            </button>
+          )}
           <button
             onClick={() => set({ compShort: !state.compShort })}
             style={{ background: "none", border: "1px solid rgba(255,255,255,0.14)", color: "#A6A4B8", borderRadius: 9, padding: "7px 13px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
@@ -531,9 +657,13 @@ export default function Composer() {
             </button>
           </div>
         </div>
-        {(genBusy || genMsg) && (
-          <div style={{ fontSize: 11.5, color: genMsg?.startsWith("✓") ? "#41D98A" : "#FFC23D", margin: "-4px 0 12px", lineHeight: 1.45 }}>
-            {genBusy ? `✨ Art-directing ${Math.min(total, 6)} slide visuals in one style — this takes about a minute…` : genMsg}
+        {(genBusy || genMsg || genArm || copyErr) && (
+          <div style={{ fontSize: 11.5, color: genMsg?.startsWith("✓") && !genArm && !copyErr ? "#41D98A" : "#FFC23D", margin: "-4px 0 12px", lineHeight: 1.45 }}>
+            {genBusy
+              ? `✨ Art-directing ${Math.min(total, 6)} slide visuals in one style — this takes about a minute…`
+              : genArm
+                ? `This spends ~${Math.min(total, 6)} Higgsfield credits on THIS exact copy — happy with the text first? Click again to confirm.`
+                : copyErr || genMsg}
           </div>
         )}
 
@@ -707,6 +837,42 @@ export default function Composer() {
             {assets.length === 0 && (
               <span style={{ alignSelf: "center", fontSize: 11, color: "#6E6C82", marginLeft: 4, lineHeight: 1.4 }}>
                 Upload your photos or b-roll — saved here and reused on every post.
+              </span>
+            )}
+          </div>
+
+          {/* row 3 — AI vault: every generated image, kept forever */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "12px 0 9px", borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 12 }}>
+            <span className="fh-kicker" style={{ fontSize: 9.5, color: "#FF9A62" }}>✨ AI vault</span>
+            <span style={{ fontSize: 10, color: "#6E6C82" }}>
+              {vault.length} saved · every generated image lands here permanently — reuse on any post
+            </span>
+          </div>
+          <div className="fh-hscroll" style={{ display: "flex", gap: 8, paddingBottom: 4 }}>
+            {vault.map((v) => {
+              const on = isActive({ type: "image", img: v.dataURL });
+              return (
+                <div key={v.id} style={{ position: "relative", flexShrink: 0 }}>
+                  <button
+                    title={`${v.label}${v.prompt ? `\n\n${v.prompt}` : ""}`}
+                    onClick={() => applyBg({ type: "image", img: v.dataURL })}
+                    style={{ display: "block", width: 80, height: 80, padding: 0, borderRadius: 8, overflow: "hidden", border: `2px solid ${on ? "#FF9A62" : "rgba(255,154,98,0.25)"}`, cursor: "pointer", background: `#111 url(${v.dataURL}) center/cover`, boxShadow: on ? "0 0 12px rgba(255,154,98,0.4)" : "none" }}
+                  />
+                  <button
+                    title="Delete from vault"
+                    onClick={() => {
+                      vaultDelete(v.id).then(() => vaultAll().then(setVault));
+                    }}
+                    style={{ position: "absolute", top: -4, right: -4, width: 16, height: 16, borderRadius: "50%", border: "none", background: "rgba(255,93,143,0.9)", color: "#fff", fontSize: 8.5, cursor: "pointer", lineHeight: 1 }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            })}
+            {vault.length === 0 && (
+              <span style={{ alignSelf: "center", fontSize: 11, color: "#6E6C82", marginLeft: 4, lineHeight: 1.4 }}>
+                Nothing yet — hit ✨ Post visuals (or generate a single image) and every result is kept here, even if the post never ships.
               </span>
             )}
           </div>
