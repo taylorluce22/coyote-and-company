@@ -10,14 +10,48 @@ specific ("hook too generic", "wrong look for this theme").
 
 ---
 
-## Example: The 3 questions before any solar quote
+## Monsoon vs. your panels — what actually happens
 - **status**: idea
-- **format**: message-card carousel (5 slides)
+- **format**: message-card carousel (5 slides, deck exists in the idea bank)
+- **hook structure**: contrarian ("a haboob is a car wash with attitude")
+- **look**: Phone-Cam Authentic
+- **CTA territory**: Peoria
+- **why now**: mid-July — monsoon anxiety is peaking in every neighborhood group
+
+## The kitchen-table bill moment
+- **status**: idea
+- **format**: realistic-moment single — homeowner at a kitchen table staring
+  at a paper APS bill, morning light (scene bank #2); caption carries the
+  bill-breakdown numbers (34¢ on-peak vs ~12¢ off)
+- **hook structure**: number-led (in the caption)
+- **look**: Golden Hour Lifestyle
+- **CTA territory**: Buckeye
+- **why now**: July bills landing this week — the exact moment of pain
+
+## SRP's 40¢ window nobody explains
+- **status**: idea
+- **format**: message-card carousel (deck exists — 6–9pm July/Aug rate)
 - **hook structure**: number-led
 - **look**: Editorial Minimal
-- **CTA territory**: Buckeye
-- **why now**: evergreen authority piece; quote season picks up when bills spike
+- **CTA territory**: Queen Creek
+- **why now**: the 40¢ summer-peak rate is literally in effect right now
 
-*(Copywriter adds Hook/Slides/CTA/Caption here; Art Director adds the
-prompt plan + credit estimate; Taylor flips status to `approved`; whoever
-produces it in the Studio marks `produced`, then `posted` with the date.)*
+## The 30% federal credit is gone — honest 2026 math
+- **status**: idea
+- **format**: message-card carousel (objection-handling deck)
+- **hook structure**: contrarian (an installer telling you the credit is dead)
+- **look**: Desert High-Key
+- **CTA territory**: Peoria
+- **why now**: 2026 buyers are still being pitched the dead credit; honesty
+  is the differentiator
+
+## The doorstep consult
+- **status**: idea
+- **format**: realistic-moment single — consultant with tablet at a front
+  door, solar roof behind (scene bank #1); caption = the 3 questions to ask
+  any solar company
+- **hook structure**: question
+- **look**: Blue Hour Cinematic
+- **CTA territory**: Buckeye
+- **why now**: pairs the flagship authority piece with the realism lane
+  Taylor wants the feed to move toward
