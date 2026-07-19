@@ -102,10 +102,14 @@ export async function POST(req: NextRequest) {
     // model" on a live key even with a correct request. Try each known
     // text-to-image route until one accepts (v1 wraps in `params`, the
     // flux route takes `input` per the official v2 SDK).
+    // Model ids are vendor-scoped (e.g. bytedance/seedream/v4/text-to-image,
+    // from the official Python SDK) and those model-path routes take the
+    // fields DIRECTLY in the body (v2 SDK spreads input, no wrapper); only
+    // the /v1/* routes wrap in `params`.
     const attempts: { path: string; body: unknown }[] = [
       { path: "/v1/text2image/soul", body: { params: { prompt, width_and_height: "1536x1536" } } },
-      { path: "/flux-pro/kontext/max/text-to-image", body: { input: { prompt, aspect_ratio: "1:1" } } },
-      { path: "/v1/text2image/flux", body: { params: { prompt, width_and_height: "1536x1536" } } },
+      { path: "/bytedance/seedream/v4/text-to-image", body: { prompt, aspect_ratio: "1:1", resolution: "2K" } },
+      { path: "/flux-pro/kontext/max/text-to-image", body: { prompt, aspect_ratio: "1:1" } },
     ];
     let startJson: unknown = null;
     const failures: string[] = [];
