@@ -98,22 +98,38 @@ export async function POST(req: NextRequest) {
 
   const headers = { Authorization: auth, "Content-Type": "application/json" };
   try {
-    const start = await fetch(`${BASE}/v1/text2image/soul`, {
-      method: "POST",
-      headers,
-      // the API requires generation parameters wrapped in a `params` object
-      // (422 "missing body.params" otherwise — confirmed against the live API)
-      body: JSON.stringify({ params: { prompt, width_and_height: "1536x1536" } }),
-      signal: AbortSignal.timeout(30000),
-    });
-    const startText = await start.text();
-    if (!start.ok) {
-      return NextResponse.json({ configured: true, images: [], error: `higgsfield ${start.status}: ${startText.slice(0, 200)}` });
+    // Model availability varies by account — Soul returned "Unavailable
+    // model" on a live key even with a correct request. Try each known
+    // text-to-image route until one accepts (v1 wraps in `params`, the
+    // flux route takes `input` per the official v2 SDK).
+    const attempts: { path: string; body: unknown }[] = [
+      { path: "/v1/text2image/soul", body: { params: { prompt, width_and_height: "1536x1536" } } },
+      { path: "/flux-pro/kontext/max/text-to-image", body: { input: { prompt, aspect_ratio: "1:1" } } },
+      { path: "/v1/text2image/flux", body: { params: { prompt, width_and_height: "1536x1536" } } },
+    ];
+    let startJson: unknown = null;
+    const failures: string[] = [];
+    for (const a of attempts) {
+      const r = await fetch(`${BASE}${a.path}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(a.body),
+        signal: AbortSignal.timeout(30000),
+      });
+      const text = await r.text();
+      if (r.ok) {
+        try {
+          startJson = JSON.parse(text);
+        } catch {
+          startJson = {};
+        }
+        break;
+      }
+      failures.push(`${a.path} → ${r.status}: ${text.slice(0, 120)}`);
     }
-    let startJson: unknown = {};
-    try {
-      startJson = JSON.parse(startText);
-    } catch {}
+    if (startJson == null) {
+      return NextResponse.json({ configured: true, images: [], error: `all models unavailable — ${failures.join(" · ")}` });
+    }
 
     // some responses may already carry result URLs
     let found = imageUrls(startJson);
