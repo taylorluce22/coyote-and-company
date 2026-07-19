@@ -52,22 +52,39 @@ export function ideaFactPair(idea: Idea): { utility: "aps" | "srp" | "unknown"; 
   return { utility: u, facts: factsFor(idea.theme, u) };
 }
 
+/** First self-contained clause of a KB fact — slide-length, never a wall of text. */
+function slideClause(fact: string): string {
+  const first = fact.split(" — ")[0].split(/(?<=[.!?])\s+/)[0].trim();
+  return (first.length >= 25 ? first : fact.slice(0, 140).trim()).replace(/\.+$/, "");
+}
+
 export function ideaCopy(idea: Idea, strategy: StrategyProfile, channel: "ig" | "fb" | "nd"): IdeaCopyPack {
   const t = idea.territory;
   const { utility: u, facts } = ideaFactPair(idea);
   const [fact, altFact] = facts;
-  // honest local close — never a fabricated credential
-  const who = `If you're in ${t.name}, this is the first thing I'd check before signing anything.`;
+  // The education is statewide; the geography belongs in the ACTION. The CTA
+  // is the one place the territory shows up — "run this for YOUR house here".
   const cta =
     channel === "nd"
-      ? `Happy to run the numbers for your address, neighbors — just ask below.`
-      : `Save this — and DM me if you want the math for your house.`;
+      ? `Happy to run these numbers for your address, neighbors — just ask below.`
+      : `Save this — and DM me when you want it run for your own ${t.name} numbers.`;
 
-  // both facts come from the same theme family, so the post stays on ONE
-  // subject while having enough substance for a real carousel
-  const long = `${idea.title}\n\n${cap(fact)}.\n\n${cap(altFact)}.\n\n${who}`;
-  const alt = `${idea.title}\n\n${cap(altFact)}.\n\n${cap(fact)}.\n\n${who}`;
-  const short = `${idea.title} — ${fact.split(" — ")[0]}. DM me for the numbers on your house.`;
+  const deck = Array.isArray(idea.deck) && idea.deck.length ? idea.deck : null;
+  let long: string;
+  let alt: string;
+  let short: string;
+  if (deck) {
+    // authored deck: every slide was written to deliver the title's promise
+    long = [idea.title, ...deck].join("\n\n");
+    alt = deck.length > 1 ? [idea.title, ...deck.slice(1), deck[0]].join("\n\n") : long;
+    short = `${idea.title} — ${deck[0].replace(/^\d+\.\s*/, "")}`;
+  } else {
+    // fallback (older persisted ideas): same-subject KB facts, clipped to
+    // slide length so a slide can never be a wall of text
+    long = `${idea.title}\n\n${cap(slideClause(fact))}.\n\n${cap(slideClause(altFact))}.`;
+    alt = `${idea.title}\n\n${cap(slideClause(altFact))}.\n\n${cap(slideClause(fact))}.`;
+    short = `${idea.title} — ${fact.split(" — ")[0]}. DM me for the numbers on your house.`;
+  }
 
   const cityTag = t.city.toLowerCase().replace(/[^a-z]/g, "");
   const nameTag = t.name.toLowerCase().replace(/[^a-z]/g, "");

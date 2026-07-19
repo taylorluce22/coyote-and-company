@@ -151,26 +151,187 @@ const CONVERSION_BANK: { title: string; angle: string; format: "carousel" | "ree
 
 /* --------- solar content banks — AZ homeowner education, Instagram-first ---------- */
 
-const SOLAR_IDEA_BANK: { title: string; angle: string; format: "carousel" | "reel" | "story" | "text"; theme: string }[] = [
-  { title: "What a $320 APS bill looks like after solar in {n}", angle: "real before/after bill breakdown — screenshots get shared and saved", format: "carousel", theme: "bill-breakdown" },
-  { title: "The 3 questions to ask ANY solar company before you talk price", angle: "authority through generosity — protects people from bad installs, builds trust in you", format: "carousel", theme: "buyer-education" },
-  { title: "Monsoon season vs. your panels: what actually happens", angle: "reel: wind/dust/hail myths answered in 60 seconds — seasonal, timely, local", format: "reel", theme: "myth-busting" },
-  { title: "Why Arizona's 'free solar' ads aren't free — the honest version", angle: "call out your own industry's worst pitch; honesty is the differentiator", format: "text", theme: "myth-busting" },
-  { title: "The rate-plan check that saves {n} homeowners money BEFORE solar", angle: "on-peak vs off-peak explained — free value first, no pitch", format: "carousel", theme: "bill-breakdown" },
-  { title: "How much roof a real 10kW system needs in {n}", angle: "reel: pace out a roof on camera — concrete beats abstract", format: "reel", theme: "buyer-education" },
-  { title: "West-facing vs. south-facing in AZ: what the production data says", angle: "counterintuitive local knowledge (west wins on-peak) — instant credibility", format: "text", theme: "authority" },
-  { title: "Buying a new build in {n}? Read this before the builder's solar offer", angle: "new-homeowner moment — they're deciding NOW and nobody's helping them", format: "carousel", theme: "new-homeowner" },
-  { title: "EV + solar in {n}: the real math for charging at home", angle: "the EV crowd runs the numbers — give them numbers worth running", format: "carousel", theme: "battery-ev" },
-  { title: "How to read your neighbor's solar brag post", angle: "kWh vs. savings vs. offset — decode the jargon people actually see on Nextdoor", format: "text", theme: "myth-busting" },
+/* decks = the post's actual slides, written to deliver the title's promise */
+const SOLAR_IDEA_BANK: { title: string; angle: string; format: "carousel" | "reel" | "story" | "text"; theme: string; deck?: string[] }[] = [
+  {
+    title: "What a $320 APS bill looks like after solar in {n}",
+    angle: "real before/after bill breakdown — screenshots get shared and saved",
+    format: "carousel",
+    theme: "bill-breakdown",
+    deck: [
+      "A $320 summer bill is mostly the 4–7pm window: about 34¢/kWh on-peak vs ~12¢ off-peak.",
+      "Solar sized to your usage kills the daytime piece. Shifting big loads off-peak kills most of the rest.",
+      "Exports only earn ~6.2¢/kWh — so right-sizing beats over-sizing every single time.",
+    ],
+  },
+  {
+    title: "The 3 questions to ask ANY solar company before you talk price",
+    angle: "authority through generosity — protects people from bad installs, builds trust in you",
+    format: "carousel",
+    theme: "buyer-education",
+    deck: [
+      "1. What's my price per watt before incentives? It's the only honest way to compare quotes.",
+      "2. Which export rate does your savings math assume? APS pays ~6.2¢/kWh, SRP ~3.45¢ — inflated means fantasy.",
+      "3. Which rate plan will I be on after install, and why? The wrong plan quietly eats the savings.",
+    ],
+  },
+  {
+    title: "Monsoon season vs. your panels: what actually happens",
+    angle: "reel: wind/dust/hail myths answered in 60 seconds — seasonal, timely, local",
+    format: "reel",
+    theme: "myth-busting",
+    deck: [
+      "Panels are engineered for one-inch hail and serious wind uplift — a haboob is basically a car wash with attitude.",
+      "Dust costs a few percent of production until the next rain rinses it. Skip the $300 'panel cleaning' pitch.",
+      "The real monsoon risk is your roof, not the panels. That's why roof condition comes before any install.",
+    ],
+  },
+  {
+    title: "Why Arizona's 'free solar' ads aren't free — the honest version",
+    angle: "call out your own industry's worst pitch; honesty is the differentiator",
+    format: "text",
+    theme: "myth-busting",
+    deck: [
+      "'Free solar' means a lease or PPA: you buy the power, they own the system on your roof.",
+      "It prices differently because the leasing company can still claim a commercial tax credit — homeowners can't anymore.",
+      "Sometimes a lease genuinely fits. But nobody is giving away $25k of hardware. Ever.",
+    ],
+  },
+  {
+    title: "The rate-plan check that saves {n} homeowners money BEFORE solar",
+    angle: "on-peak vs off-peak explained — free value first, no pitch",
+    format: "carousel",
+    theme: "bill-breakdown",
+    deck: [
+      "APS runs three main plans. SRP rebuilt theirs in late 2025. Being on the wrong one costs real money.",
+      "Matching your plan to how you actually live is free and takes about ten minutes.",
+      "I run this check before quoting anyone — sometimes it shrinks the bill enough to change the system size.",
+    ],
+  },
+  {
+    title: "How much roof a real 10kW system needs in {n}",
+    angle: "reel: pace out a roof on camera — concrete beats abstract",
+    format: "reel",
+    theme: "buyer-education",
+    deck: [
+      "A 10kW system is roughly 24–25 modern panels — call it 500+ square feet of clear, well-facing roof.",
+      "Vents, valleys and fire setbacks eat more space than people expect. Paper designs love to ignore them.",
+      "Tight roof? A smaller system plus load-shifting usually beats cramming panels onto bad angles.",
+    ],
+  },
+  {
+    title: "West-facing vs. south-facing in AZ: what the production data says",
+    angle: "counterintuitive local knowledge (west wins on-peak) — instant credibility",
+    format: "text",
+    theme: "authority",
+    deck: [
+      "South-facing wins on total annual kWh. West-facing wins where it counts: the 4–7pm on-peak window.",
+      "When on-peak power costs ~34¢ and exports pay ~6.2¢, WHEN you produce beats how much.",
+      "The best designs here often split the array — south for volume, west for the expensive hours.",
+    ],
+  },
+  {
+    title: "Buying a new build in {n}? Read this before the builder's solar offer",
+    angle: "new-homeowner moment — they're deciding NOW and nobody's helping them",
+    format: "carousel",
+    theme: "new-homeowner",
+    deck: [
+      "Builder solar rolls into the mortgage — convenient, but compare its price per watt against outside quotes first.",
+      "Ask which utility serves the lot: APS credits exports ~6.2¢/kWh, SRP ~3.45¢. It changes the right system size.",
+      "Get the rate plan and export terms in writing before closing — 'solar-ready' and 'solar-smart' are not the same thing.",
+    ],
+  },
+  {
+    title: "EV + solar in {n}: the real math for charging at home",
+    angle: "the EV crowd runs the numbers — give them numbers worth running",
+    format: "carousel",
+    theme: "battery-ev",
+    deck: [
+      "A typical EV adds roughly 3,000–4,000 kWh a year — charging at 4–7pm on APS costs about 3x the overnight rate.",
+      "Overnight off-peak charging is the free fix. Panels sized for the extra load are the permanent one.",
+      "Exports only pay ~6.2¢ on APS — so size for what you'll actually use, EV included, not for bragging rights.",
+    ],
+  },
+  {
+    title: "How to read your neighbor's solar brag post",
+    angle: "kWh vs. savings vs. offset — decode the jargon people actually see on Nextdoor",
+    format: "text",
+    theme: "myth-busting",
+    deck: [
+      "kWh produced is not dollars saved. Production is weather; savings are rate-plan math.",
+      "'100% offset' means annual energy, not a $0 bill — fixed charges and evening peaks still land.",
+      "The numbers that matter: what they paid per watt, and what their evening usage looks like. Ask those.",
+    ],
+  },
 ];
 
-const SOLAR_CONVERSION_BANK: { title: string; angle: string; format: "carousel" | "reel" | "story" | "text"; theme: string }[] = [
-  { title: "What my last {n} install actually cost per watt", angle: "radical transparency — real numbers are rare in solar and get remembered", format: "carousel", theme: "social-proof" },
-  { title: "3 red flags I found in a quote someone sent me this week", angle: "story of advocacy — position as the person who reviews quotes, not sells them", format: "story", theme: "authority" },
-  { title: "“We'll wait for the tech to get better” — the honest math on waiting", angle: "objection-handling with real payback numbers, zero pressure", format: "carousel", theme: "objection-handling" },
-  { title: "What happened when I told a {n} homeowner NOT to go solar", angle: "the anti-pitch — nothing builds trust faster than a no", format: "text", theme: "social-proof" },
-  { title: "Know someone with a $300+ summer bill? Here's what I send them", angle: "referral prompt disguised as a resource — highly shareable", format: "carousel", theme: "referral" },
-  { title: "The free quote review I do (and why confusing quotes are on purpose)", angle: "a service offer that's genuinely useful — the softest possible CTA", format: "text", theme: "referral" },
+const SOLAR_CONVERSION_BANK: { title: string; angle: string; format: "carousel" | "reel" | "story" | "text"; theme: string; deck?: string[] }[] = [
+  {
+    title: "What my last {n} install actually cost per watt",
+    angle: "radical transparency — real numbers are rare in solar and get remembered",
+    format: "carousel",
+    theme: "social-proof",
+    deck: [
+      "Price per watt, pre-incentive, all-in — the one number that makes every solar quote comparable.",
+      "Arizona's honest range is wide, and confusing quotes keep it that way on purpose.",
+      "I share real numbers because this industry mostly won't. That's the whole differentiator.",
+    ],
+  },
+  {
+    title: "3 red flags I found in a quote someone sent me this week",
+    angle: "story of advocacy — position as the person who reviews quotes, not sells them",
+    format: "story",
+    theme: "authority",
+    deck: [
+      "Red flag 1: savings math built on old export rates. APS pays ~6.2¢/kWh now — not the 12.9¢ of 2017.",
+      "Red flag 2: no price per watt anywhere on the page. That is never an accident.",
+      "Red flag 3: 'the federal credit covers 30%.' For homeowner purchases installed after 2025, it's $0.",
+    ],
+  },
+  {
+    title: "“We'll wait for the tech to get better” — the honest math on waiting",
+    angle: "objection-handling with real payback numbers, zero pressure",
+    format: "carousel",
+    theme: "objection-handling",
+    deck: [
+      "Panel tech improves single digits a year. APS's export rate has dropped ~10% every September since 2017.",
+      "Waiting a year buys slightly better panels, a permanently worse export lock, and another summer of 34–40¢ evenings.",
+      "Honest answer: under a ~$150 bill, waiting can be right. Above it, the math usually says otherwise.",
+    ],
+  },
+  {
+    title: "What happened when I told a {n} homeowner NOT to go solar",
+    angle: "the anti-pitch — nothing builds trust faster than a no",
+    format: "text",
+    theme: "social-proof",
+    deck: [
+      "When the bill is under ~$150, the roof is near end-of-life, or shade is real — the right call is 'not yet'. I say so.",
+      "Without the federal credit, payback runs 10+ years. Forcing it onto the wrong house makes that worse.",
+      "An honest 'no' today is how you earn the referral 'yes' tomorrow. It's also just the right thing.",
+    ],
+  },
+  {
+    title: "Know someone with a $300+ summer bill? Here's what I send them",
+    angle: "referral prompt disguised as a resource — highly shareable",
+    format: "carousel",
+    theme: "referral",
+    deck: [
+      "First: the rate-plan check. It's free and sometimes fixes a chunk of the bill in ten minutes.",
+      "Then the honest solar screen: bill over ~$150, decent sun, a roof with life left, staying put 5+ years.",
+      "Clear both? Then we talk panels. Send this to the friend with the scary bill.",
+    ],
+  },
+  {
+    title: "The free quote review I do (and why confusing quotes are on purpose)",
+    angle: "a service offer that's genuinely useful — the softest possible CTA",
+    format: "text",
+    theme: "referral",
+    deck: [
+      "Solar quotes hide the two numbers that matter: price per watt, and the export rate the savings assume.",
+      "I review any quote free — yours, your neighbor's, the door-knocker's. No strings.",
+      "Worst case, you learn your quote is solid. Best case, I save you from a 25-year mistake.",
+    ],
+  },
 ];
 
 export interface Idea {
@@ -180,6 +341,8 @@ export interface Idea {
   angle: string;
   format: "carousel" | "reel" | "story" | "text";
   theme: string;
+  /** authored slide lines that deliver the title's promise ({n} resolved) */
+  deck?: string[];
 }
 
 export function ideasFor(profile: StrategyProfile): Idea[] {
@@ -197,6 +360,7 @@ export function ideasFor(profile: StrategyProfile): Idea[] {
         : [...(IDEA_BANK[t.segment] ?? IDEA_BANK.growth), ...CONVERSION_BANK.slice(ti % 2, (ti % 2) + 4)];
     const price = t.segment === "luxury" ? "2M" : t.segment === "growth" ? "450K" : "350K";
     bank.forEach((b, i) => {
+      const deck = (b as { deck?: string[] }).deck;
       out.push({
         id: `${t.slug}-${i}`,
         territory: t,
@@ -204,6 +368,7 @@ export function ideasFor(profile: StrategyProfile): Idea[] {
         angle: b.angle,
         format: b.format,
         theme: b.theme,
+        ...(deck ? { deck: deck.map((d) => d.replace(/\{n\}/g, t.name)) } : {}),
       });
     });
   });

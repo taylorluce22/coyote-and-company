@@ -235,6 +235,18 @@ export default function Composer() {
         : variant.long;
   const accent = ACCENTS[state.compAccent] || ACCENTS.cyan;
 
+  // self-heal: an idea persisted before decks existed re-loads its authored
+  // slide deck from the bank (ids are stable) so old ideas get coherent copy
+  useEffect(() => {
+    if (idea && !idea.deck) {
+      // title is the identity; ids are positional and could drift
+      const bank = ideasFor(strategy);
+      const fresh = bank.find((b) => b.title === idea.title) || bank.find((b) => b.id === idea.id && b.theme === idea.theme);
+      if (fresh?.deck) set({ compIdea: fresh });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // pull the next proposal from the content generator — cycles through the
   // full idea bank (KB-driven for solar) so every click is a fresh post
   const nextIdea = () => {
@@ -351,7 +363,9 @@ export default function Composer() {
           territory: idea.territory.name,
           city: idea.territory.city,
           utility: fp.utility,
-          facts: fp.facts,
+          // ground the writer on the authored deck when the idea has one —
+          // it already delivers the title's promise; KB facts otherwise
+          facts: idea.deck?.length ? idea.deck : fp.facts,
           channel: ch,
         }),
         signal: AbortSignal.timeout(50000),
