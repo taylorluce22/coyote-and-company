@@ -67,9 +67,9 @@ function SolarTerritoryPicker() {
     });
 
   const groups: { key: TerritoryUtility[]; title: string; note: string }[] = [
-    { key: ["aps"], title: "APS territories · West Valley + North Phoenix", note: "Pitch: export-rate lock (6.2¢, drops each Sept), 4–7pm TOU math, Storage Rewards" },
-    { key: ["srp"], title: "SRP territories · East Valley", note: "Pitch: demand management, batteries, self-consumption — exports pay only 3.45¢" },
-    { key: ["ed3", "ed2", "verify"], title: "Other utilities · verify rates first", note: "ED3/ED2 have their own tariffs — never quote APS or SRP numbers here" },
+    { key: ["aps"], title: "West Valley + North Phoenix · APS", note: "Pick a city for the whole corridor, or a specific development to go deep. Pitch: export-rate lock (6.2¢, drops each Sept), 4–7pm TOU math, Storage Rewards" },
+    { key: ["srp"], title: "East Valley · SRP", note: "Pick a city for the whole corridor, or a specific development to go deep. Pitch: demand management, batteries, self-consumption — exports pay only 3.45¢" },
+    { key: ["ed3", "ed2", "verify"], title: "Outskirts · other utilities — verify rates first", note: "ED3/ED2 have their own tariffs — never quote APS or SRP numbers here" },
   ];
 
   const catalogSlugs = new Set(AZ_TERRITORY_CATALOG.map((c) => c.slug));
@@ -96,7 +96,10 @@ function SolarTerritoryPicker() {
         </div>
       )}
       {groups.map((g) => {
-        const items = AZ_TERRITORY_CATALOG.filter((c) => g.key.includes(c.utility));
+        // cities first (whole-corridor picks), then developments within them
+        const items = AZ_TERRITORY_CATALOG.filter((c) => g.key.includes(c.utility)).sort(
+          (a, b) => Number(b.kind === "city") - Number(a.kind === "city")
+        );
         return (
           <div key={g.title} style={{ marginBottom: 14 }}>
             <div className="fh-kicker" style={{ fontSize: 9, marginBottom: 3 }}>{g.title}</div>
@@ -117,8 +120,9 @@ function SolarTerritoryPicker() {
                     <span style={{ flex: 1, minWidth: 0 }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
                         <span style={{ fontSize: 12.5, fontWeight: 800, color: "#EDEBF6" }}>{def.name}</span>
-                        <span style={{ fontSize: 10, color: "#77758C" }}>{def.city}</span>
+                        {def.kind !== "city" && <span style={{ fontSize: 10, color: "#77758C" }}>{def.city}</span>}
                         <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: "0.07em", color: "#04110E", background: uc, borderRadius: 999, padding: "1.5px 7px" }}>{UTILITY_LABEL[def.utility]}</span>
+                        {def.kind === "city" && <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: "0.07em", color: "#7DD3FC", border: "1px solid rgba(125,211,252,0.4)", borderRadius: 999, padding: "1px 7px" }}>CITY</span>}
                         {def.tier === 1 && <span style={{ fontSize: 8.5, fontWeight: 900, color: "#FFC23D" }}>★ TOP TARGET</span>}
                       </span>
                       <span style={{ display: "block", fontSize: 10.5, color: "#8B89A0", lineHeight: 1.45, marginTop: 2 }}>{def.label}</span>

@@ -85,9 +85,12 @@ export const PLATFORM_OPTS = [
  * leads and wrong-sounding on a solar account.
  */
 export const SOLAR_TERRITORIES: Territory[] = [
-  { slug: "phoenix", name: "Phoenix", city: "Phoenix", segment: "growth", hex: "#FF9A62", status: "building", utility: "aps" },
-  { slug: "scottsdale", name: "Scottsdale", city: "Scottsdale", segment: "growth", hex: "#C9A8FF", status: "building", utility: "aps" },
-  { slug: "mesa", name: "Mesa", city: "Mesa", segment: "growth", hex: "#26E0C8", status: "building", utility: "srp" },
+  // actual solar hot spots per the territory research — West Valley APS
+  // growth corridors + the East Valley's top SRP market, not the saturated
+  // central cities (Phoenix/Scottsdale/Mesa were placeholder defaults)
+  { slug: "buckeye-city", name: "Buckeye", city: "Buckeye", segment: "growth", hex: "#FF9A62", status: "building", utility: "aps" },
+  { slug: "peoria-city", name: "Peoria", city: "Peoria", segment: "growth", hex: "#C9A8FF", status: "building", utility: "aps" },
+  { slug: "queen-creek-city", name: "Queen Creek", city: "Queen Creek", segment: "growth", hex: "#26E0C8", status: "building", utility: "srp" },
 ];
 
 export const DEFAULT_STRATEGY: StrategyProfile = {
@@ -219,11 +222,21 @@ export function cadenceCap(mode: ProspectingMode): { perWeek: number; note: stri
 export function suggestedSources(profile: StrategyProfile): { name: string; kind: string; territory: string }[] {
   const out: { name: string; kind: string; territory: string }[] = [];
   profile.territories.forEach((t) => {
-    out.push(
-      { name: `${t.name} Neighbors`, kind: "fb_group", territory: t.name },
-      { name: `${t.city} ${profile.vertical === "solar" ? "Homeowners" : "Buy Nothing / Community"}`, kind: "fb_group", territory: t.name },
-      { name: `Nextdoor · ${t.name}`, kind: "nextdoor", territory: t.name }
-    );
+    if (profile.vertical === "solar") {
+      // new-build communities run resident groups under predictable names —
+      // that's where fresh homeowners ask their first energy questions
+      out.push(
+        { name: `${t.name} Residents / Community (Facebook)`, kind: "fb_group", territory: t.name },
+        { name: `Living in ${t.city} AZ (Facebook)`, kind: "fb_group", territory: t.name },
+        { name: `Nextdoor · ${t.name}`, kind: "nextdoor", territory: t.name }
+      );
+    } else {
+      out.push(
+        { name: `${t.name} Neighbors`, kind: "fb_group", territory: t.name },
+        { name: `${t.city} Buy Nothing / Community`, kind: "fb_group", territory: t.name },
+        { name: `Nextdoor · ${t.name}`, kind: "nextdoor", territory: t.name }
+      );
+    }
   });
   if (profile.vertical === "solar") {
     out.push(

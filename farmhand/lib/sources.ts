@@ -107,8 +107,80 @@ function patternRows(t: Territory): BankRow[] {
   ];
 }
 
-export function bankFor(t: Territory): SourceEntry[] {
-  const rows = BY_TERRITORY[t.slug] ?? patternRows(t);
+/* ---------- solar banks — homeowner/energy spaces, not realtor groups ---------- */
+
+/** Statewide solar — relevant to every AZ solar territory. */
+const SOLAR_STATEWIDE: BankRow[] = [
+  { name: "r/solar", platform: "reddit", why: "The main solar sub — quote reviews and 'is it worth it' threads daily; AZ questions are frequent.", size: "~300k" },
+  { name: "r/solarenergy", platform: "reddit", why: "Second solar hub; homeowner-level questions with less pro noise." },
+  { name: "r/phoenix", platform: "reddit", why: "Metro hub — summer-bill rants and APS/SRP threads spike every July; answer with real numbers.", size: "~450k" },
+  { name: "r/arizona", platform: "reddit", why: "Statewide — rate-case and utility news threads where expertise stands out.", size: "~350k" },
+  { name: "DIY Solar Forum (diysolarforum.com)", platform: "forum", why: "Serious owners and researchers; Arizona threads rank on Google for years." },
+];
+
+/**
+ * Curated solar rows for the hot-spot territories (from the July 2026
+ * territory research). Group names follow the predictable patterns AZ
+ * communities actually use — search and join as a neighbor.
+ */
+const SOLAR_BY_TERRITORY: Record<string, BankRow[]> = {
+  "buckeye-city": [
+    { name: "Buckeye AZ Community Group (Facebook)", platform: "facebook", why: "Main resident group of one of America's fastest-growing cities — new-homeowner energy questions weekly." },
+    { name: "Verrado Community (Facebook)", platform: "facebook", why: "Flagship master plan — HOA/builder threads constant; solar comes up on every summer bill cycle." },
+    { name: "Tartesso Community (Facebook)", platform: "facebook", why: "Young families, big unshaded roofs, long commutes — the research's #1 affordable APS profile." },
+    { name: "Nextdoor · Buckeye", platform: "nextdoor", why: "New-resident heavy; 'anyone gone solar?' recommendation threads are where trust converts." },
+    { name: "r/WestValleyAZ", platform: "reddit", why: "West Valley catch-all — new-build and utility-bill threads appear regularly." },
+  ],
+  "peoria-city": [
+    { name: "Vistancia Community (Facebook)", platform: "facebook", why: "The corridor's anchor master plan — affluent owners with pools comparing summer bills." },
+    { name: "Aloravita Neighbors (Facebook)", platform: "facebook", why: "Brand-new 67th & Happy Valley community — first-energy-decision homeowners." },
+    { name: "Peoria AZ Community (Facebook)", platform: "facebook", why: "City-wide resident group; APS rate-plan confusion posts are routine." },
+    { name: "Nextdoor · Vistancia / North Peoria", platform: "nextdoor", why: "Premium new-build streets — referrals carry weight here." },
+  ],
+  "queen-creek-city": [
+    { name: "Queen Creek 101 (Facebook)", platform: "facebook", why: "Large resident group — growth and new-build threads daily; SRP bill season lights it up." },
+    { name: "Barney Farms Community (Facebook)", platform: "facebook", why: "Fulton's lake community — the research's top affluent SRP family profile." },
+    { name: "Nextdoor · Queen Creek", platform: "nextdoor", why: "New-resident heavy; demand-charge confusion makes real expertise stand out." },
+    { name: "r/QueenCreek", platform: "reddit", why: "Small town sub — low competition for genuinely helpful answers." },
+  ],
+  "mesa-gateway": [
+    { name: "Eastmark Community (Facebook)", platform: "facebook", why: "One of the most active community groups in AZ — mature, high-income, referral-rich." },
+    { name: "Hawes Crossing / Cadence Residents (Facebook)", platform: "facebook", why: "The Gateway boom's newest roofs — SRP plan questions from day one." },
+    { name: "Nextdoor · East Mesa / Gateway", platform: "nextdoor", why: "Dense newer streets; recommendation threads convert." },
+    { name: "r/mesa", platform: "reddit", why: "City sub — SRP and summer-bill threads recur.", size: "~20k" },
+  ],
+  "san-tan-valley-city": [
+    { name: "San Tan Valley 101 / Community (Facebook)", platform: "facebook", why: "Pinal County's boom corridor — Bella Vista Farms and Soleo families comparing bills." },
+    { name: "Nextdoor · San Tan Valley", platform: "nextdoor", why: "Unsaturated market — early presence compounds." },
+    { name: "r/SanTanValley", platform: "reddit", why: "Small but growing; new-build and utility threads." },
+  ],
+  "surprise-city": [
+    { name: "Surprise AZ Community (Facebook)", platform: "facebook", why: "Main city group — Marley Park/Asante families plus 55+ backup-power interest." },
+    { name: "Sterling Grove Residents (Facebook)", platform: "facebook", why: "Toll Brothers golf community — premium battery economics." },
+    { name: "Nextdoor · Surprise", platform: "nextdoor", why: "Strong 55+ presence; trust-based referrals dominate." },
+  ],
+  "goodyear-city": [
+    { name: "Estrella Community (Facebook)", platform: "facebook", why: "The master plan's resident hub — pools + big cooling loads, years of new phases left." },
+    { name: "Goodyear AZ Community (Facebook)", platform: "facebook", why: "City-wide group — verify utility per address (Agua Fria splits APS/SRP)." },
+    { name: "Nextdoor · Estrella / Goodyear", platform: "nextdoor", why: "High-usage family streets; recommendation threads are frequent." },
+  ],
+};
+
+/** Solar pattern fallback — development-name based, since new-build resident
+    groups are where fresh homeowners ask their first energy questions. */
+function solarPatternRows(t: Territory): BankRow[] {
+  return [
+    { name: `${t.name} Residents / Community (Facebook)`, platform: "facebook", why: "New-build communities run resident groups under predictable names — search and join as a neighbor." },
+    { name: `${t.city} AZ Community (Facebook)`, platform: "facebook", why: "The city's main resident group — summer-bill and rate-plan threads every year." },
+    { name: `Nextdoor · ${t.name}`, platform: "nextdoor", why: "'Anyone gone solar?' recommendation threads are where local trust converts." },
+  ];
+}
+
+export function bankFor(t: Territory, vertical?: string): SourceEntry[] {
+  const rows =
+    vertical === "solar"
+      ? SOLAR_BY_TERRITORY[t.slug] ?? solarPatternRows(t)
+      : BY_TERRITORY[t.slug] ?? patternRows(t);
   return rows.map((r, i) => ({
     ...r,
     id: `kb-${t.slug}-${i}`,
@@ -119,8 +191,8 @@ export function bankFor(t: Territory): SourceEntry[] {
   }));
 }
 
-export function statewide(): SourceEntry[] {
-  return AZ_STATEWIDE.map((r, i) => ({
+export function statewide(vertical?: string): SourceEntry[] {
+  return (vertical === "solar" ? SOLAR_STATEWIDE : AZ_STATEWIDE).map((r, i) => ({
     ...r,
     id: `kb-az-${i}`,
     territorySlug: "arizona",

@@ -163,11 +163,19 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // solar prospects live in homeowner/community spaces, not industry groups —
+  // without this steer the researcher returns real-estate agent communities
+  const solarFocus = /solar/i.test(profession)
+    ? `PRIORITIZE: city/community resident groups, homeowner groups, new-build and master-planned community ` +
+      `resident groups (e.g. "<community name> Residents/Neighbors"), HOA-adjacent groups, and Arizona ` +
+      `energy/solar discussion spaces. Do NOT include real-estate agent, investor, or home-sales groups. `
+    : "";
   const prompt =
     `Research active online communities where a ${profession} serving ${territory}` +
     `${city !== territory ? ` (${city}, Arizona)` : ", Arizona"}` +
     `${segment ? ` — a ${segment}-segment market —` : ""} could participate helpfully and build local trust. ` +
     `Find up to 8 across: Facebook groups, subreddits, Nextdoor neighborhoods, and local forums. ` +
+    solarFocus +
     `Only include communities you can verify actually exist and are active. ` +
     `Respond with ONLY a JSON array, no prose, no markdown fences. Each element: ` +
     `{"name": "exact community name (platform in parens if Facebook)", "platform": "facebook"|"reddit"|"nextdoor"|"forum", ` +
