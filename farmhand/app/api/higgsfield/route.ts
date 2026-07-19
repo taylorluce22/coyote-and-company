@@ -98,14 +98,17 @@ export async function POST(req: NextRequest) {
 
   const headers = { Authorization: auth, "Content-Type": "application/json" };
   try {
-    // Model availability varies per account, so try a ladder. Body shapes
-    // differ by route family: /v1/* wraps in `params`; vendor-scoped model
-    // paths take {"arguments": {...}} and return { request_id, status_url }
-    // (both confirmed from the official SDKs).
+    // Canonical official-API shapes (verified against a working wrapper of
+    // platform.higgsfield.ai): model routes take RAW JSON bodies — no
+    // params/arguments wrapper — and return { request_id } to poll at
+    // /requests/{id}/status with results in images[].url. Soul's real image
+    // endpoint is higgsfield-ai/soul/standard. The legacy /v1 route (params-
+    // wrapped) stays as a last resort.
     const attempts: { path: string; body: unknown }[] = [
+      { path: "/higgsfield-ai/soul/standard", body: { prompt, aspect_ratio: "1:1", resolution: "1080p" } },
+      { path: "/bytedance/seedream/v4/text-to-image", body: { prompt, aspect_ratio: "1:1", resolution: "2K" } },
+      { path: "/flux-pro/kontext/max/text-to-image", body: { prompt, aspect_ratio: "1:1" } },
       { path: "/v1/text2image/soul", body: { params: { prompt, width_and_height: "1536x1536" } } },
-      { path: "/bytedance/seedream/v4/text-to-image", body: { arguments: { prompt, aspect_ratio: "1:1", resolution: "2K" } } },
-      { path: "/flux-pro/kontext/max/text-to-image", body: { arguments: { prompt, aspect_ratio: "1:1" } } },
     ];
     let startJson: unknown = null;
     const failures: string[] = [];
