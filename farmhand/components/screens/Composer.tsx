@@ -22,7 +22,7 @@ import { textures } from "@/lib/textures";
 import { COMP_COPY, type CompCh } from "@/lib/data";
 import { ideaCopy, ideaFactPair } from "@/lib/ideaCopy";
 import { ideasFor, type Idea, type StrategyProfile } from "@/lib/strategy";
-import { buildSlidePrompts } from "@/lib/postVisuals";
+import { buildSlidePrompts, pushPackLog, readPackLog } from "@/lib/postVisuals";
 import { vaultAdd, vaultAll, vaultDelete, type VaultImage } from "@/lib/vault";
 
 /* ---- content model (Farmhand): per-channel variants of the post ---- */
@@ -513,10 +513,13 @@ export default function Composer() {
     setGenBusy(true);
     setGenMsg("✨ Starting the batch…");
     try {
-      const prompts = buildSlidePrompts(slides.slice(0, 6), {
+      // aesthetic rotates per post (anti-repetition log) so consecutive
+      // posts never share a look — the AZ setting stays as the signature
+      const { prompts, pack } = buildSlidePrompts(slides.slice(0, 6), {
         theme: idea?.theme,
         territoryName: idea?.territory.name,
         city: idea?.territory.city,
+        avoidPacks: readPackLog(),
       });
       const seed = 1 + Math.floor(Math.random() * 999_999);
       const r = await fetch("/api/higgsfield", {
@@ -547,11 +550,12 @@ export default function Composer() {
       if (!ok) {
         setGenMsg("The images didn't come back in time — they're already paid for. Hit ⟳ Recover images in a minute to pull them into your vault.");
       } else {
+        pushPackLog(pack.id);
         const missing = items.length - ok;
         setGenMsg(
           missing > 0
-            ? `✓ ${ok} slides styled — ${failed ? `${failed} failed on Higgsfield's side.` : `${missing} still rendering: hit ⟳ Recover images in a minute.`}`
-            : `✓ All ${ok} slides styled in one matching look.`
+            ? `✓ ${ok} slides styled in "${pack.name}" — ${failed ? `${failed} failed on Higgsfield's side.` : `${missing} still rendering: hit ⟳ Recover images in a minute.`}`
+            : `✓ All ${ok} slides styled in "${pack.name}" — next post gets a fresh look automatically.`
         );
       }
     } catch {
