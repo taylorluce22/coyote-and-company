@@ -58,6 +58,8 @@ export interface AppState {
   compAccent: string;
   compShort: boolean;
   compRegen: boolean;
+  // AI-written copy for the current idea+channel (key = `${ideaId}:${channel}`)
+  compAiCopy: { key: string; long: string; short: string; cta: string } | null;
   uploads: Upload[];
   stStudio: Record<string, ChannelStudio>; // per-channel design + slide bgs
   stAssets: Asset[]; // analyzed image library (persisted)
@@ -121,6 +123,7 @@ const initialState: AppState = {
   compAccent: "cyan",
   compShort: false,
   compRegen: false,
+  compAiCopy: null,
   uploads: [],
   stStudio: {},
   stAssets: [],
@@ -213,6 +216,7 @@ const PERSIST_FIELDS = [
   "stAssets",
   "compStatus",
   "compIdea",
+  "compAiCopy",
   "pexelsKey",
   "plannedPosts",
   "weekBrief",
@@ -487,7 +491,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       PERSIST_FIELDS.forEach((k) => (out[k] = state[k]));
       localStorage.setItem(persistKeyFor(workspaceRef.current), JSON.stringify(out));
     } catch {}
-  }, [state.stStudio, state.stAssets, state.compStatus, state.compIdea, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.leadTraining, state.doneActions, state.contentResponses, state.briefs, state.energyIntel, state.demoMode, state.streak]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.stStudio, state.stAssets, state.compStatus, state.compIdea, state.compAiCopy, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.leadTraining, state.doneActions, state.contentResponses, state.briefs, state.energyIntel, state.demoMode, state.streak]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // switch between workspaces (test users / the owner's real solar account).
   // Current state is already persisted on every change, so no flush needed —
