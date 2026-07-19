@@ -71,7 +71,7 @@ function TerritoryDetail({ t, onBack }: { t: Territory; onBack: () => void }) {
     // seed knowledge-base sources for this territory if none yet
     set((s) => {
       const cur = (s.sources as SourceEntry[]) || [];
-      return cur.some((e) => e.territorySlug === t.slug) ? {} : { sources: mergeSources(cur, bankFor(t)) };
+      return cur.some((e) => e.territorySlug === t.slug) ? {} : { sources: mergeSources(cur, bankFor(t, strategy.vertical)) };
     });
 
     // live radar — real Reddit threads showing actual moving/relocation intent,

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import type { StrategyProfile } from "@/lib/strategy";
 import { bankFor, mergeSources, PLATFORM_META, statewide, type SourceEntry } from "@/lib/sources";
+import { verticalOf } from "@/lib/verticals";
 
 /**
  * Auto-discovered engagement sources.
@@ -27,9 +28,9 @@ export default function Sources() {
       const cur = (s.sources as SourceEntry[]) || [];
       let next = cur;
       (s.strategy as StrategyProfile).territories.forEach((t) => {
-        if (!next.some((e) => e.territorySlug === t.slug)) next = mergeSources(next, bankFor(t));
+        if (!next.some((e) => e.territorySlug === t.slug)) next = mergeSources(next, bankFor(t, strategy.vertical));
       });
-      if (!next.some((e) => e.territorySlug === "arizona")) next = mergeSources(next, statewide());
+      if (!next.some((e) => e.territorySlug === "arizona")) next = mergeSources(next, statewide(strategy.vertical));
       return next === cur ? {} : { sources: next };
     });
   }, [set]);
@@ -47,7 +48,9 @@ export default function Sources() {
     if (!t || researching) return;
     setResearching(slug);
     try {
-      const q = new URLSearchParams({ territory: t.name, city: t.city, segment: t.segment, profession: "real estate agent" });
+      // profession drives what the researcher looks for — this was hardcoded
+      // to "real estate agent", which fed the solar account realtor groups
+      const q = new URLSearchParams({ territory: t.name, city: t.city, segment: t.segment, profession: verticalOf(strategy.vertical).profession });
       const r = await fetch(`/api/discover?${q}`);
       const d = await r.json();
       const found: SourceEntry[] = (d.sources || []).map((f: { name: string; platform: SourceEntry["platform"]; why: string; size?: string }, i: number) => ({

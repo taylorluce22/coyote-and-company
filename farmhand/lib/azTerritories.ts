@@ -19,6 +19,7 @@ export interface AzTerritoryDef {
   utility: TerritoryUtility;
   label: string; // one-line card subtitle: profile + why it works
   tier: 1 | 2 | 3; // 1 = ranked top target, 2 = strong, 3 = situational/referral
+  kind?: "city" | "development"; // city = whole-corridor pick; default development
 }
 
 export const UTILITY_LABEL: Record<TerritoryUtility, string> = {
@@ -38,6 +39,22 @@ export const UTILITY_COLOR: Record<TerritoryUtility, string> = {
 };
 
 export const AZ_TERRITORY_CATALOG: AzTerritoryDef[] = [
+  // ---- WEST VALLEY cities (APS) — whole-corridor picks; the research's
+  // growth engines, NOT the saturated central cities ----
+  { slug: "buckeye-city", name: "Buckeye", city: "Buckeye", utility: "aps", tier: 1, kind: "city", label: "One of America's fastest-growing cities — Verrado, Tartesso, Sundance, Tyler Ranch, Copper Falls + Teravalis coming" },
+  { slug: "goodyear-city", name: "Goodyear", city: "Goodyear", utility: "aps", tier: 1, kind: "city", label: "Estrella + Canyon Trails + Sedella corridors; pools and big cooling loads (verify east-of-Agua-Fria = SRP)" },
+  { slug: "surprise-city", name: "Surprise", city: "Surprise", utility: "aps", tier: 1, kind: "city", label: "Marley Park, Asante, Sterling Grove, North Copper Canyon — huge fresh-roof volume" },
+  { slug: "peoria-city", name: "Peoria", city: "Peoria", utility: "aps", tier: 1, kind: "city", label: "Vistancia corridor + 67th/Happy Valley (Aloravita, Mystic) — affluent new construction" },
+  { slug: "avondale-city", name: "Avondale", city: "Avondale", utility: "aps", tier: 2, kind: "city", label: "Alamar + Del Rio Ranch; dense affordable new-family roofs (verify east-of-Agua-Fria = SRP)" },
+  { slug: "glendale-city", name: "Glendale", city: "Glendale", utility: "aps", tier: 2, kind: "city", label: "Stonehaven + Arrowhead infill — split city: north Glendale APS, south SRP, verify by address" },
+
+  // ---- EAST VALLEY cities (SRP) ----
+  { slug: "queen-creek-city", name: "Queen Creek", city: "Queen Creek", utility: "srp", tier: 1, kind: "city", label: "Top-growth city: Barney Farms, Harvest, Madera, Wales Ranch — affluent families, ~$135k+ incomes" },
+  { slug: "mesa-gateway", name: "Mesa Gateway", city: "Mesa", utility: "srp", tier: 1, kind: "city", label: "The Gateway boom: Hawes Crossing (2025 launch), Eastmark, Cadence — best fresh SRP roofs" },
+  { slug: "san-tan-valley-city", name: "San Tan Valley", city: "San Tan Valley", utility: "srp", tier: 1, kind: "city", label: "Bella Vista Farms, Soleo, San Tan Heights — Pinal County's unsaturated family boom" },
+  { slug: "gilbert-city", name: "Gilbert", city: "Gilbert", utility: "srp", tier: 2, kind: "city", label: "Waterston, Cooley Station, Morrison Ranch — premium established + fresh releases" },
+  { slug: "chandler-city", name: "Chandler", city: "Chandler", utility: "srp", tier: 3, kind: "city", label: "Low new-build volume but luxury tickets: Viviendo, Vistara — battery/backup market" },
+
   // ---- APS · West Valley + North Phoenix ----
   { slug: "teravalis", name: "Teravalis", city: "Buckeye", utility: "aps", tier: 1, label: "Massive greenfield — Floreo village launched 2025, up to 100k homes planned, almost zero legacy solar" },
   { slug: "estrella", name: "Estrella", city: "Goodyear", utility: "aps", tier: 1, label: "High-usage family master plan, pools + fresh Montecito/Lucero releases, ~$105k incomes" },

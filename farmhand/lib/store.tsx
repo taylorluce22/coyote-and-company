@@ -270,7 +270,20 @@ function parseSaved(raw: string): Partial<AppState> {
   if (saved.strategy?.vertical === "solar" && saved.strategy.territories.length) {
     const demoSlugs = new Set(DEFAULT_STRATEGY.territories.map((t) => t.slug));
     const allDemo = saved.strategy.territories.every((t: { slug?: string }) => t.slug && demoSlugs.has(t.slug));
-    if (allDemo) saved.strategy = { ...saved.strategy, territories: SOLAR_TERRITORIES };
+    // second stock signature: the interim Phoenix/Scottsdale/Mesa placeholder
+    // defaults — the research showed those are saturated central cities, not
+    // solar hot spots. A set the user picked themselves never matches either.
+    const placeholderSlugs = new Set(["phoenix", "scottsdale", "mesa"]);
+    const allPlaceholder = saved.strategy.territories.every((t: { slug?: string }) => t.slug && placeholderSlugs.has(t.slug));
+    if (allDemo || allPlaceholder) {
+      saved.strategy = { ...saved.strategy, territories: SOLAR_TERRITORIES };
+      // drop stale knowledge-base source suggestions (they were realtor cards
+      // for the old territories) so the solar bank reseeds for the new ones —
+      // anything the user explicitly added to their rotation is kept
+      if (Array.isArray(saved.sources)) {
+        saved.sources = saved.sources.filter((s: { origin?: string; status?: string }) => s.origin !== "knowledge-base" || s.status === "added");
+      }
+    }
   }
   // inbox hygiene: auto-purge engine captures that are provably stale
   // (captured before the recency/age-verification gates existed). Untouched
