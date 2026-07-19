@@ -11,7 +11,13 @@ import { NextRequest, NextResponse } from "next/server";
  * POST { prompts: string[], seed?, aspect? }
  *      → whole-post mode: one job per slide prompt (max 6), all on the same
  *        model with a shared seed for a congruent carousel. Returns
- *        { images: (url|null)[] } ordered to match the prompts.
+ *        IMMEDIATELY with { jobs: (statusUrl|null)[] } ordered to match the
+ *        prompts — the CLIENT polls via check mode. (A single server-side
+ *        request babysitting a 5-job batch died mid-poll in production and
+ *        stranded paid-for images; short requests can't.)
+ * POST { check: string[] }
+ *      → polls the given platform.higgsfield.ai status URLs once, returns
+ *        { results: [{ status: "completed"|"failed"|"pending", images? }] }.
  *
  * Auth: Authorization: Key KEY_ID:KEY_SECRET (platform.higgsfield.ai).
  * Keys live ONLY in Vercel env: HIGGSFIELD_API_KEY + HIGGSFIELD_API_SECRET.
@@ -98,10 +104,45 @@ export async function POST(req: NextRequest) {
   const auth = creds();
   if (!auth) return NextResponse.json({ configured: false, needsCreds: true, images: [] });
 
-  let body: { prompt?: unknown; prompts?: unknown; seed?: unknown; aspect?: unknown } = {};
+  let body: { prompt?: unknown; prompts?: unknown; seed?: unknown; aspect?: unknown; check?: unknown } = {};
   try {
     body = await req.json();
   } catch {}
+
+  // check mode: one status sweep over job handles the client is tracking.
+  // Only platform.higgsfield.ai URLs — the auth header must never be sent
+  // anywhere else.
+  if (Array.isArray(body.check)) {
+    const urls = (body.check as unknown[])
+      .map((u) => String(u || ""))
+      .filter((u) => {
+        try {
+          const x = new URL(u);
+          return x.protocol === "https:" && x.hostname === "platform.higgsfield.ai";
+        } catch {
+          return false;
+        }
+      })
+      .slice(0, 8);
+    const headers = { Authorization: auth, "Content-Type": "application/json" };
+    const results = await Promise.all(
+      urls.map(async (u) => {
+        try {
+          const r = await fetch(u, { headers, signal: AbortSignal.timeout(15000) });
+          if (!r.ok) return { status: "pending" };
+          const sj = await r.json();
+          const status = String((sj as { status?: unknown })?.status || "");
+          if (/failed|nsfw|error/i.test(status)) return { status: "failed" };
+          const images = imageUrls(sj);
+          return images.length ? { status: "completed", images: images.slice(0, 4) } : { status: "pending" };
+        } catch {
+          return { status: "pending" };
+        }
+      })
+    );
+    return NextResponse.json({ configured: true, results });
+  }
+
   const list = Array.isArray(body.prompts)
     ? (body.prompts as unknown[]).map((p) => String(p || "").trim().slice(0, 800)).filter(Boolean).slice(0, 6)
     : [];
@@ -165,7 +206,8 @@ export async function POST(req: NextRequest) {
     if (!attempt || !firstJob) {
       return NextResponse.json({
         configured: true,
-        images: multi ? prompts.map(() => null) : [],
+        images: [],
+        jobs: [],
         error: `all models unavailable — ${failures.join(" · ")}`,
       });
     }
@@ -182,12 +224,19 @@ export async function POST(req: NextRequest) {
     );
     const jobs: (Job | null)[] = [firstJob, ...rest];
 
+    if (multi) {
+      // hand the job handles straight back — the client drives polling, so a
+      // slow batch can't outlive this request and strand paid-for images
+      const handles = jobs.map((j) => (j ? j.statusUrl || (j.ids[0] ? `${BASE}/requests/${j.ids[0]}/status` : null) : null));
+      return NextResponse.json({ configured: true, jobs: handles });
+    }
+
     // some responses may already carry result URLs
     const found: string[][] = jobs.map((j) => (j ? imageUrls(j.startJson) : []));
     const failStatus: (string | null)[] = jobs.map(() => null);
 
-    // poll every unfinished job until completed / failed (shared deadline)
-    const deadline = Date.now() + (multi ? 110000 : 70000);
+    // poll the single job until completed / failed (~70s budget)
+    const deadline = Date.now() + 70000;
     const pending = () => jobs.some((j, i) => j && !found[i].length && !failStatus[i]);
     while (pending() && Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 2500));
@@ -216,17 +265,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (multi) {
-      // ordered one-url-per-prompt; a failed/timed-out slide is null so the
-      // client can keep the rest of the carousel
-      const images = found.map((f) => f[0] ?? null);
-      const got = images.filter(Boolean).length;
-      return NextResponse.json({
-        configured: true,
-        images,
-        ...(got ? {} : { error: "timed out waiting for images — try again" }),
-      });
-    }
     if (failStatus[0]) return NextResponse.json({ configured: true, images: [], error: `generation ${failStatus[0]}` });
     if (!found[0].length) return NextResponse.json({ configured: true, images: [], error: "timed out waiting for the image — try again" });
     return NextResponse.json({ configured: true, images: found[0].slice(0, 4) });

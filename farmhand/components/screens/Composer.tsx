@@ -56,6 +56,43 @@ const STATUSES = [
   { id: "posted", label: "Posted" },
 ];
 
+/* ---- pending Higgsfield batch, persisted the moment jobs start ----
+   If a batch is interrupted (tab closed, connection dropped, function
+   died), these records let ⟳ Recover pull the already-paid-for images. */
+type PendingItem = { url: string; prompt: string; role: string; index: number; title: string };
+const PENDING_KEY = "fh-hf-pending";
+function readPending(): PendingItem[] | null {
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    if (!Array.isArray(p.items) || !p.items.length) return null;
+    // Higgsfield results don't live forever — stop offering recovery after a day
+    if (!(p.createdAt > Date.now() - 24 * 3600000)) {
+      localStorage.removeItem(PENDING_KEY);
+      return null;
+    }
+    return p.items as PendingItem[];
+  } catch {
+    return null;
+  }
+}
+function writePending(items: PendingItem[]) {
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify({ createdAt: Date.now(), items }));
+  } catch {}
+}
+function prunePending(index: number) {
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    if (!raw) return;
+    const p = JSON.parse(raw);
+    p.items = (Array.isArray(p.items) ? p.items : []).filter((it: PendingItem) => it.index !== index);
+    if (p.items.length) localStorage.setItem(PENDING_KEY, JSON.stringify(p));
+    else localStorage.removeItem(PENDING_KEY);
+  } catch {}
+}
+
 /* ---- small UI atoms (studio parity) ---- */
 function Seg({
   value,
@@ -372,9 +409,19 @@ export default function Composer() {
   }, []);
 
   /* ---- whole-post AI visuals: one Higgsfield image per slide, shared
-     seed + shared style language so the carousel reads as one piece ---- */
+     seed + shared style language so the carousel reads as one piece.
+
+     Crash-proof by design: the server only STARTS the jobs (instant), the
+     browser polls for results, every started job is recorded locally before
+     the first poll, and each finished image is committed to the vault the
+     moment it lands. If anything dies mid-batch, the Recover button pulls
+     the already-paid-for images — credits can't be stranded again. ---- */
   const [genBusy, setGenBusy] = useState(false);
   const [genMsg, setGenMsg] = useState<string | null>(null);
+  const [pendingBatch, setPendingBatch] = useState<PendingItem[] | null>(null);
+  useEffect(() => {
+    setPendingBatch(readPending());
+  }, []);
   // two-step trigger: first click arms with the credit cost, second confirms —
   // so credits are only spent once the copy is locked
   const [genArm, setGenArm] = useState(false);
@@ -383,10 +430,74 @@ export default function Composer() {
     const t = setTimeout(() => setGenArm(false), 10000);
     return () => clearTimeout(t);
   }, [genArm]);
+
+  /** Poll tracked jobs; commit every finished image immediately. */
+  async function pollBatch(items: PendingItem[], applyToSlides: boolean, budgetMs: number): Promise<{ ok: number; failed: number }> {
+    const deadline = Date.now() + budgetMs;
+    const settled = new Set<number>();
+    let ok = 0;
+    let failed = 0;
+    while (settled.size < items.length && Date.now() < deadline) {
+      const open = items.filter((it) => !settled.has(it.index));
+      let results: { status?: string; images?: string[] }[] = [];
+      try {
+        const r = await fetch("/api/higgsfield", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ check: open.map((o) => o.url) }),
+          signal: AbortSignal.timeout(30000),
+        });
+        const j = await r.json();
+        results = Array.isArray(j.results) ? j.results : [];
+      } catch {}
+      for (let k = 0; k < open.length; k++) {
+        const it = open[k];
+        const res = results[k];
+        if (!res) continue;
+        if (res.status === "failed") {
+          settled.add(it.index);
+          failed++;
+          prunePending(it.index);
+          continue;
+        }
+        const u = res.status === "completed" ? res.images?.[0] : null;
+        if (!u) continue;
+        settled.add(it.index);
+        const p = await processImageURL(`/api/higgsfield?img=${encodeURIComponent(u)}`, 1200, 0.85);
+        if (!p) {
+          failed++;
+          prunePending(it.index);
+          continue;
+        }
+        // vault FIRST — the paid-for image is safe before anything else
+        await vaultAdd({ id: uid(), dataURL: p.dataURL, lum: p.lum, busy: p.busy, prompt: it.prompt, label: `${it.title.slice(0, 48)} · ${it.role}`, createdAt: Date.now() });
+        set((s) => ({ stAssets: [...s.stAssets, { id: uid(), name: `${it.role} visual`, dataURL: p.dataURL, lum: p.lum, busy: p.busy, source: "higgsfield" }].slice(-40) }));
+        if (applyToSlides) {
+          const b: Bg = { type: "image", img: p.dataURL };
+          set((s) => {
+            const st = s.stStudio[ch] || studio;
+            if (it.index === 0) {
+              const nb = { ...st.slideBg };
+              delete nb[0]; // cover lives in its own slot
+              return { stStudio: { ...s.stStudio, [ch]: { ...st, coverBg: b, slideBg: nb } } };
+            }
+            return { stStudio: { ...s.stStudio, [ch]: { ...st, slideBg: { ...st.slideBg, [it.index]: b } } } };
+          });
+        }
+        ok++;
+        prunePending(it.index);
+        setGenMsg(`✨ ${ok}/${items.length} images in — the rest are still rendering…`);
+      }
+      if (settled.size < items.length) await new Promise((r) => setTimeout(r, 4000));
+    }
+    vaultAll().then(setVault);
+    return { ok, failed };
+  }
+
   async function generateVisuals() {
     if (genBusy || !slides.length) return;
     setGenBusy(true);
-    setGenMsg(null);
+    setGenMsg("✨ Starting the batch…");
     try {
       const prompts = buildSlidePrompts(slides.slice(0, 6), {
         theme: idea?.theme,
@@ -398,57 +509,59 @@ export default function Composer() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompts, seed, aspect: "3:4" }),
-        signal: AbortSignal.timeout(150000),
+        signal: AbortSignal.timeout(90000),
       });
       const j = await r.json();
       if (j.needsCreds) {
         setGenMsg("Add your Higgsfield API keys first — see the image panel on the right.");
         return;
       }
-      const urls: (string | null)[] = Array.isArray(j.images) ? j.images : [];
-      if (!urls.some(Boolean)) {
-        setGenMsg(j.error || "Generation returned no images — try again.");
+      const handles: (string | null)[] = Array.isArray(j.jobs) ? j.jobs : [];
+      const items: PendingItem[] = handles
+        .map((u, i) => (u ? { url: u, prompt: prompts[i], role: slides[i]?.role || `slide ${i + 1}`, index: i, title: idea?.title || "Post" } : null))
+        .filter((x): x is PendingItem => !!x);
+      if (!items.length) {
+        setGenMsg(j.error || "Couldn't start the batch — no credits were spent.");
         return;
       }
-      // process each result through the same canvas pipeline as uploads so
-      // legibility auto-fill and export keep working, then save to the library
-      const nb: Record<number, Bg> = { ...slideBg };
-      let coverImg: Bg | null = null;
-      const newAssets: { id: string; name: string; dataURL: string; lum?: number; busy?: number; source?: string }[] = [];
-      for (let i = 0; i < urls.length && i < total; i++) {
-        const u = urls[i];
-        if (!u) continue;
-        const p = await processImageURL(`/api/higgsfield?img=${encodeURIComponent(u)}`, 1200, 0.85);
-        if (!p) continue;
-        const b: Bg = { type: "image", img: p.dataURL };
-        if (i === 0) {
-          coverImg = b;
-          delete nb[0]; // cover lives in its own slot
-        } else nb[i] = b;
-        newAssets.push({ id: uid(), name: `${slides[i]?.role || "slide " + (i + 1)} visual`, dataURL: p.dataURL, lum: p.lum, busy: p.busy, source: "higgsfield" });
-        // permanent copy in the vault — survives the 40-asset cap, reusable
-        // on any later post even if this one never ships
-        await vaultAdd({
-          id: uid(),
-          dataURL: p.dataURL,
-          lum: p.lum,
-          busy: p.busy,
-          prompt: prompts[i],
-          label: `${(idea?.title || "Post").slice(0, 48)} · ${slides[i]?.role || "slide " + (i + 1)}`,
-          createdAt: Date.now(),
-        });
+      // record the paid-for jobs BEFORE polling — from here on, a crash,
+      // closed tab, or dead connection can't lose them
+      writePending(items);
+      setGenMsg(`✨ ${items.length} images rendering — they land on the slides as they finish…`);
+      const { ok, failed } = await pollBatch(items, true, 4 * 60000);
+      setPendingBatch(readPending());
+      if (!ok) {
+        setGenMsg("The images didn't come back in time — they're already paid for. Hit ⟳ Recover images in a minute to pull them into your vault.");
+      } else {
+        const missing = items.length - ok;
+        setGenMsg(
+          missing > 0
+            ? `✓ ${ok} slides styled — ${failed ? `${failed} failed on Higgsfield's side.` : `${missing} still rendering: hit ⟳ Recover images in a minute.`}`
+            : `✓ All ${ok} slides styled in one matching look.`
+        );
       }
-      if (!newAssets.length) {
-        setGenMsg("Couldn't load the generated images — try again.");
-        return;
-      }
-      set((s) => ({ stAssets: [...s.stAssets, ...newAssets].slice(-40) }));
-      saveStudio({ slideBg: nb, ...(coverImg ? { coverBg: coverImg } : {}) });
-      vaultAll().then(setVault);
-      const missing = urls.slice(0, total).filter((u) => !u).length;
-      setGenMsg(missing ? `✓ ${newAssets.length} slides styled — ${missing} didn't finish, hit the button again to retry.` : `✓ All ${newAssets.length} slides styled in one matching look.`);
     } catch {
-      setGenMsg("Generation timed out — try again in a minute.");
+      setPendingBatch(readPending());
+      setGenMsg("Lost the connection mid-batch — your images are safe. Hit ⟳ Recover images to pull them into your vault.");
+    } finally {
+      setGenBusy(false);
+    }
+  }
+
+  /** Pull finished images from an interrupted batch — no new credits spent. */
+  async function recoverBatch() {
+    const items = readPending();
+    if (!items || genBusy) return;
+    setGenBusy(true);
+    setGenMsg("⟳ Checking Higgsfield for your finished images…");
+    try {
+      const { ok } = await pollBatch(items, false, 45000);
+      setPendingBatch(readPending());
+      setGenMsg(
+        ok
+          ? `✓ Recovered ${ok} image${ok > 1 ? "s" : ""} into your AI vault — nothing wasted.`
+          : "Nothing ready yet — try once more in a minute. If it stays empty, those jobs failed on Higgsfield's side."
+      );
     } finally {
       setGenBusy(false);
     }
@@ -682,10 +795,34 @@ export default function Composer() {
             </button>
           </div>
         </div>
+        {pendingBatch && !genBusy && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", background: "rgba(255,194,61,0.08)", border: "1px solid rgba(255,194,61,0.35)", borderRadius: 10, padding: "9px 12px", margin: "-2px 0 12px" }}>
+            <span style={{ fontSize: 11.5, color: "#FFC23D", lineHeight: 1.45 }}>
+              An image batch didn&apos;t finish downloading — {pendingBatch.length} paid-for image{pendingBatch.length > 1 ? "s are" : " is"} likely waiting at Higgsfield.
+            </span>
+            <button
+              onClick={recoverBatch}
+              style={{ background: "rgba(255,194,61,0.18)", color: "#FFC23D", border: "1px solid rgba(255,194,61,0.5)", borderRadius: 8, padding: "5px 12px", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}
+            >
+              ⟳ Recover images
+            </button>
+            <button
+              onClick={() => {
+                try {
+                  localStorage.removeItem(PENDING_KEY);
+                } catch {}
+                setPendingBatch(null);
+              }}
+              style={{ background: "none", color: "#8B89A0", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 8, padding: "5px 12px", fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
         {(genBusy || genMsg || genArm || copyErr) && (
           <div style={{ fontSize: 11.5, color: genMsg?.startsWith("✓") && !genArm && !copyErr ? "#41D98A" : "#FFC23D", margin: "-4px 0 12px", lineHeight: 1.45 }}>
             {genBusy
-              ? `✨ Art-directing ${Math.min(total, 6)} slide visuals in one style — this takes about a minute…`
+              ? genMsg || `✨ Art-directing ${Math.min(total, 6)} slide visuals in one style — this takes about a minute…`
               : genArm
                 ? `This spends ~${Math.min(total, 6)} Higgsfield credits on THIS exact copy — happy with the text first? Click again to confirm.`
                 : copyErr || genMsg}
