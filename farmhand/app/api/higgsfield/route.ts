@@ -98,18 +98,14 @@ export async function POST(req: NextRequest) {
 
   const headers = { Authorization: auth, "Content-Type": "application/json" };
   try {
-    // Model availability varies by account — Soul returned "Unavailable
-    // model" on a live key even with a correct request. Try each known
-    // text-to-image route until one accepts (v1 wraps in `params`, the
-    // flux route takes `input` per the official v2 SDK).
-    // Model ids are vendor-scoped (e.g. bytedance/seedream/v4/text-to-image,
-    // from the official Python SDK) and those model-path routes take the
-    // fields DIRECTLY in the body (v2 SDK spreads input, no wrapper); only
-    // the /v1/* routes wrap in `params`.
+    // Model availability varies per account, so try a ladder. Body shapes
+    // differ by route family: /v1/* wraps in `params`; vendor-scoped model
+    // paths take {"arguments": {...}} and return { request_id, status_url }
+    // (both confirmed from the official SDKs).
     const attempts: { path: string; body: unknown }[] = [
       { path: "/v1/text2image/soul", body: { params: { prompt, width_and_height: "1536x1536" } } },
-      { path: "/bytedance/seedream/v4/text-to-image", body: { prompt, aspect_ratio: "1:1", resolution: "2K" } },
-      { path: "/flux-pro/kontext/max/text-to-image", body: { prompt, aspect_ratio: "1:1" } },
+      { path: "/bytedance/seedream/v4/text-to-image", body: { arguments: { prompt, aspect_ratio: "1:1", resolution: "2K" } } },
+      { path: "/flux-pro/kontext/max/text-to-image", body: { arguments: { prompt, aspect_ratio: "1:1" } } },
     ];
     let startJson: unknown = null;
     const failures: string[] = [];
@@ -138,14 +134,18 @@ export async function POST(req: NextRequest) {
     // some responses may already carry result URLs
     let found = imageUrls(startJson);
     const ids = jobIds(startJson);
+    // model-path routes hand back an absolute status_url — poll it verbatim
+    const statusUrl = typeof (startJson as { status_url?: unknown })?.status_url === "string"
+      ? ((startJson as { status_url: string }).status_url)
+      : null;
 
     // poll each request id until completed / failed (~70s budget)
     const deadline = Date.now() + 70000;
-    while (!found.length && ids.length && Date.now() < deadline) {
+    while (!found.length && (ids.length || statusUrl) && Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 2500));
-      for (const id of ids) {
+      for (const target of statusUrl ? [statusUrl] : ids.map((id) => `${BASE}/requests/${id}/status`)) {
         try {
-          const st = await fetch(`${BASE}/requests/${id}/status`, { headers, signal: AbortSignal.timeout(15000) });
+          const st = await fetch(target, { headers, signal: AbortSignal.timeout(15000) });
           if (!st.ok) continue;
           const sj = await st.json();
           const status = String((sj as { status?: unknown })?.status || "");
