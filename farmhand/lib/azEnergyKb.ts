@@ -63,7 +63,7 @@ export const KB = {
     any: "the solar industry has a trust problem worth naming out loud: roughly 100 U.S. solar companies have gone bankrupt since 2023 (Titan, SunPower, Sunnova, Freedom Forever among them) and homeowner distrust doubled in a single year — which is exactly why every quote deserves a slow, skeptical read",
   },
   installerQuality: {
-    any: "price per watt is one input, not the verdict — a low bid can reflect the financing structure or labor shortcuts, and the real differentiators are how the roof penetrations are flashed, whether the crew is in-house and utility/manufacturer-qualified, and who actually services the system in year five. The few AZ installers doing truly high-quality work usually cost a bit more",
+    any: "price per watt is one input, not the verdict — a low bid can reflect dealer-fee financing or labor shortcuts. The real markers: how the roof penetrations are flashed, an active R-11/CR-11 license with a clean ROC complaint record (free to look up), a spot on APS's Qualified Technology Installer or SRP's Preferred Solar Installer list, in-house crews, and 10+ year workmanship coverage. The few AZ installers doing truly high-quality work usually cost a bit more",
   },
   leaseShift: {
     any: "about 7 in 10 new solar deals in 2026 are leases/PPAs — not because leases got better, but because the homeowner purchase credit expired and leasing companies can still claim a commercial credit through 2027–28. It can genuinely fit, but read the escalator: 0.99–2.99% a year for 20–25 years",
@@ -213,6 +213,39 @@ export const SOLAR_KB_CONTENT: { title: string; angle: string; format: "carousel
       "The homeowner purchase credit died Dec 31, 2025. Leasing companies can still claim a commercial credit through 2027–28.",
       "That's why about 7 in 10 new solar deals in 2026 are leases or PPAs. It's a tax-code shift — not automatically a trick.",
       "But read the escalator: 0.99–2.99% a year, for 20–25 years. Price the 25-year total, never the first month.",
+    ],
+  },
+  {
+    title: "The 60-second background check for any solar installer",
+    angle: "the free, verifiable vetting path — ROC lookup + utility lists; homeowner-protective, zero pitch",
+    format: "carousel",
+    theme: "buyer-education",
+    deck: [
+      "Arizona solar requires an R-11 or CR-11 license. The ROC website shows status, discipline, and complaints — free.",
+      "Years licensed + a clean complaint record is the signal. Repeated roof-leak complaints are the red flag.",
+      "Then check the utility lists: APS's Qualified Technology Installer program and SRP's Preferred Solar Installer list both require good standing and training.",
+    ],
+  },
+  {
+    title: "What happens to your warranty if your installer disappears",
+    angle: "post-bankruptcy reality — Arizona minimums, what survives, what dies with the company",
+    format: "carousel",
+    theme: "objection-handling",
+    deck: [
+      "Arizona's legal minimum: 2 years on the solar device and its install, 1 year on the rest. Quality installers go 10+ on workmanship.",
+      "Panel and inverter warranties usually survive an installer bankruptcy. Workmanship and roof warranties usually die with the company.",
+      "Ask: is there manufacturer-backed or escrowed coverage if you're gone in year 8? Real companies have a real answer.",
+    ],
+  },
+  {
+    title: "Tile roofs and solar: how the good crews do it",
+    angle: "the Phoenix-specific craft education nobody posts — flashing as a tested system, not goop on a hole",
+    format: "carousel",
+    theme: "buyer-education",
+    deck: [
+      "Good crews remove tiles, mount standoffs into structure, and three-course the underlayment: cement, fabric, cement.",
+      "Then the tiles get cut to fit around the standoff — never drilled through and smeared with sealant.",
+      "That's a sealed system versus a leak on a timer. Ask exactly how YOUR roof gets flashed.",
     ],
   },
   {

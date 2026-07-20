@@ -4,10 +4,6 @@ Operational task board (system work — content work lives in [[Content Queue]])
 Orchestrator triages this every run. Newest on top within each section.
 
 ## Needs Taylor
-- [ ] **Run the installer-quality research prompt** (provided in chat
-  2026-07-20) — verifies flashing standards, utility qualified-installer
-  programs, manufacturer tiers; upgrades the [owner-expertise] section of
-  az-solar-market-2026.md to sourced fact
 - [ ] **Run the competitor audit** with the browser extension (read-only
   prompt provided in chat 2026-07-20) — results paste into
   [[Competitor Audit]]; a session then distills Adopt/Avoid lists
@@ -38,6 +34,9 @@ Orchestrator triages this every run. Newest on top within each section.
 - [ ] Performance loop: pack/hook win-rates → [[Content Analytics]]
 
 ## Done
+- [x] Installer-quality research ingested: `az-installer-quality-2026.md`
+  (QTI/PSI programs, flashing standards, ROC/NABCEP, warranty survival);
+  owner-expertise upgraded to verified fact; 3 new idea decks (2026-07-20)
 - [x] Deep research ingested: `az-rates-supply-demand-2026.md` +
   `az-solar-market-2026.md`, KB reply lines + idea banks refreshed,
   Editorial Direction updated (2026-07-19)

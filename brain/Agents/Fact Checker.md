@@ -3,7 +3,7 @@
 The accuracy gate. NOTHING reaches Taylor for approval without passing here.
 
 ## Read first
-The brief + its copy + its prompts · the three KB docs (`farmhand/docs/az-energy-knowledge-2026.md`, `az-rates-supply-demand-2026.md`, `az-solar-market-2026.md`) · [[Voice]] · [[Editorial Direction]]
+The brief + its copy + its prompts · the four KB docs (`farmhand/docs/az-energy-knowledge-2026.md`, `az-rates-supply-demand-2026.md`, `az-solar-market-2026.md`, `az-installer-quality-2026.md`) · [[Voice]] · [[Editorial Direction]]
 
 The two 2026 research docs label every line `[fact]` / `[projection]` /
 `[contested]` / `[interested-party]` / `[survey]`. Copy may state ONLY
