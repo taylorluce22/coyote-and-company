@@ -6,7 +6,7 @@ The one-screen view of the operation. Agents: read this first, every run.
 
 | Agent | State | Last run | Next |
 |---|---|---|---|
-| [[Orchestrator]] | **LIVE — scheduled** Mon/Thu/Fri 9:00 AM Phoenix | 2026-07-20 (manual make-up run) | Thu 2026-07-23 auto |
+| [[Orchestrator]] | **ON HOLD** — schedule deleted per owner; manual runs only | 2026-07-20 (manual make-up run) | when Taylor asks |
 | [[Creative Director]] | 5 open briefs, all advanced | 2026-07-19 | when queue < 3 open |
 | [[Copywriter]] | all 5 briefs drafted | 2026-07-20 | next `idea` brief |
 | [[Art Director]] | all 5 visual plans done (~13 credits total est.) | 2026-07-20 | next `drafted` brief |

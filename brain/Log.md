@@ -9,6 +9,16 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-20 · owner hold + credit preservation policy
+Taylor's call: nothing fires automatically until the content is dialed in.
+The scheduled Routine was DELETED (not paused) — zero autonomous runs;
+manual "run the brain" passes only. Re-arm instructions preserved in
+[[Schedule]]. New binding Credit Preservation Policy added to [[Tools]]:
+no paid call is ever a test (mocked responses for testing), Higgsfield
+only on `approved` briefs within estimate, Metricool free-tier-only until
+explicitly approved, one-pass token discipline, and a spend ledger in this
+Log. Nothing spent.
+
 ## 2026-07-20 · Orchestrator (manual make-up run, in-session)
 The Monday 9 AM slot fell during the routine's recreation, so the pass ran
 in-session. Copywriter: all 5 briefs drafted (hooks, slides, CTAs,
