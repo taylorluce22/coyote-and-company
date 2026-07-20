@@ -4,6 +4,9 @@ Operational task board (system work — content work lives in [[Content Queue]])
 Orchestrator triages this every run. Newest on top within each section.
 
 ## Needs Taylor
+- [ ] **Run the competitor audit** with the browser extension (read-only
+  prompt provided in chat 2026-07-20) — results paste into
+  [[Competitor Audit]]; a session then distills Adopt/Avoid lists
 - [ ] **A/B decision**: realistic-lane faces — (A) real photos of you for
   identity + AI for scenes, or (B) a consistent stylized character via Soul
   ID. Record the answer in [[Visual Style]]. *(Recommendation: A)*

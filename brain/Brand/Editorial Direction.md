@@ -35,6 +35,21 @@ never dwell or fearmonger — and ALWAYS land on a **soft CTA** (an offer to
 help, never pressure). Example of the standard: monsoon panel-cleaning
 content was rejected for exactly this.
 
+## The screen/caption split (owner, 2026-07-20)
+
+Follow the model successful service pros (especially realtors) use — never
+the solar-recruiting model (commission receipts, sold-deal shoutouts,
+"join my team"). This page is for homeowners AND reps to learn from.
+
+- **On-screen text is a summary, not a lesson**: ≤ ~12 words per slide,
+  at most ONE number per slide, punchy fragments over full sentences.
+  If a slide needs a comma-heavy sentence, it belongs in the caption.
+- **The education lives in the caption** (and gets extended in the
+  comments — answering questions there is content too).
+- **Realistic-moment posts carry zero on-screen text** — image + caption.
+- A post should never *look* educational; it should look good and *read*
+  educational when someone cares enough to tap "more".
+
 **CTA geography rule (owner, 2026-07-20):** CTAs are Valley-general and
 interchangeable — "Valley homeowners…", "if you're in the Valley and have
 questions you want answered…". Never pin the ask to one city. Cities appear
