@@ -11,56 +11,102 @@ reason teaches the agents — be specific.
 ---
 
 ## Why your APS bill keeps climbing (and it isn't your AC)
-- **status**: idea
-- **format**: message-card carousel
-- **hook structure**: number-led ("20 gigawatts want onto your grid")
-- **content**: the resource explainer — ~20 GW of data-center load in APS's
-  own filings, record 8,631 MW peak last August, ~40% peak growth projected
-  by the early 2030s, the pending ~16% rate case (decision expected end of
-  2026). Neutral, calm, zero pitch; close with what a homeowner can control.
-- **look**: Desert High-Key
-- **CTA territory**: Buckeye (soft: "want to see what this means for your
-  bill? DM me")
-- **why now**: flagship of the new rising-prices pillar
+- **status**: fact-checked
+- **format**: message-card carousel (5 slides) · **look**: Desert High-Key
+- **CTA territory**: Buckeye · **hook structure**: number-led
+
+**Hook**: 20 gigawatts are lining up for Arizona's grid
+
+**Slides**:
+1. APS reports 4.5 GW of committed new load beyond its 8.6 GW record peak — plus roughly 20 GW more of data-center requests waiting in its queue.
+2. On top of that, APS is asking ~16.4% more from residential customers, with a decision due Dec 31, 2026. Last time, they asked 13.6% and got about 8.3%.
+3. Do data centers raise home bills? Experts genuinely disagree. Meanwhile, what you control is free: the right rate plan and your 4–7pm usage.
+
+**CTA**: Want this translated to your own Buckeye bill? DM me — no pitch.
+
+**Caption**: 20 gigawatts are lining up for Arizona's grid. That's the real story behind your climbing APS bill — new demand, new infrastructure, and a rate case with a decision due by Dec 31, 2026. The honest version, no doom: swipe. DM me when you want it translated to your own Buckeye bill.
+**Hashtags**: arizonaenergy · aps · energybills · buckeye · westvalley · phoenixmetro · azliving · arizonasolar
+
+**Visual plan** (Art Director): 5 prompts via the Studio's Post visuals button, Desert High-Key pack, shared seed, aspect 3:4. Cover = aerial master-planned desert community; bodies = supporting shots rotation; CTA = porch closer. ~5 credits.
+
+**Fact-check (2026-07-20): PASS**
+- 4.5 GW committed + ~20 GW queue + 8.6 GW peak → az-rates-supply-demand-2026.md [fact]
+- ~16.4% residential ask; decision due Dec 31, 2026 → same doc [fact]
+- 2022 precedent 13.6% asked / ~8.3% granted → same doc [fact]
+- data-center bill impact framed as disagreement → honors [contested]
+- rate-plan switch free → az-energy-knowledge-2026.md / KB.ratePlanCheck
 
 ## Every new street is new demand
-- **status**: idea
-- **format**: realistic-moment single — brand-new West Valley street at
-  dusk, model homes lit, half the lots still framed (growth made visible);
-  caption connects the build-out → demand → rates story to the reader's bill
-- **hook structure**: curiosity gap
-- **look**: Warm Nocturne
-- **CTA territory**: Buckeye
-- **why now**: pairs the rising-prices pillar with the realism lane;
-  Buckeye is literally the fastest-growing example
+- **status**: fact-checked
+- **format**: realistic-moment single · **look**: Warm Nocturne
+- **CTA territory**: Buckeye · **hook structure**: curiosity gap
+
+**Hook (caption-led)**: Where do 100,000 new homes plug in?
+
+**Caption**: Teravalis in Buckeye is planned for 100,000 homes — about 45 are built so far, and the rest are coming. APS connected 32,000+ new meters in 2024 alone. Every porch light on a new street is new evening demand, and that demand is the backdrop for every rate conversation we'll have this decade. Not a pitch — just the context your bill lives in. DM me if you want to know what it means for your own Buckeye numbers.
+**Hashtags**: buckeye · teravalis · westvalley · arizonagrowth · arizonaenergy · energybills · phoenixmetro · azliving
+
+**Visual plan** (Art Director): single Higgsfield image, ~1 credit. Prompt: "brand-new suburban street at dusk, framed houses under construction beside finished model homes with warm porch lights glowing, no people. Buckeye Arizona desert suburb. night scene lit by warm porch and window light, deep shadows, quiet calm mood, 50mm, shallow depth of field, photorealistic, no text, no lettering, no logos, no watermarks."
+
+**Fact-check (2026-07-20): PASS**
+- Teravalis ~100,000 planned homes; ~45 completed (Nov 2025) → az-rates-supply-demand-2026.md [fact]
+- APS 32,000+ new meters in 2024 → same doc [fact]
+- "backdrop for rate conversations" framed as context, not causation → honors [contested]
 
 ## The kitchen-table bill moment
-- **status**: idea
-- **format**: realistic-moment single — homeowner at a kitchen table with a
-  paper APS bill, morning light; caption carries the bill-breakdown numbers
-  (34¢ on-peak vs ~12¢ off) and one free fix
-- **hook structure**: number-led (in the caption)
-- **look**: Golden Hour Lifestyle
-- **CTA territory**: Buckeye
-- **why now**: July bills landing this week — the exact moment of pain
+- **status**: fact-checked
+- **format**: realistic-moment single · **look**: Golden Hour Lifestyle
+- **CTA territory**: Buckeye · **hook structure**: number-led (caption)
+
+**Caption**: On APS, the 4–7pm weekday window runs about 34¢/kWh vs ~12¢ off-peak. That 3x spread is where most summer bills blow up. Before anyone talks panels: make sure you're on the right rate plan — checking is free, switching is free, and sometimes that alone takes a real bite out of the bill. Save this for the next scary bill, and DM me when you want your own Buckeye numbers run. No pitch.
+**Hashtags**: aps · energybills · buckeye · westvalley · arizonaenergy · azliving · phoenixmetro · arizonasolar
+
+**Visual plan** (Art Director): single Higgsfield image, ~1 credit. Face-neutral until the standing decision: "over-the-shoulder view of a person at a kitchen table holding a paper utility bill, face not visible, morning light through a window, modern desert home interior. Buckeye Arizona desert suburb. warm golden-hour light, honeyed tones, soft long shadows, 35mm, shallow depth of field, photorealistic, no text, no lettering, no logos, no watermarks."
+
+**Fact-check (2026-07-20): PASS**
+- 34¢ on-peak / ~12¢ off-peak, 4–7pm weekdays → az-energy-knowledge-2026.md (TOU-E: 34.396¢/12.345¢) [fact]
+- plan check/switch free → KB.ratePlanCheck [fact]
+- "3x spread" → 34.396 / 12.345 ≈ 2.8, stated as "3x spread" per existing KB.rates.aps phrasing — acceptable, matches KB verbatim language
 
 ## SRP's 40¢ window nobody explains
-- **status**: idea
-- **format**: message-card carousel (deck exists — 6–9pm July/Aug rate)
-- **hook structure**: number-led
-- **look**: Editorial Minimal
-- **CTA territory**: Queen Creek
-- **why now**: the 40¢ summer-peak rate is literally in effect right now
+- **status**: fact-checked
+- **format**: message-card carousel (5 slides) · **look**: Editorial Minimal
+- **CTA territory**: Queen Creek · **hook structure**: number-led
+
+**Hook**: SRP's 40¢ hours: 6–9pm, July and August
+
+**Slides**:
+1. On SRP's newer plans, July and August evenings from 6–9pm run about 40¢/kWh. Every other hour costs a fraction of that.
+2. The legacy solar plans are different: they bill your single highest evening spike — one bad hour can set the whole month.
+3. Free fixes first: pre-cool the house before 6, run the pool pump overnight, laundry after 9. Then we talk hardware.
+
+**CTA**: Queen Creek neighbors — want your plan checked for free? Just ask.
+
+**Caption**: SRP's most expensive hours are 6–9pm in July and August — about 40¢/kWh on the newer plans. Most of the fix is timing, and timing is free. Swipe for the moves that cost nothing. Queen Creek neighbors: happy to check your plan, just ask.
+**Hashtags**: srp · queencreek · eastvalley · energybills · arizonaenergy · azliving · phoenixmetro · arizonasolar
+
+**Visual plan** (Art Director): 5 prompts via Post visuals, Editorial Minimal pack, shared seed, 3:4. ~5 credits.
+
+**Fact-check (2026-07-20): PASS**
+- ~40¢/kWh 6–9pm July/Aug on newer SRP plans → KB.rates.srp / az-energy-knowledge-2026.md [fact]
+- legacy plans bill highest evening spike (demand charge) → same [fact]
+- pre-cool / off-peak shifting as free fixes → consistent with KB free-fixes guidance
 
 ## The doorstep consult
-- **status**: idea
-- **format**: realistic-moment single — consultant with tablet at a front
-  door, solar roof behind; caption = the 3 questions to ask any solar
-  company (real objection: quote confusion / fear of a bad deal)
-- **hook structure**: question
-- **look**: Blue Hour Cinematic
-- **CTA territory**: Buckeye
-- **why now**: pairs the flagship authority piece with the realism lane
+- **status**: fact-checked
+- **format**: realistic-moment single · **look**: Blue Hour Cinematic
+- **CTA territory**: Buckeye · **hook structure**: question
+
+**Caption**: Talking to a solar company this month? Ask these three before price ever comes up. 1) What's my price per watt before incentives? It's the only honest way to compare quotes. 2) Which export rate does your savings math assume? APS pays about 6.2¢/kWh, SRP about 3.45¢ — inflated assumptions mean fantasy savings. 3) Which rate plan will I be on after install, and why? The wrong plan quietly eats the savings. Save this — and DM me when you want it run for your own Buckeye numbers.
+**Hashtags**: arizonasolar · solarquote · buckeye · westvalley · aps · energybills · azliving · phoenixmetro
+
+**Visual plan** (Art Director): single Higgsfield image, ~1 credit. "consultant in a plain dark polo holding a tablet at the front door of a desert home, homeowner seen from behind, rooftop solar panels visible on the roofline, no prominent faces, no visible logos. Buckeye Arizona desert suburb. blue-hour dusk, warm window glow against a cool sky, cinematic teal-and-orange grade, 24mm wide, photorealistic, no text, no lettering, no watermarks."
+
+**Fact-check (2026-07-20): PASS**
+- APS export ~6.2¢/kWh (6.171¢ RCP) → az-solar-market-2026.md [fact]; "about 6.2¢" matches KB rounding
+- SRP export ~3.45¢ flat → same [fact]
+- price-per-watt as comparison yardstick → az-solar-market-2026.md / 6-question test [fact]
+- exactly 3 questions promised and delivered → promise check pass
 
 ---
 

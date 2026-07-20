@@ -9,6 +9,18 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-20 · Orchestrator (manual make-up run, in-session)
+The Monday 9 AM slot fell during the routine's recreation, so the pass ran
+in-session. Copywriter: all 5 briefs drafted (hooks, slides, CTAs,
+captions, hashtags) grounded in the three KB docs. Art Director: visual
+plans on all 5 (2 card carousels ~5 credits each via Post visuals; 3
+realistic singles ~1 credit each; face-neutral framing pending the
+standing decision). Fact Checker: 5/5 PASS with claim→source receipts
+under each brief; [contested] items verified two-sided. Queue now holds
+five `fact-checked` briefs awaiting Taylor's approval — total production
+cost if all approved ≈13 Higgsfield credits. Nothing spent. Next auto-run
+Thursday 2026-07-23, 9 AM Phoenix.
+
 ## 2026-07-19 · research ingested (in-session)
 Taylor ran the deep-research prompt; results distilled into two labeled
 fact-check docs: `farmhand/docs/az-rates-supply-demand-2026.md` (rate case
