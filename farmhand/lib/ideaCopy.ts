@@ -32,11 +32,11 @@ function factsFor(theme: string, u: "aps" | "srp" | "unknown"): [string, string]
     case "objection-handling":
       return [KB.tax.any, KB.honestPayback.any];
     case "buyer-education":
-      return [KB.export[u], KB.tax.any];
+      return [KB.export[u], KB.trust.any];
     case "new-homeowner":
       return [KB.ratePlanCheck[u], KB.export[u]];
     case "authority":
-      return [KB.gridDemand.any, KB.export[u]];
+      return [KB.gridDemand.any, KB.rateCase.any];
     case "myth-busting":
       return [KB.honestPayback.any, KB.rates[u]];
     default:
