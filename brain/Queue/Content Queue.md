@@ -17,14 +17,14 @@ reason teaches the agents — be specific.
 
 **Hook**: 20 gigawatts are lining up for Arizona's grid
 
-**Slides**:
-1. APS reports 4.5 GW of committed new load beyond its 8.6 GW record peak — plus roughly 20 GW more of data-center requests waiting in its queue.
-2. On top of that, APS is asking ~16.4% more from residential customers, with a decision due Dec 31, 2026. Last time, they asked 13.6% and got about 8.3%.
-3. Do data centers raise home bills? Experts genuinely disagree. Meanwhile, what you control is free: the right rate plan and your 4–7pm usage.
+**Slides** (screen = summary; full education in the caption):
+1. 4.5 GW committed. Twenty more waiting in line.
+2. APS is asking for ~16% more. History says it lands lower.
+3. Who pays? Experts disagree. Your levers are free.
 
 **CTA**: Valley homeowners — want this translated to your own bill? DM me, no pitch.
 
-**Caption**: 20 gigawatts are lining up for Arizona's grid. That's the real story behind your climbing APS bill — new demand, new infrastructure, and a rate case with a decision due by Dec 31, 2026. The honest version, no doom: swipe. If you're in the Valley and want it translated to your own bill, DM me.
+**Caption**: 20 gigawatts are lining up for Arizona's grid. The fuller story: APS reports 4.5 GW of committed new load beyond its 8.6 GW record peak, with roughly 20 GW more of data-center requests in its queue — and it's asking ~16.4% more from residential customers, decision due Dec 31, 2026. Worth knowing: in 2022 they asked for 13.6% and regulators approved about 8.3%, so the ask usually isn't the outcome. Do data centers raise or lower home bills? Experts genuinely disagree — the rate case even proposes a data-center class paying +47% so "growth pays for growth." What you control today is free either way: the right rate plan and your 4–7pm usage. If you're in the Valley and want this translated to your own bill, DM me.
 **Hashtags**: arizonaenergy · aps · energybills · buckeye · westvalley · phoenixmetro · azliving · arizonasolar
 
 **Visual plan** (Art Director): 5 prompts via the Studio's Post visuals button, Desert High-Key pack, shared seed, aspect 3:4. Cover = aerial master-planned desert community; bodies = supporting shots rotation; CTA = porch closer. ~5 credits.
@@ -35,6 +35,7 @@ reason teaches the agents — be specific.
 - 2022 precedent 13.6% asked / ~8.3% granted → same doc [fact]
 - data-center bill impact framed as disagreement → honors [contested]
 - rate-plan switch free → az-energy-knowledge-2026.md / KB.ratePlanCheck
+- 2026-07-20 screen/caption rework: detailed claims moved from slides to caption — same claims, same sources, re-verified
 
 ## Every new street is new demand
 - **status**: fact-checked
@@ -75,14 +76,14 @@ reason teaches the agents — be specific.
 
 **Hook**: SRP's 40¢ hours: 6–9pm, July and August
 
-**Slides**:
-1. On SRP's newer plans, July and August evenings from 6–9pm run about 40¢/kWh. Every other hour costs a fraction of that.
-2. The legacy solar plans are different: they bill your single highest evening spike — one bad hour can set the whole month.
-3. Free fixes first: pre-cool the house before 6, run the pool pump overnight, laundry after 9. Then we talk hardware.
+**Slides** (screen = summary; full education in the caption):
+1. 6–9pm summer evenings: ~40¢/kWh. Everything else, a fraction.
+2. Legacy solar plans? One bad hour sets the month.
+3. Pre-cool by 6. Pool pump overnight. Laundry after 9.
 
 **CTA**: On SRP and want your plan checked for free? Just ask.
 
-**Caption**: SRP's most expensive hours are 6–9pm in July and August — about 40¢/kWh on the newer plans. Most of the fix is timing, and timing is free. Swipe for the moves that cost nothing. On SRP anywhere in the Valley? Happy to check your plan — just ask.
+**Caption**: SRP's most expensive hours are 6–9pm in July and August — about 40¢/kWh on the newer plans, while every other hour costs a fraction of that. The legacy solar plans work differently: they bill your single highest evening grid spike (a demand charge), so one bad hour — AC, oven, and dryer overlapping — can set the whole month. Most of the fix is timing, and timing is free: pre-cool the house before 6, run the pool pump overnight, push laundry past 9. Then, and only then, is it worth talking hardware. On SRP anywhere in the Valley and want your plan checked for free? Just ask.
 **Hashtags**: srp · queencreek · eastvalley · energybills · arizonaenergy · azliving · phoenixmetro · arizonasolar
 
 **Visual plan** (Art Director): 5 prompts via Post visuals, Editorial Minimal pack, shared seed, 3:4. ~5 credits.
@@ -91,6 +92,7 @@ reason teaches the agents — be specific.
 - ~40¢/kWh 6–9pm July/Aug on newer SRP plans → KB.rates.srp / az-energy-knowledge-2026.md [fact]
 - legacy plans bill highest evening spike (demand charge) → same [fact]
 - pre-cool / off-peak shifting as free fixes → consistent with KB free-fixes guidance
+- 2026-07-20 screen/caption rework: detailed claims moved from slides to caption — same claims, same sources, re-verified
 
 ## The doorstep consult
 - **status**: fact-checked

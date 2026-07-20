@@ -9,6 +9,17 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-20 · owner direction: screen/caption split + competitor audit
+New content-model law in [[Editorial Direction]]: on-screen text is a
+summary (≤ ~12 words/slide, one number max), the education lives in the
+caption and comments; posts must never LOOK educational. Both queued
+carousels reworked to match (slides compressed, captions absorbed the
+full numbers — same claims, same sources, receipts updated). New
+[[Competitor Audit]] framework in Analytics: study local realtors and
+trusted service pros as the model, solar recruiting pages as the
+anti-pattern; scoring rubric + read-only extension collection process;
+Adopt/Avoid lists seeded. Nothing spent.
+
 ## 2026-07-20 · owner direction: Valley-general CTAs
 CTAs are now interchangeable and Valley-wide ("Valley homeowners…", "if
 you're in the Valley with questions you want answered…") — never pinned to
