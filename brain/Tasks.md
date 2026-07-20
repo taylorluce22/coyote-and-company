@@ -26,6 +26,10 @@ Orchestrator triages this every run. Newest on top within each section.
 - [ ] Art Director pass follows on `drafted` briefs
 
 ## Backlog
+- [ ] Settings field for the real IG handle (@taylorlucesolar) — Studio
+  slides currently render a derived placeholder handle
+- [ ] Reel lane: reel-format versions of queued topics (until DoP video
+  is wired: Taylor on camera or simple motion over Studio exports)
 - [ ] "Produce post" one-button pipeline in the app (`/api/produce`)
 - [ ] Vercel KV for server-side state (unlocks fully autonomous production
   + the 24/7 lead cron)
