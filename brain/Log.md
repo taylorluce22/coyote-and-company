@@ -9,6 +9,17 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-20 · growth strategy: @taylorlucesolar audited
+First-pass audit of the real IG profile (1 post, 133/261, sales-voice
+bio) → [[Growth Strategy]]: bio rewrite proposed (resource-first, keep
+the "DM AZ" keyword funnel but attach it to a free rate-plan check),
+display-name searchability fix, following-ratio cleanup, and the
+three-engine reach model (reels = non-follower reach · carousels = saves
+· daily comment presence + realtor collab posts = borrowed audiences).
+Gap flagged: queue has no reel lane yet. Insights data pull prompt issued
+to the extension. Handle mismatch with Studio placeholder queued as an
+app fix. Nothing spent.
+
 ## 2026-07-20 · owner direction: value over price
 Price-per-watt demoted from "the one honest yardstick" to a transparency
 tool — never the verdict. New Editorial Direction rule: educate on
