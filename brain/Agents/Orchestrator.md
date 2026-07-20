@@ -12,7 +12,10 @@ specialist agents. Any session asked to "run the brain" starts HERE.
 2. **Route work**: for each item in [[Tasks]] and each queue entry, decide
    which specialist runs next ([[Creative Director]] when the queue has
    < 3 open briefs · [[Copywriter]] for `idea` briefs · [[Art Director]] for
-   `drafted` briefs · [[Analyst]] weekly). Either run that role in this same
+   `drafted` briefs · [[Fact Checker]] for `visuals-planned` briefs ·
+   [[Feed Director]] whenever [[Competitor Audit]] or the photo dump in
+   `brain/Brand/refs/` changed since its last run, to refresh the grid
+   plan · [[Analyst]] weekly). Either run that role in this same
    session (read its charter, do the work) or leave a `→ next:` marker on the
    item for the next scheduled run.
 3. **Escalate**: anything needing an owner decision goes to the top of
