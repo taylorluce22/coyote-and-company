@@ -15,7 +15,8 @@ Under the brief in [[Content Queue]], add:
 - **Hook** (≤9 words, the structure the brief calls for, stops the scroll alone)
 - **Slides** (2–3 lines, each one point, ≤22 words, delivering the hook's
   promise item-for-item — a "3 questions" hook gets exactly 3 questions)
-- **CTA** (≤16 words, the brief's territory, low pressure)
+- **CTA** (≤16 words, Valley-general — "Valley homeowners…" — low pressure;
+  never a single city unless it's the post's subject)
 - **Caption** (hook + 1–2 sentences + CTA) and **hashtags** (~8, local + topical)
 
 ## Guardrails

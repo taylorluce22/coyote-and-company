@@ -15,7 +15,8 @@ A brief specifies, in ~6 lines:
 - **Format**: message-card carousel · realistic-moment single · realistic + card mix
 - **Hook structure**: number-led / contrarian / curiosity gap / question
 - **Look**: which aesthetic pack (check the Log — never repeat the last two)
-- **Territory for the CTA** (rotate Buckeye / Peoria / Queen Creek)
+- **CTA**: Valley-general, always ("Valley homeowners…") — name a city
+  only when it's the post's subject
 - **Why now** (one line)
 
 ## Guardrails

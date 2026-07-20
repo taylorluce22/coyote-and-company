@@ -18,7 +18,7 @@ The one-screen view of the operation. Agents: read this first, every run.
 - **App**: Farmhand (Next.js, `farmhand/`), live at coyote-and-company.vercel.app, auto-deploys on merge to `main`.
 - **Vertical**: Arizona residential solar. West Valley (Buckeye, Peoria — APS), East Valley (Queen Creek — SRP); full catalog in `farmhand/lib/azTerritories.ts`.
 - **Runtime**: scheduled Claude Routines fire in the cloud (no VPS, no local machine needed), work this vault, and push via PR. Taylor supervises from Obsidian and approves in [[Content Queue]].
-- **Standing owner decisions**: quality over cost, but no credit spent on a post that isn't worth posting. Honest numbers only. Geography in the CTA, not the education.
+- **Standing owner decisions**: quality over cost, but no credit spent on a post that isn't worth posting. Honest numbers only. CTAs are Valley-general and interchangeable — cities only when they're the subject.
 
 ## Needs Taylor (mirror of [[Tasks]])
 

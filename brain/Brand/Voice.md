@@ -17,8 +17,11 @@ Buckeye/Peoria/Queen Creek homeowners like neighbors. Comfortable saying
 2. **One post = one argument.** The hook makes a promise; the body delivers
    exactly that promise, item for item.
 3. **Plain 8th-grade language.** Short sentences. Second person.
-4. **Geography lives in the CTA only** ("DM me for your Buckeye numbers").
-   Education is statewide; the action is local.
+4. **CTAs are Valley-general and interchangeable** — "Valley homeowners,
+   DM me…" or "if you're in the Valley with questions…". Never fence the
+   ask to one city. A specific city may appear only when it's the SUBJECT
+   of the post (a Teravalis growth story can say Buckeye); hashtags may
+   stay local for discovery.
 5. **Banned**: emojis in copy, "game-changer", "unlock", "did you know",
    urgency tricks, invented credentials or stories, anything not in the KB.
 6. **Hooks stop the scroll on their own**: number-led, contrarian,
