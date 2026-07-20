@@ -6,11 +6,11 @@ The one-screen view of the operation. Agents: read this first, every run.
 
 | Agent | State | Last run | Next |
 |---|---|---|---|
-| [[Orchestrator]] | **LIVE — scheduled** Mon/Thu/Fri 9:00 AM Phoenix | 2026-07-19 (manual, this setup) | next scheduled firing |
-| [[Creative Director]] | 5 open briefs | 2026-07-19 | when queue < 3 open |
-| [[Copywriter]] | queued — briefs are `idea` | — | next scheduled run |
-| [[Art Director]] | waiting on `drafted` briefs | — | after Copywriter |
-| [[Fact Checker]] | gate armed — nothing reaches Taylor unverified | — | after Art Director |
+| [[Orchestrator]] | **LIVE — scheduled** Mon/Thu/Fri 9:00 AM Phoenix | 2026-07-20 (manual make-up run) | Thu 2026-07-23 auto |
+| [[Creative Director]] | 5 open briefs, all advanced | 2026-07-19 | when queue < 3 open |
+| [[Copywriter]] | all 5 briefs drafted | 2026-07-20 | next `idea` brief |
+| [[Art Director]] | all 5 visual plans done (~13 credits total est.) | 2026-07-20 | next `drafted` brief |
+| [[Fact Checker]] | **5/5 PASS** — receipts under each brief | 2026-07-20 | next `visuals-planned` brief |
 | [[Analyst]] | idle — no post data yet | — | first Friday after posts ship |
 
 ## Current state
