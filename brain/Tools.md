@@ -2,6 +2,32 @@
 
 Registry of what the agents can actually use, what it costs, and the rules.
 
+## CREDIT PRESERVATION POLICY (owner, 2026-07-20 — binding on everyone)
+
+Paid services exist to produce **approved, publishable content** — never to
+test, demo, or "see what it looks like."
+
+1. **No paid call is ever a test.** App and pipeline testing uses mocked/
+   intercepted responses (the engineering verification flow already works
+   this way) or free stock sources. If a real generation is needed to
+   evaluate quality, that IS a production run: it requires an `approved`
+   brief and gets logged.
+2. **Higgsfield**: spend only on briefs with status `approved`, via the
+   planned visual spec, within its stated credit estimate. Overage beyond
+   the estimate needs Taylor. Every finished image is committed to the
+   vault immediately (already enforced in-app) — a spent credit must never
+   be lose-able.
+3. **Metricool / any scheduler (future)**: free tier only until Taylor
+   explicitly approves a paid plan. No API calls that consume plan quota
+   for testing — dry-run against docs, not the live API.
+4. **Perplexity / Claude tokens**: cheap but not free — no loops, one pass
+   per run (already in the Orchestrator charter), no re-runs to "polish"
+   without a failed check or new input.
+5. **Ledger**: every paid spend gets a line in [[Log]] — service, amount,
+   brief it served. If a month's spend can't be reconstructed from the
+   Log, that's a policy breach.
+6. When in doubt: don't spend, escalate in [[Tasks]] → Needs Taylor.
+
 | Tool | What it does | Access | Cost | Rules |
 |---|---|---|---|---|
 | Higgsfield Soul | photoreal images (posts, scenes) | app `/api/higgsfield` (keys in Vercel env) | ~1 credit/image | ONLY after a brief is `approved`; batch ≤6; every image auto-saves to the app's AI vault |
