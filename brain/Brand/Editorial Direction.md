@@ -35,6 +35,11 @@ never dwell or fearmonger — and ALWAYS land on a **soft CTA** (an offer to
 help, never pressure). Example of the standard: monsoon panel-cleaning
 content was rejected for exactly this.
 
+**CTA geography rule (owner, 2026-07-20):** CTAs are Valley-general and
+interchangeable — "Valley homeowners…", "if you're in the Valley and have
+questions you want answered…". Never pin the ask to one city. Cities appear
+only when they're the post's SUBJECT; hashtags may stay local.
+
 ## Demoted — expired tax credits
 
 The dead 30% federal credit is NOT a content pillar. Use it ONLY as

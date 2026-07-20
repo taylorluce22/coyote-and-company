@@ -65,7 +65,8 @@ Rules:
 - The body must DELIVER exactly what the hook promises. If the hook promises N questions, steps, or red flags, the body is exactly those N items, numbered. Never promise a list and then talk about something else.
 - hook: max 9 words, and it must stop the scroll ON ITS OWN — lead with the number, the contradiction, or the cost of not knowing. Pick whichever structure fits this idea best: number-led, contrarian statement, curiosity gap, or direct question. No clickbait words, no emojis, no hashtags, no colons-into-nothing.
 - body: 2 or 3 strings. Each is ONE point supporting the hook, max 30 words, conversational second person, plain language an 8th grader gets. Use the facts' numbers exactly. Every string must be about the same single subject as the hook.
-- cta: max 16 words, low pressure. The CTA is the ONLY place ${territory} may appear — the education itself stays statewide. No "link in bio", no urgency tricks.
+- cta: max 16 words, low pressure, geography GENERAL — address "Valley homeowners" or "if you're in the Valley", never a single city name. No "link in bio", no urgency tricks.
+- Never name a specific city anywhere in the copy unless the FACTS themselves are about that city. The education stays statewide/Valley-wide.
 - short: a 1-2 sentence caption version of the whole post, max 220 characters.
 - Banned everywhere: "in today's world", "game-changer", "unlock", "did you know", "look no further", "☀️", all emojis, all hashtags, any claim not in the facts.`;
 

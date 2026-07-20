@@ -13,7 +13,7 @@ reason teaches the agents — be specific.
 ## Why your APS bill keeps climbing (and it isn't your AC)
 - **status**: fact-checked
 - **format**: message-card carousel (5 slides) · **look**: Desert High-Key
-- **CTA territory**: Buckeye · **hook structure**: number-led
+- **CTA**: Valley-general · **hook structure**: number-led
 
 **Hook**: 20 gigawatts are lining up for Arizona's grid
 
@@ -22,9 +22,9 @@ reason teaches the agents — be specific.
 2. On top of that, APS is asking ~16.4% more from residential customers, with a decision due Dec 31, 2026. Last time, they asked 13.6% and got about 8.3%.
 3. Do data centers raise home bills? Experts genuinely disagree. Meanwhile, what you control is free: the right rate plan and your 4–7pm usage.
 
-**CTA**: Want this translated to your own Buckeye bill? DM me — no pitch.
+**CTA**: Valley homeowners — want this translated to your own bill? DM me, no pitch.
 
-**Caption**: 20 gigawatts are lining up for Arizona's grid. That's the real story behind your climbing APS bill — new demand, new infrastructure, and a rate case with a decision due by Dec 31, 2026. The honest version, no doom: swipe. DM me when you want it translated to your own Buckeye bill.
+**Caption**: 20 gigawatts are lining up for Arizona's grid. That's the real story behind your climbing APS bill — new demand, new infrastructure, and a rate case with a decision due by Dec 31, 2026. The honest version, no doom: swipe. If you're in the Valley and want it translated to your own bill, DM me.
 **Hashtags**: arizonaenergy · aps · energybills · buckeye · westvalley · phoenixmetro · azliving · arizonasolar
 
 **Visual plan** (Art Director): 5 prompts via the Studio's Post visuals button, Desert High-Key pack, shared seed, aspect 3:4. Cover = aerial master-planned desert community; bodies = supporting shots rotation; CTA = porch closer. ~5 credits.
@@ -39,11 +39,11 @@ reason teaches the agents — be specific.
 ## Every new street is new demand
 - **status**: fact-checked
 - **format**: realistic-moment single · **look**: Warm Nocturne
-- **CTA territory**: Buckeye · **hook structure**: curiosity gap
+- **CTA**: Valley-general (Buckeye is the SUBJECT here, so it stays in the body) · **hook structure**: curiosity gap
 
 **Hook (caption-led)**: Where do 100,000 new homes plug in?
 
-**Caption**: Teravalis in Buckeye is planned for 100,000 homes — about 45 are built so far, and the rest are coming. APS connected 32,000+ new meters in 2024 alone. Every porch light on a new street is new evening demand, and that demand is the backdrop for every rate conversation we'll have this decade. Not a pitch — just the context your bill lives in. DM me if you want to know what it means for your own Buckeye numbers.
+**Caption**: Teravalis in Buckeye is planned for 100,000 homes — about 45 are built so far, and the rest are coming. APS connected 32,000+ new meters in 2024 alone. Every porch light on a new street is new evening demand, and that demand is the backdrop for every rate conversation we'll have this decade. Not a pitch — just the context your bill lives in. If you're in the Valley and want to know what it means for your bill, DM me.
 **Hashtags**: buckeye · teravalis · westvalley · arizonagrowth · arizonaenergy · energybills · phoenixmetro · azliving
 
 **Visual plan** (Art Director): single Higgsfield image, ~1 credit. Prompt: "brand-new suburban street at dusk, framed houses under construction beside finished model homes with warm porch lights glowing, no people. Buckeye Arizona desert suburb. night scene lit by warm porch and window light, deep shadows, quiet calm mood, 50mm, shallow depth of field, photorealistic, no text, no lettering, no logos, no watermarks."
@@ -56,9 +56,9 @@ reason teaches the agents — be specific.
 ## The kitchen-table bill moment
 - **status**: fact-checked
 - **format**: realistic-moment single · **look**: Golden Hour Lifestyle
-- **CTA territory**: Buckeye · **hook structure**: number-led (caption)
+- **CTA**: Valley-general · **hook structure**: number-led (caption)
 
-**Caption**: On APS, the 4–7pm weekday window runs about 34¢/kWh vs ~12¢ off-peak. That 3x spread is where most summer bills blow up. Before anyone talks panels: make sure you're on the right rate plan — checking is free, switching is free, and sometimes that alone takes a real bite out of the bill. Save this for the next scary bill, and DM me when you want your own Buckeye numbers run. No pitch.
+**Caption**: On APS, the 4–7pm weekday window runs about 34¢/kWh vs ~12¢ off-peak. That 3x spread is where most summer bills blow up. Before anyone talks panels: make sure you're on the right rate plan — checking is free, switching is free, and sometimes that alone takes a real bite out of the bill. Save this for the next scary bill — and Valley homeowners, DM me when you want your own numbers run. No pitch.
 **Hashtags**: aps · energybills · buckeye · westvalley · arizonaenergy · azliving · phoenixmetro · arizonasolar
 
 **Visual plan** (Art Director): single Higgsfield image, ~1 credit. Face-neutral until the standing decision: "over-the-shoulder view of a person at a kitchen table holding a paper utility bill, face not visible, morning light through a window, modern desert home interior. Buckeye Arizona desert suburb. warm golden-hour light, honeyed tones, soft long shadows, 35mm, shallow depth of field, photorealistic, no text, no lettering, no logos, no watermarks."
@@ -71,7 +71,7 @@ reason teaches the agents — be specific.
 ## SRP's 40¢ window nobody explains
 - **status**: fact-checked
 - **format**: message-card carousel (5 slides) · **look**: Editorial Minimal
-- **CTA territory**: Queen Creek · **hook structure**: number-led
+- **CTA**: Valley-general (SRP households) · **hook structure**: number-led
 
 **Hook**: SRP's 40¢ hours: 6–9pm, July and August
 
@@ -80,9 +80,9 @@ reason teaches the agents — be specific.
 2. The legacy solar plans are different: they bill your single highest evening spike — one bad hour can set the whole month.
 3. Free fixes first: pre-cool the house before 6, run the pool pump overnight, laundry after 9. Then we talk hardware.
 
-**CTA**: Queen Creek neighbors — want your plan checked for free? Just ask.
+**CTA**: On SRP and want your plan checked for free? Just ask.
 
-**Caption**: SRP's most expensive hours are 6–9pm in July and August — about 40¢/kWh on the newer plans. Most of the fix is timing, and timing is free. Swipe for the moves that cost nothing. Queen Creek neighbors: happy to check your plan, just ask.
+**Caption**: SRP's most expensive hours are 6–9pm in July and August — about 40¢/kWh on the newer plans. Most of the fix is timing, and timing is free. Swipe for the moves that cost nothing. On SRP anywhere in the Valley? Happy to check your plan — just ask.
 **Hashtags**: srp · queencreek · eastvalley · energybills · arizonaenergy · azliving · phoenixmetro · arizonasolar
 
 **Visual plan** (Art Director): 5 prompts via Post visuals, Editorial Minimal pack, shared seed, 3:4. ~5 credits.
@@ -95,9 +95,9 @@ reason teaches the agents — be specific.
 ## The doorstep consult
 - **status**: fact-checked
 - **format**: realistic-moment single · **look**: Blue Hour Cinematic
-- **CTA territory**: Buckeye · **hook structure**: question
+- **CTA**: Valley-general · **hook structure**: question
 
-**Caption**: Talking to a solar company this month? Ask these three before price ever comes up. 1) What's my price per watt before incentives? It's the only honest way to compare quotes. 2) Which export rate does your savings math assume? APS pays about 6.2¢/kWh, SRP about 3.45¢ — inflated assumptions mean fantasy savings. 3) Which rate plan will I be on after install, and why? The wrong plan quietly eats the savings. Save this — and DM me when you want it run for your own Buckeye numbers.
+**Caption**: Talking to a solar company this month? Ask these three before price ever comes up. 1) What's my price per watt before incentives? It's the only honest way to compare quotes. 2) Which export rate does your savings math assume? APS pays about 6.2¢/kWh, SRP about 3.45¢ — inflated assumptions mean fantasy savings. 3) Which rate plan will I be on after install, and why? The wrong plan quietly eats the savings. Save this — and if you're in the Valley with quote questions you want answered, DM me.
 **Hashtags**: arizonasolar · solarquote · buckeye · westvalley · aps · energybills · azliving · phoenixmetro
 
 **Visual plan** (Art Director): single Higgsfield image, ~1 credit. "consultant in a plain dark polo holding a tablet at the front door of a desert home, homeowner seen from behind, rooftop solar panels visible on the roofline, no prominent faces, no visible logos. Buckeye Arizona desert suburb. blue-hour dusk, warm window glow against a cool sky, cinematic teal-and-orange grade, 24mm wide, photorealistic, no text, no lettering, no watermarks."

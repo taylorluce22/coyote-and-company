@@ -62,12 +62,13 @@ export function ideaCopy(idea: Idea, strategy: StrategyProfile, channel: "ig" | 
   const t = idea.territory;
   const { utility: u, facts } = ideaFactPair(idea);
   const [fact, altFact] = facts;
-  // The education is statewide; the geography belongs in the ACTION. The CTA
-  // is the one place the territory shows up — "run this for YOUR house here".
+  // CTAs stay Valley-general and interchangeable — "Valley homeowners", not
+  // a single city. A specific city appears only when it's the SUBJECT of
+  // the post, never bolted onto the ask.
   const cta =
     channel === "nd"
       ? `Happy to run these numbers for your address, neighbors — just ask below.`
-      : `Save this — and DM me when you want it run for your own ${t.name} numbers.`;
+      : `Save this — and if you're in the Valley with questions, DM me. No pitch.`;
 
   const deck = Array.isArray(idea.deck) && idea.deck.length ? idea.deck : null;
   let long: string;

@@ -9,6 +9,16 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-20 · owner direction: Valley-general CTAs
+CTAs are now interchangeable and Valley-wide ("Valley homeowners…", "if
+you're in the Valley with questions you want answered…") — never pinned to
+one city. Cities appear only when they're the post's SUBJECT (Teravalis →
+Buckeye stays in the body); hashtags may stay local for discovery. Applied
+everywhere: app template copy (ideaCopy), the AI writer's rules
+(/api/copy), Voice, Editorial Direction, Creative Director + Copywriter
+charters, and all 5 queued briefs' CTAs and captions (fact-check receipts
+unaffected — no factual claims changed). Nothing spent.
+
 ## 2026-07-20 · owner hold + credit preservation policy
 Taylor's call: nothing fires automatically until the content is dialed in.
 The scheduled Routine was DELETED (not paused) — zero autonomous runs;
