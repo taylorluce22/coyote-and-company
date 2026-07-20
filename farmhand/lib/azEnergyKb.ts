@@ -62,6 +62,9 @@ export const KB = {
   trust: {
     any: "the solar industry has a trust problem worth naming out loud: roughly 100 U.S. solar companies have gone bankrupt since 2023 (Titan, SunPower, Sunnova, Freedom Forever among them) and homeowner distrust doubled in a single year — which is exactly why every quote deserves a slow, skeptical read",
   },
+  installerQuality: {
+    any: "price per watt is one input, not the verdict — a low bid can reflect the financing structure or labor shortcuts, and the real differentiators are how the roof penetrations are flashed, whether the crew is in-house and utility/manufacturer-qualified, and who actually services the system in year five. The few AZ installers doing truly high-quality work usually cost a bit more",
+  },
   leaseShift: {
     any: "about 7 in 10 new solar deals in 2026 are leases/PPAs — not because leases got better, but because the homeowner purchase credit expired and leasing companies can still claim a commercial credit through 2027–28. It can genuinely fit, but read the escalator: 0.99–2.99% a year for 20–25 years",
   },
@@ -224,14 +227,14 @@ export const SOLAR_KB_CONTENT: { title: string; angle: string; format: "carousel
     ],
   },
   {
-    title: "Solar quote check: the one number that exposes a bad deal",
-    angle: "price per watt before incentives + which export rate the quote assumes — most confusion is deliberate",
+    title: "Why the cheapest solar quote can cost you the most",
+    angle: "owner rule: never condition buyers on price alone — a low bid often reflects financing structures or labor shortcuts, not a better deal",
     format: "reel",
     theme: "buyer-education",
     deck: [
-      "Divide the pre-incentive price by system watts. That's price per watt — the industry's honest yardstick.",
-      "Then find which export rate the quote assumes. APS pays ~6.2¢, SRP ~3.45¢ — inflated assumptions mean fantasy savings.",
-      "Most quote confusion is deliberate. Those two numbers cut through all of it.",
+      "A low bid often reflects the financing structure or the labor — not a better deal.",
+      "Price follows process: how the roof is flashed, who's on the crew, who services you later.",
+      "Use price per watt for transparency — then judge the installer, not just the number.",
     ],
   },
 ];

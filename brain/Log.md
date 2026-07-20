@@ -9,6 +9,20 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-20 · owner direction: value over price
+Price-per-watt demoted from "the one honest yardstick" to a transparency
+tool — never the verdict. New Editorial Direction rule: educate on
+installer QUALITY (flashing, utility qualified-installer credentials,
+manufacturer partner tiers, in-house crews, year-five service); honest
+framing that AZ's few high-quality installers price slightly higher; never
+name specific installers. Owner's professional knowledge recorded in
+az-solar-market-2026.md as [owner-expertise] pending a dedicated
+installer-quality research pass (prompt issued to Taylor). Reworked: the
+"3 questions" idea deck + the queued doorstep-consult brief (quality/
+process/service questions before price), the "Solar quote check" idea →
+"Why the cheapest solar quote can cost you the most", new
+KB.installerQuality reply line wired into buyer-education. Nothing spent.
+
 ## 2026-07-20 · owner direction: screen/caption split + competitor audit
 New content-model law in [[Editorial Direction]]: on-screen text is a
 summary (≤ ~12 words/slide, one number max), the education lives in the

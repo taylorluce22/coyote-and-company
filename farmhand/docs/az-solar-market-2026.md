@@ -107,3 +107,28 @@ labels: **[fact]**, **[projection]**, **[survey]**, **[interested-party]**,
 4. Installer bankruptcies + AG cases are the trust opening — calm,
    documented walk-throughs occupy underserved territory.
 5. The neutral-consultant niche is genuinely open at scale.
+
+## Installer quality — [owner-expertise, research verification pending]
+
+Owner-provided professional knowledge (Taylor, 2026-07-20). Content may use
+these as advice/considerations in the owner's voice; numeric or program-name
+claims here must NOT be stated as verified fact until the installer-quality
+research pass lands and upgrades them.
+
+- [owner-expertise] Price per watt is a TRANSPARENCY tool, never the
+  verdict. A low bid often reflects the financing structure (dealer-fee
+  games) or labor shortcuts — not a better deal.
+- [owner-expertise] Quality markers to educate on: three-course roof
+  flashing on penetrations; installers who have gone through APS/SRP
+  qualified-installer processes; manufacturer partner tiers (e.g. Tesla
+  premier-level partners); in-house crews vs. subcontractor chains;
+  attentive post-install service ("who answers in year five").
+- [owner-expertise] Reality of the AZ market: only a few installers do
+  truly high-quality work, and their prices usually run slightly higher
+  than competitors.
+- [owner rule] Content never names specific installers — homeowners should
+  understand consultants have multiple installer options.
+- [pending] Research to verify/enrich: exact utility qualified-installer
+  program names, manufacturer certification tiers, flashing standards and
+  best practice on tile vs shingle, AZ ROC licensing, NABCEP, warranty
+  structures. Until then, the bullets above stay [owner-expertise].

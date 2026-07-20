@@ -99,15 +99,16 @@ reason teaches the agents — be specific.
 - **format**: realistic-moment single · **look**: Blue Hour Cinematic
 - **CTA**: Valley-general · **hook structure**: question
 
-**Caption**: Talking to a solar company this month? Ask these three before price ever comes up. 1) What's my price per watt before incentives? It's the only honest way to compare quotes. 2) Which export rate does your savings math assume? APS pays about 6.2¢/kWh, SRP about 3.45¢ — inflated assumptions mean fantasy savings. 3) Which rate plan will I be on after install, and why? The wrong plan quietly eats the savings. Save this — and if you're in the Valley with quote questions you want answered, DM me.
+**Caption**: Talking to a solar company this month? Ask these three before price ever comes up. 1) Who's actually on my roof — your crew or subcontractors — and how is every roof penetration flashed? 2) Which export rate and rate plan does your savings math assume? APS pays about 6.2¢/kWh, SRP about 3.45¢ — inflated assumptions mean fantasy savings. 3) Who answers the phone in year five if something goes wrong? One honest thing about price: the cheapest bid isn't automatically the best deal — price usually reflects the labor, the process, and the service behind it. Save this — and if you're in the Valley with quote questions you want answered, DM me.
 **Hashtags**: arizonasolar · solarquote · buckeye · westvalley · aps · energybills · azliving · phoenixmetro
 
 **Visual plan** (Art Director): single Higgsfield image, ~1 credit. "consultant in a plain dark polo holding a tablet at the front door of a desert home, homeowner seen from behind, rooftop solar panels visible on the roofline, no prominent faces, no visible logos. Buckeye Arizona desert suburb. blue-hour dusk, warm window glow against a cool sky, cinematic teal-and-orange grade, 24mm wide, photorealistic, no text, no lettering, no watermarks."
 
-**Fact-check (2026-07-20): PASS**
+**Fact-check (2026-07-20, reworked per owner value-over-price rule): PASS**
 - APS export ~6.2¢/kWh (6.171¢ RCP) → az-solar-market-2026.md [fact]; "about 6.2¢" matches KB rounding
 - SRP export ~3.45¢ flat → same [fact]
-- price-per-watt as comparison yardstick → az-solar-market-2026.md / 6-question test [fact]
+- flashing / crew / year-five-service framing → questions + advice in owner voice, per [owner-expertise] section of az-solar-market-2026.md; no unverified program names stated as fact
+- "cheapest bid isn't automatically the best deal / price reflects labor+process" → [owner-expertise], worded as advice not statistic
 - exactly 3 questions promised and delivered → promise check pass
 
 ---

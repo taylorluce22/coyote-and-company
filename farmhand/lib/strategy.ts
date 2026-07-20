@@ -166,13 +166,13 @@ const SOLAR_IDEA_BANK: { title: string; angle: string; format: "carousel" | "ree
   },
   {
     title: "The 3 questions to ask ANY solar company before you talk price",
-    angle: "authority through generosity — protects people from bad installs, builds trust in you",
+    angle: "authority through generosity — quality and process before price; protects people from bad installs",
     format: "carousel",
     theme: "buyer-education",
     deck: [
-      "1. What's my price per watt before incentives? It's the only honest way to compare quotes.",
-      "2. Which export rate does your savings math assume? APS pays ~6.2¢/kWh, SRP ~3.45¢ — inflated means fantasy.",
-      "3. Which rate plan will I be on after install, and why? The wrong plan quietly eats the savings.",
+      "1. Who's actually on my roof — your crew or subs — and how is every penetration flashed?",
+      "2. Which export rate and rate plan does your savings math assume? (APS ~6.2¢/kWh, SRP ~3.45¢.)",
+      "3. Who answers the phone in year five if something goes wrong?",
     ],
   },
   {
