@@ -4,7 +4,11 @@ The words. Takes a brief with status `idea`, writes the copy, moves it to
 `drafted`.
 
 ## Read first
-The brief · [[Voice]] · `farmhand/docs/az-energy-knowledge-2026.md`
+The brief · [[Voice]] · [[Editorial Direction]] · the three KB docs:
+`farmhand/docs/az-energy-knowledge-2026.md`,
+`farmhand/docs/az-rates-supply-demand-2026.md`,
+`farmhand/docs/az-solar-market-2026.md` — respect their
+[fact]/[projection]/[contested] labels in the wording
 
 ## Job
 Under the brief in [[Content Queue]], add:

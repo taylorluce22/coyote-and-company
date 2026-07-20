@@ -51,7 +51,19 @@ export const KB = {
     unknown: "batteries in AZ now earn three ways: avoiding the evening peak rates, shaving demand charges (on SRP plans), and utility VPP programs that pay roughly $110 per kW per year for sharing capacity during grid events",
   },
   gridDemand: {
-    any: "Arizona's grid demand keeps breaking records (APS hit 8,631 MW last August) and APS's own filings show ~20 GW of data-center load committed or in negotiation — their plan projects peak demand growing ~40% by the early 2030s, which is the backdrop for every rate case",
+    any: "Arizona's grid demand keeps breaking records (APS hit 8,631 MW last August) and APS reports 4.5 GW of committed new load plus roughly 20 GW more of data-center requests in its queue — its own plan projects peak demand growing ~40% by 2031, which is the backdrop for every rate case",
+  },
+  rateCase: {
+    any: "APS is asking for about 14.75% more revenue (~16.4% for residential), with a decision due by Dec 31, 2026 and new rates in early 2027 — worth knowing the precedent: in 2022 they asked 13.6% and regulators approved about 8.3%, so the final number usually lands below the ask",
+  },
+  azContext: {
+    any: "Arizona is cheap by the kWh but expensive by the month — the average rate here is ~10% below the national average and rose slower over the last decade (+23% vs +30%), but bills run higher ($160 vs $142/month) because desert homes use about 25% more electricity, mostly AC",
+  },
+  trust: {
+    any: "the solar industry has a trust problem worth naming out loud: roughly 100 U.S. solar companies have gone bankrupt since 2023 (Titan, SunPower, Sunnova, Freedom Forever among them) and homeowner distrust doubled in a single year — which is exactly why every quote deserves a slow, skeptical read",
+  },
+  leaseShift: {
+    any: "about 7 in 10 new solar deals in 2026 are leases/PPAs — not because leases got better, but because the homeowner purchase credit expired and leasing companies can still claim a commercial credit through 2027–28. It can genuinely fit, but read the escalator: 0.99–2.99% a year for 20–25 years",
   },
   honestPayback: {
     any: "the honest 2026 math: without the federal credit a purchased system pays back slower than the ads claim (think 10+ years, not 7), so it pencils best with a bill over ~$150, good sun, a roof with life left, and a plan to stay put — and for some homes the answer is genuinely 'not yet'",
@@ -125,13 +137,13 @@ export const SOLAR_KB_CONTENT: { title: string; angle: string; format: "carousel
   },
   {
     title: "20 gigawatts of data centers want onto Arizona's grid",
-    angle: "APS's own filings — what it means (and honestly doesn't mean) for {n} bills over the next decade",
+    angle: "APS's own filings — what it means (and honestly doesn't mean) for {n} bills over the next decade; present the cost question as genuinely unresolved",
     format: "carousel",
     theme: "authority",
     deck: [
-      "APS's own filings show ~20 GW of data-center load committed or in negotiation.",
-      "Their plan projects peak demand growing ~40% by the early 2030s — APS already hit a record 8,631 MW last August.",
-      "That growth is the backdrop for every rate case — and the quiet case for owning your own evening power.",
+      "APS reports 4.5 GW of committed new load beyond its 8.6 GW record peak — plus roughly 20 GW more of data-center requests waiting in its queue.",
+      "The rate case even proposes a special data-center class paying +47%, so 'growth pays for growth.' Whether that holds is the fight.",
+      "Honest answer: experts genuinely disagree on whether data centers raise or lower home bills. What's certain is the grid is being rebuilt around them.",
     ],
   },
   {
@@ -158,13 +170,57 @@ export const SOLAR_KB_CONTENT: { title: string; angle: string; format: "carousel
   },
   {
     title: "APS is asking for ~16% more on your bill — what the rate case means",
-    angle: "decision expected by end of 2026, new rates early 2027; explain it neutrally and locals will share it",
+    angle: "decision due by Dec 31, 2026, new rates early 2027; explain it neutrally with the 2022 precedent and locals will share it",
     format: "text",
     theme: "authority",
     deck: [
-      "APS has filed for roughly 16% more revenue. Decision expected by end of 2026; new rates early 2027.",
-      "Nothing changes on your bill yet — rate cases are slow, public, and usually get trimmed down.",
-      "But every point rates rise makes self-generated evening power worth a little more.",
+      "APS is asking for ~16.4% more from residential customers. The hearing ran 31 days — the longest in ACC history — and a decision is due by Dec 31, 2026.",
+      "Precedent matters: in 2022 APS asked for 13.6% and regulators approved about 8.3%. The final number usually lands below the ask.",
+      "Nothing changes until early 2027. What you control now: your rate plan and your 4–7pm usage — both free to fix.",
+    ],
+  },
+  {
+    title: "Arizona power: cheap by the kWh, expensive by the month",
+    angle: "the nuanced take nobody posts — AZ rates rose SLOWER than the national average, but bills are bigger; credibility through less alarmism",
+    format: "carousel",
+    theme: "authority",
+    deck: [
+      "Arizona's average rate is ~10% BELOW the national average — and over the last decade it rose slower too (+23% here vs +30% nationally).",
+      "But the average Arizona bill is $160/month vs $142 nationally, because desert homes use about 25% more electricity. AC is the whole story.",
+      "Translation: the lever you control isn't the rate — it's when and how you use the expensive hours.",
+    ],
+  },
+  {
+    title: "100 solar companies have gone bankrupt since 2023. Vet yours.",
+    angle: "the trust crisis is the credibility opening — calm, documented, homeowner-protective",
+    format: "carousel",
+    theme: "buyer-education",
+    deck: [
+      "Titan, SunPower, Sunnova, Freedom Forever — some of the biggest names in solar have all filed for bankruptcy since 2023. Warranties don't service themselves.",
+      "Arizona's AG has real enforcement wins too: $600k restitution from Sunrun/Vivint, $13.8M against Vision Solar for faking utility affiliation.",
+      "Before you compare prices, ask: who services this system in year 12 if the installer disappears? Good companies have a real answer. Insist on it.",
+    ],
+  },
+  {
+    title: "Why every solar quote is suddenly a lease",
+    angle: "the tax-code truth behind the TPO wave — honest explanation beats conspiracy, and it defuses 'why is everyone pushing leases'",
+    format: "carousel",
+    theme: "objection-handling",
+    deck: [
+      "The homeowner purchase credit died Dec 31, 2025. Leasing companies can still claim a commercial credit through 2027–28.",
+      "That's why about 7 in 10 new solar deals in 2026 are leases or PPAs. It's a tax-code shift — not automatically a trick.",
+      "But read the escalator: 0.99–2.99% a year, for 20–25 years. Price the 25-year total, never the first month.",
+    ],
+  },
+  {
+    title: "Advisor or salesperson? The 6-question test",
+    angle: "homeowner-protective litmus test — the flagship consultant-not-salesperson content anchor",
+    format: "carousel",
+    theme: "buyer-education",
+    deck: [
+      "1. Is their pay tied to system size? 2. Will they show you competing bids? 3. Will they walk you through the actual contract language?",
+      "4. Do they model YOUR usage — not a national average? 5. Is their contact info transparent? 6. Will they ever say 'solar isn't worth it for your home'?",
+      "Six yeses means you found an advisor. Anything less — keep your signature in your pocket.",
     ],
   },
   {

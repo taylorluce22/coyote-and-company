@@ -102,3 +102,19 @@ windows and demand charges sit there, and why storage arbitrage works.
 5. SRP grandfathering dies at home sale and everything sunsets Nov 2029.
 6. SRP E-28 without a battery can disappoint despite a working system.
 7. Data-center strain is real but regulators are actively isolating residential rates from it.
+
+## See also (July 2026 research expansion)
+
+Two companion fact-check documents, distilled from the July 2026 deep-research
+pass, extend this KB and are equal sources of truth for the Fact Checker:
+
+- `az-rates-supply-demand-2026.md` — the APS rate case in full (asks,
+  intervenors, schedule, precedent), data-center/growth supply-demand story
+  (with the contested points labeled), 10-year price history vs national,
+  forecasts, homeowner bill translations, and the sourced consumer-pain
+  record (named bills, hearing testimony, the October cliff, disconnection
+  history). Every line labeled [fact]/[projection]/[contested].
+- `az-solar-market-2026.md` — how solar is sold in metro Phoenix in 2026:
+  the post-§25D TPO/lease wave and why, pricing ($2.30/W local), installer
+  bankruptcies + AZ AG enforcement record, ranked objection data, and the
+  consultant-not-salesperson positioning evidence.

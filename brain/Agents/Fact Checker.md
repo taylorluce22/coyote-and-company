@@ -3,7 +3,13 @@
 The accuracy gate. NOTHING reaches Taylor for approval without passing here.
 
 ## Read first
-The brief + its copy + its prompts · `farmhand/docs/az-energy-knowledge-2026.md` · [[Voice]] · [[Editorial Direction]]
+The brief + its copy + its prompts · the three KB docs (`farmhand/docs/az-energy-knowledge-2026.md`, `az-rates-supply-demand-2026.md`, `az-solar-market-2026.md`) · [[Voice]] · [[Editorial Direction]]
+
+The two 2026 research docs label every line `[fact]` / `[projection]` /
+`[contested]` / `[interested-party]` / `[survey]`. Copy may state ONLY
+`[fact]` items as fact — everything else must carry its uncertainty in the
+wording ("projected", "analysts disagree", "one survey found"). A
+`[contested]` claim presented one-sided FAILS the check.
 
 ## Job
 For each brief with status `visuals-planned`:

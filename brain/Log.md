@@ -9,6 +9,22 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-19 · research ingested (in-session)
+Taylor ran the deep-research prompt; results distilled into two labeled
+fact-check docs: `farmhand/docs/az-rates-supply-demand-2026.md` (rate case
+in full, supply-demand with contested points labeled, price history,
+homeowner translations, sourced consumer-pain record) and
+`farmhand/docs/az-solar-market-2026.md` (post-§25D lease wave, installer
+bankruptcies + AG enforcement, ranked objections, positioning evidence).
+App KB refreshed: new reply lines (rateCase, azContext, trust, leaseShift),
+authority/buyer-education fact wiring updated, 4 new deck-carrying ideas
+(cheap-by-kWh · vet-your-installer · why-every-quote-is-a-lease ·
+6-question test), rate-case + data-center decks updated with exact
+numbers, monsoon idea replaced with the October-cliff resource piece.
+Editorial Direction refined with 6 adopted rules; Fact Checker + Copywriter
+now bound to all three docs and their [fact]/[projection]/[contested]
+labels. Routine recreated accordingly. Nothing spent.
+
 ## 2026-07-19 · owner direction + accuracy gate
 Taylor set new editorial priorities → [[Editorial Direction]]: rising
 prices / supply-and-demand as the lead pillar (APS-first), homeowner-

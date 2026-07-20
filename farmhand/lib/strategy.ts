@@ -176,14 +176,14 @@ const SOLAR_IDEA_BANK: { title: string; angle: string; format: "carousel" | "ree
     ],
   },
   {
-    title: "Monsoon season vs. your panels: what actually happens",
-    angle: "reel: wind/dust/hail myths answered in 60 seconds — seasonal, timely, local",
-    format: "reel",
-    theme: "myth-busting",
+    title: "The October bill cliff nobody warns you about",
+    angle: "the summer shutoff moratorium pauses bills but doesn't forgive them — resource-first honesty about the debt cliff, assistance before solar",
+    format: "carousel",
+    theme: "bill-breakdown",
     deck: [
-      "Panels are engineered for one-inch hail and serious wind uplift — a haboob is basically a car wash with attitude.",
-      "Dust costs a few percent of production until the next rain rinses it. Skip the $300 'panel cleaning' pitch.",
-      "The real monsoon risk is your roof, not the panels. That's why roof condition comes before any install.",
+      "APS and other regulated utilities can't disconnect you June 1 – Oct 15. But the balance isn't forgiven — it all comes due when the pause lifts.",
+      "Assistance agencies report people walking in with $1,600 October balances. If summer bills are burying you, act in July — not October.",
+      "Free moves first: a payment plan before the debt stacks, a rate-plan check, and shifting the big loads out of the 4–7pm window.",
     ],
   },
   {

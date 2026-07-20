@@ -22,8 +22,6 @@ The one-screen view of the operation. Agents: read this first, every run.
 
 ## Needs Taylor (mirror of [[Tasks]])
 
-- Run the deep-research prompt (rising prices + solar sales craft) and
-  paste results back — refines the whole content engine
 - Face decision for the realistic lane → record in [[Visual Style]]
 - Reference photos → `brain/Brand/refs/`
 - Review the 5 open briefs in [[Content Queue]] (2 rejected per your direction)
