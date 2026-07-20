@@ -55,6 +55,25 @@ interchangeable — "Valley homeowners…", "if you're in the Valley and have
 questions you want answered…". Never pin the ask to one city. Cities appear
 only when they're the post's SUBJECT; hashtags may stay local.
 
+## Value over price (owner, 2026-07-20)
+
+Never condition buyers to shop on price-per-watt alone. Price is a
+REFLECTION of labor quality and install process; low bids often come from
+financing structures that leave customers with inattentive installers
+after the check clears. The education pillar this creates:
+
+- Price per watt = a transparency tool for comparing, never the verdict.
+- Teach the quality markers: proper roof-penetration flashing
+  (three-course), utility qualified-installer credentials, manufacturer
+  partner tiers, in-house crews, real post-install service — all
+  [owner-expertise] in the market doc until the research pass verifies
+  program names and standards.
+- Honest framing: the few AZ installers doing truly high-quality work
+  usually price slightly higher — and that's usually the better 25-year
+  deal. Transparency front-to-back is the real filter.
+- NEVER name specific installers, good or bad, in content — homeowners
+  should understand a consultant keeps multiple installer options.
+
 ## Demoted — expired tax credits
 
 The dead 30% federal credit is NOT a content pillar. Use it ONLY as

@@ -4,6 +4,10 @@ Operational task board (system work — content work lives in [[Content Queue]])
 Orchestrator triages this every run. Newest on top within each section.
 
 ## Needs Taylor
+- [ ] **Run the installer-quality research prompt** (provided in chat
+  2026-07-20) — verifies flashing standards, utility qualified-installer
+  programs, manufacturer tiers; upgrades the [owner-expertise] section of
+  az-solar-market-2026.md to sourced fact
 - [ ] **Run the competitor audit** with the browser extension (read-only
   prompt provided in chat 2026-07-20) — results paste into
   [[Competitor Audit]]; a session then distills Adopt/Avoid lists
