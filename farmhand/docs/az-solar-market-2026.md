@@ -108,27 +108,26 @@ labels: **[fact]**, **[projection]**, **[survey]**, **[interested-party]**,
    documented walk-throughs occupy underserved territory.
 5. The neutral-consultant niche is genuinely open at scale.
 
-## Installer quality — [owner-expertise, research verification pending]
+## Installer quality — VERIFIED (see az-installer-quality-2026.md)
 
-Owner-provided professional knowledge (Taylor, 2026-07-20). Content may use
-these as advice/considerations in the owner's voice; numeric or program-name
-claims here must NOT be stated as verified fact until the installer-quality
-research pass lands and upgrades them.
+The July 2026 installer-quality research pass verified the owner's
+professional knowledge. The full labeled source of truth is
+`az-installer-quality-2026.md`; headlines:
 
-- [owner-expertise] Price per watt is a TRANSPARENCY tool, never the
-  verdict. A low bid often reflects the financing structure (dealer-fee
-  games) or labor shortcuts — not a better deal.
-- [owner-expertise] Quality markers to educate on: three-course roof
-  flashing on penetrations; installers who have gone through APS/SRP
-  qualified-installer processes; manufacturer partner tiers (e.g. Tesla
-  premier-level partners); in-house crews vs. subcontractor chains;
-  attentive post-install service ("who answers in year five").
-- [owner-expertise] Reality of the AZ market: only a few installers do
-  truly high-quality work, and their prices usually run slightly higher
-  than competitors.
-- [owner rule] Content never names specific installers — homeowners should
-  understand consultants have multiple installer options.
-- [pending] Research to verify/enrich: exact utility qualified-installer
-  program names, manufacturer certification tiers, flashing standards and
-  best practice on tile vs shingle, AZ ROC licensing, NABCEP, warranty
-  structures. Until then, the bullets above stay [owner-expertise].
+- [fact] Program names confirmed: **APS Qualified Technology Installer
+  (QTI)** and **SRP Preferred Solar Installer** — both requiring R-11/
+  CR-11 licensing, ROC + BBB good standing, insurance, and utility
+  training. Tesla Certified Installer + manufacturer tiers confirmed.
+- [fact] Three-course flashing defined (cement/fabric/cement) — used on
+  foam/flat roofs and, per owner practice, at the UNDERLAYMENT layer on
+  tile roofs (tiles removed, standoff into structure, underlayment
+  penetration three-coursed, tiles cut to fit); shingle roofs use flashed
+  feet under the course, lagged into rafters.
+- [fact] ARS 44-1762 warranty minimums (2yr device+install / 1yr rest);
+  quality installers voluntarily go 10+ years on workmanship and roof.
+- [fact] ROC public license + complaint lookup is the free homeowner
+  background check; the license holder answers for subcontractors.
+- [industry-claim] Dealer fees ~15–25% inside solar loans; quality-local
+  premium ~10–20¢/W.
+- [owner rule, standing] Price per watt = transparency tool, never the
+  verdict. Content never names specific installers.

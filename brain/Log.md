@@ -9,6 +9,21 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-20 · installer-quality research ingested + owner correction
+Taylor ran the installer-quality deep dive → new fact-check doc
+`farmhand/docs/az-installer-quality-2026.md` (legal floor: R-11/CR-11 +
+ARS 44-1762 warranty minimums · roof-penetration best practice by roof
+type · verified credentials: APS QTI, SRP Preferred Solar Installer,
+Tesla Certified, NABCEP PVIP rarity, SASSB bar · dealer-fee and
+quality-premium industry claims · warranty-survival reality · the
+7-point homeowner checklist). Owner-expertise section in the market doc
+upgraded to VERIFIED. Owner field correction applied: three-course
+flashing on tile roofs happens at the UNDERLAYMENT layer (standoff
+penetration three-coursed before tiles are cut and replaced) — doc and
+deck updated. KB reply line now cites QTI/PSI by name; 3 new idea decks
+(60-second background check · warranty survival · tile-roof craft).
+Fact Checker + Copywriter now bound to all four KB docs. Nothing spent.
+
 ## 2026-07-20 · growth strategy: @taylorlucesolar audited
 First-pass audit of the real IG profile (1 post, 133/261, sales-voice
 bio) → [[Growth Strategy]]: bio rewrite proposed (resource-first, keep
