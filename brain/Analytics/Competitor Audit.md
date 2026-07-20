@@ -15,7 +15,30 @@ homeowner consultant. That's the open lane. So the models to study are:
    educators) who make expertise watchable
 3. **Solar recruiting pages** — studied only as the ANTI-PATTERN library
 
-## The scoring rubric
+## Grid-level audit (owner priority, 2026-07-20 — this IS the review)
+
+Taylor's ask is explicitly NOT an analytics review — it's "make my page
+LOOK AND FEEL like an established local pro," judged the way a homeowner
+actually experiences a profile: they land on it and scroll the grid for
+2 seconds before deciding if this is a real, active professional. The
+[[Feed Director]] owns running this test and applying findings to grid
+composition. Score each high-follower account on:
+
+- **Grid rhythm**: what % of the 9-30 visible tiles are photo-feeling
+  (proof-of-work, candid) vs. designed cards vs. text-only? What's the
+  repeat pattern (e.g. photo-photo-card, photo-card-photo)?
+- **Proof-of-work visibility**: how often does a real job/meeting/result
+  appear, and how is it framed (candid vs. staged, face-forward vs.
+  hands/detail shots)?
+- **Profile-level signals**: pinned posts (what do they lead with?),
+  Highlights categories, bio structure, Reels cover consistency.
+- **"Does this look active TODAY"**: recency cues, Stories rings,
+  cadence — what makes a page feel currently-run vs. abandoned.
+
+This feeds directly into [[Feed Director]]'s grid plan — not just into
+Adopt/Avoid bullet points.
+
+## The scoring rubric (per-post detail, secondary to the grid-level view)
 
 **Per account** (fill one row per account below):
 handle · niche · metro · followers · avg likes + comments over the last 12

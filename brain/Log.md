@@ -9,6 +9,33 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-20 · Feed Director added — the Instagram/grid-level agent
+Owner clarified the page review isn't analytics — it's "make my page
+LOOK AND FEEL like an established local pro." New agent [[Feed Director]]
+owns this: judges the whole GRID (not one post at a time) against a
+2-second-scroll credibility test, sets grid composition rules (~2:1
+photo-feeling-to-designed-card ratio, no adjacent same-look posts, pinned
+trio = positioning/flagship/proof-of-work), and drafted a First-12 grid
+plan mixing the 5 queued posts with new proof-of-work slots.
+
+Added Lane 3 (proof-of-work) to [[Visual Style]] with binding
+authenticity rules — the core protection: REAL photos are the only
+material that may be presented as documentation of an actual job/
+meeting/install; Higgsfield images are illustrative-only (generic,
+representative, never captioned as a specific documented event). This
+is deliberate risk management — one "that's AI" callout on a fake
+install would undermine the whole trust brand.
+
+Owner decision resolved: minimize on-camera presence. Lean on real
+equipment/install photos (faces optional, craft mandatory) over
+talking-head content; no recurring synthetic persona for AI-illustrated
+people. [[Competitor Audit]] gained a grid-level scoring section (rhythm,
+proof-of-work visibility, pinned posts, "looks active today" signals) as
+the primary audit, with per-post metrics now secondary. Grid-audit
+extension prompt issued to Taylor; photo-dump spec issued (10-25 photos,
+postable vs. style-only tagging). Orchestrator now routes to Feed
+Director whenever the audit or photo dump changes. Nothing spent.
+
 ## 2026-07-20 · installer-quality research ingested + owner correction
 Taylor ran the installer-quality deep dive → new fact-check doc
 `farmhand/docs/az-installer-quality-2026.md` (legal floor: R-11/CR-11 +

@@ -4,14 +4,18 @@ Operational task board (system work — content work lives in [[Content Queue]])
 Orchestrator triages this every run. Newest on top within each section.
 
 ## Needs Taylor
-- [ ] **Run the competitor audit** with the browser extension (read-only
-  prompt provided in chat 2026-07-20) — results paste into
-  [[Competitor Audit]]; a session then distills Adopt/Avoid lists
-- [ ] **A/B decision**: realistic-lane faces — (A) real photos of you for
-  identity + AI for scenes, or (B) a consistent stylized character via Soul
-  ID. Record the answer in [[Visual Style]]. *(Recommendation: A)*
-- [ ] Drop 10–15 reference photos into `brain/Brand/refs/` and list them in
-  [[Visual Style]]
+- [ ] **Run the GRID-LEVEL competitor audit** with the browser extension
+  (prompt provided in chat 2026-07-20 — compares whole profiles/grids on
+  established high-follower pages, not individual post stats) — results
+  paste into [[Competitor Audit]]; [[Feed Director]] then refines the
+  First-12 grid plan from it
+- [x] Face/on-camera decision — RESOLVED 2026-07-20: minimize on-camera,
+  lean on real equipment/install photos + AI illustration for generic
+  moments, no recurring synthetic persona. Recorded in [[Visual Style]].
+- [ ] **Photo dump**: 10–25 real photos into `brain/Brand/refs/` (installs,
+  flashed penetrations/racking close-ups, panels on tile+shingle, consult
+  moments, truck/tools) — powers Lane 3 proof-of-work posts AND becomes
+  the Higgsfield style reference for illustrative scenes
 - [ ] Vercel: add `ANTHROPIC_API_KEY` (enables the in-app produce pipeline)
 - [ ] Higgsfield key hygiene: rotate the exposed key, mark env vars
   Sensitive (flagged 2026-07-18)
@@ -24,8 +28,11 @@ Orchestrator triages this every run. Newest on top within each section.
 ## Backlog
 - [ ] Settings field for the real IG handle (@taylorlucesolar) — Studio
   slides currently render a derived placeholder handle
-- [ ] Reel lane: reel-format versions of queued topics (until DoP video
-  is wired: Taylor on camera or simple motion over Studio exports)
+- [ ] Reel lane: reel-format versions of queued topics — screen-recorded
+  walkthroughs / install b-roll / voiceover-over-stills per the
+  minimize-on-camera decision (until DoP video is wired)
+- [ ] Build the first Feed Director grid plan into actual Content Queue
+  briefs once the photo dump + grid audit land
 - [ ] "Produce post" one-button pipeline in the app (`/api/produce`)
 - [ ] Vercel KV for server-side state (unlocks fully autonomous production
   + the 24/7 lead cron)

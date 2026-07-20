@@ -11,6 +11,7 @@ The one-screen view of the operation. Agents: read this first, every run.
 | [[Copywriter]] | all 5 briefs drafted | 2026-07-20 | next `idea` brief |
 | [[Art Director]] | all 5 visual plans done (~13 credits total est.) | 2026-07-20 | next `drafted` brief |
 | [[Fact Checker]] | **5/5 PASS** — receipts under each brief | 2026-07-20 | next `visuals-planned` brief |
+| [[Feed Director]] | **NEW** — First-12 grid plan drafted; awaiting grid-level audit data + photo dump | 2026-07-20 | after Competitor Audit grid pass |
 | [[Analyst]] | idle — no post data yet | — | first Friday after posts ship |
 
 ## Current state
@@ -22,12 +23,16 @@ The one-screen view of the operation. Agents: read this first, every run.
 
 ## Needs Taylor (mirror of [[Tasks]])
 
-- Face decision for the realistic lane → record in [[Visual Style]]
-- Reference photos → `brain/Brand/refs/`
+- **Photo dump** into `brain/Brand/refs/` (installs, equipment, consults,
+  truck/tools) — unlocks Lane 3 proof-of-work posts AND a Higgsfield
+  style reference so AI scenes match your real work
+- **Run the grid-level competitor audit** (extension prompt below) — this
+  is the "make my page look/feel like an established pro" review
 - Review the 5 open briefs in [[Content Queue]] (2 rejected per your direction)
 - `ANTHROPIC_API_KEY` in Vercel · Higgsfield key rotation
 
 ## Map
 
 [[Tasks]] · [[Schedule]] · [[Tools]] · [[Content Queue]] · [[Log]] ·
-[[Voice]] · [[Visual Style]] · [[Lead Pipeline]] · [[Content Analytics]]
+[[Voice]] · [[Visual Style]] · [[Feed Director]] · [[Competitor Audit]] ·
+[[Growth Strategy]] · [[Lead Pipeline]] · [[Content Analytics]]

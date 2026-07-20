@@ -31,7 +31,8 @@ which means:
 - `Brand/` — [[Voice]], [[Visual Style]], and [[Editorial Direction]]
   (owner priorities: rising prices, real pain points, soft CTAs)
 - `Agents/` — [[Orchestrator]] + specialists (Creative Director, Copywriter,
-  Art Director, [[Fact Checker]] — the accuracy gate — and Analyst)
+  Art Director, [[Fact Checker]] — the accuracy gate — [[Feed Director]] —
+  the Instagram/grid-level agent — and Analyst)
 - `Queue/` — [[Content Queue]]: the production pipeline you approve from
 - `Pipelines/` · `Analytics/` — [[Lead Pipeline]] and [[Content Analytics]]
 - [[Log]] — every agent run appends what it did and why
