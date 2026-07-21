@@ -9,6 +9,31 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-21 · editorial pivot: rising-cost thesis + solar-as-hedge
+Owner reset the spine of the content pillar during brief review. New
+thesis recorded in [[Editorial Direction]]: no matter the rate plan, AZ
+power costs only climb (infrastructure + data centers + repeated rate
+cases) — so plan-switching is NOT sold as a fix; the real hedge is
+solar + battery sized to self-supply the punishing evening peak. Rate
+DESIGN (low buyback, cheap off-peak, brutal on-peak) is the story, and
+utility VPP / residential-battery programs are reframed as proof the grid
+isn't stable ("if it were stable, why would they need your battery?").
+Also resolved last turn's open question — the "cheap by the kWh / rose
+slower than national" credibility-through-downplay framings are RETIRED,
+not kept.
+
+Queue actions: brief 2 (Every new street) REJECTED (owner: doesn't land/
+flow, too abstract; new-demand facts kept only as support). Briefs 3
+(kitchen-table) and 4 (SRP) moved to `reworking` with explicit rework
+notes — #3 drops plan-switching-as-savings, #4 must teach SRP system
+design + VPPs instead of cooling tips. Both HELD pending a research dump
+the owner offered: SRP redesign/peak-window shift, current export+off-peak
+rates, APS & SRP VPP terms, the grid-strain rationale, and a sourced
+historical+projected bill trajectory to ground "costs keep climbing /
+could double." Full research prompt saved in [[Tasks]]. Nothing enters
+content as [fact] until sourced — no "bill will double" without a
+timeframe + citation. Nothing spent.
+
 ## 2026-07-21 · Reel Coach: whole-browser freeze fixed (drag-and-drop gap)
 Taylor hit this twice: Chrome itself — not just the tab — went fully
 unresponsive after using Reel Coach, needing a full quit both times.

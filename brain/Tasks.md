@@ -4,14 +4,30 @@ Operational task board (system work — content work lives in [[Content Queue]])
 Orchestrator triages this every run. Newest on top within each section.
 
 ## Needs Taylor
-- [ ] **"Credible" framings — keep or retire?**: the new 2026-07-21 "build
-  the pain, never soothe it" rule killed the rate-case "usually lands lower"
-  reassurance. But the same downplay logic lives in older "credibility"
-  framings we deliberately adopted: "Arizona is cheap by the kWh," "AZ rates
-  rose SLOWER than the national average" (Editorial Direction research rule
-  #1, the `azContext` KB reply line, and the "cheap by the kWh" idea deck).
-  Do those get retired too, or do they stay as the thing that separates us
-  from doom-selling reps? Your call — see [[Editorial Direction]].
+- [x] **"Credible" framings — RESOLVED (owner 2026-07-21)**: retire them.
+  The "cheap by the kWh / rose slower than national" downplay is off-message
+  under the rising-cost thesis; gets reworked in the post-research KB
+  overhaul. See [[Editorial Direction]].
+- [ ] **RESEARCH DUMP — rate design, VPPs, cost trajectory** (owner offered
+  2026-07-21): needed to source the rising-cost/solar-hedge thesis before
+  the KB overhaul + brief rewrites (kitchen-table #3, SRP #4). Run this and
+  paste results back (label every item [fact]/[projection]/[contested]/
+  [industry-claim] with source + date):
+  - **SRP redesign 2025–26**: residential plan names, what changed, who's
+    grandfathered + for how long; on-peak windows now vs. after (confirm the
+    ~3–8pm → 5–10pm shift), months, on/off-peak ¢/kWh; demand charges on
+    solar plans; solar export/buyback ¢/kWh + how it's set.
+  - **APS current**: TOU on/off-peak windows + ¢; export/RCP ¢ and its
+    decline path.
+  - **VPP / battery programs, BOTH utilities**: names, incentives, dispatch
+    rules (how often they can pull your battery), eligibility, 2026 status.
+  - **Why VPPs exist (grid-strain case)**: AZ peak-demand growth, reserve
+    margins, data-center load, capacity constraints — NERC assessments,
+    utility IRPs, ACC filings; the reliability rationale utilities give for
+    needing residential storage.
+  - **Bill trajectory**: historical AZ residential rate/bill path (10–20 yr,
+    % increases) + forward projections (EIA, IRPs, approved + pending rate
+    cases) — over what horizon does a Phoenix bill realistically double?
 - [ ] **Reel Coach setup**: Content → Reel Coach tab needs two things live in
   Vercel before it works: `GEMINI_API_KEY` (free at aistudio.google.com,
   cheap pay-as-you-go for video) and a Vercel Blob store connected

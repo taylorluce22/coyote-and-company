@@ -38,7 +38,10 @@ reason teaches the agents — be specific.
 - 2026-07-20 screen/caption rework: detailed claims moved from slides to caption — same claims, same sources, re-verified
 
 ## Every new street is new demand
-- **status**: fact-checked
+- **status**: rejected: owner 2026-07-21 — doesn't land or flow; the "where
+  do 100k homes plug in" curiosity framing is too abstract and doesn't drive
+  the rising-cost thesis. Keep the new-demand facts (Teravalis, +32k meters)
+  as SUPPORT for the inflation throughline, not as their own post.
 - **format**: realistic-moment single · **look**: Warm Nocturne
 - **CTA**: Valley-general (Buckeye is the SUBJECT here, so it stays in the body) · **hook structure**: curiosity gap
 
@@ -55,9 +58,19 @@ reason teaches the agents — be specific.
 - "backdrop for rate conversations" framed as context, not causation → honors [contested]
 
 ## The kitchen-table bill moment
-- **status**: fact-checked
+- **status**: reworking (owner 2026-07-21) — pending KB refresh
 - **format**: realistic-moment single · **look**: Golden Hour Lifestyle
 - **CTA**: Valley-general · **hook structure**: number-led (caption)
+
+> ⚠ **Rework (owner 2026-07-21)**: DROP the "switch your rate plan to save
+> money" angle — we do not promote plan-switching as a fix. New thesis: no
+> matter which plan you're on, you ride the same rising baseline; AZ power
+> costs climb regardless (infrastructure + data-center load + repeated rate
+> cases). Keep the 34¢/12¢ evening-peak spread ONLY as the "why peak is
+> brutal" teaching, never as "fix your plan and relax." The "bills keep
+> climbing / could double" line must be grounded in the forthcoming
+> research (historical + projected trajectory) before it can pass
+> fact-check. Rewrite after the dump.
 
 **Caption**: On APS, the 4–7pm weekday window runs about 34¢/kWh vs ~12¢ off-peak. That 3x spread is where most summer bills blow up. Before anyone talks panels: make sure you're on the right rate plan — checking is free, switching is free, and sometimes that alone takes a real bite out of the bill. Save this for the next scary bill — and Valley homeowners, DM me when you want your own numbers run. No pitch.
 **Hashtags**: aps · energybills · buckeye · westvalley · arizonaenergy · azliving · phoenixmetro · arizonasolar
@@ -70,9 +83,19 @@ reason teaches the agents — be specific.
 - "3x spread" → 34.396 / 12.345 ≈ 2.8, stated as "3x spread" per existing KB.rates.aps phrasing — acceptable, matches KB verbatim language
 
 ## SRP's 40¢ window nobody explains
-- **status**: fact-checked
+- **status**: reworking (owner 2026-07-21) — pending SRP/VPP research
 - **format**: message-card carousel (5 slides) · **look**: Editorial Minimal
 - **CTA**: Valley-general (SRP households) · **hook structure**: number-led
+
+> ⚠ **Rework (owner 2026-07-21)**: STOP at cooling tips — teach SRP SYSTEM
+> DESIGN. The concept: low solar buyback + cheap off-peak + punishing
+> evening on-peak means the only real hedge is solar + battery sized to
+> self-supply the peak. Cover the rate-plan redesign (grandfathering;
+> on-peak window reportedly shifting ~3–8pm → 5–10pm — VERIFY in research),
+> and introduce VPP / residential-battery programs (both utilities) with
+> the reframe: if the grid were stable and forecastable, why would utilities
+> need access to your battery? These specifics are unsourced today — hold
+> until the research dump lands.
 
 **Hook**: SRP's 40¢ hours: 6–9pm, July and August
 
