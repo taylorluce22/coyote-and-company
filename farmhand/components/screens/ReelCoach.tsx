@@ -8,6 +8,11 @@ import { reelVaultAdd, reelVaultAll, reelVaultDelete, type ReelAnalysis, type Va
 const SOURCE_LABEL: Record<VaultReel["source"], string> = { own: "My content", reference: "Reference / competitor" };
 const SOURCE_COLOR: Record<VaultReel["source"], string> = { own: "#26E0C8", reference: "#C9A8FF" };
 
+function formatBytes(n: number): string {
+  if (n < 1024 * 1024) return `${Math.max(1, Math.round(n / 1024))} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function noteFor(reel: VaultReel): string {
   const a = reel.analysis || {};
   const lines = [
@@ -101,10 +106,20 @@ export default function ReelCoach() {
   const [list, setList] = useState<VaultReel[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   useEffect(() => {
     reelVaultAll().then(setList);
   }, []);
+
+  const pickFile = (f: File | null | undefined) => {
+    if (f && !f.type.startsWith("video/")) {
+      setError(`"${f.name}" doesn't look like a video file (${f.type || "unknown type"}) — pick a video clip.`);
+      return;
+    }
+    setError(null);
+    setFile(f || null);
+  };
 
   const analyze = async () => {
     if (!file || busy) return;
@@ -171,15 +186,52 @@ export default function ReelCoach() {
       </div>
 
       <div className="fh-glass" style={{ borderRadius: 14, padding: "16px 17px", marginBottom: 20 }}>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+        <div
+          onClick={() => !busy && fileRef.current?.click()}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!busy) setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            if (busy) return;
+            pickFile(e.dataTransfer.files?.[0]);
+          }}
+          style={{
+            border: `1.5px dashed ${dragOver ? "#FF9A62" : "rgba(255,255,255,0.16)"}`,
+            borderRadius: 12,
+            padding: "18px 16px",
+            textAlign: "center",
+            cursor: busy ? "default" : "pointer",
+            background: dragOver ? "rgba(255,154,98,0.08)" : "transparent",
+            transition: "border-color .15s ease, background .15s ease",
+            marginBottom: 12,
+          }}
+        >
           <input
             ref={fileRef}
             type="file"
             accept="video/*"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            onChange={(e) => pickFile(e.target.files?.[0])}
             disabled={busy}
-            style={{ fontSize: 12, color: "#A6A4B8", maxWidth: 240 }}
+            style={{ display: "none" }}
           />
+          {file ? (
+            <div style={{ fontSize: 12.5, color: "#F4F3F8" }}>
+              <strong>{file.name}</strong>{" "}
+              <span style={{ color: "#6E6C82" }}>({formatBytes(file.size)})</span>
+              <div style={{ fontSize: 11, color: "#7DD3FC", marginTop: 4 }}>selected — click to swap, or Analyze below</div>
+            </div>
+          ) : (
+            <div style={{ fontSize: 12.5, color: "#8B89A0" }}>
+              Drag a clip here, or click to browse
+              <div style={{ fontSize: 10.5, color: "#5E5C72", marginTop: 3 }}>video files only — .mov, .mp4, up to 200MB</div>
+            </div>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
           <input
             type="text"
             placeholder="label (e.g. clip 1, @competitor reel)"
