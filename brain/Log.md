@@ -9,6 +9,23 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-21 · Connectors audit screen + checklist
+Owner asked to "connect everything / make sure the connectors are set up."
+Can't obtain keys or create accounts from here (owner actions), so built a
+live **Connectors** screen (new nav item) that probes the app's own `/api`
+status endpoints and shows each integration's real state: Perplexity,
+Higgsfield, Pexels/Pixabay/Unsplash, Gemini (live-checked); Vercel Blob/KV
+(attach-store); Apify, Tavily, Firecrawl, Gmail/Meet/Calendar, Supabase,
+Metricool, Instagram/X, Anthropic, Reddit (to-wire); GitHub (connected).
+21 connectors total. Each card shows what it powers, the env var, a
+"get key" link, and setup notes. Registry in `farmhand/lib/connectors.ts`.
+Matching checklist saved as [[Connectors]] for the Obsidian side.
+Verified rendering (screenshot). Nothing spent.
+
+Priority for the owner: (1) confirm Perplexity + Higgsfield keys are live;
+(2) turn on the already-built features — Pexels, Gemini, Vercel Blob;
+(3) the compounding one is Supabase shared memory (needs Dev to wire).
+
 ## 2026-07-21 · MIGRATED to the 6-agent Agentic OS roster
 Owner adopted the Agentic OS architecture (the Sureflow model, adapted to
 solar). Migrated the brain vault agent charters to match: 1 chief of staff
