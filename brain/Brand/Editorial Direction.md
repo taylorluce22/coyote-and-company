@@ -88,13 +88,49 @@ reference [fact] in the KB, but is NOT deployed to comfort — if it appears
 in content at all, it's evidence they keep winning increases and returning
 for the next one, never "so the final number will be lower."
 
-**Open tension for Taylor to settle** (logged in [[Tasks]]): the older
-"credible over alarmist" framings are *also* reassurance/downplay — the
-research rule below ("AZ rates rose SLOWER than the national average"), the
-`azContext` KB reply line, and the "Arizona power: cheap by the kWh"
-idea deck. Does this new rule retire those too, or do they stay as
-credibility plays that separate us from doom-selling reps? Not decided
-here — this edit only removed the rate-case "lands lower" reassurance.
+**Resolved (owner, 2026-07-21):** retire the reassuring/downplay framings.
+The older "credible over alarmist" angles — "AZ rates rose SLOWER than the
+national average," the `azContext` KB reply line, the "Arizona power: cheap
+by the kWh" idea deck — are OFF-message under the rising-cost thesis below.
+They get reworked (not kept as credibility plays) in the post-research KB
+overhaul.
+
+## The rising-cost thesis + solar-as-hedge (owner, 2026-07-21)
+
+The spine the whole rising-cost pillar now hangs on: **no matter what rate
+plan you're on, Arizona power costs are on a one-way climb** — driven by
+infrastructure spend, data-center load, and repeated rate-case increases —
+and that trajectory is the core reason to own your own production. Push
+these throughout content AND the knowledge base:
+
+1. **Inflation is inevitable; plan choice won't save you from it.** Do NOT
+   promote "switch your rate plan to save money." That frames the problem
+   as fixable by shuffling plans, when every plan rides the same rising
+   baseline. Rate-plan literacy stays only as a tool to explain WHY evening
+   peak is brutal — never as "the fix."
+2. **Rate DESIGN is the story, not just the rate.** SRP/APS design — low
+   solar buyback, cheap off-peak, punishing evening on-peak windows — is
+   shaped so the only durable hedge is self-supplying the peak: solar +
+   battery. Teach the concept, not just the ¢/kWh.
+3. **VPP programs = proof the grid isn't stable.** Both utilities are
+   standing up virtual-power-plant / residential-battery programs. The
+   reframe that reorders everything: if the grid were stable and
+   forecastable, why would they need access to homeowners' batteries?
+   These programs are evidence of strain — and they put battery owners in
+   the driver's seat.
+4. **Pro-solar, honestly anti-utility-rate-design.** Pointed is fine;
+   dishonest is not. Attack the rate DESIGN and the cost trajectory with
+   SOURCED facts — never vague conspiracy, never a claim that can't clear
+   the [[Fact Checker]]. "Anti-utility" means naming how the design shifts
+   cost and risk onto homeowners, backed by citations.
+
+**Accuracy gate:** the specifics this thesis leans on — SRP's redesign +
+peak-window shift, current export/off-peak rates, APS & SRP VPP terms, and
+a defensible historical+projected bill trajectory (to ground "costs keep
+climbing" / "could double") — are NOT yet sourced in the KB. They enter as
+[projection]/[industry-claim] until the research dump ([[Tasks]]) lands
+them as [fact]. No "your bill will double" in content until it has a
+timeframe + source.
 
 ## Demoted — expired tax credits
 
@@ -111,9 +147,10 @@ Taylor's deep-research pass is distilled into two labeled fact-check docs —
 `farmhand/docs/az-solar-market-2026.md` — now equal sources of truth
 alongside the original KB. Refinements adopted from it:
 
-1. **Lead with nuance, not alarm**: AZ rates rose SLOWER than the national
-   average last decade; bills are big because of usage. The credible take
-   beats the scary take.
+1. **Lead with nuance, not alarm** — *partially SUPERSEDED 2026-07-21*:
+   "never fearmonger" stays (via the pain-point rule), but the "AZ rose
+   SLOWER than national / cheap by the kWh" downplay is RETIRED under the
+   rising-cost thesis above.
 2. **The rate case gets sourced numbers**: ~16.4% residential ask, decision
    due Dec 31 2026, 2022 precedent (asked 13.6%, got ~8.3%). Never predict
    the outcome as fact — and per the 2026-07-21 "build the pain" rule
