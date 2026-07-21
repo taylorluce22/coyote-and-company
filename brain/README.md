@@ -30,9 +30,10 @@ which means:
   a cloud Routine runs the Orchestrator Mon/Thu/Fri 9 AM Phoenix)
 - `Brand/` — [[Voice]], [[Visual Style]], and [[Editorial Direction]]
   (owner priorities: rising prices, real pain points, soft CTAs)
-- `Agents/` — [[Orchestrator]] + specialists (Creative Director, Copywriter,
-  Art Director, [[Fact Checker]] — the accuracy gate — [[Feed Director]] —
-  the Instagram/grid-level agent — and Analyst)
+- `Agents/` — [[Orchestrator|CEO / Orchestrator]] + 5 specialists:
+  [[Researcher]] (intel), [[CMO]] (all content — ideation, copy, visuals,
+  the accuracy gate, grid), [[Lead Manager]] (web leads → consults),
+  [[Data Analyst]] (the reel→revenue chain), [[Dev]] (build system)
 - `Queue/` — [[Content Queue]]: the production pipeline you approve from
 - `Pipelines/` · `Analytics/` — [[Lead Pipeline]] and [[Content Analytics]]
 - [[Log]] — every agent run appends what it did and why

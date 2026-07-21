@@ -1,7 +1,7 @@
 # Editorial Direction
 
-Owner-set priorities (Taylor, 2026-07-19). The [[Creative Director]] plans
-against this; the [[Fact Checker]] enforces the spirit as well as the facts.
+Owner-set priorities (Taylor, 2026-07-19). The [[CMO]] plans against this
+and enforces the spirit as well as the facts (its accuracy gate).
 
 ## North star
 
@@ -131,12 +131,12 @@ these throughout content AND the knowledge base:
 4. **Pro-solar, honestly anti-utility-rate-design.** Pointed is fine;
    dishonest is not. Attack the rate DESIGN and the cost trajectory with
    SOURCED facts — never vague conspiracy, never a claim that can't clear
-   the [[Fact Checker]]. "Anti-utility" means naming how the design shifts
+   the [[CMO]]. "Anti-utility" means naming how the design shifts
    cost and risk onto homeowners, backed by citations.
 
 **Accuracy gate — LANDED 2026-07-21:** the research dump is in and sourced
-in `farmhand/docs/az-rising-costs-heat-datacenters-2026.md` (Fact Checker +
-Copywriter now bound to it alongside the other KB docs). Honest guardrails
+in `farmhand/docs/az-rising-costs-heat-datacenters-2026.md` (the [[CMO]]'s
+accuracy gate is bound to it alongside the other KB docs). Honest guardrails
 baked into that doc — follow them:
 - **"Grid is unstable" → NO.** NERC says AZ reserve margins are fine now.
   Say utilities are *paying homeowners for evening battery access* because

@@ -1,6 +1,6 @@
 # Content Analytics
 
-Where results live. The [[Analyst]] writes here; the [[Creative Director]]
+Where results live. The [[Data Analyst]] writes here; the [[CMO]]
 reads here before planning.
 
 ## How data gets in

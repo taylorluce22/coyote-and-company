@@ -128,8 +128,8 @@ export const GRAPH_GROUPS: Record<NodeGroup, { color: string; label: string }> =
 };
 
 export const GRAPH_NODES: [string, NodeGroup][] = [
-  ["Home", "system"], ["Orchestrator", "agents"], ["Log", "system"], ["README", "system"], ["Tasks", "system"], ["Tools", "system"], ["Schedule", "system"],
-  ["Analyst", "agents"], ["Art Director", "agents"], ["Copywriter", "agents"], ["Creative Director", "agents"], ["Fact Checker", "agents"], ["Feed Director", "agents"],
+  ["Home", "system"], ["Log", "system"], ["README", "system"], ["Tasks", "system"], ["Tools", "system"], ["Schedule", "system"],
+  ["Orchestrator", "agents"], ["Researcher", "agents"], ["CMO", "agents"], ["Lead Manager", "agents"], ["Data Analyst", "agents"], ["Dev", "agents"],
   ["Competitor Audit", "analytics"], ["Content Analytics", "analytics"], ["Growth Strategy", "analytics"],
   ["Editorial Direction", "brand"], ["Visual Style", "brand"], ["Voice", "brand"],
   ["Content Queue", "queue"], ["Lead Pipeline", "pipelines"],
@@ -138,30 +138,35 @@ export const GRAPH_NODES: [string, NodeGroup][] = [
 ];
 
 export const GRAPH_LINKS: [string, string][] = [
-  ["Content Queue", "Editorial Direction"], ["Tools", "Log"], ["Tools", "Tasks"],
-  ["Lead Pipeline", "Analyst"], ["Lead Pipeline", "Content Analytics"], ["Lead Pipeline", "Creative Director"], ["Lead Pipeline", "Tasks"],
-  ["Log", "Competitor Audit"], ["Log", "Content Queue"], ["Log", "Editorial Direction"], ["Log", "Fact Checker"], ["Log", "Feed Director"], ["Log", "Growth Strategy"], ["Log", "Schedule"], ["Log", "Tasks"], ["Log", "Tools"], ["Log", "Visual Style"],
-  ["README", "Content Analytics"], ["README", "Content Queue"], ["README", "Editorial Direction"], ["README", "Fact Checker"], ["README", "Feed Director"], ["README", "Home"], ["README", "Lead Pipeline"], ["README", "Log"], ["README", "Orchestrator"], ["README", "Schedule"], ["README", "Tasks"], ["README", "Tools"], ["README", "Visual Style"], ["README", "Voice"],
-  ["Competitor Audit", "Editorial Direction"], ["Competitor Audit", "Feed Director"], ["Competitor Audit", "Visual Style"],
-  ["Content Analytics", "Analyst"], ["Content Analytics", "Creative Director"],
-  ["Growth Strategy", "Analyst"], ["Growth Strategy", "Competitor Audit"], ["Growth Strategy", "Content Analytics"],
-  ["Tasks", "Competitor Audit"], ["Tasks", "Content Analytics"], ["Tasks", "Content Queue"], ["Tasks", "Editorial Direction"], ["Tasks", "Feed Director"], ["Tasks", "Visual Style"],
-  ["Editorial Direction", "Creative Director"], ["Editorial Direction", "Fact Checker"], ["Editorial Direction", "Visual Style"],
-  ["Visual Style", "Feed Director"], ["Visual Style", "Tasks"],
-  ["Home", "Analyst"], ["Home", "Art Director"], ["Home", "Competitor Audit"], ["Home", "Content Analytics"], ["Home", "Content Queue"], ["Home", "Copywriter"], ["Home", "Creative Director"], ["Home", "Fact Checker"], ["Home", "Feed Director"], ["Home", "Growth Strategy"], ["Home", "Lead Pipeline"], ["Home", "Log"], ["Home", "Orchestrator"], ["Home", "Schedule"], ["Home", "Tasks"], ["Home", "Tools"], ["Home", "Visual Style"], ["Home", "Voice"],
-  ["Schedule", "Content Analytics"], ["Schedule", "Content Queue"], ["Schedule", "Log"], ["Schedule", "Tools"],
-  ["Orchestrator", "Analyst"], ["Orchestrator", "Art Director"], ["Orchestrator", "Competitor Audit"], ["Orchestrator", "Content Queue"], ["Orchestrator", "Copywriter"], ["Orchestrator", "Creative Director"], ["Orchestrator", "Fact Checker"], ["Orchestrator", "Feed Director"], ["Orchestrator", "Home"], ["Orchestrator", "Log"], ["Orchestrator", "Schedule"], ["Orchestrator", "Tasks"],
-  ["Creative Director", "Content Queue"], ["Creative Director", "Editorial Direction"], ["Creative Director", "Home"], ["Creative Director", "Log"], ["Creative Director", "Visual Style"], ["Creative Director", "Voice"],
-  ["Fact Checker", "Editorial Direction"], ["Fact Checker", "Tasks"], ["Fact Checker", "Voice"],
-  ["Analyst", "Content Queue"], ["Analyst", "Log"], ["Analyst", "Visual Style"], ["Analyst", "Voice"],
-  ["Copywriter", "Content Queue"], ["Copywriter", "Editorial Direction"], ["Copywriter", "Voice"],
-  ["Art Director", "Log"], ["Art Director", "Visual Style"],
-  ["Feed Director", "Competitor Audit"], ["Feed Director", "Content Queue"], ["Feed Director", "Growth Strategy"], ["Feed Director", "Log"], ["Feed Director", "Visual Style"],
-  ["Fact Checker", "Rising-cost / heat KB"], ["Fact Checker", "Installer-quality KB"], ["Fact Checker", "Solar-market KB"], ["Fact Checker", "Rates / supply KB"], ["Fact Checker", "AZ energy KB"],
-  ["Copywriter", "Rising-cost / heat KB"], ["Copywriter", "Rates / supply KB"], ["Copywriter", "AZ energy KB"], ["Copywriter", "Solar-market KB"],
-  ["Editorial Direction", "Rising-cost / heat KB"], ["Editorial Direction", "Installer-quality KB"], ["Editorial Direction", "Solar-market KB"], ["Editorial Direction", "Rates / supply KB"],
-  ["Art Director", "IG / Higgsfield playbook"], ["Visual Style", "IG / Higgsfield playbook"],
-  ["Content Queue", "Data centers heat"], ["Content Queue", "Hottest year"], ["Content Queue", "Battery VPP"], ["Content Queue", "APS bill climbs"], ["Content Queue", "Bill isn't going down"], ["Content Queue", "SRP rate design"],
+  // CEO / Orchestrator coordinates the roster
+  ["Orchestrator", "Home"], ["Orchestrator", "Researcher"], ["Orchestrator", "CMO"], ["Orchestrator", "Lead Manager"], ["Orchestrator", "Data Analyst"], ["Orchestrator", "Dev"], ["Orchestrator", "Tasks"], ["Orchestrator", "Schedule"], ["Orchestrator", "Log"],
+  // Home hub
+  ["Home", "Researcher"], ["Home", "CMO"], ["Home", "Lead Manager"], ["Home", "Data Analyst"], ["Home", "Dev"], ["Home", "Tasks"], ["Home", "Tools"], ["Home", "Schedule"], ["Home", "Log"], ["Home", "Content Queue"], ["Home", "Editorial Direction"], ["Home", "Visual Style"], ["Home", "Voice"], ["Home", "Competitor Audit"], ["Home", "Content Analytics"], ["Home", "Growth Strategy"], ["Home", "Lead Pipeline"],
+  // README map
+  ["README", "Home"], ["README", "Orchestrator"], ["README", "Tasks"], ["README", "Tools"], ["README", "Log"], ["README", "Content Queue"], ["README", "Editorial Direction"], ["README", "Visual Style"], ["README", "Voice"],
+  // CMO — the whole content line
+  ["CMO", "Content Queue"], ["CMO", "Editorial Direction"], ["CMO", "Visual Style"], ["CMO", "Voice"], ["CMO", "Rising-cost / heat KB"], ["CMO", "Installer-quality KB"], ["CMO", "Solar-market KB"], ["CMO", "Rates / supply KB"], ["CMO", "AZ energy KB"], ["CMO", "IG / Higgsfield playbook"],
+  // Researcher — sources + intel
+  ["Researcher", "Competitor Audit"], ["Researcher", "Growth Strategy"], ["Researcher", "Rising-cost / heat KB"], ["Researcher", "Installer-quality KB"], ["Researcher", "Solar-market KB"], ["Researcher", "Rates / supply KB"],
+  // Lead Manager — revenue ops
+  ["Lead Manager", "Lead Pipeline"], ["Lead Manager", "Growth Strategy"], ["Lead Manager", "Voice"],
+  // Data Analyst — signal
+  ["Data Analyst", "Content Analytics"], ["Data Analyst", "Content Queue"], ["Data Analyst", "Lead Pipeline"],
+  // Dev — build system
+  ["Dev", "Tools"], ["Dev", "Tasks"], ["Dev", "Schedule"],
+  // brand + analytics interlinks
+  ["Editorial Direction", "Visual Style"], ["Editorial Direction", "Rising-cost / heat KB"], ["Editorial Direction", "Solar-market KB"],
+  ["Visual Style", "IG / Higgsfield playbook"],
+  ["Competitor Audit", "Editorial Direction"], ["Competitor Audit", "Visual Style"], ["Competitor Audit", "Growth Strategy"],
+  ["Growth Strategy", "Content Analytics"],
+  // system doc interlinks
+  ["Tasks", "Content Queue"], ["Tasks", "Editorial Direction"], ["Tasks", "Visual Style"], ["Tasks", "Competitor Audit"],
+  ["Tools", "Log"], ["Tools", "Tasks"],
+  ["Schedule", "Content Queue"], ["Schedule", "Log"], ["Schedule", "Tools"],
+  ["Log", "Content Queue"], ["Log", "Editorial Direction"], ["Log", "Competitor Audit"], ["Log", "Growth Strategy"], ["Log", "Visual Style"], ["Log", "Tasks"],
+  // content queue → the posts
+  ["Content Queue", "Editorial Direction"], ["Content Queue", "Data centers heat"], ["Content Queue", "Hottest year"], ["Content Queue", "Battery VPP"], ["Content Queue", "APS bill climbs"], ["Content Queue", "Bill isn't going down"], ["Content Queue", "SRP rate design"],
+  // posts → their KB source
   ["Data centers heat", "Rising-cost / heat KB"], ["Hottest year", "Rising-cost / heat KB"], ["Battery VPP", "Rising-cost / heat KB"], ["APS bill climbs", "Rates / supply KB"], ["APS bill climbs", "Rising-cost / heat KB"], ["Bill isn't going down", "Rising-cost / heat KB"], ["SRP rate design", "Rising-cost / heat KB"],
 ];
 

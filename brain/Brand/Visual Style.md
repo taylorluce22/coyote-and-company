@@ -59,7 +59,7 @@ see the standing question below.
 The grid needs to visibly show REAL activity: homeowner meetings, install
 walkthroughs, properly-installed equipment. This is what separates "an
 established local pro actively posting" from a content mill — see the
-[[Feed Director]] grid test. Two sources, never confused:
+[[CMO]] grid test. Two sources, never confused:
 
 - **Real photos** (`brain/Brand/refs/`, Taylor's camera roll): the ONLY
   material that may be presented as documentation of an actual job,
@@ -70,7 +70,7 @@ established local pro actively posting" from a content mill — see the
   post. Styled from the real photos via Soul reference/moodboard so the
   AI output matches Taylor's actual light, gear, and neighborhoods —
   but never captioned as a specific documented event. See the
-  authenticity rules in [[Feed Director]] — they are binding, not
+  authenticity rules in [[CMO]] — they are binding, not
   optional, because this is the trust brand's whole moat.
 
 Practical rule of thumb: "we just installed this in Buckeye" → real photo
