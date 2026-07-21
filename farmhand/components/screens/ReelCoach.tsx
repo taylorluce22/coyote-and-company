@@ -115,6 +115,7 @@ export default function ReelCoach() {
   }, []);
 
   const pickFile = (f: File | null | undefined) => {
+    console.log("[reel-coach] pickFile", f ? { name: f.name, size: f.size, type: f.type } : null);
     if (f && !f.type.startsWith("video/")) {
       setError(`"${f.name}" doesn't look like a video file (${f.type || "unknown type"}) — pick a video clip.`);
       return;
@@ -129,24 +130,31 @@ export default function ReelCoach() {
 
   const analyze = async () => {
     if (!file || busy) return;
+    const tag = `[reel-coach ${Date.now()}]`;
+    console.log(tag, "analyze() start", { name: file.name, size: file.size, type: file.type });
     setBusy(true);
     setError(null);
     setStage("Uploading clip…");
     try {
+      console.log(tag, "calling blob upload()…");
       const blob = await upload(`reels/${Date.now()}-${file.name.replace(/[^a-z0-9.\-_]/gi, "_")}`, file, {
         access: "public",
         handleUploadUrl: "/api/video-reference/blob-upload",
         contentType: file.type || "video/mp4",
       });
+      console.log(tag, "blob upload() resolved", blob.url);
 
       setStage("Gemini is watching the clip — this can take a minute…");
+      console.log(tag, "calling /api/video-reference…");
       const r = await fetch("/api/video-reference", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: blob.url, contentType: file.type, label: label.trim(), source }),
         signal: AbortSignal.timeout(290000),
       });
+      console.log(tag, "/api/video-reference responded", r.status);
       const j = await r.json();
+      console.log(tag, "response parsed", { configured: j.configured, hasError: !!j.error });
       if (!j.configured) {
         setError("Needs GEMINI_API_KEY set in Vercel — ask Taylor to add it, then try again.");
         return;
@@ -168,7 +176,9 @@ export default function ReelCoach() {
       setFile(null);
       setLabel("");
       if (fileRef.current) fileRef.current.value = "";
+      console.log(tag, "done");
     } catch (e) {
+      console.error(tag, "analyze() threw", e);
       setError(e instanceof Error ? e.message : "upload failed");
     } finally {
       setBusy(false);
