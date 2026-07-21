@@ -9,6 +9,25 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-20 · video reel reviewed; SunSolar affiliation confirmed
+Taylor sent a 3.13s HEVC/Dolby Vision .mov (iPhone selfie clip). Sandbox
+tooling couldn't decode it out of the box (Playwright's bundled ffmpeg is
+webm/mjpeg-only; the sandboxed Chromium has zero proprietary codecs) —
+fixed session-locally via `apt-get install ffmpeg --fix-broken` (recipe
+now in [[Tools]] for future video reviews). Extracted + reviewed frames:
+Taylor + a colleague, both in SunSolar-branded polos (colleague also
+badged), golden-hour selfie on a bare lot in a new-construction desert
+neighborhood — casual, no on-screen text, has untranscribed audio. This
+visually CONFIRMS SunSolar Solutions is Taylor's own company (resolves
+the batch 1/2 "competitor" mislabel — corrected in [[Visual Style]], not
+deleted). Raw footage is strong (real match for the "new demand" post's
+backdrop) but too short/unstructured to post standalone — b-roll
+candidate. Surfaced a real strategic fork for Taylor: keep the
+installer-neutral "consultant" positioning the whole Editorial Direction
+is built on, or let personal-brand transparency (visible company
+branding) take priority — added to [[Tasks]] as Needs Taylor. Nothing
+spent (apt install is free, session-local infra, not a content spend).
+
 ## 2026-07-20 · photo dump batches 1-3 catalogued
 Batches 1-2: Aurora Solar design-tool screenshots + SRP DER meter
 (style-reference, likely fine to post once actually committed) and a

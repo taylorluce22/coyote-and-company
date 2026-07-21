@@ -4,6 +4,11 @@ Operational task board (system work — content work lives in [[Content Queue]])
 Orchestrator triages this every run. Newest on top within each section.
 
 ## Needs Taylor
+- [ ] **Brand positioning call**: your own on-camera photos/video show
+  SunSolar Solutions branding (polo + badge) — keep that visible (real,
+  transparent) or keep public content installer-neutral (matches the
+  "consultant not salesperson" positioning the whole page strategy is
+  built on)? See [[Visual Style]] for the tradeoff.
 - [ ] **Run the GRID-LEVEL competitor audit** with the browser extension
   (prompt provided in chat 2026-07-20 — compares whole profiles/grids on
   established high-follower pages, not individual post stats) — results
