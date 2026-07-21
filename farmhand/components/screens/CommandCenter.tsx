@@ -34,7 +34,7 @@ export default function CommandCenter() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14, marginBottom: 16 }}>
         <Stat label="System" value="Operational" accent="#41D98A" note="Manual-run mode · autonomous scheduler paused." />
-        <div onClick={() => go("agents")} style={{ cursor: "pointer" }}><Stat label="Agents" value="7" accent="#F4F3F8" note="1 command layer + 6 specialists." /></div>
+        <div onClick={() => go("agents")} style={{ cursor: "pointer" }}><Stat label="Agents" value="6" accent="#F4F3F8" note="1 chief of staff + 5 specialists." /></div>
         <div onClick={() => go("vault")} style={{ cursor: "pointer" }}><Stat label="Knowledge base" value="6 docs" accent="#7BE495" note={`${GRAPH_NODES.length} nodes / ${GRAPH_LINKS.length} links in the vault graph.`} /></div>
         <div onClick={() => go("content")} style={{ cursor: "pointer" }}><Stat label="Content queue" value="5" accent="#FF5D8F" note="Fact-checked, awaiting approval · 1 held · 3 rejected." /></div>
       </div>

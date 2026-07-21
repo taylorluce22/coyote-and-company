@@ -16,39 +16,93 @@ export interface AgentDef {
   color: string;
   status: AgentStatus;
   statusLabel: string;
+  model: string;
   desc: string;
+  tools: string[];
+  flow: string[];
+  tagline?: string;
+  output?: string;
   command?: boolean;
 }
 
+/**
+ * The Agentic OS roster — one AI chief of staff coordinating five
+ * specialists on a shared memory layer. Adapted to Taylor's solar
+ * consulting: reel → homeowner inquiry → consult call → install → revenue.
+ */
 export const AGENTS: AgentDef[] = [
   {
-    id: "Orchestrator", role: "Command Layer", glyph: "◆", color: "#A855F7", status: "hold", statusLabel: "on hold",
-    desc: "Routes work, reviews context, coordinates the specialists, and returns the operator debrief.", command: true,
+    id: "CEO / Orchestrator", role: "Command Layer", glyph: "◆", color: "#A855F7", status: "hold", statusLabel: "waiting",
+    model: "gpt-5.5", command: true,
+    desc: "Your AI chief of staff. The main point of contact — routes every task and returns one debrief.",
+    tools: ["Claude Code", "Obsidian", "Git"],
+    flow: ["Every agent reports here", "You manage one conversation, not six tools"],
+    tagline: "One conversation, not six tools.",
   },
   {
-    id: "Creative Director", role: "Ideation", glyph: "✷", color: "#38BDF8", status: "idle", statusLabel: "idle",
-    desc: "Turns strategy + live intel into single-subject post briefs and plans the queue.",
+    id: "Researcher", role: "Intel Gatherer", glyph: "◉", color: "#38BDF8", status: "idle", statusLabel: "idle",
+    model: "gemini-2.5-pro",
+    desc: "Finds market signals, research briefs, sources, and strategic context.",
+    tools: ["Apify", "Tavily", "Firecrawl"],
+    flow: [
+      "Scrapes top solar / competitor reels weekly — hooks, formats, CTAs",
+      "Pulls niche + adjacent-niche outliers before they saturate",
+      "Tracks the space and upgrades its own playbook",
+    ],
+    output: "Ranked ideas, angles + proof points",
+    tagline: "Nothing generic. Everything sourced and scored.",
   },
   {
-    id: "Copywriter", role: "Voice", glyph: "✎", color: "#C084FC", status: "idle", statusLabel: "idle",
-    desc: "Writes tight, single-argument copy from the idea + the knowledge base. Facts trace to source.",
+    id: "CMO", role: "Market Voice", glyph: "✷", color: "#FF9A62", status: "idle", statusLabel: "idle",
+    model: "gpt-5.5",
+    desc: "Turns strategy into consistent content angles, campaigns, and publish-ready drafts.",
+    tools: ["Instagram", "X", "Post Studio"],
+    flow: [
+      "Pulls research + your performance data",
+      "Ranks hooks by predicted performance",
+      "Writes scripts in your voice",
+      "You film + approve (approval queue)",
+      "Posted + tracked per reel",
+      "Winners replicated + one new idea",
+    ],
+    tagline: "I wake up to finished scripts.",
   },
   {
-    id: "Art Director", role: "Visuals", glyph: "◐", color: "#FF9A62", status: "idle", statusLabel: "idle",
-    desc: "Plans each post's visuals — message cards, Higgsfield scenes, Pexels backgrounds, news screengrabs.",
+    id: "Lead Manager", role: "Revenue Ops", glyph: "⇆", color: "#FF5D8F", status: "idle", statusLabel: "waiting",
+    model: "gpt-5.5",
+    desc: "Converts web leads into booked in-home or virtual consults — and calls to set the appointment when that's what it takes.",
+    tools: ["Gmail", "Google Meet", "Calendar", "Firecrawl"],
+    flow: [
+      "New web lead lands",
+      "Researches the address, roof, and socials",
+      "Fit score + pain summary",
+      "Books an in-home or virtual consult (or calls to set it)",
+      "Call brief ready before you open it",
+      "Transcript + notes analyzed instantly",
+    ],
+    output: "Appointment booked · follow-up drafted + CRM updated · no-show recovery auto",
   },
   {
-    id: "Fact Checker", role: "Accuracy Gate", glyph: "✓", color: "#41D98A", status: "pass", statusLabel: "5/5 pass",
-    desc: "Verifies every claim against a labeled KB source before Taylor sees a brief. Nothing passes unsourced.",
+    id: "Data Analyst", role: "Signal Layer", glyph: "◭", color: "#FFC23D", status: "idle", statusLabel: "idle",
+    model: "gemini-2.5-pro",
+    desc: "Analyzes performance, trends, records, and operational signal quality — then tells every agent.",
+    tools: ["Supabase", "Metricool"],
+    flow: ["Tracks the full chain:", "reel → inquiry → booked → showed → closed → revenue"],
+    tagline: "Communicates data to the rest of the agents.",
   },
   {
-    id: "Feed Director", role: "Grid / Instagram", glyph: "▦", color: "#FF5D8F", status: "idle", statusLabel: "idle",
-    desc: "Owns the whole grid — the 2-second credibility test, the photo/card mix, the First-12 plan.",
+    id: "Dev", role: "Build System", glyph: "⚙", color: "#41D98A", status: "idle", statusLabel: "idle",
+    model: "Claude Opus",
+    desc: "Builds dashboards, integrations, and ships the technical changes the system needs.",
+    tools: ["Next.js", "Vercel", "APIs"],
+    flow: ["Builds + wires new capabilities", "Keeps the OS running"],
   },
-  {
-    id: "Analyst", role: "Signal Layer", glyph: "◭", color: "#FFC23D", status: "idle", statusLabel: "waiting",
-    desc: "Reads performance once posts ship — pack/hook win-rates feed back into the strategy.",
-  },
+];
+
+/** The shared memory layer (Supabase) — what every agent reads from and writes back to. */
+export const MEMORY_LAYER = [
+  "Content metrics per reel", "Comments + DMs", "Applications + lead context", "Call transcripts + objections",
+  "CRM + pipeline state", "Client brand docs + voice", "Weekly reports + learnings",
 ];
 
 export const AGENT_STATUS_STYLE: Record<AgentStatus, { color: string; bg: string }> = {
