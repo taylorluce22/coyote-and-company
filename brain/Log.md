@@ -9,6 +9,36 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-21 · research dump LANDED — rising-cost/heat/data-center KB
+Owner ran the deep ChatGPT research pass (news-sourced: azcentral/AZFamily/
+ABC15/12News, NWS Phoenix, Maricopa County, ASU, EIA, NERC, APS/SRP
+tariffs). Distilled into a new sourced+labeled fact-check doc
+`farmhand/docs/az-rising-costs-heat-datacenters-2026.md` (Fact Checker +
+Copywriter now bound to it). Key sourced facts: AZ avg bill +33%/decade
+($120→$160, EIA); APS ~8% (2024) + ~14%/$20 ask (2H 2026); SRP redesign
+(E-28 6–9pm w/ 40.26¢ summer-peak, E-16 5–10pm demand, export 3.45¢,
+grandfathering to Nov 2029); APS TOU-E 4–7pm 34.4¢/12.3¢, RCP 6.17¢
+declining; APS Storage Rewards ($110/kW) + SRP Battery Partner ($55/kW);
+2024 warmest Phoenix year, 113-day 100°F streak, 608→430 heat deaths;
+data centers ~5% of peak, ASU says their waste heat +1–4°F downwind.
+
+Three owner assumptions CORRECTED to stay honest: (1) SRP window shift is
+plan-specific, not a blanket 3–8→5–10; (2) "grid unstable" isn't supported
+(NERC margins fine) — reframed as "utilities pay for your evening battery
+because peaks/growth strain the plan"; (3) "bill doubles" given BOTH
+horizons (~15 yr recent / ~24 yr decade), never a fixed date. Data-center-
+raises-bills kept as a live dispute (AG Mayes vs. utilities). These
+guardrails baked into the doc + Editorial Direction.
+
+Content updated: brief 1 rate-case number fixed to sourced ~14%/$20/2H-2026;
+brief 3 rewritten ("Your power bill isn't going back down" — rising-cost
+inevitability, no plan-switching-as-fix); brief 4 rewritten ("SRP's rate
+design: why solar alone won't save you" — 3.45¢ export vs 40¢ evening,
+battery hedge, Battery Partner VPP). azEnergyKb rate-case reply + deck and
+the retired "cheap by the kWh" deck rewritten to the rising-cost thesis.
+Briefs 3 & 4 back to `fact-checked` (awaiting Taylor's approve). Nothing
+spent.
+
 ## 2026-07-21 · editorial pivot: rising-cost thesis + solar-as-hedge
 Owner reset the spine of the content pillar during brief review. New
 thesis recorded in [[Editorial Direction]]: no matter the rate plan, AZ
