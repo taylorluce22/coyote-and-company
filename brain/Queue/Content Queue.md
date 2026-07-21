@@ -10,6 +10,64 @@ reason teaches the agents — be specific.
 
 ---
 
+## Data centers are heating up your neighborhood
+- **status**: fact-checked (2026-07-21) · **priority**: HIGH (standout)
+- **format**: message-card carousel (5 slides) · **look**: Editorial Minimal
+- **CTA**: Valley-general · **hook structure**: contrarian/curiosity
+
+**Hook**: A study says data centers are warming nearby neighborhoods
+
+**Slides** (screen = summary; full education in the caption):
+1. Phoenix is #2 in North America for new data centers.
+2. An ASU study: their waste heat raises nearby air temps 1–4°.
+3. Each one can use the power of ~64,000 homes. 24/7.
+
+**CTA**: Valley homeowner with questions about all this? DM me.
+
+**Caption**: An ASU study released in 2026 found the waste heat pouring off data centers can raise air temperatures in downwind Phoenix-area neighborhoods by as much as 1–4°F. And they're not slowing down — metro Phoenix ranks second in North America for proposed data-center development, and a single one can use as much electricity as about 64,000 homes, running 24/7. What it means for your bill is still being fought over: APS wants data centers to pay a higher rate so costs don't land on households, while the state's Attorney General has challenged utility rate hikes as going too far. Either way, they're competing for the same grid, in the same heat, your home runs on. Worth watching — and worth asking what it means for you. DM me. No pitch.
+**Hashtags**: datacenters · arizonaenergy · aps · phoenixmetro · arizonagrowth · energybills · azliving · arizonasolar
+
+**Visual plan** (Art Director): 5 prompts via Post visuals, Editorial Minimal pack, shared seed, 3:4. ~5 credits. Alt cover option: a real citable ASU/AZFamily article headline screenshot with attribution per the image-usage rules in `az-rising-costs-heat-datacenters-2026.md` §9.
+
+**Fact-check (2026-07-21): PASS**
+- ASU study: data-center waste heat +1–4°F in downwind neighborhoods → az-rising-costs-heat-datacenters-2026.md §2 [fact, ASU News 2026-05-18]
+- Phoenix metro #2 in N. America for proposed data-center development → same §3 [fact, APS]
+- avg data center ≈ 64,000 homes, running 24/7 → same §3 [fact, APS]
+- data-center bill impact framed as a live dispute (APS +45% proposal vs. AG Mayes) → honors §3 [contested], not stated as settled
+
+## 2024 was the hottest year in Phoenix history
+- **status**: fact-checked (2026-07-21)
+- **format**: realistic-moment single · **look**: Golden Hour Lifestyle
+- **CTA**: Valley-general · **hook structure**: number-led (caption)
+
+**Caption**: 2024 was the hottest year ever recorded in Phoenix — and 2025 came in second. We ran 113 straight days of 100°F+ (a new record), and the nights stopped cooling off: Phoenix keeps setting records for lows that never drop below 90°. Here's why your wallet feels it — when it doesn't cool down at night, your AC never gets a break, so you're pulling power straight through the most expensive evening hours. Hotter summers and rising rates is the squeeze, and it isn't letting up. The homeowners getting ahead of it are the ones producing and storing their own power instead of renting all of it at peak. Valley homeowners, DM me if you want to talk through what that looks like on your home. No pitch.
+**Hashtags**: extremeheat · phoenixheat · arizonaenergy · aps · energybills · risingcosts · azliving · phoenixmetro · arizonasolar
+
+**Visual plan** (Art Director): single Higgsfield image, ~1 credit. "a quiet desert suburb street at golden hour under a brutal Arizona sun, visible heat shimmer over the asphalt, rooftop AC condenser units, palo verde trees, no people. Phoenix Arizona desert suburb. harsh late-afternoon golden light, long shadows, dry heat haze, 35mm, photorealistic, no text, no lettering, no logos, no watermarks."
+
+**Fact-check (2026-07-21): PASS**
+- 2024 warmest year on record in Phoenix; 2025 second warmest → az-rising-costs-heat-datacenters-2026.md §2 [fact, NWS Phoenix]
+- 113 straight days of 100°F+ (new record) → same §2 [fact, NWS]
+- record overnight lows not dropping below 90° → same §2 [fact, AZFamily/NWS]
+- heat → nighttime AC load → evening-peak bills → same §2/§6 [projection], worded as "why your wallet feels it"
+- rising rates → same §1 [fact]; "produce and store your own power" = soft advocacy, no ROI/savings figure claimed
+
+## They'll pay to use your home battery. Ask why.
+- **status**: fact-checked (2026-07-21)
+- **format**: realistic-moment single · **look**: Blue Hour Cinematic
+- **CTA**: Valley-general · **hook structure**: question/contrarian
+
+**Caption**: Both APS and SRP now pay homeowners to let them tap your home battery during peak demand — around $110 per kW a year (APS calls it Storage Rewards; SRP, Battery Partner). So stop and ask the obvious question: if your evening power weren't valuable to them, they wouldn't be paying to borrow it. That's the whole story of Arizona's grid right now — the high-demand evening hours are where everything is tight, which is exactly why the expensive on-peak power lands in the evening, why what you export at midday pays so little, and why they'll now pay for access to your battery. A battery doesn't just back you up in an outage — it puts you on the paid side of that equation. Want to understand how it works for your home? DM me. No pitch.
+**Hashtags**: solarbattery · homebattery · arizonaenergy · aps · energybills · vpp · azliving · phoenixmetro · arizonasolar
+
+**Visual plan** (Art Director): single Higgsfield image, ~1 credit. "a sleek wall-mounted home battery / energy-storage unit on an exterior desert-home wall or in a clean garage at dusk, a subtle indicator light, no people, no brand logos. Phoenix Arizona desert suburb. blue-hour dusk, warm interior glow against a cool sky, cinematic, 35mm, photorealistic, no text, no lettering, no watermarks."
+
+**Fact-check (2026-07-21): PASS**
+- APS Storage Rewards + SRP Battery Partner both ~$110/avg kW per year → az-rising-costs-heat-datacenters-2026.md §7 [fact, verified 2026-07-21 via both program pages]; do NOT say either pays more
+- expensive on-peak lands in the evening; midday export pays little → same §5/§6 [fact] (APS TOU-E 34.4¢ on-peak / 12.3¢ off-peak, RCP export 6.17¢) — stated qualitatively/utility-general
+- "worth to them" framing → honest VPP framing; does NOT claim grid instability (honors §4 guardrail)
+- battery outage-backup value → same §8 [fact]
+
 ## Why your APS bill keeps climbing (and it isn't your AC)
 - **status**: fact-checked
 - **format**: message-card carousel (5 slides) · **look**: Desert High-Key
