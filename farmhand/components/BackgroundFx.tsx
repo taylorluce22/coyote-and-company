@@ -85,15 +85,21 @@ export default function BackgroundFx() {
 
     let raf = 0;
     const animate = () => {
-      const t = performance.now() / 1000;
-      layers.forEach((p, i) => {
-        p.rotation.y = t * (p.userData.speed as number);
-        p.rotation.x = Math.sin(t * 0.05 + i) * 0.05;
-      });
-      camera.position.x += (mouse.x * 1.2 - camera.position.x) * 0.02;
-      camera.position.y += (-mouse.y * 0.8 - camera.position.y) * 0.02;
-      camera.lookAt(0, 0, 0);
-      renderer.render(scene, camera);
+      // Heavy client-side work (Reel Coach upload/analysis) sets this flag so
+      // this GPU-continuous render loop isn't also competing for the GPU/
+      // compositor during the exact window a large local video is being
+      // read/uploaded — see ReelCoach.tsx.
+      if (!(window as unknown as { __fhSuspendBg?: boolean }).__fhSuspendBg) {
+        const t = performance.now() / 1000;
+        layers.forEach((p, i) => {
+          p.rotation.y = t * (p.userData.speed as number);
+          p.rotation.x = Math.sin(t * 0.05 + i) * 0.05;
+        });
+        camera.position.x += (mouse.x * 1.2 - camera.position.x) * 0.02;
+        camera.position.y += (-mouse.y * 0.8 - camera.position.y) * 0.02;
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+      }
       raf = requestAnimationFrame(animate);
     };
     animate();

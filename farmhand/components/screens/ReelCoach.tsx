@@ -135,6 +135,7 @@ export default function ReelCoach() {
     setBusy(true);
     setError(null);
     setStage("Uploading clip…");
+    (window as unknown as { __fhSuspendBg?: boolean }).__fhSuspendBg = true;
     try {
       console.log(tag, "calling blob upload()…");
       const blob = await upload(`reels/${Date.now()}-${file.name.replace(/[^a-z0-9.\-_]/gi, "_")}`, file, {
@@ -181,6 +182,7 @@ export default function ReelCoach() {
       console.error(tag, "analyze() threw", e);
       setError(e instanceof Error ? e.message : "upload failed");
     } finally {
+      (window as unknown as { __fhSuspendBg?: boolean }).__fhSuspendBg = false;
       setBusy(false);
       setStage("");
     }
