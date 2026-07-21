@@ -55,22 +55,30 @@ interface LeadLike {
 }
 
 export async function upsertLeads(leads: LeadLike[], workspace?: string): Promise<boolean> {
-  const rows = leads
-    .map((l) => {
-      const dedup = String(l.key || l.url || "").trim();
-      if (!dedup) return null;
-      return {
-        workspace: ws(workspace),
-        dedup_key: dedup,
-        score: typeof l.score === "number" ? l.score : null,
-        platform: l.platform ?? null,
-        intent: l.intent ?? null,
-        territory: l.territory ?? null,
-        data: l,
-      };
-    })
-    .filter(Boolean);
-  return sbUpsert("leads", rows, "workspace,dedup_key");
+  // Collapse duplicate dedup_keys WITHIN this batch first. PostgREST's
+  // merge-duplicates upsert compiles to a single INSERT … ON CONFLICT DO
+  // UPDATE, and Postgres rejects the WHOLE request (SQLSTATE 21000) if the
+  // payload names the same conflict target twice — which is the expected case
+  // when a hunt re-cites one url across two searches. Keep the highest score.
+  const byKey = new Map<string, Record<string, unknown>>();
+  for (const l of leads) {
+    const dedup = String(l.key || l.url || "").trim();
+    if (!dedup) continue;
+    const prev = byKey.get(dedup);
+    const prevScore = typeof prev?.score === "number" ? (prev.score as number) : -1;
+    const thisScore = typeof l.score === "number" ? l.score : -1;
+    if (prev && thisScore < prevScore) continue; // keep the stronger existing one
+    byKey.set(dedup, {
+      workspace: ws(workspace),
+      dedup_key: dedup,
+      score: typeof l.score === "number" ? l.score : null,
+      platform: l.platform ?? null,
+      intent: l.intent ?? null,
+      territory: l.territory ?? null,
+      data: l,
+    });
+  }
+  return sbUpsert("leads", [...byKey.values()], "workspace,dedup_key");
 }
 
 export async function getStoredLeads(workspace?: string, limit = 200) {

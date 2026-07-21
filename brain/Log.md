@@ -28,7 +28,14 @@ connector now live-checks `/api/memory`. Full doc: [[Shared Memory Layer]].
 
 Ran a 4-lens adversarial review workflow (inert-when-unconfigured, key-leak
 security, PostgREST correctness, store-sync safety), each finding independently
-verified. Build passes. Nothing spent.
+verified. Security + inert lenses came back clean. Two real (latent) bugs
+caught and fixed before ship: (1) `upsertLeads` didn't collapse duplicate
+dedup_keys within a batch — PostgREST rejects the whole request (SQLSTATE
+21000) if a hunt re-cites one url twice; now deduped by key (highest score
+wins); (2) the store push effect was gated by a `useRef`, whose flip doesn't
+re-run the effect, so an edit made during the cloud-pull window could go
+unsynced — `syncReady` is now state + a push-effect dep. Build passes. Nothing
+spent.
 
 Owner action (~5 min): create a Supabase project → run the schema → add
 `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE` (mark Sensitive) / `SUPABASE_ANON_KEY`

@@ -337,7 +337,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [workspace, setWorkspace] = useState<WorkspaceId>("default");
   const workspaceRef = useRef<WorkspaceId>("default");
   const hydrated = useRef(false);
-  const syncReady = useRef(false); // cloud pull finished (or skipped) → safe to push
+  // cloud pull finished (or skipped) → safe to push. STATE, not a ref, so the
+  // push effect re-runs when it flips true and flushes any edit queued during
+  // the pull window.
+  const [syncReady, setSyncReady] = useState(false);
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragId = useMemo(
     () => ({ current: null as string | null }),
@@ -505,9 +508,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // cloud records this device hasn't seen, so nothing local is ever clobbered.
   useEffect(() => {
     let alive = true;
-    syncReady.current = false;
+    setSyncReady(false); // block pushes until this workspace's pull settles
     (async () => {
-      if (!(await memoryConfigured())) { syncReady.current = true; return; }
+      if (!(await memoryConfigured())) { if (alive) setSyncReady(true); return; }
       const snap = await pullSnapshot(workspace);
       if (!alive) return;
       if (snap) {
@@ -518,15 +521,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           plannedPosts: mergeById(s.plannedPosts as PlannedPost[], (snap.plannedPosts as PlannedPost[]) || []),
         }));
       }
-      syncReady.current = true;
+      setSyncReady(true);
     })();
     return () => { alive = false; };
   }, [workspace]);
 
   // push local arrays up, debounced — only after the pull has settled so we
-  // never overwrite the cloud before we've merged from it
+  // never overwrite the cloud before we've merged from it. syncReady is a dep,
+  // so when the pull finishes this re-runs and flushes any edit that landed
+  // during the pull window.
   useEffect(() => {
-    if (!hydrated.current || !syncReady.current) return;
+    if (!hydrated.current || !syncReady) return;
     if (pushTimer.current) clearTimeout(pushTimer.current);
     pushTimer.current = setTimeout(() => {
       memoryConfigured().then((ok) => {
@@ -539,7 +544,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       });
     }, 2500);
     return () => { if (pushTimer.current) clearTimeout(pushTimer.current); };
-  }, [state.contacts, state.opportunities, state.plannedPosts]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.contacts, state.opportunities, state.plannedPosts, syncReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // switch between workspaces (test users / the owner's real solar account).
   // Current state is already persisted on every change, so no flush needed —
