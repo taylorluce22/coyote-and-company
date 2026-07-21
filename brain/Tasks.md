@@ -16,6 +16,10 @@ Orchestrator triages this every run. Newest on top within each section.
   "utilities paying for evening flexibility" (NERC says margins fine);
   "bill doubles" given both horizons (~15/~24 yr). Briefs 1/3/4 rewritten
   on it; azEnergyKb rate-case + "cheap by the kWh" decks updated.
+- [ ] **Pexels API key** in Vercel (`PEXELS_API_KEY`, free at
+  pexels.com/api) — turns on photo backgrounds for the upgraded
+  informational carousels (the `/api/stock` proxy is already built; also
+  accepts `PIXABAY_API_KEY` / `UNSPLASH_ACCESS_KEY`). See [[Visual Style]].
 - [ ] **Reel Coach setup**: Content → Reel Coach tab needs two things live in
   Vercel before it works: `GEMINI_API_KEY` (free at aistudio.google.com,
   cheap pay-as-you-go for video) and a Vercel Blob store connected
@@ -50,6 +54,10 @@ Orchestrator triages this every run. Newest on top within each section.
 - [ ] Art Director pass follows on `drafted` briefs
 
 ## Backlog
+- [ ] **Wire `/api/stock` auto-background into carousel generation** so the
+  content engine defaults informational carousels to photo backgrounds
+  (Pexels), with a slot for a credited news-article screengrab — per the
+  Lane 1 upgrade in [[Visual Style]]. App build; needs the Pexels key first.
 - [ ] Settings field for the real IG handle (@taylorlucesolar) — Studio
   slides currently render a derived placeholder handle
 - [ ] Reel lane: reel-format versions of queued topics — screen-recorded

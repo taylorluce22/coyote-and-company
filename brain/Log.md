@@ -9,6 +9,22 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-21 · carousel look upgraded — photo-backed + news screengrabs
+Owner direction after seeing the post-preview mockup: informational
+carousels should be PHOTO-backed (image + scrim + short overlay text),
+not flat text-on-black, to feel like an established pro and earn the
+swipe. Recorded as the Lane 1 upgrade in [[Visual Style]]: Pexels
+backgrounds (the `/api/stock` proxy already supports Pexels/Pixabay/
+Unsplash — just needs `PEXELS_API_KEY`), one slide can be a credited
+news-article screengrab (binding legal rule: headline+image as a
+reference to the coverage, outlet credited on-slide + source in caption,
+never strip credits; AP/Getty photos → keep to headline-screenshot +
+attribution or swap to Pexels/own). On-screen text tightened to ≤~10–12
+words, one idea per slide, swipe-loop structure. Preview artifact updated
+to v2 showing the data-center carousel photo-backed with an AZFamily/ASU
+news slide. Added: Pexels key (Needs Taylor), and a backlog task to wire
+`/api/stock` auto-backgrounds into carousel generation. Nothing spent.
+
 ## 2026-07-21 · 3 new briefs added from the fresh research
 Added three fact-checked briefs off the new sourced KB, all APS-primary/
 utility-general per the SRP cap: "Data centers are heating up your
