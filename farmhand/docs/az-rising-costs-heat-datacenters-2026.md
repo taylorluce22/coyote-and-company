@@ -158,13 +158,21 @@ Owner research dump ingested 2026-07-21 (via ChatGPT web research pass).
 ## 7. VPP / home-battery programs — why they matter
 
 - **[fact]** **APS Storage Rewards Pilot**: 5-year pilot, up to 5,000
-  participants, pays **$110 per average kW** discharged across the season,
-  up to **60 events/yr**, **May 1–Oct 31, 4–10pm**, 1–4 hours each.
-  Source: APS Storage Rewards page; ACC 2025-03-13; APS 2026 forum deck.
+  participants, pays **$110 per average kW for the season** — APS runs
+  **one season** (summer, **May 1–Oct 31**), up to **60 events**, 4–10pm,
+  1–4 hours each, bill-credited after Oct 31. → **~$110/avg kW per year.**
+  Source: APS Storage Rewards / chargingrewards.com/apsstoragerewards;
+  ACC 2025-03-13.
 - **[fact]** **SRP Battery Partner**: 5-year pilot ending Apr 30, 2030,
-  up to 5,000 customers, pays **$55 per average kW twice a year**, app
-  notifications + opt-outs, **never discharges below 20%**.
-  Source: SRP Battery Partner page.
+  up to 5,000 customers, pays **$55 per average kW per season, twice a
+  year** (summer + winter), bill-credited after each season; never
+  discharges below 20%; app notifications + opt-outs. Program terms:
+  "$110/kW per year divided into 2 seasonal payments." → **~$110/avg kW
+  per year.**
+  Source: SRP Battery Partner page; SRP program T&Cs (2025-11-06).
+- **[fact]** **Annual pay is roughly the SAME (~$110/avg kW/yr)** — APS
+  pays it in one summer season; SRP splits it across summer + winter. **Do
+  NOT say "APS pays more."** Verified 2026-07-21 via both program pages.
 - **[fact]** Both utilities explicitly tie these to **grid reliability**
   and integrating batteries during high-load hours.
   Source: APS & SRP program pages.
