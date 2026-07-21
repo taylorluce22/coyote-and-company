@@ -9,6 +9,24 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-21 · Reel Coach: whole-browser freeze fixed (drag-and-drop gap)
+Taylor hit this twice: Chrome itself — not just the tab — went fully
+unresponsive after using Reel Coach, needing a full quit both times.
+Root cause found by reading the browser's default drag-drop behavior,
+not by reproducing it: the upload box's drop handling only covered
+drops that landed exactly inside it. A drop missing the box by a few
+pixels (easy when dragging from Finder/Photos) fell through to
+Chrome's native default — navigate the tab and try to open the raw
+video file directly — which can wedge the browser's shared video/GPU
+pipeline hard enough to take the whole thing down for a large local
+clip. Fixed with a page-level `dragover`/`drop` guard in
+`FarmhandApp.tsx` (`DropGuard`) that no-ops any drop by default; the
+upload box's own handler still runs first via bubbling so intentional
+drops are unaffected. Shipped ahead of confirmation since the fix is
+low-risk and the bug is a hard blocker; awaiting Taylor's confirmation
+it's actually resolved. Also added a client-side 200MB file-size cap
+as a smaller defensive measure. Nothing spent.
+
 ## 2026-07-21 · Reel Coach built — Gemini video coaching pipeline
 Taylor's ask: he wants to upload real reference reels (his own or
 competitors') and get an AI that actually WATCHES them (video + audio
