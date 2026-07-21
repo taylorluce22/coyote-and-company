@@ -9,6 +9,28 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-20 · photo dump batches 1-3 catalogued
+Batches 1-2: Aurora Solar design-tool screenshots + SRP DER meter
+(style-reference, likely fine to post once actually committed) and a
+SunSolar Solutions-branded proposal for a named homeowner ("John
+Matthews," Peoria) across two images plus a matching bill-comparison
+graphic — held as NOT postable, named third-party PII, regardless of
+whose company produced it. Batch 3: two candid personal shots (dusk, dog
+— low value, postable as texture), one context-unclear kitchen photo
+(hold), a genuine team photo holding a SunSolar Solutions/REC Certified
+Professional tote, and a real doorstep photo of Taylor in SunSolar
+branding with a homeowner holding a welcome flyer — the clearest Lane 3
+proof-of-work material yet, pending confirmation the homeowner consented
+to appear.
+
+Correction flagged, not asserted: batches 1-2 were provisionally
+described as "competitor" material without knowing Taylor's actual
+affiliation — batch 3 shows Taylor himself in SunSolar Solutions
+branding among colleagues, suggesting that read may be wrong. Open
+question posted in [[Visual Style]] rather than guessed at. No files
+committed to brain/Brand/refs/ yet (all catalogued from chat pending
+Obsidian hookup or a bulk GitHub upload). Nothing spent.
+
 ## 2026-07-20 · installer-quality research pass 2 — sourced upgrade
 Taylor pasted a second, far more rigorously cited installer-quality deep
 dive (NREL SolarAPP+ inspection data, CFPB dealer-fee findings, exact
