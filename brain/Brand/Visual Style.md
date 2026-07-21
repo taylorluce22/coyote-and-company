@@ -74,12 +74,36 @@ scenes match Taylor's real work instead of generic stock-AI look.
   - **Batch 1** — style-reference-ONLY, NOT postable: Aurora Solar
     design-tool screenshots (shading/production simulation UI); an SRP
     dedicated DER meter close-up (generic equipment, no address/name
-    visible — likely fine to post once committed, re-confirm); a
-    **competitor-branded proposal PDF** (SunSolar Solutions, AZ
-    ROC#331679, "LightReach Solar Plan") containing a real homeowner's
-    **name and street address** — flagged: do not post, contains another
-    company's IP and a non-consenting third party's PII.
-  - **Batch 2** — pending description at intake.
+    visible — likely fine to post once committed, re-confirm).
+  - **Batch 2** — same SunSolar-branded proposal material as batch 1
+    (a "YOUR HOME. POWERED BY THE SUN." design PDF + an email screenshot
+    of it, both for a named homeowner "John Matthews," Peoria AZ, and a
+    bill-comparison graphic, same branding). Still contains a **named
+    third party's address and production/billing numbers** — NOT
+    postable regardless of whose company this is, until Taylor confirms
+    consent to publish that specific client's info (or these get
+    replaced with a redacted/anonymized version).
+  - **Batch 3** — mix of personal/candid and genuine proof-of-work:
+    (1)-(2) Taylor + a colleague greeting a dog at dusk outside a house —
+    personal/candid, low proof-of-work value, postable as texture if
+    Taylor's OK with the casual vibe; (3) a man on a kitchen counter
+    photographing a ceiling fixture, context unclear — hold, low value;
+    (4) **team photo**, Taylor + 3 colleagues, one holding a "SunSolar
+    Solutions · REC Certified Professional" tote — real team, real
+    branding; (5) **door-meeting photo**: Taylor in a SunSolar-branded
+    polo with a real homeowner, holding a "Welcome to the neighborhood"
+    branded flyer (stock family photo on it, no client PII visible in
+    this specific shot) — genuinely the kind of doorstep proof-of-work
+    Lane 3 wants, PENDING confirmation the homeowner consented to being
+    photographed/posted.
+  - **⚠ Open question for Taylor**: batches 1-3 all carry "SunSolar
+    Solutions" branding, including on YOUR OWN polo and a team photo.
+    Batch 1/2 were provisionally logged as "competitor material" — that
+    may be wrong. Please confirm: is SunSolar Solutions your own company/
+    employer/brand, or a different company's material you have some
+    other access to? This changes IP framing but NOT the consent
+    requirement — a named client's info still needs their OK to publish
+    either way.
 
 ## Standing decision: on-camera minimized (owner, 2026-07-20)
 
