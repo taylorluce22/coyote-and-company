@@ -9,6 +9,31 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-21 · Reel Coach built — Gemini video coaching pipeline
+Taylor's ask: he wants to upload real reference reels (his own or
+competitors') and get an AI that actually WATCHES them (video + audio
+together, not sampled stills) to coach the content bot on hooks/pacing/
+visual style/reusable format. Built as a real app feature, not a one-off
+session task, per Taylor's choice.
+
+New: Content → Reel Coach tab. Upload flow: browser → Vercel Blob
+(`@vercel/blob/client`, bypasses the ~4.5MB Vercel serverless body cap
+that would otherwise reject most iPhone reels) → `/api/video-reference`
+fetches the bytes, resumable-uploads to Gemini's Files API, polls until
+processed, asks Gemini to analyze (structured JSON: hook strength/
+technique, cut/pacing rhythm, on-screen text, visual style, spoken
+content, the reusable content PATTERN, coaching notes) → Blob copy
+deleted immediately (transfer hop only) → analysis persists in a new
+in-app IndexedDB store (`reelVault`, mirrors the existing image Vault
+pattern) with a "copy as vault note" button so results can be pasted
+straight into a brain session. GET/POST `configured` pattern matches
+`/api/copy`.
+
+Needs Taylor before it's live: `GEMINI_API_KEY` + a Vercel Blob store
+attached (`BLOB_READ_WRITE_TOKEN`) — added to [[Tasks]]. `npm run build`
+passes clean, but the actual Gemini/Blob calls are untested — no real
+keys exist in this sandbox. Nothing spent (build only).
+
 ## 2026-07-21 · two reel clips reviewed (clip 1 + clip 2)
 Taylor sent two real reel candidates (clarifying the earlier 3.13s clip
 was reference-only, not a review subject): Clip 1 (20.23s) and Clip 2
