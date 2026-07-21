@@ -9,6 +9,26 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-21 · Connectors "Verify keys" — real validation, not just presence
+Owner flagged: "there are key placeholders but not actual keys in some of
+them." The Connectors screen only did presence checks (is the env var set?),
+which is exactly what lets a placeholder like `your-key-here` read as green.
+Added a **Verify keys** button that makes a real, **free** call to each
+provider it can safely test and reports an honest per-card verdict: valid /
+bad-or-placeholder (401/403) / no-key / couldn't-reach. Tested for free:
+Pexels, Pixabay, Unsplash (`/api/stock?verify=1`, 1-result search) and Gemini
+(`/api/video-reference?verify=1`, free `models.list`). Perplexity + Higgsfield
+stay presence-only on purpose — testing them spends a credit (Credit
+Preservation Policy). Also shipped the Blob card accuracy fix (GET status
+probe so it live-checks instead of a static "attach store"). Shipped in #130.
+Nothing spent.
+
+Owner action: open **Connectors → Verify keys** after the redeploy. The
+Jul-4 stock keys are the prime placeholder suspects — watch for any red
+"Bad / placeholder" badge and replace that key in Vercel.
+
+---
+
 ## 2026-07-21 · Connectors audit screen + checklist
 Owner asked to "connect everything / make sure the connectors are set up."
 Can't obtain keys or create accounts from here (owner actions), so built a
