@@ -124,13 +124,19 @@ these throughout content AND the knowledge base:
    the [[Fact Checker]]. "Anti-utility" means naming how the design shifts
    cost and risk onto homeowners, backed by citations.
 
-**Accuracy gate:** the specifics this thesis leans on — SRP's redesign +
-peak-window shift, current export/off-peak rates, APS & SRP VPP terms, and
-a defensible historical+projected bill trajectory (to ground "costs keep
-climbing" / "could double") — are NOT yet sourced in the KB. They enter as
-[projection]/[industry-claim] until the research dump ([[Tasks]]) lands
-them as [fact]. No "your bill will double" in content until it has a
-timeframe + source.
+**Accuracy gate — LANDED 2026-07-21:** the research dump is in and sourced
+in `farmhand/docs/az-rising-costs-heat-datacenters-2026.md` (Fact Checker +
+Copywriter now bound to it alongside the other KB docs). Honest guardrails
+baked into that doc — follow them:
+- **"Grid is unstable" → NO.** NERC says AZ reserve margins are fine now.
+  Say utilities are *paying homeowners for evening battery access* because
+  peaks + load growth strain the plan.
+- **"Bill will double" → give BOTH horizons** (~15 yr recent pace / ~24 yr
+  decade pace, EIA), never a fixed date.
+- **"Data centers raise your bill" → present as a live dispute** (utilities
+  vs. AG Mayes), never settled fact.
+- **SRP peak-window shift is plan-specific:** E-16 = 5–10pm, E-28 = 6–9pm,
+  APS still 4–7pm. Never say "SRP moved everyone to 5–10."
 
 ## Demoted — expired tax credits
 

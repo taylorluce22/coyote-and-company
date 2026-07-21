@@ -54,7 +54,7 @@ export const KB = {
     any: "Arizona's grid demand keeps breaking records (APS hit 8,631 MW last August) and APS reports 4.5 GW of committed new load plus roughly 20 GW more of data-center requests in its queue — its own plan projects peak demand growing ~40% by 2031, which is the backdrop for every rate case",
   },
   rateCase: {
-    any: "APS is asking for about 14.75% more revenue (~16.4% for residential), with a decision due by Dec 31, 2026 and new rates in early 2027 — and this isn't a one-off: APS won a rate increase in 2022 and is already back asking for more",
+    any: "APS is asking for about 14% more (13.99% net revenue) — roughly $20 a month more for a typical home — with new rates expected in the second half of 2026, and this isn't a one-off: APS already raised rates about 8% in 2024 and is already back asking for more",
   },
   azContext: {
     any: "Arizona is cheap by the kWh but expensive by the month — the average rate here is ~10% below the national average and rose slower over the last decade (+23% vs +30%), but bills run higher ($160 vs $142/month) because desert homes use about 25% more electricity, mostly AC",
@@ -172,25 +172,25 @@ export const SOLAR_KB_CONTENT: { title: string; angle: string; format: "carousel
     ],
   },
   {
-    title: "APS is asking for ~16% more on your bill — what the rate case means",
-    angle: "decision due by Dec 31, 2026, new rates early 2027; frame the 2022 precedent as a pattern of repeat increases (never reassurance) and locals will share it",
+    title: "APS wants ~14% more — and it won't be the last",
+    angle: "new rates expected 2H 2026; frame the repeated increases (~8% in 2024, ~14% now) as a one-way climb no plan escapes — the hedge is owning your production",
     format: "text",
     theme: "authority",
     deck: [
-      "APS is asking for ~16.4% more from residential customers. The hearing ran 31 days — the longest in ACC history — and a decision is due by Dec 31, 2026.",
-      "And this isn't a one-off: APS won a rate increase in 2022 and it's already back asking for more. The asks keep coming.",
-      "What you control now: your rate plan and your 4–7pm usage — both free to fix.",
+      "APS wants about 14% more — roughly $20 a month for a typical home — with new rates expected in the second half of 2026.",
+      "This isn't a one-off: APS already raised rates about 8% in 2024, and it's back for more. The asks keep coming.",
+      "No rate plan opts you out of the climb — every plan rides the same rising baseline. The real hedge is producing more of your own power.",
     ],
   },
   {
-    title: "Arizona power: cheap by the kWh, expensive by the month",
-    angle: "the nuanced take nobody posts — AZ rates rose SLOWER than the national average, but bills are bigger; credibility through less alarmism",
+    title: "Your Arizona power bill isn't going back down",
+    angle: "the rising-cost throughline — bills up ~33% in a decade, faster lately; no rate plan opts you out; the hedge is owning your production",
     format: "carousel",
     theme: "authority",
     deck: [
-      "Arizona's average rate is ~10% BELOW the national average — and over the last decade it rose slower too (+23% here vs +30% nationally).",
-      "But the average Arizona bill is $160/month vs $142 nationally, because desert homes use about 25% more electricity. AC is the whole story.",
-      "Translation: the lever you control isn't the rate — it's when and how you use the expensive hours.",
+      "Arizona's average power bill climbed about 33% in the last decade — roughly $120 a month in 2014 to $160 in 2024 (EIA).",
+      "And it's speeding up: on the last five years' pace, a typical bill doubles in about 15 years. APS already did ~8% in 2024 and wants ~14% more for 2026.",
+      "No rate plan opts you out of that climb — every plan rides the same rising baseline. The only real way off the escalator is producing your own power.",
     ],
   },
   {

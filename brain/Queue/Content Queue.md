@@ -19,12 +19,12 @@ reason teaches the agents — be specific.
 
 **Slides** (screen = summary; full education in the caption):
 1. 4.5 GW committed. Twenty more waiting in line.
-2. APS wants ~16% more — and the asks keep coming.
+2. APS wants ~14% more — and the asks keep coming.
 3. Who pays? Experts disagree. Your levers are free.
 
 **CTA**: Valley homeowners — want this translated to your own bill? DM me, no pitch.
 
-**Caption**: 20 gigawatts are lining up for Arizona's grid. The fuller story: APS reports 4.5 GW of committed new load beyond its 8.6 GW record peak, with roughly 20 GW more of data-center requests in its queue — and it's asking ~16.4% more from residential customers, decision due Dec 31, 2026. And this isn't a one-off: APS won a rate increase in 2022 and it's already back asking for more. Do data centers raise or lower home bills? Experts genuinely disagree — the rate case even proposes a data-center class paying +47% so "growth pays for growth." What you control today is free either way: the right rate plan and your 4–7pm usage. If you're in the Valley and want this translated to your own bill, DM me.
+**Caption**: 20 gigawatts are lining up for Arizona's grid. The fuller story: APS reports 4.5 GW of committed new load beyond its 8.6 GW record peak, with roughly 20 GW more of data-center requests in its queue — and it's asking ~16.4% more from residential customers, new rates expected in the second half of 2026 — about $20 a month more for a typical home. And this isn't a one-off: APS raised rates about 8% in 2024 and it's already back asking for more. Do data centers raise or lower home bills? Experts genuinely disagree — the rate case even proposes a data-center class paying +47% so "growth pays for growth." What you control today is free either way: the right rate plan and your 4–7pm usage. If you're in the Valley and want this translated to your own bill, DM me.
 **Hashtags**: arizonaenergy · aps · energybills · buckeye · westvalley · phoenixmetro · azliving · arizonasolar
 
 **Visual plan** (Art Director): 5 prompts via the Studio's Post visuals button, Desert High-Key pack, shared seed, aspect 3:4. Cover = aerial master-planned desert community; bodies = supporting shots rotation; CTA = porch closer. ~5 credits.
@@ -32,7 +32,8 @@ reason teaches the agents — be specific.
 **Fact-check (2026-07-20): PASS**
 - 4.5 GW committed + ~20 GW queue + 8.6 GW peak → az-rates-supply-demand-2026.md [fact]
 - ~16.4% residential ask; decision due Dec 31, 2026 → same doc [fact]
-- 2022: APS won a rate increase, back asking again in 2026 → same doc [fact]; framed as a pattern of repeated increases, NOT reassurance (owner rule 2026-07-21: build the pain, never downplay — dropped the old "usually lands lower" line)
+- ~14% ask (13.99% net revenue), ~$20/mo, new rates expected 2H 2026 → az-rising-costs-heat-datacenters-2026.md §1 [fact, APS 2025-06-13]; supersedes the older 16.4%/Dec-31 figure
+- ~8% increase already taken in 2024 → same §1 [fact]; framed as a pattern of repeated increases, NOT reassurance (owner rule 2026-07-21: build the pain, never downplay — dropped the old "usually lands lower" line)
 - data-center bill impact framed as disagreement → honors [contested]
 - rate-plan switch free → az-energy-knowledge-2026.md / KB.ratePlanCheck
 - 2026-07-20 screen/caption rework: detailed claims moved from slides to caption — same claims, same sources, re-verified
@@ -57,65 +58,52 @@ reason teaches the agents — be specific.
 - APS 32,000+ new meters in 2024 → same doc [fact]
 - "backdrop for rate conversations" framed as context, not causation → honors [contested]
 
-## The kitchen-table bill moment
-- **status**: reworking (owner 2026-07-21) — pending KB refresh
+## Your power bill isn't going back down
+- **status**: fact-checked (reworked 2026-07-21 on the rising-cost thesis)
 - **format**: realistic-moment single · **look**: Golden Hour Lifestyle
 - **CTA**: Valley-general · **hook structure**: number-led (caption)
 
-> ⚠ **Rework (owner 2026-07-21)**: DROP the "switch your rate plan to save
-> money" angle — we do not promote plan-switching as a fix. New thesis: no
-> matter which plan you're on, you ride the same rising baseline; AZ power
-> costs climb regardless (infrastructure + data-center load + repeated rate
-> cases). Keep the 34¢/12¢ evening-peak spread ONLY as the "why peak is
-> brutal" teaching, never as "fix your plan and relax." The "bills keep
-> climbing / could double" line must be grounded in the forthcoming
-> research (historical + projected trajectory) before it can pass
-> fact-check. Rewrite after the dump.
-
-**Caption**: On APS, the 4–7pm weekday window runs about 34¢/kWh vs ~12¢ off-peak. That 3x spread is where most summer bills blow up. Before anyone talks panels: make sure you're on the right rate plan — checking is free, switching is free, and sometimes that alone takes a real bite out of the bill. Save this for the next scary bill — and Valley homeowners, DM me when you want your own numbers run. No pitch.
-**Hashtags**: aps · energybills · buckeye · westvalley · arizonaenergy · azliving · phoenixmetro · arizonasolar
+**Caption**: Your power bill isn't going back down. Arizona's average residential bill climbed about 33% in the last decade — roughly $120 a month in 2014 to $160 in 2024 (EIA). And the pace is picking up: on the last five years' trend, a typical bill doubles in about 15 years — and even on the slower decade pace, it's still up every single year. APS already raised rates about 8% in 2024 and is asking for ~14% more — about $20 a month — for 2026. Here's the part nobody tells you: no rate plan opts you out of that climb. Every plan rides the same rising baseline; shuffling plans just changes how the increase is shaped, not whether it's coming. The only real way off the escalator is producing more of your own power. Save this for the next bill — and Valley homeowners, DM me if you want your own numbers looked at. No pitch.
+**Hashtags**: aps · srp · energybills · arizonaenergy · risingcosts · buckeye · westvalley · phoenixmetro · azliving · arizonasolar
 
 **Visual plan** (Art Director): single Higgsfield image, ~1 credit. Face-neutral until the standing decision: "over-the-shoulder view of a person at a kitchen table holding a paper utility bill, face not visible, morning light through a window, modern desert home interior. Buckeye Arizona desert suburb. warm golden-hour light, honeyed tones, soft long shadows, 35mm, shallow depth of field, photorealistic, no text, no lettering, no logos, no watermarks."
 
-**Fact-check (2026-07-20): PASS**
-- 34¢ on-peak / ~12¢ off-peak, 4–7pm weekdays → az-energy-knowledge-2026.md (TOU-E: 34.396¢/12.345¢) [fact]
-- plan check/switch free → KB.ratePlanCheck [fact]
-- "3x spread" → 34.396 / 12.345 ≈ 2.8, stated as "3x spread" per existing KB.rates.aps phrasing — acceptable, matches KB verbatim language
+**Fact-check (2026-07-21, reworked on rising-cost thesis): PASS**
+- AZ avg residential bill +33% over 10 yr ($120.51 in 2014 → $160.24 in 2024) → az-rising-costs-heat-datacenters-2026.md §1 [fact, EIA]
+- doubling ~15 yr on the 5-yr pace / ~24 yr on the decade pace → same §1 [projection]; BOTH horizons given, no fixed date (honors the doubling guardrail)
+- APS ~8% (2024) + ~14%/$20 ask (2026) → same §1 [fact]
+- "no plan opts you out / plans ride the same baseline" → owner rising-cost thesis (Editorial Direction), framed as positioning not a numeric claim
+- "produce your own power" = soft advocacy, no ROI/savings figure claimed
+- DROPPED the old "checking/switching is free takes a bite out of the bill" reassurance per owner 2026-07-21 (we do not sell plan-switching as a fix)
 
-## SRP's 40¢ window nobody explains
-- **status**: reworking (owner 2026-07-21) — pending SRP/VPP research
+## SRP's rate design: why solar alone won't save you
+- **status**: fact-checked (reworked 2026-07-21 on SRP system design)
 - **format**: message-card carousel (5 slides) · **look**: Editorial Minimal
-- **CTA**: Valley-general (SRP households) · **hook structure**: number-led
+- **CTA**: Valley-general (SRP households) · **hook structure**: contrarian
 
-> ⚠ **Rework (owner 2026-07-21)**: STOP at cooling tips — teach SRP SYSTEM
-> DESIGN. The concept: low solar buyback + cheap off-peak + punishing
-> evening on-peak means the only real hedge is solar + battery sized to
-> self-supply the peak. Cover the rate-plan redesign (grandfathering;
-> on-peak window reportedly shifting ~3–8pm → 5–10pm — VERIFY in research),
-> and introduce VPP / residential-battery programs (both utilities) with
-> the reframe: if the grid were stable and forecastable, why would utilities
-> need access to your battery? These specifics are unsourced today — hold
-> until the research dump lands.
-
-**Hook**: SRP's 40¢ hours: 6–9pm, July and August
+**Hook**: SRP built its rates so solar alone won't save you
 
 **Slides** (screen = summary; full education in the caption):
-1. 6–9pm summer evenings: ~40¢/kWh. Everything else, a fraction.
-2. Legacy solar plans? One bad hour sets the month.
-3. Pre-cool by 6. Pool pump overnight. Laundry after 9.
+1. Sell your solar back: ~3.4¢. Buy it back at night: up to 40¢.
+2. That ~10x gap is the design — not an accident.
+3. A battery banks your cheap daytime sun for the 5–10pm hit.
 
-**CTA**: On SRP and want your plan checked for free? Just ask.
+**CTA**: On SRP and want your setup explained? Just ask.
 
-**Caption**: SRP's most expensive hours are 6–9pm in July and August — about 40¢/kWh on the newer plans, while every other hour costs a fraction of that. The legacy solar plans work differently: they bill your single highest evening grid spike (a demand charge), so one bad hour — AC, oven, and dryer overlapping — can set the whole month. Most of the fix is timing, and timing is free: pre-cool the house before 6, run the pool pump overnight, push laundry past 9. Then, and only then, is it worth talking hardware. On SRP anywhere in the Valley and want your plan checked for free? Just ask.
-**Hashtags**: srp · queencreek · eastvalley · energybills · arizonaenergy · azliving · phoenixmetro · arizonasolar
+**Caption**: SRP pays you about 3.45¢/kWh for the solar power you send back to the grid — but on the newer plans, buying power back on a July or August evening runs up to about 40¢/kWh (the E-28 plan hits 40.26¢ on-peak in summer peak; the E-16 demand plan puts on-peak at 5–10pm). That roughly 10x gap isn't an accident — it's how the system is designed, and it means solar that just exports at midday isn't the win it used to be. The play is a battery that banks your cheap daytime production and carries you through the expensive evening instead of buying it back at peak. Two things worth knowing: SRP is only grandfathering current plans until November 2029, and SRP now pays customers to let it pull from their home batteries during peak (Battery Partner, ~$55/kW) — a pretty good tell for how much your evening power is worth to them. On SRP and want your setup explained? Just ask.
+**Hashtags**: srp · queencreek · eastvalley · energybills · arizonaenergy · solarbattery · azliving · phoenixmetro · arizonasolar
 
 **Visual plan** (Art Director): 5 prompts via Post visuals, Editorial Minimal pack, shared seed, 3:4. ~5 credits.
 
-**Fact-check (2026-07-20): PASS**
-- ~40¢/kWh 6–9pm July/Aug on newer SRP plans → KB.rates.srp / az-energy-knowledge-2026.md [fact]
-- legacy plans bill highest evening spike (demand charge) → same [fact]
-- pre-cool / off-peak shifting as free fixes → consistent with KB free-fixes guidance
-- 2026-07-20 screen/caption rework: detailed claims moved from slides to caption — same claims, same sources, re-verified
+**Fact-check (2026-07-21, reworked on SRP system design): PASS**
+- SRP export credit 3.45¢/kWh (E-13/E-16/E-28) → az-rising-costs-heat-datacenters-2026.md §5 [fact, SRP FY26 ratebook]
+- E-28 July–Aug summer-peak on-peak 40.26¢/kWh → same §5 [fact]
+- E-16 demand plan on-peak 5–10pm → same §5 [fact]; window stated plan-specifically (never "SRP moved everyone to 5–10")
+- grandfathering until Nov 2029 billing cycle → same §5 [fact]
+- SRP Battery Partner ~$55/avg kW (twice yearly) → same §7 [fact]
+- "~10x gap" → 40.26 / 3.45 ≈ 11.7, stated as "roughly 10x" (conservative) [fact-derived]
+- "battery to self-supply the evening peak" → §8 [projection] tariff-spread support + [owner-expertise] advocacy; no individualized ROI claimed
+- "how much your evening power is worth to them" → honest VPP framing; does NOT claim grid instability (honors §4 guardrail)
 
 ## The doorstep consult
 - **status**: fact-checked

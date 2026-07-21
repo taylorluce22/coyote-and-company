@@ -8,26 +8,14 @@ Orchestrator triages this every run. Newest on top within each section.
   The "cheap by the kWh / rose slower than national" downplay is off-message
   under the rising-cost thesis; gets reworked in the post-research KB
   overhaul. See [[Editorial Direction]].
-- [ ] **RESEARCH DUMP — rate design, VPPs, cost trajectory** (owner offered
-  2026-07-21): needed to source the rising-cost/solar-hedge thesis before
-  the KB overhaul + brief rewrites (kitchen-table #3, SRP #4). Run this and
-  paste results back (label every item [fact]/[projection]/[contested]/
-  [industry-claim] with source + date):
-  - **SRP redesign 2025–26**: residential plan names, what changed, who's
-    grandfathered + for how long; on-peak windows now vs. after (confirm the
-    ~3–8pm → 5–10pm shift), months, on/off-peak ¢/kWh; demand charges on
-    solar plans; solar export/buyback ¢/kWh + how it's set.
-  - **APS current**: TOU on/off-peak windows + ¢; export/RCP ¢ and its
-    decline path.
-  - **VPP / battery programs, BOTH utilities**: names, incentives, dispatch
-    rules (how often they can pull your battery), eligibility, 2026 status.
-  - **Why VPPs exist (grid-strain case)**: AZ peak-demand growth, reserve
-    margins, data-center load, capacity constraints — NERC assessments,
-    utility IRPs, ACC filings; the reliability rationale utilities give for
-    needing residential storage.
-  - **Bill trajectory**: historical AZ residential rate/bill path (10–20 yr,
-    % increases) + forward projections (EIA, IRPs, approved + pending rate
-    cases) — over what horizon does a Phoenix bill realistically double?
+- [x] **RESEARCH DUMP — rate design, VPPs, cost trajectory — LANDED
+  2026-07-21**: owner ran the deep ChatGPT pass; results ingested into
+  `farmhand/docs/az-rising-costs-heat-datacenters-2026.md` (sourced +
+  labeled). Corrections captured: SRP window shift is plan-specific (E-16
+  5–10pm, E-28 6–9pm, APS still 4–7pm); "grid unstable" softened to
+  "utilities paying for evening flexibility" (NERC says margins fine);
+  "bill doubles" given both horizons (~15/~24 yr). Briefs 1/3/4 rewritten
+  on it; azEnergyKb rate-case + "cheap by the kWh" decks updated.
 - [ ] **Reel Coach setup**: Content → Reel Coach tab needs two things live in
   Vercel before it works: `GEMINI_API_KEY` (free at aistudio.google.com,
   cheap pay-as-you-go for video) and a Vercel Blob store connected
