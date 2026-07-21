@@ -19,18 +19,18 @@ reason teaches the agents — be specific.
 
 **Slides** (screen = summary; full education in the caption):
 1. Phoenix is #2 in North America for new data centers.
-2. An ASU study: their waste heat raises nearby air temps 1–4°.
+2. An ASU study: their waste heat raises nearby air temps up to 4°.
 3. Each one can use the power of ~64,000 homes. 24/7.
 
 **CTA**: Valley homeowner with questions about all this? DM me.
 
-**Caption**: An ASU study released in 2026 found the waste heat pouring off data centers can raise air temperatures in downwind Phoenix-area neighborhoods by as much as 1–4°F. And they're not slowing down — metro Phoenix ranks second in North America for proposed data-center development, and a single one can use as much electricity as about 64,000 homes, running 24/7. What it means for your bill is still being fought over: APS wants data centers to pay a higher rate so costs don't land on households, while the state's Attorney General has challenged utility rate hikes as going too far. Either way, they're competing for the same grid, in the same heat, your home runs on. Worth watching — and worth asking what it means for you. DM me. No pitch.
+**Caption**: An ASU study released in 2026 found the waste heat pouring off data centers can raise air temperatures in downwind Phoenix-area neighborhoods by up to 4°F. And they're not slowing down — metro Phoenix ranks second in North America for proposed data-center development, and a single one can use as much electricity as about 64,000 homes, running 24/7. What it means for your bill is still being fought over: APS wants data centers to pay a higher rate so costs don't land on households, while the state's Attorney General has challenged utility rate hikes as going too far. Either way, they're competing for the same grid, in the same heat, your home runs on. Worth watching — and worth asking what it means for you. DM me. No pitch.
 **Hashtags**: datacenters · arizonaenergy · aps · phoenixmetro · arizonagrowth · energybills · azliving · arizonasolar
 
 **Visual plan** (Art Director): 5 prompts via Post visuals, Editorial Minimal pack, shared seed, 3:4. ~5 credits. Alt cover option: a real citable ASU/AZFamily article headline screenshot with attribution per the image-usage rules in `az-rising-costs-heat-datacenters-2026.md` §9.
 
 **Fact-check (2026-07-21): PASS**
-- ASU study: data-center waste heat +1–4°F in downwind neighborhoods → az-rising-costs-heat-datacenters-2026.md §2 [fact, ASU News 2026-05-18]
+- ASU study: waste heat up to 4°F (study range 1–4°F) in downwind neighborhoods → az-rising-costs-heat-datacenters-2026.md §2 [fact, ASU News 2026-05-18]; content says "up to 4°" (faithful to "as much as 4°F" — a peak, not an average)
 - Phoenix metro #2 in N. America for proposed data-center development → same §3 [fact, APS]
 - avg data center ≈ 64,000 homes, running 24/7 → same §3 [fact, APS]
 - data-center bill impact framed as a live dispute (APS +45% proposal vs. AG Mayes) → honors §3 [contested], not stated as settled
