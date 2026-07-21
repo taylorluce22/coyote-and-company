@@ -9,6 +9,33 @@ highlight, slide counter, @handle. Right tool for number-led and list posts
 ("3 questions", "red flags"). Backgrounds come from Higgsfield in rotating
 aesthetic packs — see `farmhand/lib/postVisuals.ts` and the playbook.
 
+## Lane 1 upgrade — photo-backed informational carousels (owner, 2026-07-21)
+
+Retire flat text-on-black for informational carousels. They get **image
+backgrounds + legibility scrim + short overlay text** — the photo does the
+work, the words stay out of the way. Flat-card style is now only for pure
+number/list posts where a photo would distract.
+
+- **Backgrounds from Pexels** (already wired: `/api/stock`, supports
+  Pexels/Pixabay/Unsplash — needs `PEXELS_API_KEY` in Vercel, free). Match
+  each slide's image to its point: data-center exterior, Phoenix aerial,
+  suburb at night, a home battery, etc. Vary the image per slide but hold a
+  consistent accent/treatment for cohesion.
+- **One slide can be a credited NEWS-ARTICLE SCREENGRAB** — the headline +
+  the article's image band, outlet tagged on-slide, source in the caption.
+  For topical Arizona-local stories this is credibility gold: a real outlet
+  said it, not us. **Binding legal rule:** screenshot the HEADLINE + image
+  as a *reference to the coverage* with the outlet credited on the slide and
+  the source link in the caption; never strip watermarks/credits. Many news
+  photos are AP/Getty (not the outlet's to license) — when unsure, keep the
+  headline-screenshot framing + attribution, or swap to a Pexels / own
+  photo. Keep every use defensible.
+- **On-screen text stays swipe-worthy:** ≤ ~10–12 words per slide, one idea
+  per slide, each slide opens a small loop the next one pays off. Anything
+  clunky or comma-heavy belongs in the caption, not on the image.
+
+Reference for the look: the v2 post-preview artifact (2026-07-21).
+
 ## Lane 2 — Realistic moments (the direction Taylor wants more of)
 
 Photoreal, candid, smartphone-authentic scenes where **the image is the
