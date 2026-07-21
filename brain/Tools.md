@@ -37,6 +37,18 @@ test, demo, or "see what it looks like."
 | Post Studio | assembles + exports finished posts | in-app | free | production happens here until `/api/produce` exists |
 | GitHub | sync layer for everything | sessions push; Obsidian Git pulls | free | scheduled runs commit with `brain:` prefix, PR + squash |
 
+## Video review recipe (session-local — not persisted across containers)
+
+iPhone video (HEVC/Dolby Vision .mov) can't be decoded by the sandbox's
+default tools: the Playwright-bundled ffmpeg is stripped to webm/mjpeg
+only, and the sandboxed Chromium build has no proprietary codecs at all.
+Fix: `apt-get update && apt-get install -y ffmpeg --fix-broken` pulls a
+full Ubuntu ffmpeg (libavcodec/HEVC-capable) over the sandbox's normal
+network access — no special permission needed, just takes a minute. Then
+`ffprobe` for duration/codec/resolution and
+`ffmpeg -i in.mov -vf "fps=6,scale=640:-1" frame-%02d.jpg` for review
+frames. Re-run this install every fresh session; it doesn't persist.
+
 Knowledge sources (read-only ground truth):
 - `farmhand/docs/az-energy-knowledge-2026.md` — AZ utility numbers
 - `farmhand/docs/higgsfield-instagram-playbook.md` — visual + IG craft

@@ -96,14 +96,36 @@ scenes match Taylor's real work instead of generic stock-AI look.
     this specific shot) — genuinely the kind of doorstep proof-of-work
     Lane 3 wants, PENDING confirmation the homeowner consented to being
     photographed/posted.
-  - **⚠ Open question for Taylor**: batches 1-3 all carry "SunSolar
-    Solutions" branding, including on YOUR OWN polo and a team photo.
-    Batch 1/2 were provisionally logged as "competitor material" — that
-    may be wrong. Please confirm: is SunSolar Solutions your own company/
-    employer/brand, or a different company's material you have some
-    other access to? This changes IP framing but NOT the consent
-    requirement — a named client's info still needs their OK to publish
-    either way.
+  - **Video clip** (3.13s HEVC selfie, reviewed via extracted frames):
+    Taylor + a colleague (both in "SunSolar"-branded polos, colleague
+    wearing a company badge/lanyard) at golden hour on a bare dirt lot in
+    a new-construction desert neighborhood — cinder-block walls, finished
+    rooftops behind, pink sunset sky, casual/laughing, no on-screen text,
+    has an audio track (untranscribed — ask Taylor what's said if the
+    audio matters). This visually confirms SunSolar Solutions is Taylor's
+    own affiliation (branded polo + employee badge), resolving the batch
+    1/2 "competitor" mislabel below. As raw footage it's strong — the
+    backdrop is a real-world match for the queued "Every new street is
+    new demand" post — but too short/unstructured to post as-is; best use
+    is b-roll/cutaway under a voiceover or narration, not a standalone post.
+  - **✅ Resolved**: SunSolar Solutions = Taylor's own company/employer,
+    per the video evidence (branded polo + badge, consistent across
+    batches 1-3). Batches 1/2's earlier "competitor material" framing was
+    wrong — noted, not deleted, so future sessions see the correction
+    trail. The consent requirement on the named-client proposal (batch
+    1/2) is UNCHANGED — Taylor's own company's material still needs that
+    specific client's OK before any of it goes public.
+  - **⚠ New open question — brand positioning**: the whole page strategy
+    (Editorial Direction, the "consultant not salesperson" niche, the
+    homeowner-6-question test) is built on staying installer-NEUTRAL —
+    "consultants have multiple installer options," never naming one.
+    Now that Taylor's own on-camera appearances show a specific company's
+    logo (SunSolar Solutions), that's a real strategic fork: (A) keep
+    wearing/showing that branding — trades some of the neutral-advisor
+    positioning for authentic personal-brand transparency, or (B) prefer
+    plain/unbranded apparel in future photos and treat SunSolar-logo
+    shots as internal/team-only, not public grid material, to protect the
+    neutral positioning. Needs Taylor's call — added to [[Tasks]].
 
 ## Standing decision: on-camera minimized (owner, 2026-07-20)
 
