@@ -74,6 +74,28 @@ after the check clears. The education pillar this creates:
 - NEVER name specific installers, good or bad, in content — homeowners
   should understand a consultant keeps multiple installer options.
 
+## Build the pain, never soothe it (owner, 2026-07-21)
+
+The rising-cost pillar exists to make real cost pressure **felt** — then
+offer yourself as the guide. Never hand the reader reassurance that
+undercuts that. Cut every downplaying softener: "the ask usually lands
+lower," "it's probably less," "not as bad as it sounds." Keep it honest
+and **subtle** (pressure, not panic — this still honors the pain-point
+rule's "never fearmonger"), but the emphasis is always the upward
+trajectory: rates keep climbing and the utilities keep coming back for
+more. The 2022 rate-case precedent (asked 13.6%, granted ~8.3%) stays a
+reference [fact] in the KB, but is NOT deployed to comfort — if it appears
+in content at all, it's evidence they keep winning increases and returning
+for the next one, never "so the final number will be lower."
+
+**Open tension for Taylor to settle** (logged in [[Tasks]]): the older
+"credible over alarmist" framings are *also* reassurance/downplay — the
+research rule below ("AZ rates rose SLOWER than the national average"), the
+`azContext` KB reply line, and the "Arizona power: cheap by the kWh"
+idea deck. Does this new rule retire those too, or do they stay as
+credibility plays that separate us from doom-selling reps? Not decided
+here — this edit only removed the rate-case "lands lower" reassurance.
+
 ## Demoted — expired tax credits
 
 The dead 30% federal credit is NOT a content pillar. Use it ONLY as
@@ -94,7 +116,8 @@ alongside the original KB. Refinements adopted from it:
    beats the scary take.
 2. **The rate case gets sourced numbers**: ~16.4% residential ask, decision
    due Dec 31 2026, 2022 precedent (asked 13.6%, got ~8.3%). Never predict
-   the outcome as fact.
+   the outcome as fact — and per the 2026-07-21 "build the pain" rule
+   above, never use that precedent to reassure ("lands lower").
 3. **Contested stays contested**: whether data centers raise home bills is
    genuinely unresolved — content presents both sides, always.
 4. **The trust crisis is our biggest opening**: installer bankruptcies

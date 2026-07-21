@@ -19,12 +19,12 @@ reason teaches the agents — be specific.
 
 **Slides** (screen = summary; full education in the caption):
 1. 4.5 GW committed. Twenty more waiting in line.
-2. APS is asking for ~16% more. History says it lands lower.
+2. APS wants ~16% more — and the asks keep coming.
 3. Who pays? Experts disagree. Your levers are free.
 
 **CTA**: Valley homeowners — want this translated to your own bill? DM me, no pitch.
 
-**Caption**: 20 gigawatts are lining up for Arizona's grid. The fuller story: APS reports 4.5 GW of committed new load beyond its 8.6 GW record peak, with roughly 20 GW more of data-center requests in its queue — and it's asking ~16.4% more from residential customers, decision due Dec 31, 2026. Worth knowing: in 2022 they asked for 13.6% and regulators approved about 8.3%, so the ask usually isn't the outcome. Do data centers raise or lower home bills? Experts genuinely disagree — the rate case even proposes a data-center class paying +47% so "growth pays for growth." What you control today is free either way: the right rate plan and your 4–7pm usage. If you're in the Valley and want this translated to your own bill, DM me.
+**Caption**: 20 gigawatts are lining up for Arizona's grid. The fuller story: APS reports 4.5 GW of committed new load beyond its 8.6 GW record peak, with roughly 20 GW more of data-center requests in its queue — and it's asking ~16.4% more from residential customers, decision due Dec 31, 2026. And this isn't a one-off: APS won a rate increase in 2022 and it's already back asking for more. Do data centers raise or lower home bills? Experts genuinely disagree — the rate case even proposes a data-center class paying +47% so "growth pays for growth." What you control today is free either way: the right rate plan and your 4–7pm usage. If you're in the Valley and want this translated to your own bill, DM me.
 **Hashtags**: arizonaenergy · aps · energybills · buckeye · westvalley · phoenixmetro · azliving · arizonasolar
 
 **Visual plan** (Art Director): 5 prompts via the Studio's Post visuals button, Desert High-Key pack, shared seed, aspect 3:4. Cover = aerial master-planned desert community; bodies = supporting shots rotation; CTA = porch closer. ~5 credits.
@@ -32,7 +32,7 @@ reason teaches the agents — be specific.
 **Fact-check (2026-07-20): PASS**
 - 4.5 GW committed + ~20 GW queue + 8.6 GW peak → az-rates-supply-demand-2026.md [fact]
 - ~16.4% residential ask; decision due Dec 31, 2026 → same doc [fact]
-- 2022 precedent 13.6% asked / ~8.3% granted → same doc [fact]
+- 2022: APS won a rate increase, back asking again in 2026 → same doc [fact]; framed as a pattern of repeated increases, NOT reassurance (owner rule 2026-07-21: build the pain, never downplay — dropped the old "usually lands lower" line)
 - data-center bill impact framed as disagreement → honors [contested]
 - rate-plan switch free → az-energy-knowledge-2026.md / KB.ratePlanCheck
 - 2026-07-20 screen/caption rework: detailed claims moved from slides to caption — same claims, same sources, re-verified
