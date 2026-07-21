@@ -57,8 +57,26 @@ const SCHEMA_PROMPT = `You are coaching a solar consultant's Instagram content s
 
 Be specific and concrete — this feeds a content-strategy knowledge base, not a general video description. If something can't be determined, say so plainly rather than guessing.`;
 
-export async function GET() {
-  return NextResponse.json({ configured: !!process.env.GEMINI_API_KEY });
+export async function GET(req: NextRequest) {
+  const key = process.env.GEMINI_API_KEY;
+
+  // verify: actually call Gemini (models.list is free) to catch a placeholder key
+  if (req.nextUrl.searchParams.get("verify")) {
+    if (!key) return NextResponse.json({ gemini: "missing" });
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`,
+        { signal: AbortSignal.timeout(15000), next: { revalidate: 0 } }
+      );
+      if (res.ok) return NextResponse.json({ gemini: "valid" });
+      if (res.status === 400 || res.status === 401 || res.status === 403) return NextResponse.json({ gemini: "invalid" });
+      return NextResponse.json({ gemini: "error" });
+    } catch {
+      return NextResponse.json({ gemini: "error" });
+    }
+  }
+
+  return NextResponse.json({ configured: !!key });
 }
 
 export async function POST(req: NextRequest) {

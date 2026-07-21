@@ -75,9 +75,65 @@ async function searchUnsplash(key: string, q: string, n: number): Promise<StockP
   }));
 }
 
+/* --- real key validation (free: 1-result search, we only read the status) ---
+   "valid"   → provider accepted the key (HTTP 200)
+   "invalid" → key present but rejected (401/403) — a placeholder / typo
+   "missing" → no key set at all
+   "error"   → couldn't reach the provider (network / rate limit) — inconclusive */
+type Verdict = "valid" | "invalid" | "missing" | "error";
+
+async function statusToVerdict(run: () => Promise<Response>): Promise<Verdict> {
+  try {
+    const res = await run();
+    if (res.ok) return "valid";
+    if (res.status === 401 || res.status === 403) return "invalid";
+    return "error";
+  } catch {
+    return "error";
+  }
+}
+
+async function verifyPexels(key: string): Promise<Verdict> {
+  if (!key) return "missing";
+  return statusToVerdict(() =>
+    fetch("https://api.pexels.com/v1/search?query=sun&per_page=1", {
+      headers: { Authorization: key },
+      next: { revalidate: 0 },
+    })
+  );
+}
+
+async function verifyPixabay(key: string): Promise<Verdict> {
+  if (!key) return "missing";
+  return statusToVerdict(() =>
+    fetch(`https://pixabay.com/api/?key=${encodeURIComponent(key)}&q=sun&per_page=3`, {
+      next: { revalidate: 0 },
+    })
+  );
+}
+
+async function verifyUnsplash(key: string): Promise<Verdict> {
+  if (!key) return "missing";
+  return statusToVerdict(() =>
+    fetch(`https://api.unsplash.com/search/photos?query=sun&per_page=1&client_id=${encodeURIComponent(key)}`, {
+      next: { revalidate: 0 },
+    })
+  );
+}
+
 export async function GET(req: NextRequest) {
   const k = keys();
   const q = req.nextUrl.searchParams.get("q");
+
+  // verify: actually call each provider with the key to catch placeholders
+  if (req.nextUrl.searchParams.get("verify")) {
+    const [pexels, pixabay, unsplash] = await Promise.all([
+      verifyPexels(k.pexels),
+      verifyPixabay(k.pixabay),
+      verifyUnsplash(k.unsplash),
+    ]);
+    return NextResponse.json({ pexels, pixabay, unsplash });
+  }
 
   // status: which providers are configured app-side
   if (!q) {

@@ -18,10 +18,43 @@ const STATUS_META: Record<ConnStatus | "checking", { label: string; color: strin
   checking: { label: "Checking…", color: "#A6A4B8", bg: "rgba(255,255,255,0.05)" },
 };
 
+type Verdict = "valid" | "invalid" | "missing" | "error";
+
+const VERDICT_META: Record<Verdict, { label: string; color: string; bg: string }> = {
+  valid: { label: "Key valid", color: "#41D98A", bg: "rgba(65,217,138,0.16)" },
+  invalid: { label: "Bad / placeholder", color: "#FF6B6B", bg: "rgba(255,107,107,0.16)" },
+  missing: { label: "No key set", color: "#FFC23D", bg: "rgba(255,194,61,0.14)" },
+  error: { label: "Couldn't reach", color: "#A6A4B8", bg: "rgba(255,255,255,0.06)" },
+};
+
 export default function Connectors() {
   // live-probe results keyed by connector id → true/false, or undefined while loading
   const [live, setLive] = useState<Record<string, boolean>>({});
   const [checking, setChecking] = useState(true);
+  // real key-validation verdicts (only the providers we can test for free)
+  const [verdicts, setVerdicts] = useState<Record<string, Verdict>>({});
+  const [verifying, setVerifying] = useState(false);
+
+  async function runVerify() {
+    setVerifying(true);
+    try {
+      const [stock, video] = await Promise.all([
+        fetch("/api/stock?verify=1", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
+        fetch("/api/video-reference?verify=1", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
+      ]);
+      const next: Record<string, Verdict> = {};
+      (["pexels", "pixabay", "unsplash"] as const).forEach((k) => {
+        if (stock?.[k]) next[k] = stock[k] as Verdict;
+      });
+      if (video?.gemini) next.gemini = video.gemini as Verdict;
+      setVerdicts(next);
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  // connectors we can validate for free (no paid call, per credit policy)
+  const VERIFIABLE = new Set(["pexels", "pixabay", "unsplash", "gemini"]);
 
   useEffect(() => {
     let alive = true;
@@ -71,10 +104,30 @@ export default function Connectors() {
 
   return (
     <div>
-      <p style={{ fontSize: 13, color: "#A6A4B8", lineHeight: 1.55, maxWidth: "72ch", marginTop: 0, marginBottom: 18 }}>
-        Every integration the agents use — live status where it's wired, and exactly what each still needs.
-        Keys are set once in Vercel → Project → Settings → Environment Variables, then redeploy.
-      </p>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 16, flexWrap: "wrap", marginBottom: 18 }}>
+        <p style={{ fontSize: 13, color: "#A6A4B8", lineHeight: 1.55, maxWidth: "58ch", margin: 0, flex: 1, minWidth: 260 }}>
+          Every integration the agents use — live status where it&apos;s wired, and exactly what each still needs.
+          Keys are set once in Vercel → Project → Settings → Environment Variables, then redeploy.
+        </p>
+        <button
+          onClick={runVerify}
+          disabled={verifying}
+          style={{
+            display: "flex", alignItems: "center", gap: 8, cursor: verifying ? "default" : "pointer",
+            fontSize: 12, fontWeight: 650, color: "#0B0A12", background: verifying ? "#6E6C82" : "#41D98A",
+            border: "none", borderRadius: 10, padding: "9px 15px", whiteSpace: "nowrap",
+          }}
+        >
+          {verifying ? "Verifying…" : "Verify keys"}
+        </button>
+      </div>
+      {Object.keys(verdicts).length > 0 && (
+        <p style={{ fontSize: 11, color: "#6E6C82", lineHeight: 1.5, marginTop: -8, marginBottom: 18, maxWidth: "72ch" }}>
+          A real call was made to each testable provider — a placeholder or typo&apos;d key shows{" "}
+          <span style={{ color: "#FF6B6B" }}>Bad / placeholder</span>. Perplexity &amp; Higgsfield stay presence-only
+          (testing them spends a credit, so we don&apos;t).
+        </p>
+      )}
 
       {/* summary */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12, marginBottom: 20 }}>
@@ -111,6 +164,15 @@ export default function Connectors() {
                     </span>
                   </div>
                   <div style={{ fontSize: 11.5, color: "#8B89A0", lineHeight: 1.5, marginTop: 6 }}>{c.powers}</div>
+                  {verdicts[c.id] && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, fontSize: 10, letterSpacing: "0.04em", textTransform: "uppercase", color: VERDICT_META[verdicts[c.id]].color, background: VERDICT_META[verdicts[c.id]].bg, borderRadius: 8, padding: "4px 9px", width: "fit-content", fontWeight: 650 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: VERDICT_META[verdicts[c.id]].color }} />
+                      {VERDICT_META[verdicts[c.id]].label}
+                    </div>
+                  )}
+                  {!verdicts[c.id] && VERIFIABLE.has(c.id) && Object.keys(verdicts).length > 0 && (
+                    <div style={{ fontSize: 10, color: "#6E6C82", marginTop: 8 }}>not tested</div>
+                  )}
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 9, flexWrap: "wrap" }}>
                     <span style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: "#77758C", background: "rgba(0,0,0,0.28)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 6, padding: "3px 7px" }}>{c.env}</span>
                     {c.getUrl && s !== "live" && (
