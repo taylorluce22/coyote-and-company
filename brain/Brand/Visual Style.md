@@ -68,7 +68,18 @@ Agents treat these as ground truth for look and authenticity, and once
 ~10+ exist they seed a Higgsfield Soul style reference so illustrative
 scenes match Taylor's real work instead of generic stock-AI look.
 
-- (none yet)
+- (no files committed to `brain/Brand/refs/` yet — Taylor is sending
+  photos in chat batches; a session will commit + list them here once
+  received. Two batches described so far, 2026-07-20:)
+  - **Batch 1** — style-reference-ONLY, NOT postable: Aurora Solar
+    design-tool screenshots (shading/production simulation UI); an SRP
+    dedicated DER meter close-up (generic equipment, no address/name
+    visible — likely fine to post once committed, re-confirm); a
+    **competitor-branded proposal PDF** (SunSolar Solutions, AZ
+    ROC#331679, "LightReach Solar Plan") containing a real homeowner's
+    **name and street address** — flagged: do not post, contains another
+    company's IP and a non-consenting third party's PII.
+  - **Batch 2** — pending description at intake.
 
 ## Standing decision: on-camera minimized (owner, 2026-07-20)
 

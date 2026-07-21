@@ -1,158 +1,234 @@
 # What Makes a Good Solar Installer (Phoenix, 2026) — Knowledge Base
 
-Distilled July 2026 from a deep-research pass (ARS statutes, AZ ROC, county
-permitting requirements, APS/SRP program pages, NABCEP, manufacturer
-programs). Fact-check source of truth — labels: **[fact]**,
-**[best-practice]** (industry/AHJ-backed practice, not statute),
-**[industry-claim]** (plausible, interested or anecdotal sourcing),
-**[opinion]** (our editorial framing). Never name specific installers in
-content (owner rule).
+Distilled July 2026 from TWO deep-research passes: an initial owner-guided
+dive, then a rigorously sourced follow-up (manufacturer program pages,
+NREL SolarAPP+ data, CFPB findings, ROC/utility program pages). The
+second pass is authoritative where the two conflict; both are folded in.
+Labels: **[fact]** (utility/regulator/manufacturer/NREL/CFPB-sourced),
+**[industry-claim]** (a company describing its own program), **[opinion]**
+(our inference, stated as such). Never name specific installers in
+content (owner rule). Current to July 20, 2026 — re-verify program specs
+periodically, they change.
 
-## Legal floor (what EVERY installer must do)
+## The headline finding
 
-- [fact] Arizona requires solar installers to hold the appropriate ROC
-  contractor license — R-11 and/or CR-11 for residential PV — meet ROC
-  education/training standards, pass adopted exams, and comply with all
-  fire, safety, building, and consumer-protection codes (ARS; ROC
-  classification tables verify experience, trade/business exams, bonding).
-- [fact] ARS 44-1762 warranty minimums: at least 2 years on collectors,
-  heat exchangers, storage units and the installation of the solar device;
-  at least 1 year on remaining components and their installation; a
-  written warranty statement filed with the ROC and given to the buyer.
-- [fact] AHJ permitting (e.g., Pinal County, Phoenix) requires plans
-  showing roof covering, framing, array layout, weight (PV dead load
-  typically under ~4–5 psf), attachment method, and "roof mounting details
-  and method of sealing penetrations." Phoenix's SolarAPP enables instant
-  permits for simple systems — still requiring licensed contractors and
-  code compliance.
-- [fact] The LICENSED CONTRACTOR is responsible to the ROC regardless of
-  whether employees or subcontractors do the work; homeowners can search
-  ROC license status, classification, discipline, and complaint history
-  online, free.
+[fact] The strongest differentiators are NOT "best panel brand" or
+lowest $/W. They are: roof attachment done to the standard for that roof
+type; meaningful Arizona utility + ROC credentials; ONE accountable
+company across sales/design/install/monitoring/service; and warranty
+protection that survives the installer disappearing. Public inspection
+data backs this — see NREL/SolarGrade below.
 
-## Roof-penetration quality (the heart of it)
+## Roof-penetration quality by roof type
 
-- [fact] "Three-course flashing" = three alternating layers — roofing
-  cement, reinforcing fabric (usually fiberglass), roofing cement —
-  feathered over the penetration and onto adjacent material, forming a
-  reinforced continuous membrane. Used on foam/flat/modified roofs AND
-  [owner-expertise] at the UNDERLAYMENT layer on tile roofs: the
-  penetration where the standoff passes through the tile underlayment
-  gets three-coursed before the tiles are replaced.
-- [best-practice] Foam/flat roofs: mechanically fasten standoffs into
-  structure → approved sealant at the fastener → three-course flashing
-  over the base plate → re-coat with a compatible roof coating tied into
-  the existing system. Maintain slope/drainage; avoid ponding at mounts.
-- [best-practice + owner-expertise] Tile roofs (the Phoenix signature):
-  good crews REMOVE tiles at each attachment, mount a standoff into
-  structure, THREE-COURSE the underlayment penetration (cement / fabric /
-  cement), then cut and replace tiles to sit around — not under — the
-  standoff, using flashings made for that tile profile. Drilling through
-  tiles and smearing sealant cracks tiles and leaves exposed
-  underlayment.
-- [best-practice] Shingle roofs: flashed feet that slide under the upper
-  shingle course, lagged into rafters (not just sheathing), sealant under
-  base and at fastener, installed per UL 2703 mounting listings. A
-  code-listed deck-mount system installed per manufacturer instructions
-  is [opinion] at least as reliable as three-course on pitched roofs —
-  the principle either way: "flashing isn't goop on a hole; it's a tested
-  system that moves water predictably."
-- [fact/best-practice] Documented shortcut failure modes: fasteners into
-  sheathing only (pull-out/flex risk; structural review required when
-  point loads exceed ~40 lbs or older roofs fall outside prescriptive
-  rules) · tile drill-through with surface sealant · generic non-UV-rated
-  sealants · conduit "gooped" through the roof without boots/flashing ·
-  poor spacing from ridges/hips complicating fire pathways and future
-  roof work.
+- [fact] **Tile roofs**: the waterproofing plane is the UNDERLAYMENT, not
+  the tile. Manufacturer install guides (e.g. IronRidge tile-replacement
+  mounts) instruct installers to "waterproof at underlayment level per
+  roofing manufacturer instructions and Tile Roofing Institute
+  Guidelines." **Three-course flashing — cement, reinforcing fabric,
+  cement — is applied at that underlayment layer**, sealing the
+  sub-flashing on all four sides, before tiles are replaced around the
+  standoff. This confirms and sources the owner's field correction.
+- [opinion] Be skeptical of any installer who treats the tile itself as
+  the waterproof barrier, or can't clearly explain how the underlayment
+  gets restored. "Deck-seal" is fine only if it's a roof-system-specific,
+  tested method restoring the waterproof plane at the deck/underlayment
+  level — not a surface bead of sealant.
+- [fact] **Shingle roofs**: flashing must weave into the shingle courses
+  with proper upslope headlap (Atlas Roofing's PV detail), comply with
+  local code + the mount manufacturer's instructions + NRCA rooftop-PV
+  guidance; some systems fasten to deck, others must reach rafters
+  depending on the mounting system. Overusing sealant can soften
+  asphalt-based underlayments/leak barriers — a documented shortcut risk.
+- [fact] **Low-slope/foam/membrane roofs**: the issue is roof-system
+  COMPATIBILITY, not just penetrating-vs-not. TPO installs need a primer
+  selected with the roof manufacturer "to avoid warranty issues," a
+  clean/dry surface, only approved adhesives, ideally adhesive-trained
+  installers, and UV protection on exposed polyurethane adhesive.
+- [fact] Public inspection data confirms workmanship — not brand — is the
+  dominant risk: NREL's SolarAPP+ Performance Review found **58% of
+  inspection failures (2022 data)** and **78% (2023 data)** were
+  work-quality issues (not installed to code). HelioVolta's SolarGrade
+  field inspections found wiring/connector issues in **59% of projects
+  (2023)** and **83% (2024)** — the leading defect category (data skews
+  DG/C&I, still useful evidence of what bad workmanship looks like).
 
-## Credentials that actually mean something
+## Verified Arizona utility credentials
 
-- [fact] **APS Qualified Technology Installer (QTI)**: licensed, bonded,
-  insured in AZ for 1+ year; active R-11 and/or CR-11; good standing with
-  ROC and BBB ("A" rating for solar); liability + workers' comp; APS
-  training completed, including 3+ management-level reps; must take
-  complete responsibility for subcontractors and marketing partners.
-- [fact] **SRP Preferred Solar Installer**: licensed, bonded, insured,
-  trained on SRP's residential plans; safety/quality specs; good standing
-  with BBB and ROC; SRP provides ongoing training. SRP does NOT sponsor
-  or partner with installers — it maintains a vetted list, and warns
-  about door-to-door reps claiming SRP affiliation.
-- [fact] **Tesla Certified Installer**: application + approval + Tesla
-  training/standards for Powerwall and solar. Other manufacturers
-  (Enphase, SolarEdge, REC, Panasonic, Q CELLS) run authorized/elite/
-  premium tiers requiring training, volume, and performance;
-  [industry-claim] top tiers often carry extended product warranties and
-  priority support. [opinion] A badge matters when it extends the
-  warranty or gives direct manufacturer claim channels — otherwise it's
-  marketing. The question: "Does this badge protect me if your company
-  disappears?"
-- [fact] **NABCEP PV Installation Professional**: OSHA-10 + 58 hours of
-  advanced PV training + 6+ documented project credits in a
-  decision-making role + a 4-hour 70-question exam (~$500 fees) +
-  continuing education to recertify. [fact, derived] PVIP holders are a
-  small fraction of licensed AZ solar contractors — rare but meaningful.
-- [fact] Southern Arizona Solar Standards Board members must have
-  NABCEP-certified staff, 10+ utility-verified installations, and offer
-  10-year workmanship warranties with monitoring — an example of quality
-  bars far above the legal floor.
+- [fact] **APS Qualified Technology Installer**: active AZ ROC solar
+  installer license · at least 2 years experience under the same business
+  name · at least A+ BBB rating · at least 3 years designing/installing
+  solar+battery systems · trained on APS rate plans and program process.
+- [fact] **SRP Preferred Solar Installer (PSI)**: licensed, bonded,
+  insured, trained on SRP plans · active AZ ROC solar license · in
+  business 24+ months under the same license/leadership/corporate name ·
+  BBB rating A or higher with NO outstanding complaints · no more than 2
+  outstanding ROC complaints and no disciplinary actions in the past 2
+  years · SRP-plan trained.
 
-## Business model and accountability
+## Manufacturer programs — verified names, 2026 status
 
-- [industry-claim] Dealer/lead-gen models commonly embed 15–25% dealer
-  fees in solar loans — invisible to the homeowner, raising effective
-  price per watt and lengthening payback while funding commissions.
-  The honest question: "What's the cash price, and what dealer fee is
-  built into this loan?"
-- [opinion, ROC-anchored] In-house W-2 crews give tighter training/QA
-  control; lowest-bid sub chains produce variability — but legally the
-  license holder answers for both. Ask: "Who actually installs, who
-  trains and supervises them, employees or whoever's cheapest this week?"
-- [fact] Under TPO (lease/PPA), a third party owns the system and the
-  CONTRACT governs maintenance/performance obligations. [opinion] A lease
-  is a 25-year service agreement — read who repairs, how fast, and what
-  happens if the portfolio is sold or the provider goes bankrupt.
+- [fact] **Tesla**: current verified tier is **Tesla Certified
+  Installer** — a trained partner used where Tesla doesn't install
+  directly, responsible for install AND future service. No current
+  official "Premier" tier found on Tesla's homeowner pages (that term
+  appears in third-party marketing only) — don't cite "Premier" as an
+  official tier without re-verifying.
+- [fact] **Enphase Installer Network**: three real tiers — **Platinum**
+  (longest track record exclusive to Enphase, highest satisfaction),
+  **Gold** (long track record, battery-certified), **Silver** (sizable
+  install count, some battery-certified). Enphase explicitly states these
+  are INDEPENDENT service providers and Enphase is NOT responsible for
+  their work — the badge is a screening signal, not a guarantee.
+- [fact] **SolarEdge**: Preferred Partner Program + Sales Elite +
+  named technical certifications (Home Battery Technical Certification,
+  SolarEdge Expert Training) rather than a simple homeowner-facing
+  tier ladder. Ask for proof of the SPECIFIC certification completed.
+  The installer is the homeowner's monitoring-portal administrator.
+- [fact] **REC Certified Solar Professional**: the differentiator is
+  **REC ProTrust Warranty** eligibility — systems ≤25kW installed by a
+  Certified Professional and registered get 25yr product + 25yr
+  performance + 25yr labor (25-500kW: same product/performance, 10yr
+  labor). ProTrust explicitly SURVIVES the installer going out of
+  business — a genuinely rare, meaningful protection.
+- [fact — IMPORTANT] **Panasonic has discontinued its solar and battery
+  business line** as of 2026, but continues honoring warranties and
+  supporting existing/in-process customers. Verified active
+  designations: Panasonic Authorized Installer / Authorized Storage
+  Installer (licensed contractor, 1+ yr PV experience, 100% exam score
+  to certify). AllGuard labor coverage requires install by an Authorized
+  Installer + registration within 90 days. Content should flag this
+  discontinuation if Panasonic comes up — don't imply it's a growing tier.
+- [fact] **Qcells**: lighter homeowner-facing structure — authorized
+  installers for warranty/service, **Q.PARTNER Program** for installer
+  training/marketing/project support. No published Gold/Elite-style
+  homeowner tier comparable to Enphase's.
+- [fact] **NABCEP PV Installation Professional**: 58 hrs training + OSHA-10
+  + 6 project credits in a decision-making role (a "Board Eligible" path
+  allows testing before full experience is complete, but that's not full
+  certification). **PV Associate** (entry-level): approved training +
+  exam, OR 6 months of PV work experience + exam.
+- [fact] NABCEP's 2024 workforce survey: **30% of surveyed installer
+  employees were NABCEP certified, up from 11% the prior year** — rising
+  fast, still a real differentiator, NOT an industry baseline. Neither AZ
+  utilities nor the ROC require it as a minimum.
 
-## Warranties that survive
+## Arizona licensing — precise classes
 
-- [fact] State minimums are low (2yr/1yr, above). [best-practice] Quality
-  installers voluntarily offer 10+ year workmanship AND roof-penetration
-  warranties, matched closer to product lifespans (products: often 10–25
-  years via manufacturer).
-- [fact] Manufacturer product warranties typically survive an installer's
-  bankruptcy if the install met guidelines; some programs offer
-  installer-independent claim channels. [opinion] Workmanship and roof
-  warranties die with the company unless escrowed or third-party-backed —
-  so ask for exactly that.
-- [best-practice] Measurable "good service": stated response-time SLA
-  (1–2 business days on monitoring alerts/tickets) · active fleet
-  monitoring with homeowner app access · a real staffed service
-  department · a documented close-out package (as-builts, final permit,
-  interconnection docs).
+- [fact] ROC classes that matter: **CR-11 / R-11 Electrical** (the
+  baseline for solar installers, referenced by both APS and SRP program
+  requirements) and **R-42 Roofing**. A roofing license matters MORE when
+  the solar company contractually takes responsibility for roofing/
+  penetration repair itself rather than coordinating with a separate
+  roofer.
+- [fact] Homeowners check status/complaints via ROC's public **Contractor
+  Search** (free). ROC's own pages note the site does NOT display all
+  public sanctions/disciplinary actions — call the ROC Licensing
+  Department for the full record if anything looks unclear.
 
-## The price-quality relationship
+## Delivery model and accountability
 
-- [industry-claim] Quality-focused local installers typically run a
-  modest premium — on the order of ~10–20¢/W — over high-volume dealer
-  models, reflecting better crews, longer warranties, in-house service.
-- [opinion — the editorial frame] If two Phoenix quotes look similar on
-  hardware, the one slightly higher per watt with a clean ROC history,
-  APS/SRP list membership, NABCEP staff, 10–25-year roof/workmanship
-  coverage, and a real service department is often the better 25-year
-  buy: one leak, one uncovered inverter swap, or one service fight erases
-  the sticker difference. The risk isn't paying slightly more — it's
-  chasing the lowest per-watt price from a company that won't exist when
-  the roof needs them.
+- [fact] "Solar dealer" networks are a real, distinct structure: sales
+  organizations close deals on behalf of PV brands/installers they don't
+  necessarily design, install, or service (Aurora Solar's dealer-network
+  definition). The seller may not be the installer or the servicer.
+- [fact] Manufacturer badges do NOT create manufacturer responsibility
+  for workmanship — Enphase, Tesla, and SolarEdge all explicitly place
+  install/service responsibility on the installer, not themselves.
+- [opinion] This is the real case for in-house/self-performing local
+  firms: not that every subcontractor is worse, but that splitting sales/
+  lending/design/roof work/electrical/monitoring/service across separate
+  entities creates more places for responsibility to get deflected. One
+  accountable company = "one throat to choke."
+- [fact — upgraded from industry-claim] The CFPB's 2024 Issue Spotlight
+  (reiterated June 2026) found some solar lenders' **dealer fees increase
+  loan principal by 30% OR MORE above the cash price**, often rolled into
+  principal without being clearly separated or reflected in the stated
+  APR. Also documented: misleading payment representations, re-
+  amortization surprises when a tax credit isn't applied as expected, and
+  exaggerated savings claims.
+- [opinion] This is the cleanest explanation for the "cheap installer"
+  trap: price-per-watt shopping punishes good installers on a CASH
+  comparison while rewarding bad actors on a MONTHLY-PAYMENT comparison.
+  A higher $2.40/W cash quote can beat a "cheap" financed quote whose
+  principal is dealer-fee-inflated.
+- [fact] Lease/PPA accountability differs from loans: in a lease/PPA the
+  system-owning company is contractually obligated to maintain it: those
+  customer agreements are valuable assets that typically TRANSFER to an
+  acquirer in bankruptcy (EnergySage). With a LOAN, the loan obligation
+  survives regardless of whether the installer survives.
+- [opinion] TPO/lease is a mixed bag, not automatically safer — it's only
+  better than cash/loan if the long-term owner-servicer is strong and
+  reachable. Ask specifically who owns the asset and who services it.
 
-## The homeowner checklist (content-ready)
+## Warranties — three buckets, what survives
 
-1. ROC lookup: R-11/CR-11, active, years licensed, complaint history.
-2. On the APS QTI or SRP Preferred list? (Verifiable, free.)
-3. How are MY roof's penetrations flashed (tile removed + flashed
-   standoffs? three-course on foam? flashed feet under shingles?) — and
-   is it drawn on the permit plans?
-4. Who installs — W-2 crew or subs — and who supervises?
-5. Workmanship AND roof-penetration warranty lengths, and what backs
-   them if the company disappears?
-6. Cash price vs financed price — what dealer fee is inside the loan?
-7. Service: response SLA, monitoring, staffed service department,
-   close-out package.
+- [fact] Three distinct buckets: **product** warranties (manufacturer,
+  typically 10yr standard, 25yr+ increasingly common at the premium end),
+  **performance** warranties (output/capacity over time), and
+  **workmanship/labor/roof-penetration** warranties (the INSTALLER's
+  promise — much less standardized, typically 1-10 years; 10+ years
+  recommended as the bar to look for). Manufacturer warranties typically
+  do NOT reimburse labor by default.
+- [fact] What voids coverage: ignoring install instructions (REC);
+  missing install-by-authorized-installer + on-time registration
+  (Panasonic AllGuard requires registration within 90 days); buying from
+  an unauthorized seller (SolarEdge).
+- [fact] What SURVIVES installer bankruptcy: manufacturer-BACKED
+  programs, not pure installer promises. REC ProTrust explicitly
+  continues if the original installer is gone. Panasonic continues
+  honoring warranties post-discontinuation. SolarEdge maintains support
+  pages helping homeowners find a new installer via its directory when
+  the original one is gone.
+- [fact] Measurable "good service": Enphase says installers handle
+  servicing through the system's life; SolarEdge says the installer is
+  the monitoring-portal administrator responsible for alert setup;
+  SolarEdge's own reimbursement guidance recommends installers actively
+  REMOTE-MONITOR and attempt remote diagnosis before a truck roll.
+- [opinion] "Service that survives" should be promised IN WRITING:
+  monitoring access at PTO, alert setup, who owns ongoing monitoring, a
+  real service department, stated response-time targets (outage triage
+  vs. leak/service dispatch), and reroof removal/reinstall pricing.
+
+## Price and the honest Phoenix math
+
+- [fact] EnergySage, July 2026: Phoenix average installed cost
+  **$2.30/W**, average system 14.56 kW, pre-incentive cost ~$33,511
+  (range ~$28,484–$38,538). Statewide AZ average also $2.30/W.
+- [opinion, arithmetic from sourced facts] If dealer fees add 30%+ to
+  financed principal (CFPB), a Phoenix-average $2.30/W cash system can
+  become ~$2.99/W in financed principal BEFORE ordinary interest — on a
+  10kW system that's roughly $6,900 of pure financing-structure
+  inflation. That dwarfs any real quality premium.
+- [opinion] A fair craftsmanship/service premium in Phoenix is usually
+  much smaller than people fear — roughly **$0.05–0.20/W** (≈$500–2,000
+  on a 10kW system) is more plausible than the swings caused by
+  financing structure. No clean matched-pair Phoenix dataset exists for
+  this — present as an honest estimate, not a stat.
+- [fact] What that premium can buy: longer workmanship coverage, better
+  roof-penetration coverage, manufacturer-backed labor programs (REC
+  ProTrust, Panasonic AllGuard), stronger utility/ROC qualification,
+  real monitoring/service infrastructure.
+
+## The homeowner checklist (content-ready, six questions)
+
+1. Exact roof attachment/flashing method for MY roof type — waterproofing
+   restored at the underlayment/membrane level?
+2. APS Qualified Technology Installer or SRP Preferred Solar Installer
+   (where applicable)? ROC license status and complaint history?
+3. Employed crews or subcontractors — who's the ONE entity accountable
+   for sales, design, install, monitoring, service, and reroof coordination?
+4. Is the quote showing the true CASH price? If financed, what exact
+   dealer/platform fee is added to principal?
+5. What survives if the company fails — installer workmanship only, or
+   manufacturer-backed labor/whole-system coverage (REC ProTrust,
+   Panasonic AllGuard)?
+6. Who monitors post-PTO, what are the service SLAs, is roof-penetration
+   coverage in writing?
+
+[opinion] An installer who answers all six clearly, documents the roof
+method, shows clean ROC/utility standing, discloses real cash-vs-financed
+price, and offers warranty protection that doesn't evaporate with a
+bankruptcy is very likely high quality. If the conversation keeps
+steering to "monthly payment" and "we can get it done cheap" — it
+probably isn't.

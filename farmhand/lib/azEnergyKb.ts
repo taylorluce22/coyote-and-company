@@ -63,7 +63,7 @@ export const KB = {
     any: "the solar industry has a trust problem worth naming out loud: roughly 100 U.S. solar companies have gone bankrupt since 2023 (Titan, SunPower, Sunnova, Freedom Forever among them) and homeowner distrust doubled in a single year — which is exactly why every quote deserves a slow, skeptical read",
   },
   installerQuality: {
-    any: "price per watt is one input, not the verdict — a low bid can reflect dealer-fee financing or labor shortcuts. The real markers: how the roof penetrations are flashed, an active R-11/CR-11 license with a clean ROC complaint record (free to look up), a spot on APS's Qualified Technology Installer or SRP's Preferred Solar Installer list, in-house crews, and 10+ year workmanship coverage. The few AZ installers doing truly high-quality work usually cost a bit more",
+    any: "price per watt is one input, not the verdict — federal regulators (CFPB) have found dealer fees can inflate a financed loan's principal by 30% or more above the cash price, often hidden inside the payment rather than the rate. The real markers: how the roof penetrations are flashed, an active R-11/CR-11 license with a clean ROC complaint record (free to look up), a spot on APS's Qualified Technology Installer or SRP's Preferred Solar Installer list, one accountable company from sales to service, and 10+ year workmanship coverage. The few AZ installers doing truly high-quality work usually cost a bit more — usually far less than what a dealer-fee loan quietly adds",
   },
   leaseShift: {
     any: "about 7 in 10 new solar deals in 2026 are leases/PPAs — not because leases got better, but because the homeowner purchase credit expired and leasing companies can still claim a commercial credit through 2027–28. It can genuinely fit, but read the escalator: 0.99–2.99% a year for 20–25 years",
@@ -260,14 +260,14 @@ export const SOLAR_KB_CONTENT: { title: string; angle: string; format: "carousel
     ],
   },
   {
-    title: "Why the cheapest solar quote can cost you the most",
-    angle: "owner rule: never condition buyers on price alone — a low bid often reflects financing structures or labor shortcuts, not a better deal",
+    title: "The federal regulator's warning about 'cheap' solar financing",
+    angle: "CFPB-sourced: dealer fees can inflate financed principal 30%+ above cash price — the low-monthly-payment trap explained plainly",
     format: "reel",
     theme: "buyer-education",
     deck: [
-      "A low bid often reflects the financing structure or the labor — not a better deal.",
-      "Price follows process: how the roof is flashed, who's on the crew, who services you later.",
-      "Use price per watt for transparency — then judge the installer, not just the number.",
+      "The CFPB has flagged this directly: some solar loans hide a dealer fee that can add 30% or more to the loan principal.",
+      "It's rolled into the payment, not the rate — so the APR you're shown doesn't reveal it.",
+      "Ask for the cash price first. Then ask what the financed price adds on top.",
     ],
   },
 ];
