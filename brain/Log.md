@@ -9,6 +9,21 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-21 · two reel clips reviewed (clip 1 + clip 2)
+Taylor sent two real reel candidates (clarifying the earlier 3.13s clip
+was reference-only, not a review subject): Clip 1 (20.23s) and Clip 2
+(13.17s), both HEVC 1080x1920, both continuous unedited straight-to-
+camera talking-head takes in the same SunSolar-branded apparel/lav-mic
+setup as the earlier clip. Extracted + sampled frames across both full
+durations via the ffmpeg recipe in [[Tools]] (2fps). Clip 2's backdrop
+is notably stronger — a finished house with a visible rooftop solar
+array in frame the whole time. Neither has a scroll-stopping hook
+(static face, no text/motion in frame one) and neither can be checked
+against Editorial Direction's claims/pain-point rules without a
+transcript of the audio — flagged as the blocker before either becomes
+a `drafted` brief. Same SunSolar-branding question as before applies.
+Logged to [[Visual Style]]. Nothing spent.
+
 ## 2026-07-20 · video reel reviewed; SunSolar affiliation confirmed
 Taylor sent a 3.13s HEVC/Dolby Vision .mov (iPhone selfie clip). Sandbox
 tooling couldn't decode it out of the box (Playwright's bundled ffmpeg is

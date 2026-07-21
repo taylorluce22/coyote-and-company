@@ -108,6 +108,26 @@ scenes match Taylor's real work instead of generic stock-AI look.
     backdrop is a real-world match for the queued "Every new street is
     new demand" post — but too short/unstructured to post as-is; best use
     is b-roll/cutaway under a voiceover or narration, not a standalone post.
+  - **Clip 1** (20.23s HEVC, 1080x1920, reviewed via extracted frames
+    @2fps/40 frames): Taylor solo, one continuous unbroken straight-to-
+    camera talking segment, midday/afternoon sun, standing on bare dirt
+    in a new-construction desert neighborhood (block walls, unfinished
+    rooflines). Black zip jacket with "SUN[SOLAR]" chest branding, lav
+    mic clipped to the collar. No cuts, no on-screen text. Audio not
+    transcribed.
+  - **Clip 2** (13.17s HEVC, 1080x1920, reviewed via extracted frames
+    @2fps/26 frames): same apparel/branding/mic as Clip 1, also one
+    continuous unbroken take but much more static/deadpan framing.
+    Stronger backdrop than Clip 1 — a finished house with a visible
+    rooftop solar array over his shoulder the whole time, incidental
+    proof-of-work. No on-screen text, no cuts. Audio not transcribed.
+  - Both clips: raw/unedited talking-head footage. Neither has a scroll-
+    stopping hook in frame one (static face, no text, no motion) — would
+    need a hook overlay + edit pass before posting. Same SunSolar-branded-
+    apparel question as the earlier clip applies. Can't check Editorial
+    Direction compliance (claims labeling, pain-point rule, no-verdict
+    language) without a transcript — needed from Taylor before either
+    moves toward `drafted`.
   - **✅ Resolved**: SunSolar Solutions = Taylor's own company/employer,
     per the video evidence (branded polo + badge, consistent across
     batches 1-3). Batches 1/2's earlier "competitor material" framing was
