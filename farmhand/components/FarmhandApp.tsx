@@ -17,6 +17,7 @@ import CommandCenter from "./screens/CommandCenter";
 import AgentNetwork from "./screens/AgentNetwork";
 import KnowledgeVault from "./screens/KnowledgeVault";
 import { TasksPanel, SchedulePanel, ToolsPanel } from "./screens/OsPanels";
+import Connectors from "./screens/Connectors";
 
 function Screen() {
   const { state } = useStore();
@@ -31,6 +32,8 @@ function Screen() {
       return <SchedulePanel />;
     case "tools":
       return <ToolsPanel />;
+    case "connectors":
+      return <Connectors />;
     case "vault":
       return <KnowledgeVault />;
     case "content":

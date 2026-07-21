@@ -323,6 +323,7 @@ export const NAV_DEFS = [
   { id: "tasks", label: "Tasks", color: "#FFC23D", glyph: "▤" },
   { id: "schedule", label: "Schedule", color: "#C084FC", glyph: "◷" },
   { id: "tools", label: "Tools", color: "#26E0C8", glyph: "⚒" },
+  { id: "connectors", label: "Connectors", color: "#7DD3FC", glyph: "⧉" },
   { id: "engage", label: "Lead Pipeline", color: "#38BDF8", glyph: "⇄" },
   { id: "insights", label: "Content Analytics", color: "#41D98A", glyph: "▦" },
   { id: "content", label: "Content", color: "#FF5D8F", glyph: "✎" },
