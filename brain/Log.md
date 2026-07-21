@@ -9,6 +9,33 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-21 · Supabase Shared Memory Layer — scaffolded (inert until keys land)
+Owner chose "scaffold the code now" for the shared memory layer. Built the
+whole thing so it's live the instant the Supabase project + 3 keys exist —
+zero more code needed. Follows the existing [[Connectors|kv.ts]] philosophy:
+plain fetch against Supabase's PostgREST REST API, NO SDK dependency, graceful
+no-op degrade. Completely inert today (no keys) — the app runs on localStorage
+exactly as before.
+
+New files: `farmhand/supabase/schema.sql` (7 workspace-namespaced tables —
+agent_runs, leads, contacts, opportunities, planned_posts, reel_analyses,
+kb_refs; each = typed/indexed columns + `data jsonb`; RLS on, no public
+policies), `lib/supabase.ts` (server-only PostgREST layer, service_role key
+never reaches browser), `lib/memory.ts` (typed domain API), `app/api/memory`
+(status probe + push/pull), `lib/memorySync.ts` + store wiring (client sync —
+pull non-destructive/local-wins, push debounced, gated on configured). Supabase
+connector now live-checks `/api/memory`. Full doc: [[Shared Memory Layer]].
+
+Ran a 4-lens adversarial review workflow (inert-when-unconfigured, key-leak
+security, PostgREST correctness, store-sync safety), each finding independently
+verified. Build passes. Nothing spent.
+
+Owner action (~5 min): create a Supabase project → run the schema → add
+`SUPABASE_URL` / `SUPABASE_SERVICE_ROLE` (mark Sensitive) / `SUPABASE_ANON_KEY`
+in Vercel → redeploy. Steps in [[Shared Memory Layer]].
+
+---
+
 ## 2026-07-21 · Connectors "Verify keys" — real validation, not just presence
 Owner flagged: "there are key placeholders but not actual keys in some of
 them." The Connectors screen only did presence checks (is the env var set?),

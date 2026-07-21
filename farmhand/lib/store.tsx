@@ -20,6 +20,7 @@ import { tagOpportunity, type Opportunity } from "./engage";
 import type { SourceEntry } from "./sources";
 import { DEFAULT_TRAINING, isProvablyStaleLead, type LeadTraining } from "./hunt";
 import { VERTICALS } from "./verticals";
+import { memoryConfigured, pullSnapshot, pushSnapshot, mergeById } from "./memorySync";
 
 export interface Upload {
   id: string;
@@ -336,6 +337,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [workspace, setWorkspace] = useState<WorkspaceId>("default");
   const workspaceRef = useRef<WorkspaceId>("default");
   const hydrated = useRef(false);
+  const syncReady = useRef(false); // cloud pull finished (or skipped) → safe to push
+  const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragId = useMemo(
     () => ({ current: null as string | null }),
     []
@@ -492,6 +495,51 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(persistKeyFor(workspaceRef.current), JSON.stringify(out));
     } catch {}
   }, [state.stStudio, state.stAssets, state.compStatus, state.compIdea, state.compAiCopy, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.leadTraining, state.doneActions, state.contentResponses, state.briefs, state.energyIntel, state.demoMode, state.streak]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Shared Memory Layer (Supabase) sync — completely inert until the project is
+  // configured (memoryConfigured() caches false → both effects no-op, so the app
+  // behaves exactly as it does on localStorage today). Pull once per workspace
+  // after hydration, then push on change (debounced).
+  //
+  // Pull is NON-DESTRUCTIVE: mergeById keeps every local record and only adds
+  // cloud records this device hasn't seen, so nothing local is ever clobbered.
+  useEffect(() => {
+    let alive = true;
+    syncReady.current = false;
+    (async () => {
+      if (!(await memoryConfigured())) { syncReady.current = true; return; }
+      const snap = await pullSnapshot(workspace);
+      if (!alive) return;
+      if (snap) {
+        setState((s) => ({
+          ...s,
+          contacts: mergeById(s.contacts as Contact[], (snap.contacts as Contact[]) || []),
+          opportunities: mergeById(s.opportunities as Opportunity[], (snap.opportunities as Opportunity[]) || []),
+          plannedPosts: mergeById(s.plannedPosts as PlannedPost[], (snap.plannedPosts as PlannedPost[]) || []),
+        }));
+      }
+      syncReady.current = true;
+    })();
+    return () => { alive = false; };
+  }, [workspace]);
+
+  // push local arrays up, debounced — only after the pull has settled so we
+  // never overwrite the cloud before we've merged from it
+  useEffect(() => {
+    if (!hydrated.current || !syncReady.current) return;
+    if (pushTimer.current) clearTimeout(pushTimer.current);
+    pushTimer.current = setTimeout(() => {
+      memoryConfigured().then((ok) => {
+        if (!ok) return;
+        pushSnapshot(workspaceRef.current, {
+          contacts: state.contacts as unknown[],
+          opportunities: state.opportunities as unknown[],
+          plannedPosts: state.plannedPosts as unknown[],
+        });
+      });
+    }, 2500);
+    return () => { if (pushTimer.current) clearTimeout(pushTimer.current); };
+  }, [state.contacts, state.opportunities, state.plannedPosts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // switch between workspaces (test users / the owner's real solar account).
   // Current state is already persisted on every change, so no flush needed —

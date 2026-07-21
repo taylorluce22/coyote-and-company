@@ -64,7 +64,7 @@ export const CONNECTOR_GROUPS: ConnGroup[] = [
     title: "Data & Memory · Data Analyst / shared",
     accent: "#7BE495",
     items: [
-      { id: "supabase", name: "Supabase", agent: "shared memory", powers: "The shared memory layer — every agent reads/writes", env: "SUPABASE_URL · SUPABASE_ANON_KEY · SUPABASE_SERVICE_ROLE", getUrl: "https://supabase.com/dashboard", status: "planned", note: "The big one — real persistence so nothing gets re-explained. Not wired yet." },
+      { id: "supabase", name: "Supabase", agent: "shared memory", powers: "The shared memory layer — every agent reads/writes", env: "SUPABASE_URL · SUPABASE_SERVICE_ROLE · SUPABASE_ANON_KEY", getUrl: "https://supabase.com/dashboard", check: { endpoint: "/api/memory" }, status: "needs-key", note: "Wired. Create a Supabase project, run supabase/schema.sql, then add the 3 keys in Vercel → flips green and sync turns on." },
       { id: "metricool", name: "Metricool", agent: "Data Analyst", powers: "Post performance + scheduling", env: "METRICOOL_API_TOKEN", getUrl: "https://metricool.com", status: "planned", note: "Free tier only until owner approves a paid plan." },
       { id: "kv", name: "Vercel KV", agent: "Data Analyst / Dev", powers: "Server-side state (autonomous production)", env: "KV_REST_API_URL · KV_REST_API_TOKEN", getUrl: "https://vercel.com/dashboard/stores", status: "store", note: "Create a KV/Upstash store on the project → env auto-populates." },
     ],
