@@ -4,6 +4,14 @@ Operational task board (system work — content work lives in [[Content Queue]])
 Orchestrator triages this every run. Newest on top within each section.
 
 ## Needs Taylor
+- [ ] **"Credible" framings — keep or retire?**: the new 2026-07-21 "build
+  the pain, never soothe it" rule killed the rate-case "usually lands lower"
+  reassurance. But the same downplay logic lives in older "credibility"
+  framings we deliberately adopted: "Arizona is cheap by the kWh," "AZ rates
+  rose SLOWER than the national average" (Editorial Direction research rule
+  #1, the `azContext` KB reply line, and the "cheap by the kWh" idea deck).
+  Do those get retired too, or do they stay as the thing that separates us
+  from doom-selling reps? Your call — see [[Editorial Direction]].
 - [ ] **Reel Coach setup**: Content → Reel Coach tab needs two things live in
   Vercel before it works: `GEMINI_API_KEY` (free at aistudio.google.com,
   cheap pay-as-you-go for video) and a Vercel Blob store connected

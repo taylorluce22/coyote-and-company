@@ -54,7 +54,7 @@ export const KB = {
     any: "Arizona's grid demand keeps breaking records (APS hit 8,631 MW last August) and APS reports 4.5 GW of committed new load plus roughly 20 GW more of data-center requests in its queue — its own plan projects peak demand growing ~40% by 2031, which is the backdrop for every rate case",
   },
   rateCase: {
-    any: "APS is asking for about 14.75% more revenue (~16.4% for residential), with a decision due by Dec 31, 2026 and new rates in early 2027 — worth knowing the precedent: in 2022 they asked 13.6% and regulators approved about 8.3%, so the final number usually lands below the ask",
+    any: "APS is asking for about 14.75% more revenue (~16.4% for residential), with a decision due by Dec 31, 2026 and new rates in early 2027 — and this isn't a one-off: APS won a rate increase in 2022 and is already back asking for more",
   },
   azContext: {
     any: "Arizona is cheap by the kWh but expensive by the month — the average rate here is ~10% below the national average and rose slower over the last decade (+23% vs +30%), but bills run higher ($160 vs $142/month) because desert homes use about 25% more electricity, mostly AC",
@@ -173,13 +173,13 @@ export const SOLAR_KB_CONTENT: { title: string; angle: string; format: "carousel
   },
   {
     title: "APS is asking for ~16% more on your bill — what the rate case means",
-    angle: "decision due by Dec 31, 2026, new rates early 2027; explain it neutrally with the 2022 precedent and locals will share it",
+    angle: "decision due by Dec 31, 2026, new rates early 2027; frame the 2022 precedent as a pattern of repeat increases (never reassurance) and locals will share it",
     format: "text",
     theme: "authority",
     deck: [
       "APS is asking for ~16.4% more from residential customers. The hearing ran 31 days — the longest in ACC history — and a decision is due by Dec 31, 2026.",
-      "Precedent matters: in 2022 APS asked for 13.6% and regulators approved about 8.3%. The final number usually lands below the ask.",
-      "Nothing changes until early 2027. What you control now: your rate plan and your 4–7pm usage — both free to fix.",
+      "And this isn't a one-off: APS won a rate increase in 2022 and it's already back asking for more. The asks keep coming.",
+      "What you control now: your rate plan and your 4–7pm usage — both free to fix.",
     ],
   },
   {
