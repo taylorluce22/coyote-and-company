@@ -73,7 +73,7 @@ export const CONNECTOR_GROUPS: ConnGroup[] = [
     title: "Infrastructure · Dev",
     accent: "#41D98A",
     items: [
-      { id: "blob", name: "Vercel Blob", agent: "Dev / CMO", powers: "Reel upload transfer hop (Reel Coach)", env: "BLOB_READ_WRITE_TOKEN", getUrl: "https://vercel.com/dashboard/stores", status: "store", note: "Attach a Blob store to the project → token auto-populates." },
+      { id: "blob", name: "Vercel Blob", agent: "Dev / CMO", powers: "Reel upload transfer hop (Reel Coach)", env: "BLOB_READ_WRITE_TOKEN", getUrl: "https://vercel.com/dashboard/stores", check: { endpoint: "/api/video-reference/blob-upload" }, status: "store", note: "Attach a Blob store to the project → token auto-populates." },
       { id: "anthropic", name: "Anthropic (Claude)", agent: "Dev / Orchestrator", powers: "In-app produce pipeline + the agents", env: "ANTHROPIC_API_KEY", getUrl: "https://console.anthropic.com", status: "planned", note: "Enables the future in-app /api/produce." },
       { id: "reddit", name: "Reddit", agent: "Lead Manager", powers: "Native homeowner-thread hunt lane", env: "REDDIT_CLIENT_ID · REDDIT_CLIENT_SECRET", getUrl: "https://www.reddit.com/prefs/apps", status: "planned" },
       { id: "github", name: "GitHub", agent: "Dev", powers: "Sync layer — sessions push, Obsidian pulls", env: "(connected)", status: "live", note: "Already connected — the vault syncs through it." },

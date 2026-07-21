@@ -8,6 +8,11 @@ import { NextRequest, NextResponse } from "next/server";
  * The clip is deleted again right after /api/video-reference finishes
  * analyzing it — Blob is a transfer hop, not a permanent store.
  */
+/** Status probe for the Connectors screen — is a Blob store attached? */
+export async function GET() {
+  return NextResponse.json({ configured: !!process.env.BLOB_READ_WRITE_TOKEN });
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const body = (await request.json()) as HandleUploadBody;
 
