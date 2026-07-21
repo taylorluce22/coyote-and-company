@@ -13,6 +13,8 @@ function formatBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+const MAX_FILE_BYTES = 200 * 1024 * 1024;
+
 function noteFor(reel: VaultReel): string {
   const a = reel.analysis || {};
   const lines = [
@@ -115,6 +117,10 @@ export default function ReelCoach() {
   const pickFile = (f: File | null | undefined) => {
     if (f && !f.type.startsWith("video/")) {
       setError(`"${f.name}" doesn't look like a video file (${f.type || "unknown type"}) — pick a video clip.`);
+      return;
+    }
+    if (f && f.size > MAX_FILE_BYTES) {
+      setError(`"${f.name}" is ${formatBytes(f.size)} — that's over the 200MB cap. Trim or compress it first.`);
       return;
     }
     setError(null);
