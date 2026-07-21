@@ -27,6 +27,17 @@ Owner action: open **Connectors → Verify keys** after the redeploy. The
 Jul-4 stock keys are the prime placeholder suspects — watch for any red
 "Bad / placeholder" badge and replace that key in Vercel.
 
+**Result (owner ran it):** all four testable keys came back **valid** —
+Pexels, Pixabay, Unsplash, Gemini. No placeholders after all; the Jul-4
+stock keys are real and working. Higgsfield's two vars were already marked
+Sensitive in Vercel. The "placeholder keys" concern is closed. Every wired
+integration is confirmed live. Nothing spent.
+
+Next real build: **Supabase shared memory** — the only unwired compounding
+piece. Blocked on owner creating the Supabase project (URL + keys); the
+code side can be scaffolded ahead of that so it works the moment the env
+vars land.
+
 ---
 
 ## 2026-07-21 · Connectors audit screen + checklist
