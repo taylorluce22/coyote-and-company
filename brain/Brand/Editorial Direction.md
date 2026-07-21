@@ -25,6 +25,16 @@ follow the account because it explains their bill, not because it sells.
   [[Visual Style]].
 - **~10% — Timely/seasonal**: monsoon, summer peaks, program changes.
 
+## Utility focus: APS-primary, SRP ~1 in 20 (owner, 2026-07-21)
+
+Content is **APS-first**. SRP's residential solar economics are weaker —
+low ~3.45¢ export credit and demand-charge plan design push the ROI down —
+so we don't court SRP customers as a content focus. **Cap SRP-focused posts
+at roughly 1 in 20 (~5%).** SRP facts stay in the KB
+(`az-rising-costs-heat-datacenters-2026.md`) for education and the rare SRP
+piece, but the push — hooks, CTAs, territories, examples — leads with APS
+and stays utility-general where possible. [owner-expertise]
+
 ## The pain-point rule (owner, 2026-07-19)
 
 Every piece speaks to a pain a homeowner ACTUALLY has: bill shock, quote

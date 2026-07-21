@@ -77,9 +77,14 @@ reason teaches the agents — be specific.
 - DROPPED the old "checking/switching is free takes a bite out of the bill" reassurance per owner 2026-07-21 (we do not sell plan-switching as a fix)
 
 ## SRP's rate design: why solar alone won't save you
-- **status**: fact-checked (reworked 2026-07-21 on SRP system design)
+- **status**: fact-checked · **priority**: LOW — SRP cadence slot (~1 in 20)
 - **format**: message-card carousel (5 slides) · **look**: Editorial Minimal
 - **CTA**: Valley-general (SRP households) · **hook structure**: contrarian
+
+> ℹ **SRP cadence (owner 2026-07-21)**: SRP-focused, so this is the rare
+> ~1-in-20 SRP piece, not a priority-queue post. Kept ready and accurate
+> (good educational value), but APS/utility-general posts lead. Don't
+> stack SRP content.
 
 **Hook**: SRP built its rates so solar alone won't save you
 

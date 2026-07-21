@@ -9,6 +9,16 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-21 · owner direction: APS-primary, SRP ~1 in 20
+Owner: SRP residential solar ROI is too low (3.45¢ export + demand-charge
+design) to court as a focus. New Editorial Direction rule — content is
+APS-first, SRP-focused posts capped at ~1 in 20 (~5%); SRP facts stay in
+the KB for education + the rare SRP piece. Brief 4 ("SRP's rate design")
+demoted to the LOW-priority SRP cadence slot (kept fact-checked/ready,
+not a priority post). VPP pay also corrected this session: APS and SRP
+pay ~the same (~$110/kW/yr) — not "APS more" — verified via both program
+pages. Nothing spent.
+
 ## 2026-07-21 · research dump LANDED — rising-cost/heat/data-center KB
 Owner ran the deep ChatGPT research pass (news-sourced: azcentral/AZFamily/
 ABC15/12News, NWS Phoenix, Maricopa County, ASU, EIA, NERC, APS/SRP
