@@ -9,6 +9,19 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-21 · 3 new briefs added from the fresh research
+Added three fact-checked briefs off the new sourced KB, all APS-primary/
+utility-general per the SRP cap: "Data centers are heating up your
+neighborhood" (carousel, HIGH-priority standout — ASU 1–4°F waste-heat
+finding + #2-metro + 64k-homes, data-center-cost-shift kept a dispute);
+"2024 was the hottest year in Phoenix history" (single — heat records →
+evening AC load → rising bills → own-your-power); "They'll pay to use
+your home battery. Ask why." (single — both utilities pay ~$110/kW/yr for
+peak battery access, framed as "worth to them," not grid-instability).
+Each carries claim→source receipts. Queue now: briefs 1, 3, and these 3
+at fact-checked awaiting Taylor's approval; brief 4 held as the LOW-
+priority SRP slot; briefs 2/monsoon/credit rejected. Nothing spent.
+
 ## 2026-07-21 · owner direction: APS-primary, SRP ~1 in 20
 Owner: SRP residential solar ROI is too low (3.45¢ export + demand-charge
 design) to court as a focus. New Editorial Direction rule — content is
