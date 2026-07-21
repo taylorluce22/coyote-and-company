@@ -35,7 +35,7 @@ Orchestrator triages this every run. Newest on top within each section.
 - [ ] **Run the GRID-LEVEL competitor audit** with the browser extension
   (prompt provided in chat 2026-07-20 — compares whole profiles/grids on
   established high-follower pages, not individual post stats) — results
-  paste into [[Competitor Audit]]; [[Feed Director]] then refines the
+  paste into [[Competitor Audit]]; [[CMO]] then refines the
   First-12 grid plan from it
 - [x] Face/on-camera decision — RESOLVED 2026-07-20: minimize on-camera,
   lean on real equipment/install photos + AI illustration for generic
@@ -50,8 +50,8 @@ Orchestrator triages this every run. Newest on top within each section.
 - [ ] Review the 5 briefs in [[Content Queue]] — approve / reject with reasons
 
 ## Active
-- [ ] Copywriter pass on the 5 `idea` briefs (next scheduled/asked run)
-- [ ] Art Director pass follows on `drafted` briefs
+- [ ] [[CMO]] pass: idea → drafted → visuals-planned → fact-checked on any
+  new briefs (the content line is now one agent, not four)
 
 ## Backlog
 - [ ] **Wire `/api/stock` auto-background into carousel generation** so the
@@ -63,7 +63,7 @@ Orchestrator triages this every run. Newest on top within each section.
 - [ ] Reel lane: reel-format versions of queued topics — screen-recorded
   walkthroughs / install b-roll / voiceover-over-stills per the
   minimize-on-camera decision (until DoP video is wired)
-- [ ] Build the first Feed Director grid plan into actual Content Queue
+- [ ] Build the first [[CMO]] grid plan into actual Content Queue
   briefs once the photo dump + grid audit land
 - [ ] "Produce post" one-button pipeline in the app (`/api/produce`)
 - [ ] Vercel KV for server-side state (unlocks fully autonomous production

@@ -13,10 +13,10 @@ reason about the whole business, not just content.
 4. **People** — marked leads become contacts.
 
 ## Agent touchpoints
-- [[Creative Director]]: recurring lead themes (same objection three times
+- [[CMO]]: recurring lead themes (same objection three times
   this week) are brief fuel — check the Engage tab's recent threads when
   planning.
-- [[Analyst]]: content that generates DMs > content that generates likes;
+- [[Data Analyst]]: content that generates DMs > content that generates likes;
   weigh accordingly in [[Content Analytics]].
 
 ## Wishlist (see [[Tasks]] backlog)

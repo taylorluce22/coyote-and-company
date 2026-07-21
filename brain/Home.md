@@ -4,15 +4,19 @@ The one-screen view of the operation. Agents: read this first, every run.
 
 ## Agent status board
 
+Migrated 2026-07-21 to the 6-agent Agentic OS roster (1 chief of staff +
+5 specialists). The old content specialists (Creative Director, Copywriter,
+Art Director, Fact Checker, Feed Director) folded into the [[CMO]]; the
+Analyst became the [[Data Analyst]].
+
 | Agent | State | Last run | Next |
 |---|---|---|---|
-| [[Orchestrator]] | **ON HOLD** — schedule deleted per owner; manual runs only | 2026-07-20 (manual make-up run) | when Taylor asks |
-| [[Creative Director]] | 5 open briefs, all advanced | 2026-07-19 | when queue < 3 open |
-| [[Copywriter]] | all 5 briefs drafted | 2026-07-20 | next `idea` brief |
-| [[Art Director]] | all 5 visual plans done (~13 credits total est.) | 2026-07-20 | next `drafted` brief |
-| [[Fact Checker]] | **5/5 PASS** — receipts under each brief | 2026-07-20 | next `visuals-planned` brief |
-| [[Feed Director]] | **NEW** — First-12 grid plan drafted; awaiting grid-level audit data + photo dump | 2026-07-20 | after Competitor Audit grid pass |
-| [[Analyst]] | idle — no post data yet | — | first Friday after posts ship |
+| [[Orchestrator\|CEO / Orchestrator]] | **ON HOLD** — schedule deleted per owner; manual runs only | 2026-07-20 (manual make-up run) | when Taylor asks |
+| [[Researcher]] | idle — idea bank stocked from the research dump | 2026-07-21 | when idea bank thin / a niche saturates |
+| [[CMO]] | 5 briefs `fact-checked`, awaiting Taylor's approval; carousels upgraded to photo-backed | 2026-07-21 | when queue < 3 open |
+| [[Lead Manager]] | idle — lead engine exists (Engage), appointment-booking not wired yet | — | when web leads land |
+| [[Data Analyst]] | idle — no post data yet (pre-launch) | — | first Friday after posts ship |
+| [[Dev]] | **active** — rebuilt the app into the Agentic OS shell + roster | 2026-07-21 | next build task (Pexels/Supabase wiring) |
 
 ## Current state
 
@@ -33,6 +37,8 @@ The one-screen view of the operation. Agents: read this first, every run.
 
 ## Map
 
-[[Tasks]] · [[Schedule]] · [[Tools]] · [[Content Queue]] · [[Log]] ·
-[[Voice]] · [[Visual Style]] · [[Feed Director]] · [[Competitor Audit]] ·
+**Agents**: [[Orchestrator|CEO / Orchestrator]] · [[Researcher]] · [[CMO]] ·
+[[Lead Manager]] · [[Data Analyst]] · [[Dev]]
+**Docs**: [[Tasks]] · [[Schedule]] · [[Tools]] · [[Content Queue]] · [[Log]] ·
+[[Voice]] · [[Visual Style]] · [[Editorial Direction]] · [[Competitor Audit]] ·
 [[Growth Strategy]] · [[Lead Pipeline]] · [[Content Analytics]]

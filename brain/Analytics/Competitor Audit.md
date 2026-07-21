@@ -21,7 +21,7 @@ Taylor's ask is explicitly NOT an analytics review — it's "make my page
 LOOK AND FEEL like an established local pro," judged the way a homeowner
 actually experiences a profile: they land on it and scroll the grid for
 2 seconds before deciding if this is a real, active professional. The
-[[Feed Director]] owns running this test and applying findings to grid
+[[CMO]] owns running this test and applying findings to grid
 composition. Score each high-follower account on:
 
 - **Grid rhythm**: what % of the 9-30 visible tiles are photo-feeling
@@ -35,7 +35,7 @@ composition. Score each high-follower account on:
 - **"Does this look active TODAY"**: recency cues, Stories rings,
   cadence — what makes a page feel currently-run vs. abandoned.
 
-This feeds directly into [[Feed Director]]'s grid plan — not just into
+This feeds directly into [[CMO]]'s grid plan — not just into
 Adopt/Avoid bullet points.
 
 ## The scoring rubric (per-post detail, secondary to the grid-level view)

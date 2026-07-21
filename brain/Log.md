@@ -9,6 +9,31 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-21 · MIGRATED to the 6-agent Agentic OS roster
+Owner adopted the Agentic OS architecture (the Sureflow model, adapted to
+solar). Migrated the brain vault agent charters to match: 1 chief of staff
++ 5 specialists. New/rewritten charters in `brain/Agents/`:
+[[Orchestrator|CEO / Orchestrator]], [[Researcher]] (intel gatherer —
+Apify/Tavily), [[CMO]] (market voice — absorbs the OLD Creative Director +
+Copywriter + Art Director + Fact Checker accuracy gate + Feed Director grid/
+authenticity, so nothing binding was lost), [[Lead Manager]] (revenue ops —
+web leads → booked in-home/virtual consults), [[Data Analyst]] (signal layer
+— the full reel→revenue chain), [[Dev]] (build system).
+
+Deleted the six old content-specialist charters. Bulk-remapped every
+wikilink across the vault ([[Creative Director]]/[[Copywriter]]/[[Art
+Director]]/[[Fact Checker]]/[[Feed Director]] → [[CMO]]; [[Analyst]] →
+[[Data Analyst]]) and rewrote the [[Home]] status board + [[README]] map to
+the new roster. Fixed the readability spots the remap left (dup-CMO lines in
+Editorial Direction, stale Copywriter/Art-Director task lines). Re-aligned
+the app's Knowledge Vault graph (`agentOs.ts` nodes + links) to the new
+agents so the topology matches. Build passes. Nothing spent.
+
+Note: the CMO now owns the entire content line as one agent (idea → drafted
+→ visuals-planned → fact-checked). The accuracy gate and authenticity rules
+are preserved verbatim inside its charter — still binding, still no
+self-approval.
+
 ## 2026-07-21 · carousel look upgraded — photo-backed + news screengrabs
 Owner direction after seeing the post-preview mockup: informational
 carousels should be PHOTO-backed (image + scrim + short overlay text),
@@ -231,7 +256,7 @@ are actually committed to brain/Brand/refs/. Nothing spent.
 
 ## 2026-07-20 · Feed Director added — the Instagram/grid-level agent
 Owner clarified the page review isn't analytics — it's "make my page
-LOOK AND FEEL like an established local pro." New agent [[Feed Director]]
+LOOK AND FEEL like an established local pro." New agent [[CMO]]
 owns this: judges the whole GRID (not one post at a time) against a
 2-second-scroll credibility test, sets grid composition rules (~2:1
 photo-feeling-to-designed-card ratio, no adjacent same-look posts, pinned
@@ -363,7 +388,7 @@ pain-point rule (real pains, treated lightly, always a soft CTA). Queue
 re-planned: monsoon brief rejected (owner: not a real pain point),
 federal-credit brief rejected (redirected focus), two rising-prices briefs
 added (bill-climbing explainer · new-construction demand). New agent:
-[[Fact Checker]] — every claim verified verbatim against the KB before
+[[CMO]] — every claim verified verbatim against the KB before
 Taylor sees a brief; new status `fact-checked` gates `approved`. Deep-
 research prompt issued to Taylor (price trajectory + solar sales craft).
 Nothing spent.

@@ -2,7 +2,7 @@
 
 Goal: grow followers and outward-facing reach across Arizona. Baseline
 audited 2026-07-20 from the live profile; Insights data pending the
-extension pull. The [[Analyst]] owns keeping this current.
+extension pull. The [[Data Analyst]] owns keeping this current.
 
 ## Account baseline (2026-07-20)
 
