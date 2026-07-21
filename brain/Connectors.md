@@ -13,6 +13,12 @@ Variables**, then redeploy. Managed by [[Dev]]; used across the roster.
 | Pexels | [[CMO]] photo backgrounds | `PEXELS_API_KEY` | pexels.com/api |
 | Pixabay / Unsplash | backup stock | `PIXABAY_API_KEY` · `UNSPLASH_ACCESS_KEY` | pixabay/unsplash devs |
 | Gemini (video) | [[CMO]] Reel Coach | `GEMINI_API_KEY` | aistudio.google.com/apikey |
+| **Supabase** | **[[Shared Memory Layer]]** — every agent reads/writes | `SUPABASE_URL` · `SUPABASE_SERVICE_ROLE` · `SUPABASE_ANON_KEY` | supabase.com/dashboard |
+
+> **Supabase** is code-wired now (schema at `farmhand/supabase/schema.sql`).
+> Create the project, run the schema, add the 3 keys → it flips green and the
+> sync turns on. Full steps in [[Shared Memory Layer]]. Mark
+> `SUPABASE_SERVICE_ROLE` **Sensitive**.
 
 ## Attach a Vercel store (env auto-populates)
 | Connector | Powers | Env var |
@@ -27,7 +33,6 @@ Variables**, then redeploy. Managed by [[Dev]]; used across the roster.
 | Tavily | [[Researcher]] — niche news search | `TAVILY_API_KEY` |
 | Firecrawl | [[Researcher]] / [[Lead Manager]] — scrape a page | `FIRECRAWL_API_KEY` |
 | Gmail · Meet · Calendar | [[Lead Manager]] — outreach, consults, booking | Google OAuth app |
-| Supabase | **shared memory layer** (the big one) | `SUPABASE_URL` · `SUPABASE_ANON_KEY` · `SUPABASE_SERVICE_ROLE` |
 | Metricool | [[Data Analyst]] — post performance | `METRICOOL_API_TOKEN` |
 | Instagram / X | [[CMO]] — publish + metrics | Meta Graph / X API |
 | Anthropic | in-app produce pipeline + the agents | `ANTHROPIC_API_KEY` |
@@ -37,8 +42,9 @@ Variables**, then redeploy. Managed by [[Dev]]; used across the roster.
 - **GitHub** — the sync layer; sessions push, Obsidian pulls. Live.
 
 ## Priority order (owner)
-1. Keys you likely already have live: Perplexity, Higgsfield.
-2. Turn on the built features: **Pexels** (photo carousels) + **Gemini** +
-   **Vercel Blob** (Reel Coach).
-3. The compounding one: **Supabase** shared memory (needs Dev to wire).
-4. Everything else as the matching agent's lane gets built.
+1. ✅ Keys confirmed live: Perplexity, Higgsfield, Pexels, Pixabay, Unsplash,
+   Gemini, Blob, GitHub (all verified real — see [[Log]]).
+2. **Supabase** — the compounding one, now code-wired ([[Shared Memory Layer]]).
+   Just needs you to create the project, run the schema, and add 3 keys. ~5 min.
+3. Everything else as the matching agent's lane gets built (Apify, Tavily,
+   Firecrawl, Gmail/Meet/Calendar, Metricool, Instagram/X, Anthropic, Reddit).

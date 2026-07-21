@@ -9,6 +9,71 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-21 · Supabase Shared Memory Layer — scaffolded (inert until keys land)
+Owner chose "scaffold the code now" for the shared memory layer. Built the
+whole thing so it's live the instant the Supabase project + 3 keys exist —
+zero more code needed. Follows the existing [[Connectors|kv.ts]] philosophy:
+plain fetch against Supabase's PostgREST REST API, NO SDK dependency, graceful
+no-op degrade. Completely inert today (no keys) — the app runs on localStorage
+exactly as before.
+
+New files: `farmhand/supabase/schema.sql` (7 workspace-namespaced tables —
+agent_runs, leads, contacts, opportunities, planned_posts, reel_analyses,
+kb_refs; each = typed/indexed columns + `data jsonb`; RLS on, no public
+policies), `lib/supabase.ts` (server-only PostgREST layer, service_role key
+never reaches browser), `lib/memory.ts` (typed domain API), `app/api/memory`
+(status probe + push/pull), `lib/memorySync.ts` + store wiring (client sync —
+pull non-destructive/local-wins, push debounced, gated on configured). Supabase
+connector now live-checks `/api/memory`. Full doc: [[Shared Memory Layer]].
+
+Ran a 4-lens adversarial review workflow (inert-when-unconfigured, key-leak
+security, PostgREST correctness, store-sync safety), each finding independently
+verified. Security + inert lenses came back clean. Two real (latent) bugs
+caught and fixed before ship: (1) `upsertLeads` didn't collapse duplicate
+dedup_keys within a batch — PostgREST rejects the whole request (SQLSTATE
+21000) if a hunt re-cites one url twice; now deduped by key (highest score
+wins); (2) the store push effect was gated by a `useRef`, whose flip doesn't
+re-run the effect, so an edit made during the cloud-pull window could go
+unsynced — `syncReady` is now state + a push-effect dep. Build passes. Nothing
+spent.
+
+Owner action (~5 min): create a Supabase project → run the schema → add
+`SUPABASE_URL` / `SUPABASE_SERVICE_ROLE` (mark Sensitive) / `SUPABASE_ANON_KEY`
+in Vercel → redeploy. Steps in [[Shared Memory Layer]].
+
+---
+
+## 2026-07-21 · Connectors "Verify keys" — real validation, not just presence
+Owner flagged: "there are key placeholders but not actual keys in some of
+them." The Connectors screen only did presence checks (is the env var set?),
+which is exactly what lets a placeholder like `your-key-here` read as green.
+Added a **Verify keys** button that makes a real, **free** call to each
+provider it can safely test and reports an honest per-card verdict: valid /
+bad-or-placeholder (401/403) / no-key / couldn't-reach. Tested for free:
+Pexels, Pixabay, Unsplash (`/api/stock?verify=1`, 1-result search) and Gemini
+(`/api/video-reference?verify=1`, free `models.list`). Perplexity + Higgsfield
+stay presence-only on purpose — testing them spends a credit (Credit
+Preservation Policy). Also shipped the Blob card accuracy fix (GET status
+probe so it live-checks instead of a static "attach store"). Shipped in #130.
+Nothing spent.
+
+Owner action: open **Connectors → Verify keys** after the redeploy. The
+Jul-4 stock keys are the prime placeholder suspects — watch for any red
+"Bad / placeholder" badge and replace that key in Vercel.
+
+**Result (owner ran it):** all four testable keys came back **valid** —
+Pexels, Pixabay, Unsplash, Gemini. No placeholders after all; the Jul-4
+stock keys are real and working. Higgsfield's two vars were already marked
+Sensitive in Vercel. The "placeholder keys" concern is closed. Every wired
+integration is confirmed live. Nothing spent.
+
+Next real build: **Supabase shared memory** — the only unwired compounding
+piece. Blocked on owner creating the Supabase project (URL + keys); the
+code side can be scaffolded ahead of that so it works the moment the env
+vars land.
+
+---
+
 ## 2026-07-21 · Connectors audit screen + checklist
 Owner asked to "connect everything / make sure the connectors are set up."
 Can't obtain keys or create accounts from here (owner actions), so built a
