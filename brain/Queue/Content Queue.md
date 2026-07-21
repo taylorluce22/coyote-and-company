@@ -90,7 +90,7 @@ reason teaches the agents — be specific.
 
 **CTA**: On SRP and want your setup explained? Just ask.
 
-**Caption**: SRP pays you about 3.45¢/kWh for the solar power you send back to the grid — but on the newer plans, buying power back on a July or August evening runs up to about 40¢/kWh (the E-28 plan hits 40.26¢ on-peak in summer peak; the E-16 demand plan puts on-peak at 5–10pm). That roughly 10x gap isn't an accident — it's how the system is designed, and it means solar that just exports at midday isn't the win it used to be. The play is a battery that banks your cheap daytime production and carries you through the expensive evening instead of buying it back at peak. Two things worth knowing: SRP is only grandfathering current plans until November 2029, and SRP now pays customers to let it pull from their home batteries during peak (Battery Partner, ~$55/kW) — a pretty good tell for how much your evening power is worth to them. On SRP and want your setup explained? Just ask.
+**Caption**: SRP pays you about 3.45¢/kWh for the solar power you send back to the grid — but on the newer plans, buying power back on a July or August evening runs up to about 40¢/kWh (the E-28 plan hits 40.26¢ on-peak in summer peak; the E-16 demand plan puts on-peak at 5–10pm). That roughly 10x gap isn't an accident — it's how the system is designed, and it means solar that just exports at midday isn't the win it used to be. The play is a battery that banks your cheap daytime production and carries you through the expensive evening instead of buying it back at peak. Two things worth knowing: SRP is only grandfathering current plans until November 2029, and SRP now pays customers to let it pull from their home batteries during peak (Battery Partner — about $55/kW per season, roughly $110 a year) — a pretty good tell for how much your evening power is worth to them. On SRP and want your setup explained? Just ask.
 **Hashtags**: srp · queencreek · eastvalley · energybills · arizonaenergy · solarbattery · azliving · phoenixmetro · arizonasolar
 
 **Visual plan** (Art Director): 5 prompts via Post visuals, Editorial Minimal pack, shared seed, 3:4. ~5 credits.
@@ -100,7 +100,7 @@ reason teaches the agents — be specific.
 - E-28 July–Aug summer-peak on-peak 40.26¢/kWh → same §5 [fact]
 - E-16 demand plan on-peak 5–10pm → same §5 [fact]; window stated plan-specifically (never "SRP moved everyone to 5–10")
 - grandfathering until Nov 2029 billing cycle → same §5 [fact]
-- SRP Battery Partner ~$55/avg kW (twice yearly) → same §7 [fact]
+- SRP Battery Partner ~$55/avg kW per season × 2 seasons (~$110/yr) → same §7 [fact, verified 2026-07-21]
 - "~10x gap" → 40.26 / 3.45 ≈ 11.7, stated as "roughly 10x" (conservative) [fact-derived]
 - "battery to self-supply the evening peak" → §8 [projection] tariff-spread support + [owner-expertise] advocacy; no individualized ROI claimed
 - "how much your evening power is worth to them" → honest VPP framing; does NOT claim grid instability (honors §4 guardrail)
