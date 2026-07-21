@@ -4,6 +4,13 @@ Operational task board (system work — content work lives in [[Content Queue]])
 Orchestrator triages this every run. Newest on top within each section.
 
 ## Needs Taylor
+- [ ] **Reel Coach setup**: Content → Reel Coach tab needs two things live in
+  Vercel before it works: `GEMINI_API_KEY` (free at aistudio.google.com,
+  cheap pay-as-you-go for video) and a Vercel Blob store connected
+  (`BLOB_READ_WRITE_TOKEN` auto-populates once one's attached to the
+  project — it's just a transfer hop, clips get deleted right after
+  analysis). Built 2026-07-21, untestable in this sandbox without real
+  keys — flag anything that breaks on first real use.
 - [ ] **Brand positioning call**: your own on-camera photos/video show
   SunSolar Solutions branding (polo + badge) — keep that visible (real,
   transparent) or keep public content installer-neutral (matches the

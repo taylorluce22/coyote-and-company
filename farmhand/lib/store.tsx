@@ -74,7 +74,7 @@ export interface AppState {
   // strategy spine (LocalOS)
   onboarded: boolean;
   strategy: StrategyProfile;
-  contentTab: "ideas" | "studio" | "week" | "queue";
+  contentTab: "ideas" | "studio" | "week" | "queue" | "reels";
   engageTab: "opportunities" | "conversations" | "sources" | "drafts";
   contacts: Contact[];
   opportunities: Opportunity[];
