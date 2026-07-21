@@ -24,8 +24,9 @@ labels: **[fact]**, **[projection]**, **[survey]**, **[interested-party]**,
   terms typically 20–25 years.
 - [fact] AZ's state credit remains: 25% of cost, capped at $1,000, plus
   sales-tax and property-tax exemptions.
-- [fact] Pricing: Phoenix metro ~$2.30/W (EnergySage, July 2026) vs
-  ~$2.58/W national; typical 13.6 kW system ≈ $31,217 before incentives.
+- [fact] Pricing: Phoenix metro ~$2.30/W (EnergySage, July 2026), average
+  system 14.56 kW, pre-incentive cost ~$33,511 (range ~$28,484–$38,538);
+  statewide AZ average also $2.30/W, vs ~$2.58/W national.
 - [fact] Export rates: APS 6.171¢/kWh (RCP, locked 10 yrs by
   interconnection vintage) · SRP flat 3.45¢ (net billing since its Nov
   2025 net-metering retirement for new customers) · TEP ~5.7¢. All far
@@ -108,26 +109,47 @@ labels: **[fact]**, **[projection]**, **[survey]**, **[interested-party]**,
    documented walk-throughs occupy underserved territory.
 5. The neutral-consultant niche is genuinely open at scale.
 
-## Installer quality — VERIFIED (see az-installer-quality-2026.md)
+## Installer quality — VERIFIED, TWICE (see az-installer-quality-2026.md)
 
-The July 2026 installer-quality research pass verified the owner's
-professional knowledge. The full labeled source of truth is
+Two research passes verified and then sharpened the owner's professional
+knowledge with named, dated sources. Full labeled source of truth is
 `az-installer-quality-2026.md`; headlines:
 
-- [fact] Program names confirmed: **APS Qualified Technology Installer
-  (QTI)** and **SRP Preferred Solar Installer** — both requiring R-11/
-  CR-11 licensing, ROC + BBB good standing, insurance, and utility
-  training. Tesla Certified Installer + manufacturer tiers confirmed.
-- [fact] Three-course flashing defined (cement/fabric/cement) — used on
-  foam/flat roofs and, per owner practice, at the UNDERLAYMENT layer on
-  tile roofs (tiles removed, standoff into structure, underlayment
-  penetration three-coursed, tiles cut to fit); shingle roofs use flashed
-  feet under the course, lagged into rafters.
+- [fact] Program names + exact requirements confirmed: **APS Qualified
+  Technology Installer** (2yr+ same-name experience, A+ BBB, 3yr+ design/
+  install experience) and **SRP Preferred Solar Installer** (24mo+, BBB
+  A+ with zero outstanding complaints, ≤2 ROC complaints in 2 years).
+  Manufacturer tiers verified by name: Tesla Certified Installer ·
+  Enphase Platinum/Gold/Silver (explicitly NOT Enphase's liability) ·
+  SolarEdge Preferred Partner + named certifications · REC Certified
+  Solar Professional (unlocks the bankruptcy-surviving ProTrust warranty)
+  · Panasonic Authorized Installer (⚠ Panasonic discontinued its solar/
+  battery line in 2026 — still honors existing warranties) · Qcells
+  Q.PARTNER (lighter program, no homeowner tier ladder).
+- [fact] Three-course flashing (cement/fabric/cement) CONFIRMED at the
+  UNDERLAYMENT layer on tile roofs by manufacturer install guides
+  (IronRidge) — tiles removed, standoff into structure, underlayment
+  penetration three-coursed on all four sides, tiles cut to fit. Shingle
+  roofs weave flashing into courses per Atlas Roofing's PV detail; foam/
+  membrane roofs are a roof-system-COMPATIBILITY problem (manufacturer-
+  approved primer/adhesive), not just a penetration question.
+- [fact] NREL SolarAPP+ data: 58–78% of inspection failures are
+  WORK-QUALITY issues, not equipment. SolarGrade field inspections found
+  wiring/connector issues in 59–83% of projects. Workmanship, not brand,
+  is the dominant real-world risk.
 - [fact] ARS 44-1762 warranty minimums (2yr device+install / 1yr rest);
-  quality installers voluntarily go 10+ years on workmanship and roof.
-- [fact] ROC public license + complaint lookup is the free homeowner
-  background check; the license holder answers for subcontractors.
-- [industry-claim] Dealer fees ~15–25% inside solar loans; quality-local
-  premium ~10–20¢/W.
+  three distinct warranty buckets (product/performance/workmanship) with
+  workmanship typically only 1–10yr unless the installer voluntarily goes
+  further — 10+ years is the bar to look for.
+- [fact] ROC classes: CR-11/R-11 Electrical (the baseline) + R-42
+  Roofing (matters more when the solar co. takes contractual
+  responsibility for roof repair itself). Public license + complaint
+  lookup is free; the license holder answers for subcontractors.
+- [fact — UPGRADED from industry-claim] CFPB (2024, reiterated June 2026):
+  dealer fees can inflate financed loan principal by **30% OR MORE**
+  above cash price, often hidden inside principal rather than reflected
+  in the stated APR. On Phoenix's $2.30/W average, that's roughly $6,900
+  of pure financing-structure inflation on a 10kW system — far larger
+  than any real quality premium (~$0.05–0.20/W, ~$500–2,000 on 10kW).
 - [owner rule, standing] Price per watt = transparency tool, never the
   verdict. Content never names specific installers.

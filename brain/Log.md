@@ -9,6 +9,33 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-20 · installer-quality research pass 2 — sourced upgrade
+Taylor pasted a second, far more rigorously cited installer-quality deep
+dive (NREL SolarAPP+ inspection data, CFPB dealer-fee findings, exact
+manufacturer program names/tiers verified against current pages, ROC
+license classes, REC ProTrust / Panasonic AllGuard warranty-survival
+detail). `az-installer-quality-2026.md` REWRITTEN wholesale — pass 2
+authoritative where it refines pass 1. Key upgrades: dealer-fee claim
+moved from [industry-claim] ~15-25% to [fact, CFPB-sourced] 30%+,
+independently confirming and sourcing the owner's tile-underlayment
+three-course correction via manufacturer install guides (IronRidge),
+flagged Panasonic's 2026 solar-line discontinuation (existing warranties
+still honored), added NREL workmanship-failure stats (58-78%) as the
+strongest evidence yet that craft beats brand. az-solar-market-2026.md's
+verified-installer-quality summary and Phoenix pricing figure ($2.30/W,
+14.56kW avg, ~$33,511) updated to match. KB reply line + one idea deck
+sharpened with the CFPB stat ("The federal regulator's warning about
+'cheap' solar financing" replaces the older generic framing).
+
+Taylor is also sending a real photo dump in batches (chat 5-image cap;
+offered zip/GitHub-upload as bulk alternatives). Batch 1 flagged: Aurora
+Solar design-tool screenshots, an SRP DER meter close-up, and a
+COMPETITOR'S branded proposal (SunSolar Solutions, ROC#331679/
+LightReach plan) containing a real homeowner's name and address (privacy
++ competitor-IP concern) — logged as style-reference-only, NOT postable,
+pending Taylor's confirmation. See [[Visual Style]] refs log once photos
+are actually committed to brain/Brand/refs/. Nothing spent.
+
 ## 2026-07-20 · Feed Director added — the Instagram/grid-level agent
 Owner clarified the page review isn't analytics — it's "make my page
 LOOK AND FEEL like an established local pro." New agent [[Feed Director]]
