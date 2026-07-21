@@ -97,6 +97,30 @@ function DeployHealListener() {
   return null;
 }
 
+/**
+ * Without this, dropping a file anywhere OUTSIDE a designated drop zone
+ * (e.g. missing the Reel Coach upload box by a few pixels) falls through to
+ * the browser's default drag-drop behavior: it navigates the tab and tries
+ * to open the raw file directly. For a large local video that can wedge
+ * Chrome's shared video/GPU pipeline hard enough to need a full browser
+ * restart — not just this tab. This blanket page-level guard makes every
+ * drop a no-op by default; individual drop zones (Reel Coach's upload box)
+ * still work because their own onDrop handler runs first, during bubbling,
+ * before this one.
+ */
+function DropGuard() {
+  useEffect(() => {
+    const stop = (e: DragEvent) => e.preventDefault();
+    window.addEventListener("dragover", stop);
+    window.addEventListener("drop", stop);
+    return () => {
+      window.removeEventListener("dragover", stop);
+      window.removeEventListener("drop", stop);
+    };
+  }, []);
+  return null;
+}
+
 class CrashGuard extends Component<{ children: ReactNode }, { error: string | null }> {
   state = { error: null as string | null };
   static getDerivedStateFromError(e: Error) {
@@ -146,6 +170,7 @@ export default function FarmhandApp() {
   return (
     <CrashGuard>
       <DeployHealListener />
+      <DropGuard />
       <StoreProvider>
         <Shell />
       </StoreProvider>
