@@ -13,26 +13,42 @@ import Engage from "./screens/Engage";
 import Pipeline from "./screens/Pipeline";
 import Results from "./screens/Results";
 import Settings from "./screens/Settings";
+import CommandCenter from "./screens/CommandCenter";
+import AgentNetwork from "./screens/AgentNetwork";
+import KnowledgeVault from "./screens/KnowledgeVault";
+import { TasksPanel, SchedulePanel, ToolsPanel } from "./screens/OsPanels";
 
 function Screen() {
   const { state } = useStore();
   switch (state.tab) {
-    case "today":
-      return <Dashboard />;
+    case "command":
+      return <CommandCenter />;
+    case "agents":
+      return <AgentNetwork />;
+    case "tasks":
+      return <TasksPanel />;
+    case "schedule":
+      return <SchedulePanel />;
+    case "tools":
+      return <ToolsPanel />;
+    case "vault":
+      return <KnowledgeVault />;
     case "content":
       return <Content />;
-    case "market":
-      return <Market />;
     case "engage":
       return <Engage />;
-    case "pipeline":
-      return <Pipeline />;
     case "insights":
       return <Results />;
     case "settings":
       return <Settings />;
-    default:
+    case "today":
       return <Dashboard />;
+    case "market":
+      return <Market />;
+    case "pipeline":
+      return <Pipeline />;
+    default:
+      return <CommandCenter />;
   }
 }
 

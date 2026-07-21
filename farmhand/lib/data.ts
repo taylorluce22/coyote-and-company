@@ -318,16 +318,20 @@ export const FARM_CLUSTERS = [
 ];
 
 export const NAV_DEFS = [
-  { id: "today", label: "Today", color: "#A855F7" },
-  { id: "content", label: "Content", color: "#FF5D8F" },
-  { id: "market", label: "Market", color: "#38BDF8" },
-  { id: "engage", label: "Engage", color: "#26E0C8" },
-  { id: "pipeline", label: "People", color: "#FFC23D" },
-  { id: "insights", label: "Insights", color: "#41D98A" },
-  { id: "settings", label: "Settings", color: "#8B89A0" },
+  { id: "command", label: "Command Center", color: "#A855F7", glyph: "◎" },
+  { id: "agents", label: "Agents", color: "#7DD3FC", glyph: "✦" },
+  { id: "tasks", label: "Tasks", color: "#FFC23D", glyph: "▤" },
+  { id: "schedule", label: "Schedule", color: "#C084FC", glyph: "◷" },
+  { id: "tools", label: "Tools", color: "#26E0C8", glyph: "⚒" },
+  { id: "engage", label: "Lead Pipeline", color: "#38BDF8", glyph: "⇄" },
+  { id: "insights", label: "Content Analytics", color: "#41D98A", glyph: "▦" },
+  { id: "content", label: "Content", color: "#FF5D8F", glyph: "✎" },
+  { id: "vault", label: "Knowledge Vault", color: "#7BE495", glyph: "✸" },
+  { id: "settings", label: "Settings", color: "#8B89A0", glyph: "⚙" },
 ] as const;
 
-export type TabId = (typeof NAV_DEFS)[number]["id"];
+// Rail ids + a few screens kept routable off-rail (reached via QuickPanel etc.)
+export type TabId = (typeof NAV_DEFS)[number]["id"] | "today" | "market" | "pipeline";
 
 export const IMG = (seed: string, w = 400, h = 500) =>
   `https://picsum.photos/seed/${seed}/${w}/${h}`;

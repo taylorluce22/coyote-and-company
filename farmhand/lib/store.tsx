@@ -104,7 +104,7 @@ export interface AppState {
 }
 
 const initialState: AppState = {
-  tab: "today",
+  tab: "command",
   streak: 11,
   approved: {},
   done: {},
