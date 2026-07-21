@@ -138,7 +138,7 @@ export default function Onboarding() {
   useEffect(() => {
     if (!building) return;
     if (built >= CHECKLIST(p).length) {
-      const t = setTimeout(() => set({ ...cleanSlate(), onboarded: true, strategy: p, tab: "today" }), 900);
+      const t = setTimeout(() => set({ ...cleanSlate(), onboarded: true, strategy: p, tab: "command" }), 900);
       return () => clearTimeout(t);
     }
     const t = setTimeout(() => setBuilt((b) => b + 1), 620);
@@ -413,7 +413,7 @@ export default function Onboarding() {
           </button>
         </div>
         <button
-          onClick={() => set({ onboarded: true, strategy: DEFAULT_STRATEGY, tab: "today" })}
+          onClick={() => set({ onboarded: true, strategy: DEFAULT_STRATEGY, tab: "command" })}
           style={{ display: "block", margin: "18px auto 0", background: "transparent", border: "none", color: "#5E5C72", fontSize: 11.5, cursor: "pointer" }}
         >
           Skip for now — use a smart default profile
