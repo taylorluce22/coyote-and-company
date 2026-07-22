@@ -59,6 +59,18 @@ wrong number fails the accuracy gate. Non-negotiables:
 - QA every draft against the playbook's checklist before it can go
   `visuals-planned`.
 
+## Asset-sourcing router (BINDING — see `farmhand/docs/asset-sourcing-router-2026.md`)
+Before any visual is made, the CMO picks the **cheapest tool that still looks
+premium**, per slide:
+- **Data/text/chart/table/diagram/map slide → RENDERED** in-app (free, always).
+  Most of a carousel. Never spend a Higgsfield credit on these.
+- **Reel / any video → HIGGSFIELD** (Cinema Studio / Seedance). Never stock video.
+- **Real specific scene as proof** (rooftop, installer, meter, bill, battery, AZ
+  home) **→ HIGGSFIELD Soul or a real photo.** Never stock for field proof.
+- **Atmosphere/texture only → STOCK**, but duotone/scrim-treated so it never
+  reads generic; never a face/cliché, never the hero, never captioned as real.
+- Hero/cover unsure → Higgsfield (credibility > saving a credit).
+
 ## Visual + grid rules (BINDING — inherited from Art Director + Feed Director)
 - **Photo-backed informational carousels**: image + scrim + short overlay
   text (≤~10–12 words/slide, one idea per slide, swipe-loop). Pexels
