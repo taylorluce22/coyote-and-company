@@ -327,6 +327,7 @@ export const NAV_DEFS = [
   { id: "engage", label: "Lead Pipeline", color: "#38BDF8", glyph: "⇄" },
   { id: "insights", label: "Content Analytics", color: "#41D98A", glyph: "▦" },
   { id: "content", label: "Content", color: "#FF5D8F", glyph: "✎" },
+  { id: "studio", label: "Template Studio", color: "#E8622C", glyph: "◈" },
   { id: "vault", label: "Knowledge Vault", color: "#7BE495", glyph: "✸" },
   { id: "settings", label: "Settings", color: "#8B89A0", glyph: "⚙" },
 ] as const;

@@ -18,6 +18,7 @@ import AgentNetwork from "./screens/AgentNetwork";
 import KnowledgeVault from "./screens/KnowledgeVault";
 import { TasksPanel, SchedulePanel, ToolsPanel } from "./screens/OsPanels";
 import Connectors from "./screens/Connectors";
+import TemplateStudio from "./screens/TemplateStudio";
 
 function Screen() {
   const { state } = useStore();
@@ -38,6 +39,8 @@ function Screen() {
       return <KnowledgeVault />;
     case "content":
       return <Content />;
+    case "studio":
+      return <TemplateStudio />;
     case "engage":
       return <Engage />;
     case "insights":
