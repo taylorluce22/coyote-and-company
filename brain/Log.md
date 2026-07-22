@@ -43,6 +43,30 @@ in Vercel → redeploy. Steps in [[Shared Memory Layer]].
 
 ---
 
+## 2026-07-22 · Supabase shared memory layer — LIVE and verified
+Owner created the `farmhand-memory` Supabase project (West US / Oregon), ran
+`farmhand/supabase/schema.sql` clean, and added the 3 keys in Vercel
+(`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE` marked **Sensitive**, `SUPABASE_ANON_KEY`
+— the legacy anon/service_role JWT keys). Redeploy green.
+
+**End-to-end verified.** Connectors card = 🟢 CONNECTED on first check. A UI
+write in the solar workspace (an Opportunity captured as "Supabase Test /
+Buckeye") flowed straight into Supabase → `opportunities`: `workspace = solar`,
+`app_id opp-1784692964075`, `data` jsonb carrying the exact sourceName +
+excerpt, timestamp-consistent. The memory layer is genuinely operational, not
+just wired.
+
+First agent writer also shipped (#132): the always-on cron hunt now logs each
+run to `agent_runs` as the [[Researcher]] and mirrors leads into `leads`.
+Client sync (contacts/opportunities/planned_posts) auto-flows on change.
+
+The full 6-agent architecture is now live end to end. Remaining wiring is
+additive: [[CMO]] → log produced content to `planned_posts` + `kb_refs`;
+[[Orchestrator]] → read `agent_runs` so each session picks up where the last
+left off. Nothing spent.
+
+---
+
 ## 2026-07-21 · Connectors "Verify keys" — real validation, not just presence
 Owner flagged: "there are key placeholders but not actual keys in some of
 them." The Connectors screen only did presence checks (is the env var set?),
