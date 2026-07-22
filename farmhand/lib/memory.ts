@@ -51,7 +51,6 @@ interface LeadLike {
   platform?: string;
   intent?: string;
   territory?: string;
-  [k: string]: unknown;
 }
 
 export async function upsertLeads(leads: LeadLike[], workspace?: string): Promise<boolean> {

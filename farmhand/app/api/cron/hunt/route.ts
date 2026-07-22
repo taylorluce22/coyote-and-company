@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { kvEnabled } from "@/lib/kv";
 import { getConfig, mergeLeads } from "@/lib/leadStore";
 import { runHunt } from "@/lib/huntServer";
+import { logAgentRun, upsertLeads } from "@/lib/memory";
 
 /**
  * The always-on hunt. Vercel Cron calls this on a schedule (see vercel.json)
@@ -39,5 +40,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "PERPLEXITY_API_KEY not set" });
   }
   const added = await mergeLeads(result.leads, Date.now());
+
+  // Shared Memory Layer (Supabase) — the Researcher agent leaves a durable
+  // trail: mirror the leads into the leads table and log this run. Both no-op
+  // if Supabase isn't configured, so this is safe regardless.
+  await Promise.all([
+    result.leads.length ? upsertLeads(result.leads) : Promise.resolve(false),
+    logAgentRun({
+      agent: "researcher",
+      summary: `Always-on hunt: scanned ${config.territories.length} territories, found ${result.leads.length} leads, ${added} new.`,
+      needsHuman: added > 0 ? `${added} new lead${added === 1 ? "" : "s"} to review in the pipeline.` : undefined,
+      data: { found: result.leads.length, added, territories: config.territories.length, error: result.error || null },
+    }),
+  ]);
+
   return NextResponse.json({ ok: true, ran: true, found: result.leads.length, added, error: result.error });
 }
