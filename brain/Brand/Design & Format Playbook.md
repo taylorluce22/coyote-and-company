@@ -1,9 +1,22 @@
 # Design & Format Playbook
 
+> **Canonical spec:** the full machine-readable system is
+> **`farmhand/docs/content-engine-spec-2026.md`** — "DESERT GRID Content Engine
+> Spec v1.0" (ingested 2026-07-22). It has the exact brand tokens (hex, px,
+> type), all 16 archetypes with YAML params, the 20 pre-publish QA gates, reel
+> recipes, the 5 content pillars, and the current AZ fact bank. **On any
+> conflict, the spec wins.** This page is the human-readable summary.
+
 Ingested from Taylor's ChatGPT deep-research pass (2026-07-22). This is the
 binding visual + format system for the account — the [[CMO]]'s design gate,
 the same way `az-rising-costs-heat-datacenters-2026.md` is its accuracy gate.
 Pairs with [[Visual Style]] (mood/look) and [[Editorial Direction]] (voice).
+
+## Brand tokens (DESERT GRID — from the spec)
+- **Palette (5, max 3/slide):** `PAPER #F4F0E6` bg · `INK #14161A` type · `ACCENT_HOT #E8622C` = "this costs you money / the number that matters" (≤15% of pixels, never decorative, one per slide) · `DATA_COOL #0F5A63` = the reader's win (solar/battery/savings) · `NEUTRAL #B9B2A2` = the status quo/comparison · `ALERT #9E1B14` (rare) · `NIGHT #101820` alt surface. **Grey the field, color the subject.**
+- **Type:** P1 "Newsroom" — Inter Tight 700 (display) + Inter 400/500 (body), tabular figures. Max 2 faces/slide. Sharp corners (0px cards) read editorial.
+- **Furniture (every slide):** small wordmark (≤3% canvas, fixed corner), slide index `03 / 08` (mono), and a **source line on every slide with a number** (`Source: ACC Docket E-01773A-25-0105 · Jul 2026`). The source line is the trust device.
+- **Pillars (rotate, never 2 in a row):** P1 Rate Watch 25% · P2 Bill School 25% · P3 Grid File 20% · P4 Straight Answers 20% · P5 Field Notes 10%.
 
 **North-star standard:** every post should look like *a page torn from a smart
 local energy publication* — obvious sourcing, restrained color, repeat

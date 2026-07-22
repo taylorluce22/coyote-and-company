@@ -42,9 +42,10 @@ NOTHING reaches Taylor for approval without passing this.
 - Pass → status `fact-checked` + a dated claim→KB-line receipt so Taylor can
   spot-check in seconds. A thin week beats one wrong number in public.
 
-## The design gate (BINDING — see [[Design & Format Playbook]])
-Every post obeys the playbook's hard ceilings, or it fails the gate the same
-way a wrong number does:
+## The design gate (BINDING — see [[Design & Format Playbook]] + the canonical spec `farmhand/docs/content-engine-spec-2026.md`)
+Every post is emitted as the spec's **post object** (§7.1) and must pass all
+**20 pre-publish QA gates** (§7.2) — the render fails otherwise, the same way a
+wrong number fails the accuracy gate. Non-negotiables:
 - **One idea per slide.** Cover 6–12 words; internal chart slide ≤35; ≤2 text
   blocks. If a slide needs a 3rd block, split it. The "3 sentences per slide"
   look is banned.
