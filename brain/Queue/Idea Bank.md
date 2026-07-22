@@ -70,8 +70,27 @@ Objective: reach / save / share / DM.
 
 ---
 
-## Local-news lane (needs the [[Researcher]] / a fresh pull)
-This is the thin part — the KB is a snapshot; local news is perishable. Feed it
-from a recurring ChatGPT/Researcher pass (current APS/ACC filings, SRP program
-changes, new data-center announcements, heat records, AG actions, ACC votes).
-Each fresh item → a news-reaction reel (Cluster 1 #6 style) within the week.
+## Local-news lane — pull of 2026-07-22 (from ChatGPT weekly brief)
+Perishable — each is a news-reaction reel (R5) or an A11/A12 slide within the
+week. Re-verify the number against the primary source before publishing.
+
+37. **⚠ FACT UPDATE — solar surcharge VACATED.** AZ Court of Appeals vacated the ACC's APS rooftop-solar surcharge (adopted without proper notice; remanded), per AG Mayes, Jun 16 2026. *R5 news-react / A12 quote · reach* — **and see the accuracy-gate flag below.** [AG Mayes / AZ Court of Appeals]
+38. **The ask crept up.** APS 14% (~$240/yr per KJZZ); RUCO says effectively 15.3%, + 10.7% ROE + a formula-rate mechanism (annual adjustments). *A02 ranked / A03 · share* [KJZZ Jul 14 2026]
+39. **The clock is set.** Hearing ran May 18–Jul 7 2026 (31 days, ~36 intervenors, 50+ witnesses); ALJ recommended order ~late Nov, ACC vote by Dec 31 2026, new rates early 2027. *A11 timeline w/ "you are here" · reach* [ACC Jul 10 2026]
+40. **"Growth pays for growth" — still unsettled.** RUCO says it still can't confirm large-load costs are kept off residential bills; the case litigated APS's Extra-High-Load-Factor treatment + Formula Rate Adjustment Mechanism. *A10 myth-bust · share* — the definitive proof the data-center cost question is [contested], not settled. [KJZZ / ACC Jul 2026]
+41. **Transformers take 3–4 years now.** Grid-equipment lead times blown out by data-center demand (APS at ACC workshop; SRP too). *A01 hero (3–4 yrs) / R5 · share* [KJZZ Jul 20 2026]
+42. **Efficiency mandate repealed.** ACC voted 4-0 (Jul 8) to repeal the Electric Energy Efficiency Standards; existing DSM/rebate programs continue for now, surcharges may phase out case-by-case. Accurate takeaway = "statewide mandate repealed," NOT "rebates ended." *A08 / R5 · reach* [ACC / KJZZ Jul 8 2026]
+43. **The all-of-the-above buildout.** SRP Marigold (Pinal): 600 MW solar + 400 MW battery + up to 675 MW gas + new transmission; open houses Jul 28–29. Plus SRP SunZia wind PPA 600 MW (triples SRP wind); APS Cholla coal→gas ~380 MW (~61,000 homes, in-service 2029); APS/SRP/TEP joint nuclear siting study (~6 mo, exploratory). *A05 map / A11 timeline · reach* — **flag certainty stages:** Marigold = public input, Cholla = targeted build, nuclear = exploratory. [SRP/APS newsrooms Jun–Jul 2026]
+44. **Heat is early and ahead.** Maricopa: 16 confirmed heat deaths + 192 under investigation as of Jul 2 — ahead of last year, heat arrived in March. County urges checking vulnerable neighbors' AC. *A01 hero / R3 heat-day field · share* [KJZZ / Maricopa County Jul 2 2026]
+
+> **⚠ Accuracy-gate flag for the [[CMO]] (2026-07-22):** the APS rooftop-solar
+> surcharge / Grid Access Charge (~$0.93/kW in the spec fact bank) was
+> **vacated and remanded** by the Court of Appeals (Jun 16 2026). Do NOT state
+> that surcharge as a current, active charge without noting it was vacated and
+> is in further proceedings. This supersedes the older "monthly charge on
+> rooftop-solar customers" line until the KB fact bank is reconciled.
+
+## Keeping this lane fed
+Re-run the weekly ChatGPT news brief (in [[Connectors|the news-brief prompt]])
+and drop each item here; the [[Researcher]] agent owns this lane once its
+news connectors (Tavily/Firecrawl/Apify) are wired.
