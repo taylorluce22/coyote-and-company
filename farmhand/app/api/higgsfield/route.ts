@@ -104,10 +104,14 @@ export async function POST(req: NextRequest) {
   const auth = creds();
   if (!auth) return NextResponse.json({ configured: false, needsCreds: true, images: [] });
 
-  let body: { prompt?: unknown; prompts?: unknown; seed?: unknown; aspect?: unknown; check?: unknown } = {};
+  let body: { prompt?: unknown; prompts?: unknown; seed?: unknown; aspect?: unknown; check?: unknown; soulId?: unknown } = {};
   try {
     body = await req.json();
   } catch {}
+  // optional Soul ID (identity lock) — passed best-effort; if the endpoint
+  // rejects the extra field we fall through to plain Soul so generation never
+  // breaks (the API surface is runtime-discoverable, not guaranteed).
+  const soulId = String(body.soulId || "").trim().slice(0, 80) || null;
 
   // check mode: one status sweep over job handles the client is tracking.
   // Only platform.higgsfield.ai URLs — the auth header must never be sent
@@ -165,6 +169,9 @@ export async function POST(req: NextRequest) {
   // wrapped) stays as a last resort. A shared seed (where the model takes
   // one) keeps a multi-slide batch visually congruent.
   const attempts: { path: string; make: (p: string) => unknown }[] = [
+    // Soul-with-identity first when a Soul ID is supplied; plain Soul is the
+    // immediate fallback so a rejected soul_id field can't strand the batch.
+    ...(soulId ? [{ path: "/higgsfield-ai/soul/standard", make: (p: string) => ({ prompt: p, aspect_ratio: aspect, resolution: "1080p", ...(seed ? { seed } : {}), soul_id: soulId }) }] : []),
     { path: "/higgsfield-ai/soul/standard", make: (p) => ({ prompt: p, aspect_ratio: aspect, resolution: "1080p", ...(seed ? { seed } : {}) }) },
     { path: "/bytedance/seedream/v4/text-to-image", make: (p) => ({ prompt: p, aspect_ratio: aspect, resolution: "2K" }) },
     { path: "/flux-pro/kontext/max/text-to-image", make: (p) => ({ prompt: p, aspect_ratio: aspect, ...(seed ? { seed } : {}) }) },

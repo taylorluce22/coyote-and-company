@@ -43,6 +43,62 @@ in Vercel → redeploy. Steps in [[Shared Memory Layer]].
 
 ---
 
+## 2026-07-22 · Content quality overhaul — both research halves ingested
+Owner flagged the post TEMPLATES looked amateur (big bold text, 3 sentences a
+slide) and wanted the engine producing established-source-grade content. The
+internal deep-research harness is the wrong tool for craft (it fact-checks and
+rejects design/marketing sources → empty), so owner ran the research in ChatGPT
+and uploaded the briefs — the proven pattern.
+
+**Ingested two canonical specs into `farmhand/docs/`:**
+- **`content-engine-spec-2026.md`** — "DESERT GRID Content Engine v1.0": brand
+  tokens (PAPER #F4F0E6 / INK / ACCENT_HOT #E8622C / DATA_COOL / NEUTRAL / NIGHT),
+  16 archetypes with YAML params, 20 pre-publish QA gates, reel recipes R1–R10,
+  5 content pillars, and a current AZ fact bank (RCP 6.171¢, ~14% ask, docket
+  E-01773A-25-0105, 25D expired Dec 31 2025, peak 8,648 MW). This is the
+  authoritative design/format system — the [[CMO]]'s design gate binds to it.
+- **`higgsfield-prompting-playbook-2026.md`** — the Higgsfield prompt system:
+  Soul 2.0 / Soul ID / Soul HEX / Moodboards / Cinema Studio / Seedance-Kling,
+  the image + video prompt templates, preset→use-case map, negative clause,
+  anti-distortion rules, and engine defaults. Runtime-discoverable (no fixed
+  public REST API; MCP/CLI-first).
+
+Also: [[Design & Format Playbook]] rewritten as the human summary pointing at
+the spec; [[CMO]] design gate now requires the post-object schema + all 20 QA
+gates; [[Idea Bank]] added (36 energy ideas across 8 clusters). Rendered the
+real DESERT GRID tokens to a template-system preview artifact (6 archetypes,
+live fact-bank numbers). Nothing spent.
+
+**Next build:** wire the archetypes into Post Studio as real presets + the
+Higgsfield prompt-composer layer so the engine emits gate-passing posts +
+usable assets on the first pass.
+
+---
+
+## 2026-07-22 · Supabase shared memory layer — LIVE and verified
+Owner created the `farmhand-memory` Supabase project (West US / Oregon), ran
+`farmhand/supabase/schema.sql` clean, and added the 3 keys in Vercel
+(`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE` marked **Sensitive**, `SUPABASE_ANON_KEY`
+— the legacy anon/service_role JWT keys). Redeploy green.
+
+**End-to-end verified.** Connectors card = 🟢 CONNECTED on first check. A UI
+write in the solar workspace (an Opportunity captured as "Supabase Test /
+Buckeye") flowed straight into Supabase → `opportunities`: `workspace = solar`,
+`app_id opp-1784692964075`, `data` jsonb carrying the exact sourceName +
+excerpt, timestamp-consistent. The memory layer is genuinely operational, not
+just wired.
+
+First agent writer also shipped (#132): the always-on cron hunt now logs each
+run to `agent_runs` as the [[Researcher]] and mirrors leads into `leads`.
+Client sync (contacts/opportunities/planned_posts) auto-flows on change.
+
+The full 6-agent architecture is now live end to end. Remaining wiring is
+additive: [[CMO]] → log produced content to `planned_posts` + `kb_refs`;
+[[Orchestrator]] → read `agent_runs` so each session picks up where the last
+left off. Nothing spent.
+
+---
+
 ## 2026-07-21 · Connectors "Verify keys" — real validation, not just presence
 Owner flagged: "there are key placeholders but not actual keys in some of
 them." The Connectors screen only did presence checks (is the env var set?),

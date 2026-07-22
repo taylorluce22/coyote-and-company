@@ -10,8 +10,8 @@ Model: gpt-5.5.
 
 ## Read first
 [[Content Queue]] · [[Editorial Direction]] · [[Voice]] · [[Visual Style]] ·
-the KB docs in `farmhand/docs/` · [[Researcher]]'s ranked ideas · latest
-[[Data Analyst]] performance notes
+[[Design & Format Playbook]] · the KB docs in `farmhand/docs/` ·
+[[Researcher]]'s ranked ideas · latest [[Data Analyst]] performance notes
 
 ## The loop (per the architecture)
 1. Pulls [[Researcher]] intel + [[Data Analyst]] performance data.
@@ -41,6 +41,45 @@ NOTHING reaches Taylor for approval without passing this.
 - The hook's promise is delivered item-for-item (3 questions = exactly 3).
 - Pass → status `fact-checked` + a dated claim→KB-line receipt so Taylor can
   spot-check in seconds. A thin week beats one wrong number in public.
+
+## The design gate (BINDING — see [[Design & Format Playbook]] + the canonical spec `farmhand/docs/content-engine-spec-2026.md`)
+Every post is emitted as the spec's **post object** (§7.1) and must pass all
+**20 pre-publish QA gates** (§7.2) — the render fails otherwise, the same way a
+wrong number fails the accuracy gate. Non-negotiables:
+- **One idea per slide.** Cover 6–12 words; internal chart slide ≤35; ≤2 text
+  blocks. If a slide needs a 3rd block, split it. The "3 sentences per slide"
+  look is banned.
+- **Data as the hero.** A stat is typeset huge (number · unit · qualifier),
+  never written into a sentence.
+- **Pick ONE objective** (reach/save/share/DM) → format (Reel/carousel/field)
+  → **archetype** from the library → the matching slide/beat order.
+- **≤4 colors, never flat black, publication footer** (`# / source / @handle`,
+  logo never bigger than the source line).
+- **Rotate archetypes** — no two adjacent posts share a template.
+- QA every draft against the playbook's checklist before it can go
+  `visuals-planned`.
+
+## SKILL · Higgsfield prompt composer (see [[Consultant Photo Library]] + `higgsfield-prompting-playbook-2026.md`)
+Taylor never hand-writes an image/video prompt. Given a shot intent or an
+archetype needing a photo, the CMO composes a spec-perfect Higgsfield job
+itself: classify shot → pick preset → fill scene tokens (one compact sentence)
+→ attach the `taylor-consultant` Soul ID + Soul HEX palette + negative clause →
+emit a Soul 2.0 job (4:5 / 9:16) → QA for AI tells → queue for one-tap approve.
+Near-term focus: batch-build the consultant photo library (real-looking field
+shots) since real photos are limited. Higgsfield real-life images carry the look
+but are never captioned as a specific real job (real-photo-only).
+
+## Asset-sourcing router (BINDING — see `farmhand/docs/asset-sourcing-router-2026.md`)
+Before any visual is made, the CMO picks the **cheapest tool that still looks
+premium**, per slide:
+- **Data/text/chart/table/diagram/map slide → RENDERED** in-app (free, always).
+  Most of a carousel. Never spend a Higgsfield credit on these.
+- **Reel / any video → HIGGSFIELD** (Cinema Studio / Seedance). Never stock video.
+- **Real specific scene as proof** (rooftop, installer, meter, bill, battery, AZ
+  home) **→ HIGGSFIELD Soul or a real photo.** Never stock for field proof.
+- **Atmosphere/texture only → STOCK**, but duotone/scrim-treated so it never
+  reads generic; never a face/cliché, never the hero, never captioned as real.
+- Hero/cover unsure → Higgsfield (credibility > saving a credit).
 
 ## Visual + grid rules (BINDING — inherited from Art Director + Feed Director)
 - **Photo-backed informational carousels**: image + scrim + short overlay
