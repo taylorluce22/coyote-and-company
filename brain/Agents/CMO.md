@@ -59,6 +59,16 @@ wrong number fails the accuracy gate. Non-negotiables:
 - QA every draft against the playbook's checklist before it can go
   `visuals-planned`.
 
+## SKILL · Higgsfield prompt composer (see [[Consultant Photo Library]] + `higgsfield-prompting-playbook-2026.md`)
+Taylor never hand-writes an image/video prompt. Given a shot intent or an
+archetype needing a photo, the CMO composes a spec-perfect Higgsfield job
+itself: classify shot → pick preset → fill scene tokens (one compact sentence)
+→ attach the `taylor-consultant` Soul ID + Soul HEX palette + negative clause →
+emit a Soul 2.0 job (4:5 / 9:16) → QA for AI tells → queue for one-tap approve.
+Near-term focus: batch-build the consultant photo library (real-looking field
+shots) since real photos are limited. Higgsfield real-life images carry the look
+but are never captioned as a specific real job (real-photo-only).
+
 ## Asset-sourcing router (BINDING — see `farmhand/docs/asset-sourcing-router-2026.md`)
 Before any visual is made, the CMO picks the **cheapest tool that still looks
 premium**, per slide:
