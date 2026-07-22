@@ -56,7 +56,7 @@ export type Slide =
   | { a: "A08"; bg: Bg; eyebrow: string; label: string; bullets: { lead: string; body: string }[]; source?: string }
   | { a: "A10"; bg: Bg; eyebrow: string; myth: string; fact: string; verdict: string; source: string }
   | { a: "A14"; bg: Bg; title: string; cols: string[]; rows: { attr: string; cells: string[] }[]; bestCol: number; source: string }
-  | { a: "A09"; bg: "photo"; eyebrow: string; caption: string; micro: string }
+  | { a: "A09"; bg: "photo"; eyebrow: string; caption: string; hotWord?: string; micro: string }
   | { a: "A16"; bg: Bg; eyebrow: string; headline: string; recap: string[]; cta1: string; cta2: string };
 
 export interface DGPost {
@@ -85,6 +85,19 @@ export const SAMPLE_POSTS: DGPost[] = [
       { a: "A02", bg: "paper", title: "Every Arizona utility is asking for more.", standfirst: "2025–26 requested residential increase", rows: [{ label: "APS", pct: 100, value: "14%", hot: true }, { label: "TEP", pct: 100, value: "14%" }, { label: "SRP", pct: 17, value: "2.4%" }], ctx: "APS is yours — and it's asking the most.", source: "ACC filings · APS, TEP, SRP · 2026" },
       { a: "A10", bg: "paper", eyebrow: "STRAIGHT ANSWERS", myth: "Solar stopped paying in Arizona — they gutted net metering.", fact: "APS still credits 6.171¢ and locks your rate for 10 years.", verdict: "The math changed, not the answer. It's a battery question now.", source: "APS RCP · Docket E-01773A-25-0105" },
       { a: "A16", bg: "night", eyebrow: "THE BOTTOM LINE", headline: "No rate plan opts you out of the climb.", recap: ["APS asking ~14% — about $20/mo more.", "Export credit drops every September.", "The only hedge is owning your production."], cta1: "Send this to whoever pays your APS bill.", cta2: "Save it for the next one, too." },
+    ],
+  },
+  {
+    id: "three-questions",
+    pillar: "P4",
+    title: "3 questions before price",
+    objective: "save",
+    slides: [
+      { a: "A09", bg: "photo", eyebrow: "STRAIGHT ANSWERS", caption: "The 3 questions to ask before you talk price.", hotWord: "3 questions", micro: "@taylor.solar.az · Buckeye, AZ" },
+      { a: "A08", bg: "paper", eyebrow: "QUESTION 01", label: "WHO'S ON MY ROOF?", bullets: [{ lead: "Your crew or subs", body: "in-house installers answer for the work; subs disappear." }, { lead: "Every penetration", body: "ask how each roof hole is flashed — that's where leaks start." }] },
+      { a: "A08", bg: "night", eyebrow: "QUESTION 02", label: "WHAT RATE DID YOU ASSUME?", bullets: [{ lead: "APS ~6.2¢", body: "the real export credit — inflated numbers = fantasy savings." }, { lead: "SRP ~3.45¢", body: "very different math; make them show the plan they used." }], source: "APS RCP · SRP export schedules" },
+      { a: "A08", bg: "paper", eyebrow: "QUESTION 03", label: "WHO ANSWERS IN YEAR 5?", bullets: [{ lead: "Warranty is only as real", body: "as the company still around to honor it." }, { lead: "~100 AZ installers", body: "went bankrupt since 2023 — ask who services you after." }], source: "AZ solar market · 2023–26" },
+      { a: "A16", bg: "night", eyebrow: "THE BOTTOM LINE", headline: "Cheapest bid ≠ best deal.", recap: ["Who's on the roof, and how it's flashed.", "Which export rate the savings assume.", "Who answers the phone in year five."], cta1: "Save this before your next quote.", cta2: "In the Valley with quote questions? DM me." },
     ],
   },
   {

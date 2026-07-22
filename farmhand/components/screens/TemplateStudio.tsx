@@ -173,10 +173,16 @@ function SlideView({ s, idx, total }: { s: Slide; idx: number; total: number }) 
     case "A09":
       body = (
         <>
-          <Eyebrow text={s.eyebrow} bg={s.bg} />
-          <div style={{ marginTop: "auto", fontFamily: DISPLAY, fontWeight: 700, fontSize: 26, lineHeight: 1.1, letterSpacing: "-0.02em" }}>{s.caption}</div>
-          <div style={{ fontSize: 11, opacity: 0.7, marginTop: 10 }}>{s.micro}</div>
-          <div style={{ position: "absolute", top: 12, right: 14, fontSize: 7.5, letterSpacing: "0.16em", color: "rgba(255,255,255,0.32)", fontWeight: 700 }}>HIGGSFIELD PHOTO</div>
+          {/* bottom scrim per spec §A09: NIGHT 0→78% over the lower 46% */}
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 46%, rgba(16,24,32,0.55) 68%, rgba(16,24,32,0.92) 100%)" }} />
+          <div style={{ position: "relative", display: "flex", flexDirection: "column", height: "100%" }}>
+            <Eyebrow text={s.eyebrow} bg={s.bg} />
+            <div style={{ marginTop: "auto", fontFamily: DISPLAY, fontWeight: 800, fontSize: 27, lineHeight: 1.08, letterSpacing: "-0.025em", textAlign: "left" }}>
+              {s.hotWord ? s.caption.split(s.hotWord).flatMap((part, i) => i === 0 ? [part] : [<span key={i} style={{ color: DG.hot }}>{s.hotWord}</span>, part]) : s.caption}
+            </div>
+            <div style={{ fontSize: 11, opacity: 0.72, marginTop: 10 }}>{s.micro}</div>
+          </div>
+          <div style={{ position: "absolute", top: 12, right: 14, fontSize: 7.5, letterSpacing: "0.16em", color: "rgba(255,255,255,0.3)", fontWeight: 700 }}>HIGGSFIELD PHOTO</div>
         </>
       );
       break;
