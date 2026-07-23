@@ -23,7 +23,7 @@ Every shot must look like **a real iPhone photo someone caught in the moment** �
 never a posed portrait or a fashion/editorial shoot. Two hard rules on every prompt:
 1. **"shot on an iPhone, natural iPhone photo look, everyday snapshot"** — the phone-camera aesthetic is the target, not a polished camera/film look.
 2. **Candid, unposed, NOT looking at the camera** — the consultant is engaged in the actual thing (homeowner, tablet, roof, meter, bill), caught mid-action. No direct-to-lens gaze, no arms-crossed hero pose, no tailored blazer — plain approachable polo.
-- **Moodboard: `Digital camera`** for essentially all shots (closest to a candid phone photo). Avoid `Old smartphone` (too lo-fi/dated), `Film looks`/`Theatrical light` (too editorial — they created the "fashion shoot" look we're rejecting), and camera-gaze portrait poses.
+- **Moodboard split (verified by test):** **OUTDOOR shots → `Digital camera`** (natural light flatters — the driveway bio nailed it). **INDOOR shots (consult, bill, two-homeowners) → `Warm ambient`** for soft flattering light — `Digital camera` indoors gives a harsh on-camera-flash "party snapshot" look. Avoid `Old smartphone` (lo-fi), `Film looks`/`Theatrical light` (editorial/fashion), harsh flash, and mid-word open-mouth expressions (use "calmly explaining, relaxed natural face").
 - Body note: Soul ID locks the **face only**, not the physique — avoid full-body hero poses and crossed arms (worst for AI anatomy); favor natural mid-action framing.
 
 ## Step 2 — the realism settings (what stops it reading "AI")
