@@ -13,6 +13,11 @@ export const CONSULTANT_NEGATIVE =
     biggest "reads real" levers — phone-camera look + unposed moment. */
 export const IPHONE =
   "shot on an iPhone, looks like a photo straight from a personal camera roll, natural everyday phone snapshot, true-to-life color, slight natural imperfection, varied framing (sometimes wider, not always close up),";
+/** Locks the setting to the Arizona desert Southwest — "Arizona" alone drifts
+    to generic/European suburbs. Appended to every scene. */
+export const ARIZONA =
+  "set in a Phoenix Arizona desert suburb: tan stucco homes with tile roofs, xeriscape desert landscaping with gravel, cactus, agave and palo verde trees, dry desert ground, distant brown desert mountains, bright dry Southwest sunlight, no green grass lawns, unmistakably Arizona";
+
 export const CANDID =
   "candid and unposed, caught mid-moment, subject not looking at the camera, natural spontaneous expression, authentic everyday moment, not a posed portrait, not a fashion shoot, relaxed natural body pose, average lean build, arms relaxed at natural angles (never reaching toward the camera), a lean man with a natural full hairline, one clear main subject, wearing a plain clean single-color athletic polo (sleek minimal Lululemon-style, one muted solid color like navy, grey, black, or olive) with casual chinos, off-center environmental composition, caught in the middle of an activity, face at a natural angle or in profile, not centered, not a straight-on portrait";
 
@@ -67,5 +72,5 @@ export function composePrompt(shot: ConsultantShot): string {
   // naming unwanted things ("no logo", "no pattern") can summon them. Keep the
   // constraints phrased positively in IPHONE/CANDID/scene. CONSULTANT_NEGATIVE
   // is exported for a real negative-prompt field only (if one is available).
-  return `${IPHONE} ${CANDID}, ${shot.scene}.`;
+  return `${IPHONE} ${CANDID}, ${shot.scene}, ${ARIZONA}.`;
 }
