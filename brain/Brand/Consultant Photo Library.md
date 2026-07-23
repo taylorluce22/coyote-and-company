@@ -23,7 +23,9 @@ Every shot must look like **a real iPhone photo someone caught in the moment** �
 never a posed portrait or a fashion/editorial shoot. Two hard rules on every prompt:
 1. **"shot on an iPhone, natural iPhone photo look, everyday snapshot"** — the phone-camera aesthetic is the target, not a polished camera/film look.
 2. **Candid, unposed, NOT looking at the camera** — the consultant is engaged in the actual thing (homeowner, tablet, roof, meter, bill), caught mid-action. No direct-to-lens gaze, no arms-crossed hero pose, no tailored blazer — plain approachable polo.
-- **Moodboard split (verified by test):** **OUTDOOR shots → `Digital camera`** (natural light flatters — the driveway bio nailed it). **INDOOR shots (consult, bill, two-homeowners) → `Warm ambient`** for soft flattering light — `Digital camera` indoors gives a harsh on-camera-flash "party snapshot" look. Avoid `Old smartphone` (lo-fi), `Film looks`/`Theatrical light` (editorial/fashion), harsh flash, and mid-word open-mouth expressions (use "calmly explaining, relaxed natural face").
+- **Moodboard: `Digital camera` for ALL shots (verified).** `Warm ambient` produced fashion-editorial (cardigans, tailored coats, moody magazine light, posed) — do NOT use it. `Old smartphone` (lo-fi), `Film looks`/`Theatrical light` (editorial) also out. For indoors on `Digital camera`, add **"soft daylight from a window, no flash"** to the prompt to avoid the harsh party-flash look.
+- **Wardrobe LOCK:** a **plain solid-color polo** (light blue / grey) + casual pants, every shot. Negative-clause OUT: cardigan, blazer, sport coat, sweater, suit jacket, tie, black t-shirt.
+- **Poses:** proven simple ones only — walking, hand in pocket, holding one thing low at the side, looking down/away/up. NO hand-on-hip, crossed legs, pointing/gesturing, or crossed arms (all read posed or distort).
 - Body note: Soul ID locks the **face only**, not the physique — avoid full-body hero poses and crossed arms (worst for AI anatomy); favor natural mid-action framing.
 
 ## What actually works (learned from the test batch, 2026-07-23)
