@@ -89,6 +89,31 @@ export default function ConsultantLibrary() {
     setBusy(false);
   }
 
+  /** Import Higgsfield downloads (generated in Higgsfield's web UI with the
+      real Soul-ID character) straight into the app library so they feed the
+      DESERT GRID covers and reel openers. */
+  async function importFiles(files: FileList | null) {
+    if (!files || !files.length) return;
+    setBusy(true);
+    let n = 0;
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith("image/")) continue;
+      const obj = URL.createObjectURL(file);
+      try {
+        const p = await processImageURL(obj, 1200, 0.85);
+        if (p) {
+          await vaultAdd({ id: uid(), dataURL: p.dataURL, lum: p.lum, busy: p.busy, prompt: "imported from Higgsfield", label: `Consultant · ${file.name.replace(/\.[^.]+$/, "").slice(0, 40)}`, createdAt: Date.now() });
+          n++;
+        }
+      } finally {
+        URL.revokeObjectURL(obj);
+      }
+    }
+    vaultAll().then(setVault);
+    setMsg(`✓ Imported ${n} photo${n === 1 ? "" : "s"} into your library.`);
+    setBusy(false);
+  }
+
   const consultantImgs = vault.filter((v) => (v.label || "").startsWith("Consultant ·"));
 
   return (
@@ -115,9 +140,16 @@ export default function ConsultantLibrary() {
           style={{ cursor: busy || configured === false ? "default" : "pointer", fontSize: 12.5, fontWeight: 650, color: "#0B0A12", background: busy || configured === false ? "#6E6C82" : "#E8622C", border: "none", borderRadius: 10, padding: "10px 16px" }}>
           {busy ? "Generating…" : "Generate the library (12 shots)"}
         </button>
+        <label style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 650, color: "#F4F3F8", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 10, padding: "10px 16px" }}>
+          Import photos ↑
+          <input type="file" accept="image/*" multiple onChange={(e) => importFiles(e.target.files)} style={{ display: "none" }} />
+        </label>
         {configured === false && <span style={{ fontSize: 11.5, color: "#FFC23D" }}>Higgsfield not configured — add API keys in Vercel.</span>}
         {msg && <span style={{ fontSize: 11.5, color: "#A6A4B8" }}>{msg}</span>}
       </div>
+      <p style={{ fontSize: 11, color: "#6E6C82", lineHeight: 1.5, margin: "-6px 0 16px", maxWidth: "72ch" }}>
+        <b style={{ color: "#8B89A0" }}>For your real likeness:</b> generate the shots in Higgsfield&apos;s own Image tool with your <code>taylor-consultant</code> character selected (Soul ID isn&apos;t API-accessible), then <b>Import photos</b> here to bring them into the library. The in-app Generate makes on-brand consultant scenes without your face.
+      </p>
 
       {/* shot grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 14 }}>
