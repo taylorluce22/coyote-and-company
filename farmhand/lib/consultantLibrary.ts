@@ -14,7 +14,7 @@ export const CONSULTANT_NEGATIVE =
 export const IPHONE =
   "shot on an iPhone, looks like a photo straight from a personal camera roll, natural everyday phone snapshot, true-to-life color, slight natural imperfection, varied framing (sometimes wider, not always close up),";
 export const CANDID =
-  "candid and unposed, caught mid-moment, subject not looking at the camera, natural spontaneous expression, authentic everyday moment, not a posed portrait, not a fashion shoot, relaxed natural body pose, average lean build, arms relaxed at natural angles (never reaching toward the camera), wearing a plain solid-color athletic polo, sleek and minimal like a Lululemon performance polo (collared or collarless), one muted solid color with absolutely no pattern, print, or graphics, with casual chinos or pants, off-center environmental composition, caught in the middle of an activity, face at a natural angle or in profile, not centered, not a straight-on portrait";
+  "candid and unposed, caught mid-moment, subject not looking at the camera, natural spontaneous expression, authentic everyday moment, not a posed portrait, not a fashion shoot, relaxed natural body pose, average lean build, arms relaxed at natural angles (never reaching toward the camera), a lean man with a natural full hairline, one clear main subject, wearing a plain clean single-color athletic polo (sleek minimal Lululemon-style, one muted solid color like navy, grey, black, or olive) with casual chinos, off-center environmental composition, caught in the middle of an activity, face at a natural angle or in profile, not centered, not a straight-on portrait";
 
 /** Preset → the aesthetic phrase baked into the prompt (no style_id needed).
     All lean candid/everyday, not editorial-glossy. */
@@ -63,5 +63,9 @@ export const CONSULTANT_SHOTS: ConsultantShot[] = [
  * Deliberately compact — no "8k/hyperreal" tokens (those are the AI tell).
  */
 export function composePrompt(shot: ConsultantShot): string {
-  return `${IPHONE} ${CANDID}, ${shot.scene}. ${CONSULTANT_NEGATIVE}`;
+  // Positive-only: Higgsfield's Soul prompt field is NOT a negative prompt —
+  // naming unwanted things ("no logo", "no pattern") can summon them. Keep the
+  // constraints phrased positively in IPHONE/CANDID/scene. CONSULTANT_NEGATIVE
+  // is exported for a real negative-prompt field only (if one is available).
+  return `${IPHONE} ${CANDID}, ${shot.scene}.`;
 }
