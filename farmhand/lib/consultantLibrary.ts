@@ -14,7 +14,7 @@ export const CONSULTANT_NEGATIVE =
 export const IPHONE =
   "shot on an iPhone, natural iPhone photo look, everyday phone snapshot, true-to-life color, slight natural imperfection,";
 export const CANDID =
-  "candid and unposed, caught mid-moment, subject not looking at the camera, natural spontaneous expression, authentic everyday moment, not a posed portrait, not a fashion shoot, relaxed natural body pose, average lean build, arms relaxed at natural angles (never reaching toward the camera), wearing a plain solid-color polo shirt and casual pants, everyday clothing";
+  "candid and unposed, caught mid-moment, subject not looking at the camera, natural spontaneous expression, authentic everyday moment, not a posed portrait, not a fashion shoot, relaxed natural body pose, average lean build, arms relaxed at natural angles (never reaching toward the camera), wearing a plain solid-color polo shirt and casual pants, everyday clothing, off-center environmental composition, caught in the middle of an activity, face at a natural angle or in profile, not centered, not a straight-on portrait";
 
 /** Preset → the aesthetic phrase baked into the prompt (no style_id needed).
     All lean candid/everyday, not editorial-glossy. */
@@ -51,6 +51,9 @@ export const CONSULTANT_SHOTS: ConsultantShot[] = [
   { id: "wide", label: "Wide, at his home", job: "environmental", preset: "DigitalCamera", aspect: "3:4", scene: "a solar consultant standing in the yard looking up at the rooftop solar array on a modern desert home, one hand shading his eyes, golden hour, wide environmental shot, not looking at the camera" },
   { id: "homeowners2", label: "Consult · two homeowners", job: "the consult moment", preset: "DigitalCamera", aspect: "3:4", scene: "a solar consultant in a plain polo standing beside two older homeowners, pointing at a report on an iPad and calmly explaining it with a relaxed natural expression, the two homeowners looking at the screen with natural focused expressions, not big posed smiles, soft daylight from a nearby window, natural light, no flash inside a Southwest home" },
   { id: "powerwall", label: "At the Powerwall (in action)", job: "field / product", preset: "DigitalCamera", aspect: "3:4", scene: "a solar consultant in a plain polo, athletic shorts, and running-style sneakers standing beside a wall-mounted Tesla Powerwall on the exterior stucco wall of an Arizona home, caught mid-action at work looking at the unit, face turned away and not necessarily visible, bright natural daylight, candid" },
+  { id: "laptop", label: "Working on a MacBook", job: "at-work candid", preset: "DigitalCamera", aspect: "3:4", scene: "a solar consultant sitting at a kitchen table working on an open MacBook laptop, looking at the screen in profile, off to one side of the frame, relaxed, soft daylight from a window, environmental candid" },
+  { id: "training", label: "Presenting at a training", job: "authority / teaching", preset: "DigitalCamera", aspect: "3:4", scene: "a solar consultant standing to one side at the front of a room, presenting to a small group of people seated with their backs to the camera, gesturing naturally toward a screen, caught mid-presentation, natural indoor light, wide environmental shot, he is not centered" },
+  { id: "phone-profile", label: "On the phone, in profile", job: "candid moment", preset: "DigitalCamera", aspect: "3:4", scene: "a solar consultant standing outdoors looking down at his phone in profile, positioned off to one side of the frame, relaxed, warm afternoon daylight, a solar-equipped home in the background" },
 ];
 
 /**
