@@ -26,6 +26,17 @@ never a posed portrait or a fashion/editorial shoot. Two hard rules on every pro
 - **Moodboard split (verified by test):** **OUTDOOR shots → `Digital camera`** (natural light flatters — the driveway bio nailed it). **INDOOR shots (consult, bill, two-homeowners) → `Warm ambient`** for soft flattering light — `Digital camera` indoors gives a harsh on-camera-flash "party snapshot" look. Avoid `Old smartphone` (lo-fi), `Film looks`/`Theatrical light` (editorial/fashion), harsh flash, and mid-word open-mouth expressions (use "calmly explaining, relaxed natural face").
 - Body note: Soul ID locks the **face only**, not the physique — avoid full-body hero poses and crossed arms (worst for AI anatomy); favor natural mid-action framing.
 
+## What actually works (learned from the test batch, 2026-07-23)
+The reliable formula — nearly always lands: **solo subject · outdoor · natural
+motion (walking/standing) · one hand doing ONE simple thing low at his side
+(tablet/phone/folder) or in a pocket · looking down / away / up, never at the
+camera.** These come out clean.
+**What fails** (regenerate-heavy, distortion-prone): multiple people, pointing/
+gesturing at someone (arm reaches → giant-arm distortion), crouching, busy
+indoor scenes with hands mid-gesture. So: **bias the library to solo simple
+poses.** When people/interaction is needed, keep it to ONE homeowner, frame
+WIDE, both looking at the same thing (tablet/roof), zero pointing.
+
 ## Step 2 — the realism settings (what stops it reading "AI")
 - **Model:** Soul 2.0, **with your Soul ID**.
 - **Moodboard by shot (actual Higgsfield web-UI names, verified 2026-07-23):**
