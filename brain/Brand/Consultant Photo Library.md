@@ -20,7 +20,14 @@ Higgsfield → **Soul ID** → upload **20+ photos of Taylor**:
 
 ## Step 2 — the realism settings (what stops it reading "AI")
 - **Model:** Soul 2.0, **with your Soul ID**.
-- **Preset by shot:** `iPhone` or `Digital Camera` for candid/authentic (read most real) · `Realistic` for clean authority shots · `Warm Ambient` for indoor consult scenes. **Avoid** loud/cinematic presets and "8k/hyperreal" tokens — those are the AI tell.
+- **Moodboard by shot (actual Higgsfield web-UI names, verified 2026-07-23):**
+  clean authority → **General** · indoor consult → **Warm ambient** · candid/real
+  (driveway, walk, truck, portrait) → **Digital camera** · subtle cinematic
+  (battery, wide) → **Film looks**. **Avoid** `Old smartphone` (too lo-fi/dated)
+  and `Theatrical light` (too dramatic/staged) — both break "reads real." No
+  "8k/hyperreal" tokens. (Soul ID / character is selectable ONLY in Higgsfield's
+  own Image UI — not via the platform API — so likeness shots are made there,
+  then imported into the app's Consultant Library.)
 - **Wardrobe (keep consistent):** clean solid polo or quarter-zip (brand-ish), jeans/work pants. Approachable-professional, not corporate.
 - **Light:** golden hour, open shade, or window light. Never harsh noon on the face.
 - **Negative clause on every prompt:**
