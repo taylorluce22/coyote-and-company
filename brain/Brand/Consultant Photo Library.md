@@ -24,7 +24,7 @@ never a posed portrait or a fashion/editorial shoot. Two hard rules on every pro
 1. **"shot on an iPhone, natural iPhone photo look, everyday snapshot"** — the phone-camera aesthetic is the target, not a polished camera/film look.
 2. **Candid, unposed, NOT looking at the camera** — the consultant is engaged in the actual thing (homeowner, tablet, roof, meter, bill), caught mid-action. No direct-to-lens gaze, no arms-crossed hero pose, no tailored blazer — plain approachable polo.
 - **Moodboard: `Digital camera` for ALL shots (verified).** `Warm ambient` produced fashion-editorial (cardigans, tailored coats, moody magazine light, posed) — do NOT use it. `Old smartphone` (lo-fi), `Film looks`/`Theatrical light` (editorial) also out. For indoors on `Digital camera`, add **"soft daylight from a window, no flash"** to the prompt to avoid the harsh party-flash look.
-- **Wardrobe LOCK:** a **plain solid-color polo** (light blue / grey) + casual pants, every shot. Negative-clause OUT: cardigan, blazer, sport coat, sweater, suit jacket, tie, black t-shirt.
+- **Wardrobe:** a **modern athletic golf polo** — Lululemon-style performance polo, collared OR collarless, solid color (black is good; vary colors across shots) + casual chinos/pants. Negative-clause OUT: cardigan, blazer, sport coat, sweater, suit jacket, tie, and a black **t-shirt** (a black *polo* is fine).
 - **Poses:** proven simple ones only — walking, hand in pocket, holding one thing low at the side, looking down/away/up. NO hand-on-hip, crossed legs, pointing/gesturing, or crossed arms (all read posed or distort).
 - Body note: Soul ID locks the **face only**, not the physique — avoid full-body hero poses and crossed arms (worst for AI anatomy); favor natural mid-action framing.
 

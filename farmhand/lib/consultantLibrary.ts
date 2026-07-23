@@ -14,7 +14,7 @@ export const CONSULTANT_NEGATIVE =
 export const IPHONE =
   "shot on an iPhone, natural iPhone photo look, everyday phone snapshot, true-to-life color, slight natural imperfection,";
 export const CANDID =
-  "candid and unposed, caught mid-moment, subject not looking at the camera, natural spontaneous expression, authentic everyday moment, not a posed portrait, not a fashion shoot, relaxed natural body pose, average lean build, arms relaxed at natural angles (never reaching toward the camera), wearing a plain solid-color polo shirt and casual pants, everyday clothing, off-center environmental composition, caught in the middle of an activity, face at a natural angle or in profile, not centered, not a straight-on portrait";
+  "candid and unposed, caught mid-moment, subject not looking at the camera, natural spontaneous expression, authentic everyday moment, not a posed portrait, not a fashion shoot, relaxed natural body pose, average lean build, arms relaxed at natural angles (never reaching toward the camera), wearing a modern athletic golf polo (a sleek Lululemon-style performance polo, collared or collarless, solid color) with casual chinos or pants, off-center environmental composition, caught in the middle of an activity, face at a natural angle or in profile, not centered, not a straight-on portrait";
 
 /** Preset → the aesthetic phrase baked into the prompt (no style_id needed).
     All lean candid/everyday, not editorial-glossy. */
