@@ -24,6 +24,23 @@ export default function ConsultantLibrary() {
   const [busy, setBusy] = useState(false);
   const [vault, setVault] = useState<VaultImage[]>([]);
   const [configured, setConfigured] = useState<boolean | null>(null);
+  const [copied, setCopied] = useState<string>("");
+
+  /** The real bridge to the Higgsfield browser: copy the exact composed prompt so
+      rule changes in lib/consultantLibrary.ts flow to the manual generate path. */
+  async function copyPrompt(shot: ConsultantShot) {
+    const text = composePrompt(shot);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch {}
+      document.body.removeChild(ta);
+    }
+    setCopied(shot.id);
+    setTimeout(() => setCopied((c) => (c === shot.id ? "" : c)), 1600);
+  }
 
   useEffect(() => {
     try { setSoulId(localStorage.getItem(SOUL_KEY) || ""); } catch {}
@@ -121,6 +138,9 @@ export default function ConsultantLibrary() {
       <p style={{ fontSize: 13, color: "#A6A4B8", lineHeight: 1.55, maxWidth: "72ch", marginTop: 0, marginBottom: 16 }}>
         The system builds your consultant photo library — real-looking field shots for @taylorlucesolar — so the feed reads
         established while your real photos are limited. Each shot runs the CMO&apos;s Higgsfield prompt skill; you write nothing.
+        <br /><b style={{ color: "#F2A63C" }}>How to use:</b> in Higgsfield, select your <code>taylor-consultant</code> character + the
+        <code> arizona real estate and solar</code> moodboard, then <b>Copy prompt</b> below and paste it in. When the rules improve, the
+        copied prompt updates automatically — that&apos;s how changes reach Higgsfield.
       </p>
 
       {/* Soul ID */}
@@ -165,9 +185,13 @@ export default function ConsultantLibrary() {
               <div style={{ padding: "9px 11px" }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#F4F3F8" }}>{shot.label}</div>
                 <div style={{ fontSize: 10, color: "#8B89A0", marginTop: 1 }}>{shot.job} · {shot.preset}</div>
+                <button onClick={() => copyPrompt(shot)}
+                  style={{ marginTop: 8, width: "100%", cursor: "pointer", fontSize: 11, fontWeight: 650, color: copied === shot.id ? "#41D98A" : "#0B0A12", background: copied === shot.id ? "rgba(65,217,138,0.15)" : "#F2A63C", border: "none", borderRadius: 7, padding: "6px 0" }}>
+                  {copied === shot.id ? "✓ copied — paste in Higgsfield" : "Copy prompt for Higgsfield"}
+                </button>
                 <button onClick={() => !busy && generateShot(shot)} disabled={busy || st === "rendering" || configured === false}
-                  style={{ marginTop: 8, width: "100%", cursor: busy || st === "rendering" ? "default" : "pointer", fontSize: 11, fontWeight: 600, color: st === "done" ? "#41D98A" : "#F4F3F8", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7, padding: "6px 0" }}>
-                  {st === "done" ? "✓ done · regenerate" : st === "rendering" ? "…" : "Generate"}
+                  style={{ marginTop: 6, width: "100%", cursor: busy || st === "rendering" ? "default" : "pointer", fontSize: 10.5, fontWeight: 600, color: st === "done" ? "#41D98A" : "#8B89A0", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7, padding: "5px 0" }}>
+                  {st === "done" ? "✓ done · regenerate (API)" : st === "rendering" ? "…" : "Generate in-app (API, no face)"}
                 </button>
               </div>
             </div>
