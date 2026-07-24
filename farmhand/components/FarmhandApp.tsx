@@ -21,6 +21,7 @@ import Connectors from "./screens/Connectors";
 import TemplateStudio from "./screens/TemplateStudio";
 import ConsultantLibrary from "./screens/ConsultantLibrary";
 import PacketExport from "./screens/PacketExport";
+import Progress from "./screens/Progress";
 
 function Screen() {
   const { state } = useStore();
@@ -41,6 +42,8 @@ function Screen() {
       return <KnowledgeVault />;
     case "content":
       return <Content />;
+    case "progress":
+      return <Progress />;
     case "packet":
       return <PacketExport />;
     case "studio":
