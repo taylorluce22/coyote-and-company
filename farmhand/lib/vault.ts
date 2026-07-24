@@ -22,11 +22,24 @@ export interface VaultImage {
 const DB_NAME = "farmhand-vault";
 const STORE = "images";
 
-function openDb(): Promise<IDBDatabase | null> {
+/**
+ * Operator multi-client mode: each client's images live in their own IndexedDB
+ * so nothing bleeds between accounts (E1-1). "default" keeps the original DB
+ * name so existing images are untouched; other clients get a suffixed DB. The
+ * active client is a module variable the store sets on hydrate/switch — every
+ * vault op flows through openDb(), so this one choke point isolates them all.
+ */
+let activeClient = "default";
+export function setVaultClient(id: string) {
+  activeClient = id || "default";
+}
+const dbNameFor = (id: string) => (id === "default" ? DB_NAME : `${DB_NAME}::${id}`);
+
+function openDb(client: string = activeClient): Promise<IDBDatabase | null> {
   return new Promise((resolve) => {
     try {
       if (typeof indexedDB === "undefined") return resolve(null);
-      const req = indexedDB.open(DB_NAME, 1);
+      const req = indexedDB.open(dbNameFor(client), 1);
       req.onupgradeneeded = () => {
         if (!req.result.objectStoreNames.contains(STORE)) {
           req.result.createObjectStore(STORE, { keyPath: "id" });
@@ -82,6 +95,47 @@ export async function vaultAll(): Promise<VaultImage[]> {
       db.close();
       resolve([]);
     }
+  });
+}
+
+/** Read a specific client's vault (for exporting a client bundle). */
+export async function vaultAllFor(client: string): Promise<VaultImage[]> {
+  const db = await openDb(client);
+  if (!db) return [];
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE, "readonly");
+      const req = tx.objectStore(STORE).getAll();
+      req.onsuccess = () => { db.close(); resolve(((req.result || []) as VaultImage[]).filter((v) => v && typeof v.dataURL === "string")); };
+      req.onerror = () => { db.close(); resolve([]); };
+    } catch { db.close(); resolve([]); }
+  });
+}
+
+/** Write many images into a specific client's vault (for importing a bundle). */
+export async function vaultAddManyTo(client: string, imgs: VaultImage[]): Promise<number> {
+  const db = await openDb(client);
+  if (!db) return 0;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE, "readwrite");
+      const store = tx.objectStore(STORE);
+      let n = 0;
+      imgs.forEach((img) => { if (img && typeof img.dataURL === "string") { store.put(img); n++; } });
+      tx.oncomplete = () => { db.close(); resolve(n); };
+      tx.onerror = tx.onabort = () => { db.close(); resolve(0); };
+    } catch { db.close(); resolve(0); }
+  });
+}
+
+/** Drop a client's entire vault DB (when the client is removed). */
+export async function deleteVaultDb(client: string): Promise<void> {
+  return new Promise((resolve) => {
+    try {
+      if (typeof indexedDB === "undefined") return resolve();
+      const req = indexedDB.deleteDatabase(dbNameFor(client));
+      req.onsuccess = req.onerror = req.onblocked = () => resolve();
+    } catch { resolve(); }
   });
 }
 

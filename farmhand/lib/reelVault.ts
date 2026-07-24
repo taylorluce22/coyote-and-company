@@ -29,11 +29,19 @@ export interface VaultReel {
 const DB_NAME = "farmhand-reel-vault";
 const STORE = "reels";
 
+/** Operator multi-client mode: reels are isolated per client, same pattern as
+    the image vault. "default" keeps the original DB name. */
+let activeClient = "default";
+export function setReelVaultClient(id: string) {
+  activeClient = id || "default";
+}
+const dbNameFor = (id: string) => (id === "default" ? DB_NAME : `${DB_NAME}::${id}`);
+
 function openDb(): Promise<IDBDatabase | null> {
   return new Promise((resolve) => {
     try {
       if (typeof indexedDB === "undefined") return resolve(null);
-      const req = indexedDB.open(DB_NAME, 1);
+      const req = indexedDB.open(dbNameFor(activeClient), 1);
       req.onupgradeneeded = () => {
         if (!req.result.objectStoreNames.contains(STORE)) {
           req.result.createObjectStore(STORE, { keyPath: "id" });
