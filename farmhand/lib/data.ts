@@ -319,6 +319,7 @@ export const FARM_CLUSTERS = [
 
 export const NAV_DEFS = [
   { id: "command", label: "Command Center", color: "#A855F7", glyph: "◎" },
+  { id: "progress", label: "Launch Progress", color: "#41D98A", glyph: "▣" },
   { id: "agents", label: "Agents", color: "#7DD3FC", glyph: "✦" },
   { id: "tasks", label: "Tasks", color: "#FFC23D", glyph: "▤" },
   { id: "schedule", label: "Schedule", color: "#C084FC", glyph: "◷" },
