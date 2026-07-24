@@ -11,6 +11,7 @@ import { ideasFor } from "@/lib/strategy";
 import Performance from "@/components/Performance";
 import type { StrategyProfile } from "@/lib/strategy";
 import { verticalOf } from "@/lib/verticals";
+import { offNarrative } from "@/lib/narrative";
 
 const UTILITY_COLOR: Record<string, string> = { APS: "#FFC23D", SRP: "#26E0C8", both: "#C9A8FF", general: "#8B89A0" };
 const INTEL_TTL_MS = 12 * 60 * 60 * 1000; // refresh live intel twice a day
@@ -47,6 +48,11 @@ function EnergyIntel() {
   const stale = intel ? Date.now() - intel.fetchedAt > INTEL_TTL_MS : false;
   const ageH = intel ? Math.round((Date.now() - intel.fetchedAt) / 3600000) : null;
 
+  // Editorial narrative gate applied at render too, so off-narrative angles
+  // persisted before the gate existed (reassurance framing: "threat removed",
+  // "saving households $X/yr") never surface again. See lib/narrative.ts.
+  const items = intel ? intel.items.filter((it) => !offNarrative(it.angle)) : [];
+
   return (
     <div className="fh-glass" style={{ borderRadius: 14, padding: "15px 17px", marginBottom: 18, border: "1px solid rgba(255,194,61,0.25)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -68,9 +74,9 @@ function EnergyIntel() {
         </button>
       </div>
 
-      {intel && intel.items.length > 0 && (
+      {intel && items.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 9, marginTop: 12 }}>
-          {intel.items.map((it, i) => {
+          {items.map((it, i) => {
             const uc = UTILITY_COLOR[it.utility] || UTILITY_COLOR.general;
             return (
               <div key={`${it.url}-${i}`} style={{ padding: "11px 13px", background: "rgba(0,0,0,0.24)", borderRadius: 11, border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -98,7 +104,7 @@ function EnergyIntel() {
         </div>
       )}
 
-      {intel && intel.items.length === 0 && !loading && (
+      {intel && items.length === 0 && !loading && (
         <div style={{ fontSize: 11.5, color: "#77758C", marginTop: 10 }}>No fresh intel this cycle — try a refresh in a few hours.</div>
       )}
 

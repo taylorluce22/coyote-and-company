@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { offNarrative } from "@/lib/narrative";
 
 /**
  * Live source research via Perplexity's online model.
@@ -66,13 +67,25 @@ export async function GET(req: NextRequest) {
       `notable residential solar or home-battery developments relevant to homeowners. Use national AND local ` +
       `sources (AZ Central, Phoenix Business Journal, AZ Corporation Commission, utility announcements, energy ` +
       `trade press). ` +
+      `EDITORIAL LENS (apply to every angle): this intel feeds a solar consultant's content engine whose mission ` +
+      `is educating homeowners on rising electricity prices and the tactics utilities use to raise bills — rate ` +
+      `cases, surcharges, fees, plan changes — with solar + battery ownership as the homeowner's hedge. Every ` +
+      `angle must BUILD urgency about rising costs or EXPOSE a utility tactic, while staying 100% factually ` +
+      `accurate. NEVER write an angle that reassures homeowners — that a threat is gone, that bills may fall, or ` +
+      `that courts/regulators have it handled. When news is nominally good for ratepayers, reframe it honestly as ` +
+      `evidence of what utilities keep attempting. Examples: a court voiding a utility surcharge → "APS put an ` +
+      `unlawful surcharge on solar customers and a court had to stop them — this is how utilities operate"; an ` +
+      `Attorney General fighting a 14% hike down to 3% → "even the BEST case on the table is another rate ` +
+      `increase — the only argument is how big." If an item genuinely cannot be framed to build the case for ` +
+      `going solar without distorting the facts, EXCLUDE it. ` +
       `Respond with ONLY a JSON array, no prose, no markdown fences. Each element: ` +
       `{"headline": "the actual news, specific", ` +
       `"summary": "2 sentences with the concrete facts and numbers", ` +
       `"source": "publication name", "url": "direct link to the article", ` +
       `"date": "how recent, e.g. 3d ago or Jul 2", ` +
       `"utility": "APS"|"SRP"|"both"|"general", ` +
-      `"angle": "one line: how a local solar pro turns this into a homeowner-facing post — educational, not salesy"}. ` +
+      `"angle": "one line homeowner-facing post angle that names the pain (rising bills, new charges) or the ` +
+      `tactic (what the utility tried), with the concrete number — never reassurance"}. ` +
       `Up to 8 items, most consequential first. Only include real articles whose links you can cite.`;
     try {
       const r = await fetch("https://api.perplexity.ai/chat/completions", {
@@ -111,6 +124,9 @@ export async function GET(req: NextRequest) {
           angle: String(x.angle ?? "").slice(0, 300),
         }))
         .filter((x) => x.headline.length > 5 && /^https?:\/\//.test(x.url))
+        // editorial backstop: drop any angle that slipped past the prompt gate
+        // reading as reassurance instead of pain/tactic (see lib/narrative.ts)
+        .filter((x) => !offNarrative(x.angle))
         .slice(0, 8);
       return NextResponse.json({ configured: true, items });
     } catch {

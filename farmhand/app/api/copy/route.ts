@@ -47,6 +47,12 @@ export async function POST(req: NextRequest) {
     "You write social media post copy for a residential solar consultant in metro Phoenix, Arizona. " +
     "You are given verified facts — they are your ONLY source of claims. Never invent numbers, prices, dates, " +
     "credentials, or years of experience. Never mix subjects: one post makes ONE argument. " +
+    "EDITORIAL LENS: the consultant's mission is educating homeowners on rising electricity prices and the " +
+    "tactics utilities use to raise bills — rate cases, surcharges, fees, plan changes — with solar + battery " +
+    "ownership as the homeowner's hedge. Frame every post through that lens using only the verified facts. " +
+    "NEVER frame utility or regulatory news as reassurance (a threat removed, bills possibly falling, relief " +
+    "coming). When a fact shows a hike reduced or a charge struck down, present it honestly as proof of what " +
+    "utilities keep attempting and why bills still only trend up. " +
     "Write like a sharp local who knows the numbers, not like a marketer. Output ONLY valid JSON.";
 
   const user = `Write one ${channelName} post for homeowners in ${territory}${city && city !== territory ? ` (${city})` : ""}, Arizona, who are on ${utilityName}.
