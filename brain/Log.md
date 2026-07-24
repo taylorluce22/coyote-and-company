@@ -9,6 +9,16 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-24 · Removed the fake "Connections" demo card in Settings
+First real friction-log catch from the launch run: the owner opened
+Settings, saw the demo Connections card (hardcoded "connected" for
+Claude/Perplexity/Instagram/Facebook), and reasonably took it as the key
+check passing — but Instagram publishing isn't even wired. Exactly the trap
+the checklist note warned about. Fix: SET_CONNECTIONS deleted from
+`lib/data.ts`; the Settings card now explains and deep-links to the real
+Connectors screen (live API probes). Build green, shipped. Lesson for the
+Dev agent: no UI element may claim a status it didn't verify.
+
 ## 2026-07-24 · APS-only pivot: SRP + East Valley removed, all-West-Valley mode
 Owner decision during territory setup: "run all west valley, don't worry
 about SRP — it doesn't pencil, remove all SRP data completely and all east

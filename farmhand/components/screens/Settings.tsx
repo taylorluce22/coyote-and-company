@@ -5,7 +5,7 @@ import { cleanSlate, restoreDemo, useStore } from "@/lib/store";
 import type { ClientMeta, ClientBundle, ClientId } from "@/lib/clients";
 import { monthUsage, imageAllowance, imageCap, setImageCap, dollars, UNIT_COST_CENTS, type MonthUsage } from "@/lib/meter";
 import { Switch } from "@/components/ui";
-import { SET_VOICE, SET_IMG_PREFS, SET_CONNECTIONS } from "@/lib/data";
+import { SET_VOICE, SET_IMG_PREFS } from "@/lib/data";
 import { DEFAULT_STRATEGY, SOLAR_TERRITORIES, type StrategyProfile, type Territory } from "@/lib/strategy";
 import { AZ_TERRITORY_CATALOG, TERRITORY_HEXES, UTILITY_COLOR, UTILITY_LABEL, type AzTerritoryDef, type TerritoryUtility } from "@/lib/azTerritories";
 import type { LeadTraining } from "@/lib/hunt";
@@ -505,15 +505,16 @@ export default function Settings() {
       </Card>
 
       <Card title="Connections">
-        {SET_CONNECTIONS.map((c) => (
-          <div key={c.name} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-            <span style={{ flex: 1, fontSize: 13.5, color: "#D8D6E6" }}>{c.name}</span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 600, color: c.color }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: c.color, boxShadow: `0 0 7px ${c.color}` }} />
-              {c.status}
-            </span>
-          </div>
-        ))}
+        <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.55, marginBottom: 10 }}>
+          Live key checks moved to the <b style={{ color: "#D8D6E6" }}>Connectors</b> screen — it probes every
+          integration&apos;s API for real (this card used to show demo statuses and fooled people).
+        </div>
+        <button
+          onClick={() => set({ tab: "connectors" })}
+          style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#04110E", background: "#7DD3FC", border: "none", borderRadius: 9, padding: "9px 16px" }}
+        >
+          Open Connectors ⧉
+        </button>
       </Card>
     </div>
   );
