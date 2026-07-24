@@ -126,9 +126,9 @@ export function draftReply(opts: {
   const data = opts.tone.includes("data-driven") || opts.tone.includes("sharp");
 
   if (opts.vertical === "solar") {
-    // utility-aware knowledge: detect APS vs SRP from the thread and pull the
-    // matching real numbers (rates, export credits, demand charges, VPP pay)
-    // so the reply reads like local expertise, not a generic solar pitch
+    // utility-aware knowledge: confirm the thread is APS and pull the real
+    // numbers (rates, export credits, VPP pay) so the reply reads like local
+    // expertise; anything not clearly APS gets generic AZ framing instead
     const u = azUtilityIn(opts.excerpt);
     let sbody = "";
     if (tags.includes("quote-shopping")) {

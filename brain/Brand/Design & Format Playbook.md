@@ -28,7 +28,7 @@ text is cut, the visual is doing too little.
 - **Reels → reach/discovery** (especially non-followers). First frame must land *topic + stakes + audience + location* in ~1 sec.
 - **Carousels → authority + saves.** They behave like mini-documents / reference sheets.
 - **Field / story content → conversion to DMs.** Human, local, personality.
-- The topic stack already carries built-in tension (APS 4–7pm peak, SRP 6–9/5–10pm, 430 Maricopa heat deaths in 2025, data-center grid strain) — we don't manufacture urgency, we package it cleanly.
+- The topic stack already carries built-in tension (APS 4–7pm peak, 430 Maricopa heat deaths in 2025, data-center grid strain) — we don't manufacture urgency, we package it cleanly.
 
 ## Template archetype library (rotate — never one look)
 Reproduction specs distilled from Visual Capitalist, Sherwood/Chartr, Statista,
@@ -39,7 +39,7 @@ Information is Beautiful, The Pudding, Brew Markets. Match message → archetype
 |---|---|---|---|
 | 1 | **Monument poster** (Visual Capitalist) | 4:5, 12-col grid. Eyebrow top-left, stacked headline upper third, one dominant graphic/map 55–70% of canvas, callouts around perimeter, thin source footer. Condensed heavy display + clean sans. 1 bg / 1 data hue / 1 accent. | Annual "where your bill goes", utility breakdowns, statewide grid maps |
 | 2 | **Single-chart headline card** (Sherwood/Chartr) | One chart fills 70–80%. Headline top-left 2–4 lines, subtitle w/ units+timeframe under it. Direct-label series (no legend). Brand + source in opposite bottom corners. Off-white/light-gray bg. | One sharp stat, one trend, one clear winner/loser |
-| 3 | **Small-multiple benchmark** (Statista) | Title block, then 2×2 or 1×4 mini-charts, identical axes/labels, one accent family. Source under grid, logo lower-right. | APS vs SRP structures, 4 ZIP bill scenarios, battery ROI scenarios |
+| 3 | **Small-multiple benchmark** (Statista) | Title block, then 2×2 or 1×4 mini-charts, identical axes/labels, one accent family. Source under grid, logo lower-right. | APS plan structures, 4 ZIP bill scenarios, battery ROI scenarios |
 | 4 | **Source-first line chart** (Our World in Data) | Restrained: headline+chart title above, chart fills most of frame, **source line prominent**, direct labels, thin gridlines, generous whitespace. | Long-run trends: price history, heat deaths, cooling-load growth |
 | 5 | **Annotated brevity bar** (Axios) | Short header, simple chart, a few tactical annotations doing the storytelling. 1–2 emphasized values. Explanation lives in caption/next slide. | Short local data hits — "why your summer bill feels worse" |
 | 6 | **Map + takeaway strip** (Axios) | Map/choropleth center-right 60%, title+1–2 sentence frame above/left, source strip bottom. One hue scale, strip counties/roads, legible at phone size. | Service-territory maps, hottest ZIPs, solar potential, data-center siting |
@@ -66,7 +66,7 @@ Information is Beautiful, The Pudding, Brew Markets. Match message → archetype
 | Background | **Never flat black.** Warm white, light sand, utility-gray, dusty sage, muted cream, or 2–4% paper/noise. Light gray is the Chartr/Statista default. |
 | Type pairing | One serious sans (body/labels) + one high-contrast display sans or restrained serif (headlines). Contrast, not novelty. |
 | Footer (every slide) | `slide # / source / @handle` — small. **Publication footer, not a logo splash.** Logo never larger than the source line. Visible sourcing = credibility. |
-| Cover formula | Include ≥2 of 4: locality (AZ/Phoenix), specific stake, specific number/time-window, curiosity gap. Patterns: "The hidden cost of…", "Why Arizona bills spike after…", "The one APS/SRP rule most homeowners miss", "What happens if… in Phoenix heat". |
+| Cover formula | Include ≥2 of 4: locality (AZ/Phoenix), specific stake, specific number/time-window, curiosity gap. Patterns: "The hidden cost of…", "Why Arizona bills spike after…", "The one APS rule most homeowners miss", "What happens if… in Phoenix heat". |
 | Typographic rhythm (1080×1350) | margins 72–96px · eyebrow 24–32px · headline 72–120px · body 30–40px · footer 20–24px. Keep negative space visible. |
 
 ## Reel & field recipes (local-expert hybrid)
@@ -79,7 +79,7 @@ appointment request. Viewer feels they're asking a local expert for a tool.
 | Format | Hook (first 1–2s) | Shot list / pace / length | On-screen text | Lead path |
 |---|---|---|---|---|
 | **Street-corner reality check** | "If you live in Phoenix, this is costing you more than you think." | You on location → 3–5 B-roll (power lines, rooftop AC, meter, skyline, bill close-up). 20–35s, cut every 1.5–2.5s. | One line per shot, mid safe-zone | "DM BILL for the rate-plan checklist." |
-| **Story-led myth-bust** | "A homeowner told me solar stopped making sense in AZ. That's not the real problem." | Face, eye contact → one proof graphic → one field cutaway. 25–45s, voice carries it. | Strong headline 2s then captions only; don't cover eyes/mouth | "Comment or DM RATE for the APS vs SRP version." |
+| **Story-led myth-bust** | "A homeowner told me solar stopped making sense in AZ. That's not the real problem." | Face, eye contact → one proof graphic → one field cutaway. 25–45s, voice carries it. | Strong headline 2s then captions only; don't cover eyes/mouth | "Comment or DM RATE for the APS version." |
 | **Walk-and-talk diagnosis** | "The mistake AZ homeowners make between 4 and 7pm is this." | Walk toward/through driveway/garage/roofline, alternate talking-head + detail. 20–30s. Motion = polish. | Hook large on opening frame, then 3–5 word labels | "DM SHIFT for the one-page off-peak sheet." |
 | **Bill teardown POV** | "Here's the line on your bill most people ignore." | Overhead bill, finger tracks one line → you interpret → back to bill. 15–25s. | Arrows/circles + one highlighted number | "Send me your plan name, I'll tell you what to look at." |
 | **Heat-day field test** | "It's 114° today. Here's when your house gets most expensive." | Thermometer/weather screen, AC running, thermostat, window light, you explaining timing. 20–40s. | Reinforce windows: 2pm/4pm/6pm/after sunset | "Save this for the next heat warning" / "DM HEAT". |
@@ -106,14 +106,14 @@ appointment request. Viewer feels they're asking a local expert for a tool.
 | **Slide count** | Carousel default **6**; use 8 only for story/myth-bust. |
 | **Carousel order** | Cover → proof number/chart → interpretation → local implication → decision/action → save/share/DM CTA. |
 | **Reel beat order** | Hook frame → talking-head claim → field/bill/chart proof → one takeaway → tool-CTA. |
-| **Source stack** | Primary/local first: aps.com, srpnet.com, AZ Corp Commission, Maricopa Public Health, ADHS → then DOE/Berkeley Lab, EPRI, OWID, Carbon Brief, Reuters. |
+| **Source stack** | Primary/local first: aps.com, AZ Corp Commission, Maricopa Public Health, ADHS → then DOE/Berkeley Lab, EPRI, OWID, Carbon Brief, Reuters. |
 | **Data-object rule** | One slide, one dominant object. Two charts → small-multiples or split. |
 | **Source visibility** | Every data slide gets a visible micro-source in the footer; every Reel gets source in caption + on-screen stamp on the proof shot. |
 | **Branding** | Footer only, no oversized watermark. |
 | **CTA mapping** | reach → light/none · save → "save this for your next bill review" · share → "send this to whoever handles your power bill" · DM → keyword (PLAN/SHIFT/HEAT/BILL/RATE). |
 | **Visual QA** | one hierarchy, one focal point, one accent, readable source line, ≤2 text blocks, safe-zone on vertical video, consistent footer. |
 
-**Weekly rhythm:** 1 discovery Reel · 2 authority carousels · 1 field/community Reel. (News-reaction reel handles APS/SRP/data-center changes; one carousel explains a homeowner decision; one packages a chart/map; the field Reel humanizes locally.)
+**Weekly rhythm:** 1 discovery Reel · 2 authority carousels · 1 field/community Reel. (News-reaction reel handles APS/data-center changes; one carousel explains a homeowner decision; one packages a chart/map; the field Reel humanizes locally.)
 
 ## Still open (needs the next research pass or owner input)
 - Exact **brand palette** hexes + the two **licensed/embeddable typefaces** to standardize on (playbook gives directions, not final picks).

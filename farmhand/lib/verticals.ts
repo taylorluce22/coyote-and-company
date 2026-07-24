@@ -152,7 +152,7 @@ const REALTOR: VerticalDef = {
 /* ----------------------------------- solar ----------------------------------- */
 
 const SOLAR_SIGNAL =
-  /\b(solar|photovoltaic|\bpv\b|panels?|inverter|net ?metering|kwh|kilowatt|\baps\b|\bsrp\b|tep\b|electric bill|power bill|utility bill|rate plan|on-?peak|powerwall|battery backup|enphase|micro ?inverters?|sunrun|tesla (solar|energy)|energy independence|ev charg\w*)\b/i;
+  /\b(solar|photovoltaic|\bpv\b|panels?|inverter|net ?metering|kwh|kilowatt|\baps\b|electric bill|power bill|utility bill|rate plan|on-?peak|powerwall|battery backup|enphase|micro ?inverters?|sunrun|tesla (solar|energy)|energy independence|ev charg\w*)\b/i;
 const SOLAR_NOISE =
   /\b(job|hiring|career|recruit\w*|commission structure|door.?to.?door|d2d|sales (rep|position|team)|mlm|setter position|closer position)\b/i;
 
@@ -171,36 +171,37 @@ const SOLAR: VerticalDef = {
   defaultIntents: ["considering", "quote-shopping", "bill-pain", "referral"],
   defaultGuidance:
     "The highest-value lead for me is an Arizona homeowner actively considering solar or already shopping — " +
-    "'thinking about going solar', 'got a quote from X, is it fair', 'my APS/SRP bill is out of control', " +
-    "'anyone recommend a good solar company near me'. APS customers are my PRIMARY target; SRP customers are " +
-    "second. New homeowners planning solar and EV owners weighing a battery are strong too. Skip renters, " +
-    "anti-solar rants, DIY-only off-grid hobbyists, commercial/utility scale, and anyone recruiting for solar " +
-    "sales jobs.",
+    "'thinking about going solar', 'got a quote from X, is it fair', 'my APS bill is out of control', " +
+    "'anyone recommend a good solar company near me'. APS customers (West Valley + North Phoenix) are my ONLY " +
+    "target — I don't serve SRP or other-utility territories, so skip posts clearly about SRP/East Valley homes. " +
+    "New homeowners planning solar and EV owners weighing a battery are strong too. Skip renters, anti-solar " +
+    "rants, DIY-only off-grid hobbyists, commercial/utility scale, and anyone recruiting for solar sales jobs.",
   territoryPhrases: (name) =>
     `${name}: "going solar in ${name}", "solar quote ${name}", "solar company near ${name}", "solar installer ` +
-    `${name}", "APS bill ${name}", "SRP bill ${name}"`,
+    `${name}", "APS bill ${name}"`,
   statePhrases:
     `Arizona (broad): "going solar in Arizona", "is solar worth it in Arizona/Phoenix", "best solar company in ` +
-    `Arizona", "solar quote Phoenix", "APS solar rates", "SRP solar plan", "APS bill too high", "SRP on-peak ` +
-    `rates", "Tesla Powerwall Arizona", "EV charging home solar"`,
+    `Arizona", "solar quote Phoenix", "APS solar rates", "APS bill too high", "APS on-peak rates", ` +
+    `"Tesla Powerwall Arizona", "EV charging home solar"`,
   primaryTarget:
     `Arizona HOMEOWNERS showing real intent around rooftop solar: considering going solar, comparing installer ` +
-    `quotes (price per watt, financing, lease vs own), complaining about high APS/SRP/TEP electric bills and ` +
-    `open to alternatives, asking for installer recommendations, new homeowners planning solar, or EV/battery ` +
-    `owners weighing an upgrade. A post only needs genuine homeowner intent — it does NOT need to name a ` +
-    `specific city; state-level "is solar worth it in Arizona" questions are strong leads.`,
+    `quotes (price per watt, financing, lease vs own), complaining about high APS electric bills and open to ` +
+    `alternatives, asking for installer recommendations, new homeowners planning solar, or EV/battery owners ` +
+    `weighing an upgrade. A post only needs genuine homeowner intent — it does NOT need to name a specific ` +
+    `city; state-level "is solar worth it in Arizona" questions are strong leads.`,
   hardExclude:
-    `solar-industry JOB posts and recruiting (setters, closers, D2D sales positions), MLM-style pitches, ` +
-    `commercial/utility-scale project chatter, pure DIY off-grid hobbyists who explicitly refuse installers, ` +
-    `renters who can't install, anti-solar rants with no genuine question, and generic electrician/roofing ` +
-    `service asks with no solar interest. "Solar" appearing in a post does not make it a lead — it must be a ` +
-    `HOMEOWNER with real interest in getting or evaluating solar.`,
+    `homes clearly served by SRP or other non-APS utilities (East Valley: Mesa, Gilbert, Chandler, Tempe, Queen ` +
+    `Creek, San Tan Valley — out of my service model), solar-industry JOB posts and recruiting (setters, ` +
+    `closers, D2D sales positions), MLM-style pitches, commercial/utility-scale project chatter, pure DIY ` +
+    `off-grid hobbyists who explicitly refuse installers, renters who can't install, anti-solar rants with no ` +
+    `genuine question, and generic electrician/roofing service asks with no solar interest. "Solar" appearing ` +
+    `in a post does not make it a lead — it must be a HOMEOWNER with real interest in getting or evaluating solar.`,
   statewideLaneFocus:
     "For this search, look specifically on Reddit (reddit.com) for Arizona homeowner solar questions: \"is solar " +
-    "worth it in Arizona\", \"going solar in Phoenix\", \"APS/SRP bill\", \"solar quote\", installer " +
+    "worth it in Arizona\", \"going solar in Phoenix\", \"APS bill\", \"solar quote\", installer " +
     "recommendations. Check r/phoenix, r/arizona, r/solar, r/SolarDIY (only non-DIY-committed posters), " +
     "r/TeslaSolar, r/electricvehicles and similar. Homeowners comparing quotes or venting about utility bills " +
-    "are the highest-value leads — cast wide here.",
+    "are the highest-value leads — cast wide here, but skip posts clearly about SRP/East Valley homes.",
   isRelevant: (text) => {
     const t = text.toLowerCase();
     if (!SOLAR_SIGNAL.test(t)) return false;
@@ -217,13 +218,12 @@ const SOLAR: VerticalDef = {
     `site:reddit.com/r/solarenergy Phoenix recommendation`,
     `site:reddit.com/r/solarenergy Arizona consulting`,
     `site:reddit.com/r/phoenix solar`,
-    `site:reddit.com/r/phoenix "APS" OR "SRP" bill`,
+    `site:reddit.com/r/phoenix "APS" bill`,
     `site:reddit.com/r/arizona solar panels`,
     `site:reddit.com/r/TeslaSolar Arizona`,
     `"got a quote" solar Arizona`,
     `"is solar worth it" Phoenix`,
     `"APS bill" solar reddit`,
-    `"SRP" solar plan question`,
     `"going solar" Arizona advice`,
     `"solar consulting" OR "solar consultant" Phoenix recommendations`,
     `solar financing question Arizona homeowner`,
@@ -234,7 +234,7 @@ const SOLAR: VerticalDef = {
     `site:quora.com solar panels Phoenix cost`,
     `site:city-data.com Phoenix solar`,
     `site:city-data.com Arizona APS electric bill`,
-    `site:diysolarforum.com Arizona APS OR SRP`,
+    `site:diysolarforum.com Arizona APS`,
     `site:nextdoor.com solar recommendations Phoenix`,
     `site:x.com solar quote Phoenix OR Arizona`,
     `Phoenix homeowner solar advice forum recent`,
@@ -244,7 +244,6 @@ const SOLAR: VerticalDef = {
     "quote",
     "worth it in Arizona",
     "APS",
-    "SRP",
     "installer recommendation",
     "going solar",
     "powerwall",
@@ -263,7 +262,7 @@ const SOLAR: VerticalDef = {
   },
   tagRules: [
     { re: /(quote|bid|proposal|per watt|\$\/?w\b|financ|lease|ppa\b)/i, tag: "quote-shopping" },
-    { re: /(\baps\b|\bsrp\b|\btep\b|electric bill|power bill|rate plan|on-?peak|bill (is|was|s) (insane|crazy|huge|high))/i, tag: "bill-pain" },
+    { re: /(\baps\b|electric bill|power bill|rate plan|on-?peak|bill (is|was|s) (insane|crazy|huge|high))/i, tag: "bill-pain" },
     { re: /(worth it|considering|thinking about|should (i|we) (go|get))/i, tag: "considering" },
     { re: /(battery|powerwall|backup|ev\b|tesla|charger)/i, tag: "battery-ev" },
     { re: /(new (house|home|build)|just (bought|closed)|moving in)/i, tag: "new-homeowner" },

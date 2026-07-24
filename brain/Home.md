@@ -21,7 +21,7 @@ Analyst became the [[Data Analyst]].
 ## Current state
 
 - **App**: Farmhand (Next.js, `farmhand/`), live at coyote-and-company.vercel.app, auto-deploys on merge to `main`.
-- **Vertical**: Arizona residential solar. West Valley (Buckeye, Peoria — APS), East Valley (Queen Creek — SRP); full catalog in `farmhand/lib/azTerritories.ts`.
+- **Vertical**: Arizona residential solar. **APS-only, all West Valley + North Phoenix** (owner 2026-07-24 — SRP/East Valley removed, doesn't pencil); full catalog in `farmhand/lib/azTerritories.ts`.
 - **Runtime**: scheduled Claude Routines fire in the cloud (no VPS, no local machine needed), work this vault, and push via PR. Taylor supervises from Obsidian and approves in [[Content Queue]].
 - **Standing owner decisions**: quality over cost, but no credit spent on a post that isn't worth posting. Honest numbers only. CTAs are Valley-general and interchangeable — cities only when they're the subject.
 

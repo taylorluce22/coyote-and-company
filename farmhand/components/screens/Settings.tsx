@@ -210,14 +210,13 @@ function MiniBtn({ label, onClick, on, danger }: { label: string; onClick: () =>
   );
 }
 
-const MAX_TERRITORIES = 6;
-
 /**
  * Solar territory picker — the July 2026 metro-Phoenix new-construction
- * research as selectable cards, grouped by utility. Selections become the
- * live strategy.territories: territory names double as hunt search keywords
- * and content labels, and the utility tag picks which rate math the pulse,
- * content, and replies use.
+ * research as selectable cards. APS-only since the July 2026 pivot: the whole
+ * catalog is West Valley + North Phoenix, and the play is running all of it,
+ * so there is no selection cap and a one-click select-all. Selections become
+ * the live strategy.territories: territory names double as hunt search
+ * keywords and content labels.
  */
 function SolarTerritoryPicker() {
   const { state, set } = useStore();
@@ -232,7 +231,6 @@ function SolarTerritoryPicker() {
       if (has) {
         territories = st.territories.filter((t) => t.slug !== def.slug);
       } else {
-        if (st.territories.length >= MAX_TERRITORIES) return s;
         territories = [
           ...st.territories,
           { slug: def.slug, name: def.name, city: def.city, segment: "growth", status: "building", hex: TERRITORY_HEXES[st.territories.length % TERRITORY_HEXES.length], utility: def.utility },
@@ -243,6 +241,22 @@ function SolarTerritoryPicker() {
     });
   };
 
+  const selectAll = () =>
+    set((s) => {
+      const st = s.strategy as StrategyProfile;
+      const have = new Set(st.territories.map((t) => t.slug));
+      const added = AZ_TERRITORY_CATALOG.filter((def) => !have.has(def.slug)).map((def, i) => ({
+        slug: def.slug,
+        name: def.name,
+        city: def.city,
+        segment: "growth" as const,
+        status: "building" as const,
+        hex: TERRITORY_HEXES[(st.territories.length + i) % TERRITORY_HEXES.length],
+        utility: def.utility,
+      }));
+      return added.length ? { ...s, strategy: { ...st, territories: [...st.territories, ...added] } } : s;
+    });
+
   const removeCustom = (slug: string) =>
     set((s) => {
       const st = s.strategy as StrategyProfile;
@@ -251,9 +265,7 @@ function SolarTerritoryPicker() {
     });
 
   const groups: { key: TerritoryUtility[]; title: string; note: string }[] = [
-    { key: ["aps"], title: "West Valley + North Phoenix · APS", note: "Pick a city for the whole corridor, or a specific development to go deep. Pitch: export-rate lock (6.2¢, drops each Sept), 4–7pm TOU math, Storage Rewards" },
-    { key: ["srp"], title: "East Valley · SRP", note: "Pick a city for the whole corridor, or a specific development to go deep. Pitch: demand management, batteries, self-consumption — exports pay only 3.45¢" },
-    { key: ["ed3", "ed2", "verify"], title: "Outskirts · other utilities — verify rates first", note: "ED3/ED2 have their own tariffs — never quote APS or SRP numbers here" },
+    { key: ["aps", "verify"], title: "West Valley + North Phoenix · APS", note: "Pick a city for the whole corridor, or a specific development to go deep. Pitch: export-rate lock (6.2¢, drops each Sept), 4–7pm TOU math, Storage Rewards" },
   ];
 
   const catalogSlugs = new Set(AZ_TERRITORY_CATALOG.map((c) => c.slug));
@@ -262,12 +274,15 @@ function SolarTerritoryPicker() {
   return (
     <Card title="Solar territories · pick where you build presence">
       <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.55, marginBottom: 6 }}>
-        Metro Phoenix new-construction hot spots from the territory research, grouped by electric utility. Pick up to{" "}
-        {MAX_TERRITORIES} — each becomes a live territory: hunts search its name, content gets written for it, and
-        replies use the right utility&apos;s rate math.
+        The West Valley + North Phoenix APS hot spots from the territory research — the whole catalog is your market,
+        so run as much of it as you want. Each pick becomes a live territory: hunts search its name and content gets
+        written for it. (SRP / East Valley territories were removed — they don&apos;t pencil.)
       </div>
-      <div style={{ fontSize: 11, fontWeight: 700, color: strategy.territories.length >= MAX_TERRITORIES ? "#FFC23D" : "#41D98A", marginBottom: 10 }}>
-        {strategy.territories.length}/{MAX_TERRITORIES} selected
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#41D98A" }}>
+          {strategy.territories.length}/{AZ_TERRITORY_CATALOG.length} selected
+        </span>
+        <MiniBtn label="Run all West Valley" onClick={selectAll} on={strategy.territories.length >= AZ_TERRITORY_CATALOG.length} />
       </div>
       {customPicks.length > 0 && (
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
@@ -291,14 +306,12 @@ function SolarTerritoryPicker() {
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {items.map((def) => {
                 const on = selected.has(def.slug);
-                const full = !on && strategy.territories.length >= MAX_TERRITORIES;
                 const uc = UTILITY_COLOR[def.utility];
                 return (
                   <button
                     key={def.slug}
                     onClick={() => toggle(def)}
-                    disabled={full}
-                    style={{ display: "flex", alignItems: "flex-start", gap: 9, textAlign: "left", padding: "9px 11px", borderRadius: 10, cursor: full ? "default" : "pointer", opacity: full ? 0.45 : 1, background: on ? "rgba(65,217,138,0.08)" : "rgba(255,255,255,0.03)", border: `1px solid ${on ? "rgba(65,217,138,0.45)" : "rgba(255,255,255,0.09)"}` }}
+                    style={{ display: "flex", alignItems: "flex-start", gap: 9, textAlign: "left", padding: "9px 11px", borderRadius: 10, cursor: "pointer", background: on ? "rgba(65,217,138,0.08)" : "rgba(255,255,255,0.03)", border: `1px solid ${on ? "rgba(65,217,138,0.45)" : "rgba(255,255,255,0.09)"}` }}
                   >
                     <span style={{ flexShrink: 0, marginTop: 1, fontSize: 12, color: on ? "#41D98A" : "#3F3D52" }}>{on ? "✓" : "○"}</span>
                     <span style={{ flex: 1, minWidth: 0 }}>
@@ -319,8 +332,8 @@ function SolarTerritoryPicker() {
         );
       })}
       <div style={{ fontSize: 10, color: "#5E5C72", lineHeight: 1.5 }}>
-        Utility boundaries can split streets (Goodyear, Glendale, Avondale, San Tan Valley) — always verify the exact
-        address before quoting a rate plan.
+        Utility boundaries can split streets (Goodyear, Glendale, Avondale) — always verify the exact address is APS
+        before quoting. Anything not APS is out of market.
       </div>
     </Card>
   );

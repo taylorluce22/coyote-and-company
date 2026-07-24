@@ -25,15 +25,14 @@ follow the account because it explains their bill, not because it sells.
   [[Visual Style]].
 - **~10% — Timely/seasonal**: monsoon, summer peaks, program changes.
 
-## Utility focus: APS-primary, SRP ~1 in 20 (owner, 2026-07-21)
+## Utility focus: APS-ONLY (owner, 2026-07-24 — supersedes the 1-in-20 rule)
 
-Content is **APS-first**. SRP's residential solar economics are weaker —
-low ~3.45¢ export credit and demand-charge plan design push the ROI down —
-so we don't court SRP customers as a content focus. **Cap SRP-focused posts
-at roughly 1 in 20 (~5%).** SRP facts stay in the KB
-(`az-rising-costs-heat-datacenters-2026.md`) for education and the rare SRP
-piece, but the push — hooks, CTAs, territories, examples — leads with APS
-and stays utility-general where possible. [owner-expertise]
+Content is **APS-only**. SRP doesn't pencil — weak ~3.45¢ export credit and
+demand-charge plan design kill the ROI — and the owner removed SRP and the
+East Valley from the business entirely: territories, hunts, and content.
+**Zero SRP-focused posts.** Hooks, CTAs, territories and examples lead with
+APS or stay utility-general; never name SRP rates or plans in content. The
+market is all West Valley + North Phoenix. [owner-decision]
 
 ## The pain-point rule (owner, 2026-07-19)
 
@@ -118,7 +117,7 @@ these throughout content AND the knowledge base:
    as fixable by shuffling plans, when every plan rides the same rising
    baseline. Rate-plan literacy stays only as a tool to explain WHY evening
    peak is brutal — never as "the fix."
-2. **Rate DESIGN is the story, not just the rate.** SRP/APS design — low
+2. **Rate DESIGN is the story, not just the rate.** APS's design — low
    solar buyback, cheap off-peak, punishing evening on-peak windows — is
    shaped so the only durable hedge is self-supplying the peak: solar +
    battery. Teach the concept, not just the ¢/kWh.
@@ -145,8 +144,8 @@ baked into that doc — follow them:
   decade pace, EIA), never a fixed date.
 - **"Data centers raise your bill" → present as a live dispute** (utilities
   vs. AG Mayes), never settled fact.
-- **SRP peak-window shift is plan-specific:** E-16 = 5–10pm, E-28 = 6–9pm,
-  APS still 4–7pm. Never say "SRP moved everyone to 5–10."
+- **APS peak window is 4–7pm** — the only window we publish. (SRP windows
+  are out of scope since the APS-only pivot; SRP content is retired.)
 
 ## Demoted — expired tax credits
 

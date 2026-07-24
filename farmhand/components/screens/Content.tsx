@@ -13,14 +13,14 @@ import type { StrategyProfile } from "@/lib/strategy";
 import { verticalOf } from "@/lib/verticals";
 import { offNarrative } from "@/lib/narrative";
 
-const UTILITY_COLOR: Record<string, string> = { APS: "#FFC23D", SRP: "#26E0C8", both: "#C9A8FF", general: "#8B89A0" };
+const UTILITY_COLOR: Record<string, string> = { APS: "#FFC23D", general: "#8B89A0" };
 const INTEL_TTL_MS = 12 * 60 * 60 * 1000; // refresh live intel twice a day
 
 /**
- * Live energy intel — real, current news (APS/SRP rates, data-center demand,
+ * Live energy intel — real, current news (APS rates, data-center demand,
  * grid infrastructure, national solar policy) pulled from national + local
  * sources and turned into homeowner-facing post angles. Solar vertical only;
- * APS customers are the primary audience, SRP second.
+ * APS customers are the audience (the business is APS-only).
  */
 function EnergyIntel() {
   const { state, set, copy } = useStore();
@@ -62,7 +62,7 @@ function EnergyIntel() {
           {loading
             ? "Scanning national + local energy news…"
             : intel
-            ? `APS & SRP rates · data centers · grid · policy — updated ${ageH === 0 ? "just now" : `${ageH}h ago`}${stale ? " · hit Refresh for today's" : ""}`
+            ? `APS rates · data centers · grid · policy — updated ${ageH === 0 ? "just now" : `${ageH}h ago`}${stale ? " · hit Refresh for today's" : ""}`
             : "Hit Refresh to pull real news → post angles (searches only on demand)"}
         </span>
         <button

@@ -9,7 +9,34 @@ What was done · what was spent · what needs a human
 
 ---
 
-## 2026-07-21 · Supabase Shared Memory Layer — scaffolded (inert until keys land)
+## 2026-07-24 · APS-only pivot: SRP + East Valley removed, all-West-Valley mode
+Owner decision during territory setup: "run all west valley, don't worry
+about SRP — it doesn't pencil, remove all SRP data completely and all east
+valley." Executed across app + vault:
+
+- **Catalog** (`azTerritories.ts`): East Valley cities (Queen Creek, Mesa
+  Gateway, San Tan Valley, Gilbert, Chandler), all 16 SRP developments,
+  Laveen, and the ED3/ED2 outskirts (Maricopa/Florence) deleted — 29 West
+  Valley + North Phoenix APS entries remain. Utility type narrowed to
+  `aps | verify`; new `isOutOfMarket()` guard.
+- **Territory picker** (Settings): 6-territory cap REMOVED (the whole
+  catalog is the market now); new one-click "Run all West Valley" button.
+  Store migration strips SRP/East-Valley picks from saved profiles on load.
+- **Hunts** (`verticals.ts`): SRP flipped from secondary target to hard
+  exclude; all SRP search queries/phrases/keywords removed.
+- **KB + content** (`azEnergyKb.ts`, `strategy.ts`, `signals.ts`,
+  `desertGrid.ts`, ideaCopy, discover/copy routes, Content screen): SRP
+  reply facts, pulse packs, and the two SRP-led KB posts removed; mixed
+  pieces rewritten APS-only (bill-spike post is now the APS 4–7pm version).
+- **Vault**: Editorial Direction now APS-ONLY (supersedes the 1-in-20 SRP
+  cadence, owner 2026-07-21); SRP queue post rejected with reason; Idea
+  Bank SRP lane retired; CMO/Lead Manager charters, Home, Voice, Design
+  Playbook, Growth Strategy updated. `farmhand/docs/` research archives
+  left intact as historical record.
+
+Build + typecheck green. Nothing spent. Needs a human: open Settings →
+Solar territories → hit "Run all West Valley", then check off the Launch
+Progress territory item.
 Owner chose "scaffold the code now" for the shared memory layer. Built the
 whole thing so it's live the instant the Supabase project + 3 keys exist —
 zero more code needed. Follows the existing [[Connectors|kv.ts]] philosophy:

@@ -113,7 +113,7 @@ function patternRows(t: Territory): BankRow[] {
 const SOLAR_STATEWIDE: BankRow[] = [
   { name: "r/solar", platform: "reddit", why: "The main solar sub — quote reviews and 'is it worth it' threads daily; AZ questions are frequent.", size: "~300k" },
   { name: "r/solarenergy", platform: "reddit", why: "Second solar hub; homeowner-level questions with less pro noise." },
-  { name: "r/phoenix", platform: "reddit", why: "Metro hub — summer-bill rants and APS/SRP threads spike every July; answer with real numbers.", size: "~450k" },
+  { name: "r/phoenix", platform: "reddit", why: "Metro hub — summer-bill rants and APS threads spike every July; answer with real numbers.", size: "~450k" },
   { name: "r/arizona", platform: "reddit", why: "Statewide — rate-case and utility news threads where expertise stands out.", size: "~350k" },
   { name: "DIY Solar Forum (diysolarforum.com)", platform: "forum", why: "Serious owners and researchers; Arizona threads rank on Google for years." },
 ];
@@ -137,23 +137,6 @@ const SOLAR_BY_TERRITORY: Record<string, BankRow[]> = {
     { name: "Peoria AZ Community (Facebook)", platform: "facebook", why: "City-wide resident group; APS rate-plan confusion posts are routine." },
     { name: "Nextdoor · Vistancia / North Peoria", platform: "nextdoor", why: "Premium new-build streets — referrals carry weight here." },
   ],
-  "queen-creek-city": [
-    { name: "Queen Creek 101 (Facebook)", platform: "facebook", why: "Large resident group — growth and new-build threads daily; SRP bill season lights it up." },
-    { name: "Barney Farms Community (Facebook)", platform: "facebook", why: "Fulton's lake community — the research's top affluent SRP family profile." },
-    { name: "Nextdoor · Queen Creek", platform: "nextdoor", why: "New-resident heavy; demand-charge confusion makes real expertise stand out." },
-    { name: "r/QueenCreek", platform: "reddit", why: "Small town sub — low competition for genuinely helpful answers." },
-  ],
-  "mesa-gateway": [
-    { name: "Eastmark Community (Facebook)", platform: "facebook", why: "One of the most active community groups in AZ — mature, high-income, referral-rich." },
-    { name: "Hawes Crossing / Cadence Residents (Facebook)", platform: "facebook", why: "The Gateway boom's newest roofs — SRP plan questions from day one." },
-    { name: "Nextdoor · East Mesa / Gateway", platform: "nextdoor", why: "Dense newer streets; recommendation threads convert." },
-    { name: "r/mesa", platform: "reddit", why: "City sub — SRP and summer-bill threads recur.", size: "~20k" },
-  ],
-  "san-tan-valley-city": [
-    { name: "San Tan Valley 101 / Community (Facebook)", platform: "facebook", why: "Pinal County's boom corridor — Bella Vista Farms and Soleo families comparing bills." },
-    { name: "Nextdoor · San Tan Valley", platform: "nextdoor", why: "Unsaturated market — early presence compounds." },
-    { name: "r/SanTanValley", platform: "reddit", why: "Small but growing; new-build and utility threads." },
-  ],
   "surprise-city": [
     { name: "Surprise AZ Community (Facebook)", platform: "facebook", why: "Main city group — Marley Park/Asante families plus 55+ backup-power interest." },
     { name: "Sterling Grove Residents (Facebook)", platform: "facebook", why: "Toll Brothers golf community — premium battery economics." },
@@ -161,7 +144,7 @@ const SOLAR_BY_TERRITORY: Record<string, BankRow[]> = {
   ],
   "goodyear-city": [
     { name: "Estrella Community (Facebook)", platform: "facebook", why: "The master plan's resident hub — pools + big cooling loads, years of new phases left." },
-    { name: "Goodyear AZ Community (Facebook)", platform: "facebook", why: "City-wide group — verify utility per address (Agua Fria splits APS/SRP)." },
+    { name: "Goodyear AZ Community (Facebook)", platform: "facebook", why: "City-wide group — verify each address is APS before quoting (the Agua Fria splits utilities)." },
     { name: "Nextdoor · Estrella / Goodyear", platform: "nextdoor", why: "High-usage family streets; recommendation threads are frequent." },
   ],
 };

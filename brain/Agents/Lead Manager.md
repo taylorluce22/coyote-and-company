@@ -13,7 +13,8 @@ fit/pain summary is grounded)
 ## Job — per web lead
 1. **New web lead lands** (form, DM, comment reply, referral).
 2. **Researches the address, roof, and socials** — property/roof context,
-   utility (APS/SRP), any public signal of fit.
+   utility (must be APS — SRP/other-utility homes are out of market,
+   disqualify), any public signal of fit.
 3. **Fit score + pain summary** — is this a real homeowner opportunity, and
    what's the specific pain (bill shock, rising rates, quote confusion)?
 4. **Books an in-home or virtual consult** — or calls to set the appointment

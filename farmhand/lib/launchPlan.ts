@@ -53,7 +53,7 @@ export const LAUNCH_PLAN: LaunchPhase[] = [
     color: "#FFC23D",
     items: [
       { id: "p-account", label: "Switch to My Solar · real and confirm ACTIVE", note: "Client pill, top-right — check it every session" },
-      { id: "p-territories", label: "Set real solar territories", note: "Settings → Solar territories — names drive lead-hunt keywords, APS/SRP tags drive rate math" },
+      { id: "p-territories", label: "Set real solar territories", note: "Settings → Solar territories — names drive lead-hunt keywords; hit Run all West Valley (APS-only)" },
       { id: "p-keys", label: "Verify generation keys in Connectors", note: "Perplexity (copy) + Higgsfield (images) — the Connectors tab probes live; ignore the Settings demo card" },
       { id: "p-first-post", label: "Publish the first post", note: "Ideas → Studio → Sharpen copy → visuals → Download all → post to IG → mark Posted" },
       { id: "p-week", label: "Complete a full week on rhythm", note: "3+ posts · Mon build session · 15 min/day lead pipeline · Fri packet + backup" },

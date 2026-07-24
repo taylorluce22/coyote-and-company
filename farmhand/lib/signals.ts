@@ -49,9 +49,10 @@ import { utilityForTerritory } from "./azTerritories";
 
 /**
  * Solar pulse packs — built from the AZ energy knowledge base (real tariff
- * numbers, rate-case status, VPP pay), selected by the territory's UTILITY so
- * an APS neighborhood never gets an SRP angle. The realtor packs above were
- * showing "family relocation season" on a solar account — wrong business.
+ * numbers, rate-case status, VPP pay). APS-only: the business runs West
+ * Valley APS territories exclusively, so there is one APS bank plus a
+ * verify-first guard for anything not confirmed APS. The realtor packs above
+ * were showing "family relocation season" on a solar account — wrong business.
  */
 type SignalSeed = Omit<MarketSignal, "id" | "territorySlug" | "territoryName" | "color">;
 
@@ -62,15 +63,8 @@ const SOLAR_APS: SignalSeed[] = [
   { kind: "development", headline: "APS now pays home batteries — $110 per avg kW each summer", detail: "Storage Rewards: a typical battery earns $330–660/season sharing capacity during grid events", angle: "“Your battery can earn ~$660 a summer from APS” — VPP explainer for {n}" },
 ];
 
-const SOLAR_SRP: SignalSeed[] = [
-  { kind: "price", headline: "July/August 6–9pm hits ~40¢/kWh on SRP's new plans", detail: "E-28 summer-peak on-peak — among the highest retail power prices in Arizona", angle: "“Why your July SRP bill spiked: the 40¢ window nobody explains” — for {n}" },
-  { kind: "price", headline: "SRP demand plans bill your single worst 30 minutes", detail: "A battery shaving an 8kW evening spike to 2kW saves ~$40–112/month (~$800+/yr)", angle: "“The $800/year battery move for SRP demand-plan homes in {n}” — worked math" },
-  { kind: "news", headline: "SRP's plan overhaul is live — old plans sunset by Nov 2029", detail: "New $20–40 tiered monthly charge, new time-of-day plans, net metering retired", angle: "“Which new SRP plan actually fits your {n} home” — the honest guide" },
-  { kind: "development", headline: "SRP pays exports just 3.45¢/kWh — half of APS", detail: "SRP solar lives or dies on self-consumption and batteries, not selling power back", angle: "“Why SRP solar is a battery story, not an export story” — position as the expert" },
-];
-
-const SOLAR_OTHER: SignalSeed[] = [
-  { kind: "news", headline: "This area is NOT on APS or SRP rates", detail: "ED3/ED2 territories have their own export rules and fees — never quote APS/SRP numbers here", angle: "“The rate-plan mistake solar companies make in {n}” — instant local credibility" },
+const SOLAR_VERIFY: SignalSeed[] = [
+  { kind: "news", headline: "Confirm this pocket is APS before quoting", detail: "Utility boundaries split streets out here — anything not confirmed APS is out of market, never quote APS numbers on it", angle: "“The rate-plan mistake solar companies make in {n}” — instant local credibility" },
 ];
 
 const SOLAR_GENERAL: SignalSeed[] = [
@@ -80,7 +74,7 @@ const SOLAR_GENERAL: SignalSeed[] = [
 
 function solarSignalsFor(t: Territory): SignalSeed[] {
   const u = utilityForTerritory(t);
-  const bank = u === "aps" ? SOLAR_APS : u === "srp" ? SOLAR_SRP : SOLAR_OTHER;
+  const bank = u === "aps" ? SOLAR_APS : SOLAR_VERIFY;
   // deterministic rotation per territory so different cards show different
   // angles instead of three copies of the same headline
   const off = Math.abs([...t.slug].reduce((a, ch) => a + ch.charCodeAt(0), 0));
