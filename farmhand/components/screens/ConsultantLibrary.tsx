@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { CONSULTANT_SHOTS, composePrompt, type ConsultantShot } from "@/lib/consultantLibrary";
 import { processImageURL } from "@/lib/studio";
 import { vaultAdd, vaultAll, vaultDelete, type VaultImage } from "@/lib/vault";
+import { useStore } from "@/lib/store";
+import { record as meterRecord, imageAllowance } from "@/lib/meter";
 
 /**
  * Consultant Library — the system generates a library of real-looking
@@ -17,6 +19,7 @@ const SOUL_KEY = "fh-soul-id";
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
 export default function ConsultantLibrary() {
+  const { workspace } = useStore();
   const [soulId, setSoulId] = useState("");
   const [status, setStatus] = useState<Record<string, Status>>({});
   const [preview, setPreview] = useState<Record<string, string>>({});
@@ -37,6 +40,12 @@ export default function ConsultantLibrary() {
   }
 
   async function generateShot(shot: ConsultantShot): Promise<boolean> {
+    // E4 allowance guard: never spend past this client's monthly image cap.
+    if (imageAllowance(workspace, 1).blocked) {
+      setMsg("This client's monthly image cap is reached — raise it in Settings › Generation usage to continue.");
+      setStatus((s) => ({ ...s, [shot.id]: "failed" }));
+      return false;
+    }
     setStatus((s) => ({ ...s, [shot.id]: "rendering" }));
     try {
       const prompt = composePrompt(shot);
@@ -63,6 +72,7 @@ export default function ConsultantLibrary() {
           const p = await processImageURL(`/api/higgsfield?img=${encodeURIComponent(url)}`, 1200, 0.85);
           if (p) {
             await vaultAdd({ id: uid(), dataURL: p.dataURL, lum: p.lum, busy: p.busy, prompt, label: `Consultant · ${shot.label}`, createdAt: Date.now() });
+            meterRecord(workspace, "image", 1); // E4: log against this client's ledger
             setPreview((pv) => ({ ...pv, [shot.id]: p.dataURL }));
             setStatus((s) => ({ ...s, [shot.id]: "done" }));
             vaultAll().then(setVault);

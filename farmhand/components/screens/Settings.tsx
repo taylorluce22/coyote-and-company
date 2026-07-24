@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { cleanSlate, restoreDemo, useStore } from "@/lib/store";
 import type { ClientMeta, ClientBundle, ClientId } from "@/lib/clients";
+import { monthUsage, imageAllowance, imageCap, setImageCap, dollars, UNIT_COST_CENTS, type MonthUsage } from "@/lib/meter";
 import { Switch } from "@/components/ui";
 import { SET_VOICE, SET_IMG_PREFS, SET_CONNECTIONS } from "@/lib/data";
 import { DEFAULT_STRATEGY, SOLAR_TERRITORIES, type StrategyProfile, type Territory } from "@/lib/strategy";
@@ -144,6 +145,61 @@ function ClientsCard({ clients, active, onSwitch, onAdd, onRename, onRemove, onE
       {msg && <div style={{ fontSize: 11, color: "#8B89A0", marginTop: 10, lineHeight: 1.5 }}>{msg}</div>}
     </Card>
   );
+}
+
+/**
+ * Generation usage & cost (E4) — this client's image spend this month against
+ * its allowance, so the founder protects gross margin instead of finding out at
+ * invoice time. Costs are Farmhand-internal estimates; native credits never show.
+ */
+function UsageCard({ client }: { client: ClientId }) {
+  const [usage, setUsage] = useState<MonthUsage>({ image: 0, reel: 0, copy: 0, costCents: 0 });
+  const [cap, setCap] = useState(60);
+  const [capInput, setCapInput] = useState("60");
+  const refresh = () => { setUsage(monthUsage(client)); const c = imageCap(client); setCap(c); setCapInput(String(c)); };
+  // read on mount + whenever the active client changes
+  useRefreshOnClient(client, refresh);
+  const allow = imageAllowance(client);
+  const pct = Math.min(100, Math.round(allow.pct * 100));
+  const barColor = allow.blocked ? "#FF7A7A" : allow.warn ? "#FFC23D" : "#41D98A";
+  const month = new Date().toLocaleString("en-US", { month: "long" });
+
+  return (
+    <Card title="Generation usage & cost">
+      <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.55, marginBottom: 12 }}>
+        This client&apos;s image generation for {month}. The allowance protects your margin — at the cap, new
+        generations pause until you raise it or next month starts.
+      </div>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 6 }}>
+        <span style={{ fontSize: 22, fontWeight: 800, color: "#F4F3F8" }}>{usage.image}<span style={{ fontSize: 13, color: "#8B89A0", fontWeight: 600 }}> / {cap} images</span></span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#A6A4B8" }}>~{dollars(usage.costCents)}</span>
+      </div>
+      <div style={{ height: 8, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden", marginBottom: 4 }}>
+        <div style={{ width: `${pct}%`, height: "100%", background: barColor, transition: "width .3s" }} />
+      </div>
+      <div style={{ fontSize: 11, color: allow.blocked ? "#FF7A7A" : allow.warn ? "#FFC23D" : "#5E5C72", marginBottom: 14 }}>
+        {allow.blocked ? "Cap reached — generation paused for this client." : allow.warn ? `${allow.remaining} left before the cap.` : `${allow.remaining} images left this month.`}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 11.5, color: "#8B89A0" }}>Monthly image cap</span>
+        <input value={capInput} onChange={(e) => setCapInput(e.target.value.replace(/[^0-9]/g, ""))}
+          style={{ width: 72, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 8, padding: "6px 9px", color: "#F4F3F8", fontSize: 12.5 }} />
+        <button onClick={() => { const n = parseInt(capInput, 10); if (Number.isFinite(n)) { setImageCap(client, n); refresh(); } }}
+          style={{ cursor: "pointer", fontSize: 11.5, fontWeight: 700, padding: "7px 13px", borderRadius: 8, background: "rgba(255,255,255,0.06)", color: "#F4F3F8", border: "1px solid rgba(255,255,255,0.14)" }}>Set</button>
+        <button onClick={refresh} style={{ cursor: "pointer", fontSize: 11.5, fontWeight: 600, padding: "7px 11px", borderRadius: 8, background: "transparent", color: "#8B89A0", border: "1px solid rgba(255,255,255,0.1)" }}>Refresh</button>
+      </div>
+      <div style={{ fontSize: 10.5, color: "#5E5C72", marginTop: 12, lineHeight: 1.5 }}>
+        Est. cost per image ~{dollars(UNIT_COST_CENTS.image)}. Keep total generation cost under ~15% of the plan price.
+        {usage.reel > 0 && ` · ${usage.reel} reels`}{usage.copy > 0 && ` · ${usage.copy} copy runs`}
+      </div>
+    </Card>
+  );
+}
+
+/** Re-run refresh whenever the active client changes (and once on mount). */
+function useRefreshOnClient(client: ClientId, refresh: () => void) {
+  const last = useRef<string>("");
+  if (last.current !== client) { last.current = client; refresh(); }
 }
 
 function MiniBtn({ label, onClick, on, danger }: { label: string; onClick: () => void; on: boolean; danger?: boolean }) {
@@ -319,6 +375,8 @@ export default function Settings() {
         onExport={exportClient}
         onImport={importClient}
       />
+
+      <UsageCard client={workspace} />
 
       <Card title="Lead engine vertical">
         <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.55, marginBottom: 12 }}>

@@ -24,6 +24,7 @@ import { ideaCopy, ideaFactPair } from "@/lib/ideaCopy";
 import { ideasFor, type Idea, type StrategyProfile } from "@/lib/strategy";
 import { buildSlidePrompts, pushPackLog, readPackLog } from "@/lib/postVisuals";
 import { vaultAdd, vaultAll, vaultDelete, type VaultImage } from "@/lib/vault";
+import { record as meterRecord, imageAllowance } from "@/lib/meter";
 
 /* ---- content model (Farmhand): per-channel variants of the post ---- */
 const CHANNELS: [CompCh, string][] = [
@@ -211,7 +212,7 @@ const FIELD_LABEL: React.CSSProperties = {
 };
 
 export default function Composer() {
-  const { state, set } = useStore();
+  const { state, set, workspace } = useStore();
   const ch = state.compChannel;
   const strategy = state.strategy as StrategyProfile;
   // idea mode: copy generated from the idea engine + knowledge base (what
@@ -485,6 +486,7 @@ export default function Composer() {
         }
         // vault FIRST — the paid-for image is safe before anything else
         await vaultAdd({ id: uid(), dataURL: p.dataURL, lum: p.lum, busy: p.busy, prompt: it.prompt, label: `${it.title.slice(0, 48)} · ${it.role}`, createdAt: Date.now() });
+        meterRecord(workspace, "image", 1); // E4: log the generation against this client's ledger
         set((s) => ({ stAssets: [...s.stAssets, { id: uid(), name: `${it.role} visual`, dataURL: p.dataURL, lum: p.lum, busy: p.busy, source: "higgsfield" }].slice(-40) }));
         if (applyToSlides) {
           const b: Bg = { type: "image", img: p.dataURL };
@@ -510,6 +512,13 @@ export default function Composer() {
 
   async function generateVisuals() {
     if (genBusy || !slides.length) return;
+    // E4 allowance guard: don't start a batch that would blow this client's cap.
+    const need = Math.min(slides.length, 6);
+    if (imageAllowance(workspace, need).blocked) {
+      setGenMsg("This client's monthly image cap is reached — raise it in Settings › Generation usage.");
+      setGenArm(false);
+      return;
+    }
     setGenBusy(true);
     setGenMsg("✨ Starting the batch…");
     try {
