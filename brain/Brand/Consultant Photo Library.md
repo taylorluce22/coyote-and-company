@@ -18,9 +18,37 @@ Higgsfield → **Soul ID** → upload **20+ photos of Taylor**:
 - Include a few **full-body** shots (best consistency).
 - Name it e.g. `taylor-consultant`. Every prompt below runs **with this Soul ID selected.**
 
+## The look (owner direction, 2026-07-23) — CANDID iPHONE PHOTOS
+Every shot must look like **a real iPhone photo someone caught in the moment** —
+never a posed portrait or a fashion/editorial shoot. Two hard rules on every prompt:
+1. **"shot on an iPhone, natural iPhone photo look, everyday snapshot"** — the phone-camera aesthetic is the target, not a polished camera/film look.
+2. **Candid, unposed, NOT looking at the camera** — the consultant is engaged in the actual thing (homeowner, tablet, roof, meter, bill), caught mid-action. No direct-to-lens gaze, no arms-crossed hero pose, no tailored blazer — plain approachable polo.
+- **Moodboard: `Digital camera` for ALL shots (verified).** `Warm ambient` produced fashion-editorial (cardigans, tailored coats, moody magazine light, posed) — do NOT use it. `Old smartphone` (lo-fi), `Film looks`/`Theatrical light` (editorial) also out. For indoors on `Digital camera`, add **"soft daylight from a window, no flash"** to the prompt to avoid the harsh party-flash look.
+- **Wardrobe:** a **modern athletic golf polo** — Lululemon-style performance polo, collared OR collarless, solid color (black is good; vary colors across shots) + casual chinos/pants. Negative-clause OUT: cardigan, blazer, sport coat, sweater, suit jacket, tie, and a black **t-shirt** (a black *polo* is fine).
+- **Poses:** proven simple ones only — walking, hand in pocket, holding one thing low at the side, looking down/away/up. NO hand-on-hip, crossed legs, pointing/gesturing, or crossed arms (all read posed or distort).
+- Body note: Soul ID locks the **face only**, not the physique — avoid full-body hero poses and crossed arms (worst for AI anatomy); favor natural mid-action framing.
+
+## What actually works (learned from the test batch, 2026-07-23)
+The reliable formula — nearly always lands: **solo subject · outdoor · natural
+motion (walking/standing) · one hand doing ONE simple thing low at his side
+(tablet/phone/folder) or in a pocket · looking down / away / up, never at the
+camera.** These come out clean.
+**What fails** (regenerate-heavy, distortion-prone): multiple people, pointing/
+gesturing at someone (arm reaches → giant-arm distortion), crouching, busy
+indoor scenes with hands mid-gesture. So: **bias the library to solo simple
+poses.** When people/interaction is needed, keep it to ONE homeowner, frame
+WIDE, both looking at the same thing (tablet/roof), zero pointing.
+
 ## Step 2 — the realism settings (what stops it reading "AI")
 - **Model:** Soul 2.0, **with your Soul ID**.
-- **Preset by shot:** `iPhone` or `Digital Camera` for candid/authentic (read most real) · `Realistic` for clean authority shots · `Warm Ambient` for indoor consult scenes. **Avoid** loud/cinematic presets and "8k/hyperreal" tokens — those are the AI tell.
+- **Moodboard by shot (actual Higgsfield web-UI names, verified 2026-07-23):**
+  clean authority → **General** · indoor consult → **Warm ambient** · candid/real
+  (driveway, walk, truck, portrait) → **Digital camera** · subtle cinematic
+  (battery, wide) → **Film looks**. **Avoid** `Old smartphone` (too lo-fi/dated)
+  and `Theatrical light` (too dramatic/staged) — both break "reads real." No
+  "8k/hyperreal" tokens. (Soul ID / character is selectable ONLY in Higgsfield's
+  own Image UI — not via the platform API — so likeness shots are made there,
+  then imported into the app's Consultant Library.)
 - **Wardrobe (keep consistent):** clean solid polo or quarter-zip (brand-ish), jeans/work pants. Approachable-professional, not corporate.
 - **Light:** golden hour, open shade, or window light. Never harsh noon on the face.
 - **Negative clause on every prompt:**

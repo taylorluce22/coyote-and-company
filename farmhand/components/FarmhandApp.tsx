@@ -20,6 +20,7 @@ import { TasksPanel, SchedulePanel, ToolsPanel } from "./screens/OsPanels";
 import Connectors from "./screens/Connectors";
 import TemplateStudio from "./screens/TemplateStudio";
 import ConsultantLibrary from "./screens/ConsultantLibrary";
+import PacketExport from "./screens/PacketExport";
 
 function Screen() {
   const { state } = useStore();
@@ -40,6 +41,8 @@ function Screen() {
       return <KnowledgeVault />;
     case "content":
       return <Content />;
+    case "packet":
+      return <PacketExport />;
     case "studio":
       return <TemplateStudio />;
     case "library":

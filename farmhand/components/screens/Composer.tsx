@@ -24,6 +24,7 @@ import { ideaCopy, ideaFactPair } from "@/lib/ideaCopy";
 import { ideasFor, type Idea, type StrategyProfile } from "@/lib/strategy";
 import { buildSlidePrompts, pushPackLog, readPackLog } from "@/lib/postVisuals";
 import { vaultAdd, vaultAll, vaultDelete, type VaultImage } from "@/lib/vault";
+import { record as meterRecord, imageAllowance } from "@/lib/meter";
 
 /* ---- content model (Farmhand): per-channel variants of the post ---- */
 const CHANNELS: [CompCh, string][] = [
@@ -60,16 +61,19 @@ const STATUSES = [
    If a batch is interrupted (tab closed, connection dropped, function
    died), these records let ⟳ Recover pull the already-paid-for images. */
 type PendingItem = { url: string; prompt: string; role: string; index: number; title: string };
-const PENDING_KEY = "fh-hf-pending";
-function readPending(): PendingItem[] | null {
+// per-client so a batch started under one client can never be recovered into
+// another client's vault (multi-client isolation). "default" keeps the old key.
+const pendingKeyFor = (client: string) => (client === "default" ? "fh-hf-pending" : `fh-hf-pending::${client}`);
+function readPending(client: string): PendingItem[] | null {
   try {
-    const raw = localStorage.getItem(PENDING_KEY);
+    const key = pendingKeyFor(client);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const p = JSON.parse(raw);
     if (!Array.isArray(p.items) || !p.items.length) return null;
     // Higgsfield results don't live forever — stop offering recovery after a day
     if (!(p.createdAt > Date.now() - 24 * 3600000)) {
-      localStorage.removeItem(PENDING_KEY);
+      localStorage.removeItem(key);
       return null;
     }
     return p.items as PendingItem[];
@@ -77,19 +81,20 @@ function readPending(): PendingItem[] | null {
     return null;
   }
 }
-function writePending(items: PendingItem[]) {
+function writePending(items: PendingItem[], client: string) {
   try {
-    localStorage.setItem(PENDING_KEY, JSON.stringify({ createdAt: Date.now(), items }));
+    localStorage.setItem(pendingKeyFor(client), JSON.stringify({ createdAt: Date.now(), items }));
   } catch {}
 }
-function prunePending(index: number) {
+function prunePending(index: number, client: string) {
   try {
-    const raw = localStorage.getItem(PENDING_KEY);
+    const key = pendingKeyFor(client);
+    const raw = localStorage.getItem(key);
     if (!raw) return;
     const p = JSON.parse(raw);
     p.items = (Array.isArray(p.items) ? p.items : []).filter((it: PendingItem) => it.index !== index);
-    if (p.items.length) localStorage.setItem(PENDING_KEY, JSON.stringify(p));
-    else localStorage.removeItem(PENDING_KEY);
+    if (p.items.length) localStorage.setItem(key, JSON.stringify(p));
+    else localStorage.removeItem(key);
   } catch {}
 }
 
@@ -211,7 +216,7 @@ const FIELD_LABEL: React.CSSProperties = {
 };
 
 export default function Composer() {
-  const { state, set } = useStore();
+  const { state, set, workspace } = useStore();
   const ch = state.compChannel;
   const strategy = state.strategy as StrategyProfile;
   // idea mode: copy generated from the idea engine + knowledge base (what
@@ -434,7 +439,7 @@ export default function Composer() {
   const [genMsg, setGenMsg] = useState<string | null>(null);
   const [pendingBatch, setPendingBatch] = useState<PendingItem[] | null>(null);
   useEffect(() => {
-    setPendingBatch(readPending());
+    setPendingBatch(readPending(workspace));
   }, []);
   // two-step trigger: first click arms with the credit cost, second confirms —
   // so credits are only spent once the copy is locked
@@ -471,7 +476,7 @@ export default function Composer() {
         if (res.status === "failed") {
           settled.add(it.index);
           failed++;
-          prunePending(it.index);
+          prunePending(it.index, workspace);
           continue;
         }
         const u = res.status === "completed" ? res.images?.[0] : null;
@@ -480,11 +485,12 @@ export default function Composer() {
         const p = await processImageURL(`/api/higgsfield?img=${encodeURIComponent(u)}`, 1200, 0.85);
         if (!p) {
           failed++;
-          prunePending(it.index);
+          prunePending(it.index, workspace);
           continue;
         }
         // vault FIRST — the paid-for image is safe before anything else
         await vaultAdd({ id: uid(), dataURL: p.dataURL, lum: p.lum, busy: p.busy, prompt: it.prompt, label: `${it.title.slice(0, 48)} · ${it.role}`, createdAt: Date.now() });
+        meterRecord(workspace, "image", 1); // E4: log the generation against this client's ledger
         set((s) => ({ stAssets: [...s.stAssets, { id: uid(), name: `${it.role} visual`, dataURL: p.dataURL, lum: p.lum, busy: p.busy, source: "higgsfield" }].slice(-40) }));
         if (applyToSlides) {
           const b: Bg = { type: "image", img: p.dataURL };
@@ -499,7 +505,7 @@ export default function Composer() {
           });
         }
         ok++;
-        prunePending(it.index);
+        prunePending(it.index, workspace);
         setGenMsg(`✨ ${ok}/${items.length} images in — the rest are still rendering…`);
       }
       if (settled.size < items.length) await new Promise((r) => setTimeout(r, 4000));
@@ -510,6 +516,13 @@ export default function Composer() {
 
   async function generateVisuals() {
     if (genBusy || !slides.length) return;
+    // E4 allowance guard: don't start a batch that would blow this client's cap.
+    const need = Math.min(slides.length, 6);
+    if (imageAllowance(workspace, need).blocked) {
+      setGenMsg("This client's monthly image cap is reached — raise it in Settings › Generation usage.");
+      setGenArm(false);
+      return;
+    }
     setGenBusy(true);
     setGenMsg("✨ Starting the batch…");
     try {
@@ -543,10 +556,10 @@ export default function Composer() {
       }
       // record the paid-for jobs BEFORE polling — from here on, a crash,
       // closed tab, or dead connection can't lose them
-      writePending(items);
+      writePending(items, workspace);
       setGenMsg(`✨ ${items.length} images rendering — they land on the slides as they finish…`);
       const { ok, failed } = await pollBatch(items, true, 4 * 60000);
-      setPendingBatch(readPending());
+      setPendingBatch(readPending(workspace));
       if (!ok) {
         setGenMsg("The images didn't come back in time — they're already paid for. Hit ⟳ Recover images in a minute to pull them into your vault.");
       } else {
@@ -559,7 +572,7 @@ export default function Composer() {
         );
       }
     } catch {
-      setPendingBatch(readPending());
+      setPendingBatch(readPending(workspace));
       setGenMsg("Lost the connection mid-batch — your images are safe. Hit ⟳ Recover images to pull them into your vault.");
     } finally {
       setGenBusy(false);
@@ -568,13 +581,13 @@ export default function Composer() {
 
   /** Pull finished images from an interrupted batch — no new credits spent. */
   async function recoverBatch() {
-    const items = readPending();
+    const items = readPending(workspace);
     if (!items || genBusy) return;
     setGenBusy(true);
     setGenMsg("⟳ Checking Higgsfield for your finished images…");
     try {
       const { ok } = await pollBatch(items, false, 45000);
-      setPendingBatch(readPending());
+      setPendingBatch(readPending(workspace));
       setGenMsg(
         ok
           ? `✓ Recovered ${ok} image${ok > 1 ? "s" : ""} into your AI vault — nothing wasted.`
@@ -827,7 +840,7 @@ export default function Composer() {
             <button
               onClick={() => {
                 try {
-                  localStorage.removeItem(PENDING_KEY);
+                  localStorage.removeItem(pendingKeyFor(workspace));
                 } catch {}
                 setPendingBatch(null);
               }}

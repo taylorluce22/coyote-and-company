@@ -7,15 +7,35 @@
 
 /** The negative clause appended to every consultant prompt (kills AI tells). */
 export const CONSULTANT_NEGATIVE =
-  "avoid: text, logos, watermarks, deformed hands, extra fingers, plastic skin, over-smoothed face, over-saturation, fake bokeh, warped panels, bent rooflines";
+  "avoid: text, logos, watermarks, no logo or text on clothing, deformed hands, extra fingers, crossed-arm errors, oversized forearm, giant arm, muscular arms, foreshortened limbs, huge hands, distorted anatomy, exaggerated muscles, bulky physique, distorted arms, unnatural body proportions, plastic skin, over-smoothed face, awkward open mouth, mid-word grimace, harsh on-camera flash, blown-out flash, unflattering light, red eyes, over-saturation, fake bokeh, warped panels, bent rooflines, cardigan, blazer, sport coat, sweater, suit jacket, necktie, black t-shirt, formal or fashion wardrobe, hand on hip, crossed legs, editorial fashion pose, moody magazine lighting, receding hairline, balding, thinning hair, altered hairline, hands on solar panels, touching solar panels, posing in front of solar panels, standing against a solar panel, patterned shirt, graphic print, loud print, tie-dye, floral shirt, busy pattern, printed golf shirt, solar panel graphic on shirt, logo on shirt, duplicated person, two identical people, twin, clone";
 
-/** Preset → the aesthetic phrase baked into the prompt (no style_id needed). */
+/** The look every shot leads with: an iPhone snapshot, caught candid. The two
+    biggest "reads real" levers — phone-camera look + unposed moment. */
+export const IPHONE =
+  "shot on an iPhone, looks like a photo straight from a personal camera roll, natural everyday phone snapshot, true-to-life color, slight natural imperfection, varied framing (sometimes wider, not always close up),";
+/** Locks the setting to the Arizona desert Southwest — "Arizona" alone drifts to
+    generic/European/Midwest suburbs. Split interior vs exterior: appending desert
+    mountains + xeriscape to an indoor kitchen shot is contradictory and was a big
+    cause of interior drift. Grounded in brain/Brand/Arizona Reference Set.md
+    (real Phoenix listing photos). composePrompt() picks the right one per shot. */
+export const ARIZONA_EXTERIOR =
+  "set in a Phoenix Arizona desert suburb: tan and greige stucco homes with low-pitch concrete tile roofs (terracotta or brown), some with stone-veneer garage columns, wide flat concrete driveways, decomposed-granite gravel yards with agave, barrel cactus, olive and mesquite trees and Mexican fan palms, tan block privacy walls, distant brown desert mountains, big open sky, bright dry high-contrast Southwest sunlight, unmistakably Arizona new-build tract";
+export const ARIZONA_INTERIOR =
+  "inside a bright modern Phoenix Arizona tract home: vaulted high ceiling with a half-round arched clerestory window up high, warm greige or light grey walls, wood-look plank tile or travertine floors (no carpet), a ceiling fan, plantation shutters, a slider to a gravel desert backyard letting in bright dry desert daylight, airy new-build Southwest interior";
+/** Back-compat alias (old imports). Exterior is the general default. */
+export const ARIZONA = ARIZONA_EXTERIOR;
+
+export const CANDID =
+  "candid and unposed, caught mid-moment, subject not looking at the camera, natural spontaneous expression, authentic everyday moment, not a posed portrait, not a fashion shoot, relaxed natural body pose, average lean build, arms relaxed at natural angles (never reaching toward the camera), a lean man with a natural full hairline, one clear main subject, wearing a plain unbranded solid-color polo shirt with a blank plain chest and no writing, emblem, or logo, one muted color like light blue, grey, navy, or olive, with casual chinos, his face visible at a natural three-quarter or profile angle (never fully turned away, never his bare back to the camera), off-center environmental composition, caught in the middle of an activity, not centered, not a straight-on portrait";
+
+/** Preset → the aesthetic phrase baked into the prompt (no style_id needed).
+    All lean candid/everyday, not editorial-glossy. */
 const PRESET_LOOK: Record<string, string> = {
-  Realistic: "photoreal editorial photograph, natural skin texture, believable",
-  iPhone: "candid iPhone-style photo, spontaneous slight tilt, natural imperfections, believable",
+  Realistic: "natural photoreal snapshot, believable skin texture",
+  iPhone: "candid phone-camera snapshot, spontaneous slight tilt, natural imperfections",
   DigitalCamera: "everyday digital-camera photo, natural imperfections, unpolished realism",
-  WarmAmbient: "warm ambient lifestyle photo, soft window light, cozy realism",
-  Movie: "subtle cinematic photo, controlled contrast, filmic realism",
+  WarmAmbient: "soft soft daylight from a window, no flash, cozy everyday realism",
+  Movie: "subtle natural cinematic light, believable, not a glossy film still",
 };
 
 export interface ConsultantShot {
@@ -25,22 +45,29 @@ export interface ConsultantShot {
   preset: keyof typeof PRESET_LOOK;
   scene: string; // the scene tokens
   aspect: "3:4" | "9:16" | "1:1";
+  space: "interior" | "exterior"; // which AZ setting clause to append
 }
 
-/** The 12 seed shots — one coherent consultant persona. */
+/** Shot recipes — design-review moments + camera-roll candid activity. No
+    posing with / hands on panels; the crew is on the roof, Taylor spectates. */
 export const CONSULTANT_SHOTS: ConsultantShot[] = [
-  { id: "bio", label: "Bio headshot", job: "profile / pinned", preset: "Realistic", aspect: "3:4", scene: "a confident solar consultant in a clean solid polo standing outside a modern stucco Arizona home with rooftop solar, relaxed genuine half-smile, arms lightly crossed, golden-hour side light, shallow depth of field" },
-  { id: "roof", label: "Rooftop authority", job: "field authority", preset: "Realistic", aspect: "3:4", scene: "a solar consultant in a polo and safety gear kneeling beside clean solar panels on an Arizona tile roof, holding a tablet, checking the array, early golden-hour light, desert suburb behind, realistic tools and posture" },
-  { id: "consult", label: "Kitchen-table consult", job: "the human moment", preset: "WarmAmbient", aspect: "3:4", scene: "a solar consultant sitting at a kitchen island with a homeowner seen from behind, pointing at a tablet showing an energy chart, warm afternoon window light, relaxed trustworthy body language, modern Southwest kitchen" },
-  { id: "driveway", label: "Driveway, tablet", job: "approachable", preset: "iPhone", aspect: "3:4", scene: "a solar consultant standing in the driveway of a solar-equipped Arizona home, glancing at a tablet, casual polished wardrobe, sunset light on the facade" },
-  { id: "walk", label: "Walk-and-talk", job: "reel still / personality", preset: "DigitalCamera", aspect: "9:16", scene: "a solar consultant walking through a desert suburban neighborhood mid-stride, gesturing while talking to camera, natural daylight, palo verde and stucco homes behind" },
-  { id: "meter", label: "At the meter", job: "teaching", preset: "Realistic", aspect: "3:4", scene: "a solar consultant pointing at a home electric meter on a stucco wall, mid-explanation, homeowner partly in frame, bright open shade, authentic teaching moment" },
-  { id: "battery", label: "Battery wall", job: "product knowledge", preset: "Movie", aspect: "3:4", scene: "a solar consultant standing beside a wall-mounted home battery in a clean Arizona garage, calm confident expression, gesturing toward the unit, soft practical light and open garage-door spill, realistic hardware" },
-  { id: "bill", label: "Holding a bill", job: "bill literacy", preset: "WarmAmbient", aspect: "3:4", scene: "a solar consultant at a table holding a paper electric bill, explaining a line on it, warm window light, focused approachable expression, close natural framing, realistic paper and hands, no readable text" },
-  { id: "truck", label: "Truck / tailgate", job: "working pro", preset: "DigitalCamera", aspect: "3:4", scene: "a solar consultant leaning on the tailgate of a work truck with solar panels and gear, casual confident, late-afternoon desert light, dusty authentic work vibe" },
-  { id: "onsite", label: "On-site w/ homeowner", job: "trust", preset: "Realistic", aspect: "3:4", scene: "a solar consultant standing with a homeowner in front of a solar-equipped Arizona home, both looking up at the roof, natural conversation, golden hour, no staged poses" },
-  { id: "portrait", label: "Warm candid portrait", job: "human connection", preset: "iPhone", aspect: "3:4", scene: "a candid warm portrait of a solar consultant laughing naturally, outdoors in soft evening light, casual polo, genuine relatable expression, believable skin and eyes" },
-  { id: "wide", label: "Wide, in front of home", job: "environmental", preset: "Movie", aspect: "3:4", scene: "a solar consultant standing confidently in front of a modern desert home with a clean rooftop solar array, wide environmental portrait, golden hour, understated premium mood, realistic architecture and panels" },
+  // — the design-review moment (core: showing a customer their new design) —
+  { id: "review-table", label: "Showing the design · table", job: "the sale moment", preset: "DigitalCamera", aspect: "3:4", space: "interior", scene: "a solar consultant sitting at a kitchen table beside a homeowner, showing them their new solar system design on a tablet, both looking down at the screen, calm and focused, soft daylight from a window no flash, off-center camera-roll candid" },
+  { id: "review-driveway", label: "Showing the design · driveway", job: "the sale moment", preset: "DigitalCamera", aspect: "3:4", space: "exterior", scene: "a solar consultant standing next to a homeowner in a driveway, showing them their new solar design on a tablet held between them, both looking down at the screen, warm afternoon light, off-center environmental" },
+  { id: "review-couch", label: "Reviewing on a laptop", job: "the sale moment", preset: "DigitalCamera", aspect: "3:4", space: "interior", scene: "a solar consultant sitting beside a customer on a couch, reviewing a solar design layout on a laptop screen together, both looking at the screen, warm living-room daylight, candid" },
+  { id: "review-island", label: "Design on the island", job: "the sale moment", preset: "DigitalCamera", aspect: "3:4", space: "interior", scene: "a solar consultant at a kitchen island with a homeowner across from him, a laptop showing a solar design turned toward the homeowner, calm relaxed conversation, soft daylight from a window, off-center" },
+  // — spectating the install crew (Taylor on the ground, crew on the roof) —
+  { id: "spectate", label: "Watching the install", job: "field / proof", preset: "DigitalCamera", aspect: "3:4", space: "exterior", scene: "a wide shot of a solar consultant standing on the ground in a driveway watching an install crew work on a residential concrete-tile roof installing all-black solar panels, hands relaxed, looking up at the crew, natural daylight, off-center, camera-roll candid, the consultant is small in a wider frame" },
+  { id: "photograph", label: "Photographing the new system", job: "field / proof", preset: "DigitalCamera", aspect: "3:4", space: "exterior", scene: "a solar consultant standing in a backyard holding his phone up taking a photo of sleek new all-black triple-black solar panels on the low concrete-tile roof of a modern Arizona house, shown from a three-quarter side angle so his face is visible in profile, arm relaxed, natural daylight, off-center camera-roll candid" },
+  { id: "powerwall3", label: "Next to a Powerwall 3", job: "field / product", preset: "DigitalCamera", aspect: "3:4", space: "interior", scene: "a solar consultant standing beside a wall-mounted Tesla Powerwall 3 installed on the wall of a clean modern residential garage, looking at the unit, relaxed natural stance, soft natural garage light from an open garage door, off-center" },
+  // — solo, camera-roll candid activity —
+  { id: "laptop", label: "Working on a MacBook", job: "at-work candid", preset: "DigitalCamera", aspect: "3:4", space: "interior", scene: "a solar consultant sitting at a kitchen table working on a solar design on an open MacBook laptop, looking at the screen in profile, off to one side of the frame, soft daylight from a window" },
+  { id: "driveway", label: "Walking, tablet", job: "candid", preset: "DigitalCamera", aspect: "3:4", space: "exterior", scene: "a solar consultant walking up a driveway glancing down at a tablet held low at his side, three-quarter angle, off-center, dusk light" },
+  { id: "walk", label: "Walking, phone", job: "reel still", preset: "DigitalCamera", aspect: "9:16", space: "exterior", scene: "a solar consultant walking along a neighborhood sidewalk glancing down at his phone, seen from a slight angle, warm evening light, tan tile-roof desert homes behind" },
+  { id: "phone-profile", label: "On the phone, profile", job: "candid", preset: "DigitalCamera", aspect: "3:4", space: "exterior", scene: "a solar consultant standing outdoors looking down at his phone in profile, off to one side of the frame, warm afternoon light, a tan stucco tile-roof desert home in the background" },
+  { id: "tailgate", label: "Truck tailgate, tablet", job: "working pro", preset: "DigitalCamera", aspect: "3:4", space: "exterior", scene: "a solar consultant sitting on the open tailgate of a work truck looking down at a tablet on his lap, seen from the side, off-center, late-afternoon light" },
+  { id: "office", label: "Home office, laptop", job: "at-work candid", preset: "DigitalCamera", aspect: "3:4", space: "interior", scene: "a solar consultant sitting at a desk in a home office looking at a laptop screen in profile, jotting a note, soft daylight, environmental" },
+  { id: "training", label: "Presenting at a training", job: "authority", preset: "DigitalCamera", aspect: "3:4", space: "interior", scene: "a solar consultant standing to one side at the front of a room presenting to a small group of people seated with their backs to the camera, gesturing naturally toward a screen, mid-presentation, wide environmental shot, not centered" },
 ];
 
 /**
@@ -49,5 +76,12 @@ export const CONSULTANT_SHOTS: ConsultantShot[] = [
  * Deliberately compact — no "8k/hyperreal" tokens (those are the AI tell).
  */
 export function composePrompt(shot: ConsultantShot): string {
-  return `${PRESET_LOOK[shot.preset]}, ${shot.scene}. ${CONSULTANT_NEGATIVE}`;
+  // Positive-only: Higgsfield's Soul prompt field is NOT a negative prompt —
+  // naming unwanted things ("no logo", "no pattern") can summon them. Keep the
+  // constraints phrased positively in IPHONE/CANDID/scene. CONSULTANT_NEGATIVE
+  // is exported for a real negative-prompt field only (if one is available).
+  // Pick the setting clause by space so we don't jam desert mountains into an
+  // indoor kitchen (a real cause of interior drift).
+  const setting = shot.space === "interior" ? ARIZONA_INTERIOR : ARIZONA_EXTERIOR;
+  return `${IPHONE} ${CANDID}, ${shot.scene}, ${setting}.`;
 }

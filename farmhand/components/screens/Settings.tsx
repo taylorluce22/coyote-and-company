@@ -1,6 +1,9 @@
 "use client";
 
-import { cleanSlate, restoreDemo, useStore, WORKSPACES } from "@/lib/store";
+import { useRef, useState } from "react";
+import { cleanSlate, restoreDemo, useStore } from "@/lib/store";
+import type { ClientMeta, ClientBundle, ClientId } from "@/lib/clients";
+import { monthUsage, imageAllowance, imageCap, setImageCap, dollars, UNIT_COST_CENTS, type MonthUsage } from "@/lib/meter";
 import { Switch } from "@/components/ui";
 import { SET_VOICE, SET_IMG_PREFS, SET_CONNECTIONS } from "@/lib/data";
 import { DEFAULT_STRATEGY, SOLAR_TERRITORIES, type StrategyProfile, type Territory } from "@/lib/strategy";
@@ -23,6 +26,187 @@ function Row({ label, on, color, onToggle }: { label: string; on: boolean; color
       <span style={{ flex: 1, fontSize: 13.5, color: "#D8D6E6" }}>{label}</span>
       <Switch on={on} color={color} onToggle={onToggle} label={label} />
     </div>
+  );
+}
+
+/**
+ * Operator multi-client mode (E1) — the founder services many client accounts
+ * from one browser. Add / switch / rename / remove clients, and export/import a
+ * client bundle (the backup, since data still lives in this browser).
+ */
+function ClientsCard({ clients, active, onSwitch, onAdd, onRename, onRemove, onExport, onImport }: {
+  clients: ClientMeta[];
+  active: ClientId;
+  onSwitch: (id: ClientId) => void;
+  onAdd: (label: string, opts?: { emoji?: string; vertical?: "realtor" | "solar" }) => ClientId;
+  onRename: (id: ClientId, label: string, emoji?: string) => void;
+  onRemove: (id: ClientId) => void;
+  onExport: (id: ClientId) => Promise<void>;
+  onImport: (bundle: ClientBundle) => Promise<ClientId | null>;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newVertical, setNewVertical] = useState<"solar" | "realtor">("solar");
+  const [editId, setEditId] = useState<ClientId | null>(null);
+  const [editName, setEditName] = useState("");
+  const [msg, setMsg] = useState("");
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  const isSeed = (id: ClientId) => id === "default" || id === "solar";
+
+  const submitAdd = () => {
+    const name = newName.trim();
+    if (!name) return;
+    onAdd(name, { vertical: newVertical });
+    setNewName(""); setAdding(false);
+    setMsg(`Created “${name}” — onboarding is ready for this client.`);
+  };
+
+  const onFile = async (files: FileList | null) => {
+    const f = files?.[0];
+    if (!f) return;
+    try {
+      const bundle = JSON.parse(await f.text()) as ClientBundle;
+      const id = await onImport(bundle);
+      setMsg(id ? "✓ Client bundle restored as a new client." : "That file isn’t a Farmhand client bundle.");
+    } catch { setMsg("Couldn’t read that file."); }
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  return (
+    <Card title="Clients">
+      <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.55, marginBottom: 12 }}>
+        Every client you service is an isolated account — its own profile, content, image vault, inbox, and pipeline.
+        Nothing is shared between them. Back up a client to a file anytime, and restore it on any device.
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {clients.map((w) => {
+          const on = w.id === active;
+          const editing = editId === w.id;
+          return (
+            <div key={w.id} style={{ display: "flex", flexDirection: "column", gap: 6, padding: "11px 12px", borderRadius: 11, background: on ? (w.vertical === "solar" ? "linear-gradient(180deg,#FFC23D,#D97706)" : "linear-gradient(180deg,#2DD4BF,#0D9488)") : "rgba(255,255,255,0.05)", border: on ? "none" : "1px solid rgba(255,255,255,0.12)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 17 }}>{w.emoji}</span>
+                {editing ? (
+                  <input autoFocus value={editName} onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { onRename(w.id, editName); setEditId(null); } }}
+                    style={{ flex: 1, background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 7, padding: "6px 9px", color: on ? "#04110E" : "#F4F3F8", fontSize: 13, fontWeight: 700 }} />
+                ) : (
+                  <button onClick={() => !on && onSwitch(w.id)} style={{ flex: 1, textAlign: "left", background: "none", border: "none", cursor: on ? "default" : "pointer", fontSize: 13.5, fontWeight: 800, color: on ? "#04110E" : "#A6A4B8" }}>
+                    {w.label}
+                  </button>
+                )}
+                {on && !editing && <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.08em", color: "#04110E" }}>ACTIVE</span>}
+              </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {editing ? (
+                  <>
+                    <MiniBtn on={on} label="Save" onClick={() => { onRename(w.id, editName); setEditId(null); }} />
+                    <MiniBtn on={on} label="Cancel" onClick={() => setEditId(null)} />
+                  </>
+                ) : (
+                  <>
+                    {!on && <MiniBtn on={on} label="Open" onClick={() => onSwitch(w.id)} />}
+                    <MiniBtn on={on} label="Rename" onClick={() => { setEditId(w.id); setEditName(w.label); }} />
+                    <MiniBtn on={on} label="Back up" onClick={() => onExport(w.id)} />
+                    {!isSeed(w.id) && <MiniBtn on={on} danger label="Remove" onClick={() => { if (confirm(`Remove “${w.label}” and all its data? Back it up first if you want to keep it.`)) onRemove(w.id); }} />}
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {adding ? (
+        <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8, padding: "12px", borderRadius: 11, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)" }}>
+          <input autoFocus value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Client name (e.g. Jordan · Mesa Solar)"
+            onKeyDown={(e) => { if (e.key === "Enter") submitAdd(); }}
+            style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 8, padding: "9px 11px", color: "#F4F3F8", fontSize: 13 }} />
+          <div style={{ display: "flex", gap: 6 }}>
+            {(["solar", "realtor"] as const).map((v) => (
+              <button key={v} onClick={() => setNewVertical(v)} style={{ flex: 1, cursor: "pointer", fontSize: 12, fontWeight: 700, padding: "8px 0", borderRadius: 8, background: newVertical === v ? "#E8622C" : "rgba(255,255,255,0.05)", color: newVertical === v ? "#0B0A12" : "#A6A4B8", border: "none" }}>
+                {v === "solar" ? "☀️ Solar" : "🏠 Realtor"}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={submitAdd} disabled={!newName.trim()} style={{ flex: 1, cursor: newName.trim() ? "pointer" : "default", fontSize: 12.5, fontWeight: 700, padding: "9px 0", borderRadius: 8, background: newName.trim() ? "#41D98A" : "#3A3A46", color: "#04110E", border: "none" }}>Create client</button>
+            <button onClick={() => { setAdding(false); setNewName(""); }} style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 600, padding: "9px 14px", borderRadius: 8, background: "rgba(255,255,255,0.06)", color: "#A6A4B8", border: "1px solid rgba(255,255,255,0.12)" }}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+          <button onClick={() => setAdding(true)} style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 700, padding: "10px 16px", borderRadius: 9, background: "#E8622C", color: "#0B0A12", border: "none" }}>+ Add client</button>
+          <button onClick={() => fileRef.current?.click()} style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 650, padding: "10px 16px", borderRadius: 9, background: "rgba(255,255,255,0.06)", color: "#F4F3F8", border: "1px solid rgba(255,255,255,0.14)" }}>Restore from file ↑</button>
+          <input ref={fileRef} type="file" accept="application/json,.json" onChange={(e) => onFile(e.target.files)} style={{ display: "none" }} />
+        </div>
+      )}
+      {msg && <div style={{ fontSize: 11, color: "#8B89A0", marginTop: 10, lineHeight: 1.5 }}>{msg}</div>}
+    </Card>
+  );
+}
+
+/**
+ * Generation usage & cost (E4) — this client's image spend this month against
+ * its allowance, so the founder protects gross margin instead of finding out at
+ * invoice time. Costs are Farmhand-internal estimates; native credits never show.
+ */
+function UsageCard({ client }: { client: ClientId }) {
+  const [usage, setUsage] = useState<MonthUsage>({ image: 0, reel: 0, copy: 0, costCents: 0 });
+  const [cap, setCap] = useState(60);
+  const [capInput, setCapInput] = useState("60");
+  const refresh = () => { setUsage(monthUsage(client)); const c = imageCap(client); setCap(c); setCapInput(String(c)); };
+  // read on mount + whenever the active client changes
+  useRefreshOnClient(client, refresh);
+  const allow = imageAllowance(client);
+  const pct = Math.min(100, Math.round(allow.pct * 100));
+  const barColor = allow.blocked ? "#FF7A7A" : allow.warn ? "#FFC23D" : "#41D98A";
+  const month = new Date().toLocaleString("en-US", { month: "long" });
+
+  return (
+    <Card title="Generation usage & cost">
+      <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.55, marginBottom: 12 }}>
+        This client&apos;s image generation for {month}. The allowance protects your margin — at the cap, new
+        generations pause until you raise it or next month starts.
+      </div>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 6 }}>
+        <span style={{ fontSize: 22, fontWeight: 800, color: "#F4F3F8" }}>{usage.image}<span style={{ fontSize: 13, color: "#8B89A0", fontWeight: 600 }}> / {cap} images</span></span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#A6A4B8" }}>~{dollars(usage.costCents)}</span>
+      </div>
+      <div style={{ height: 8, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden", marginBottom: 4 }}>
+        <div style={{ width: `${pct}%`, height: "100%", background: barColor, transition: "width .3s" }} />
+      </div>
+      <div style={{ fontSize: 11, color: allow.blocked ? "#FF7A7A" : allow.warn ? "#FFC23D" : "#5E5C72", marginBottom: 14 }}>
+        {allow.blocked ? "Cap reached — generation paused for this client." : allow.warn ? `${allow.remaining} left before the cap.` : `${allow.remaining} images left this month.`}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 11.5, color: "#8B89A0" }}>Monthly image cap</span>
+        <input value={capInput} onChange={(e) => setCapInput(e.target.value.replace(/[^0-9]/g, ""))}
+          style={{ width: 72, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 8, padding: "6px 9px", color: "#F4F3F8", fontSize: 12.5 }} />
+        <button onClick={() => { const n = parseInt(capInput, 10); if (Number.isFinite(n)) { setImageCap(client, n); refresh(); } }}
+          style={{ cursor: "pointer", fontSize: 11.5, fontWeight: 700, padding: "7px 13px", borderRadius: 8, background: "rgba(255,255,255,0.06)", color: "#F4F3F8", border: "1px solid rgba(255,255,255,0.14)" }}>Set</button>
+        <button onClick={refresh} style={{ cursor: "pointer", fontSize: 11.5, fontWeight: 600, padding: "7px 11px", borderRadius: 8, background: "transparent", color: "#8B89A0", border: "1px solid rgba(255,255,255,0.1)" }}>Refresh</button>
+      </div>
+      <div style={{ fontSize: 10.5, color: "#5E5C72", marginTop: 12, lineHeight: 1.5 }}>
+        Est. cost per image ~{dollars(UNIT_COST_CENTS.image)}. Keep total generation cost under ~15% of the plan price.
+        {usage.reel > 0 && ` · ${usage.reel} reels`}{usage.copy > 0 && ` · ${usage.copy} copy runs`}
+      </div>
+    </Card>
+  );
+}
+
+/** Re-run refresh whenever the active client changes (and once on mount). */
+function useRefreshOnClient(client: ClientId, refresh: () => void) {
+  const last = useRef<string>("");
+  if (last.current !== client) { last.current = client; refresh(); }
+}
+
+function MiniBtn({ label, onClick, on, danger }: { label: string; onClick: () => void; on: boolean; danger?: boolean }) {
+  return (
+    <button onClick={onClick} style={{ cursor: "pointer", fontSize: 11, fontWeight: 650, padding: "5px 10px", borderRadius: 7, background: on ? "rgba(0,0,0,0.16)" : "rgba(255,255,255,0.06)", color: danger ? "#FF7A7A" : on ? "#04110E" : "#C8C6D8", border: on ? "none" : "1px solid rgba(255,255,255,0.12)" }}>
+      {label}
+    </button>
   );
 }
 
@@ -143,7 +327,7 @@ function SolarTerritoryPicker() {
 }
 
 export default function Settings() {
-  const { state, set, workspace, switchWorkspace } = useStore();
+  const { state, set, workspace, switchWorkspace, clients, addClient, renameClient, removeClient, exportClient, importClient } = useStore();
   const get = (k: string, def: boolean) => (state[k] != null ? (state[k] as boolean) : def);
   const strategy = state.strategy as StrategyProfile;
   const activeVertical = verticalOf(strategy.vertical).id;
@@ -181,32 +365,18 @@ export default function Settings() {
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, alignItems: "start" }}>
-      <Card title="Accounts">
-        <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.55, marginBottom: 12 }}>
-          Switch between the realtor test user and your real solar business. Each account keeps its own profile,
-          engine training, inbox, and pipeline — nothing is shared between them.
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {WORKSPACES.map((w) => {
-            const on = w.id === workspace;
-            return (
-              <button
-                key={w.id}
-                onClick={() => switchWorkspace(w.id)}
-                style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 14px", borderRadius: 11, fontSize: 13.5, fontWeight: 800, cursor: on ? "default" : "pointer", background: on ? (w.id === "solar" ? "linear-gradient(180deg,#FFC23D,#D97706)" : "linear-gradient(180deg,#2DD4BF,#0D9488)") : "rgba(255,255,255,0.05)", color: on ? "#04110E" : "#A6A4B8", border: on ? "none" : "1px solid rgba(255,255,255,0.12)", textAlign: "left" }}
-              >
-                <span style={{ fontSize: 17 }}>{w.emoji}</span>
-                <span style={{ flex: 1 }}>{w.label}</span>
-                {on && <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.08em" }}>ACTIVE</span>}
-              </button>
-            );
-          })}
-        </div>
-        <div style={{ fontSize: 10.5, color: "#5E5C72", marginTop: 10, lineHeight: 1.5 }}>
-          The solar account starts clean — no demo data, solar engine training, Instagram-first. Every number in it
-          is earned.
-        </div>
-      </Card>
+      <ClientsCard
+        clients={clients}
+        active={workspace}
+        onSwitch={switchWorkspace}
+        onAdd={addClient}
+        onRename={renameClient}
+        onRemove={removeClient}
+        onExport={exportClient}
+        onImport={importClient}
+      />
+
+      <UsageCard client={workspace} />
 
       <Card title="Lead engine vertical">
         <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.55, marginBottom: 12 }}>

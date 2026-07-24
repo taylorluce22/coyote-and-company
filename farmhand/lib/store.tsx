@@ -21,6 +21,13 @@ import type { SourceEntry } from "./sources";
 import { DEFAULT_TRAINING, isProvablyStaleLead, type LeadTraining } from "./hunt";
 import { VERTICALS } from "./verticals";
 import { memoryConfigured, pullSnapshot, pushSnapshot, mergeById } from "./memorySync";
+import { setVaultClient } from "./vault";
+import { setReelVaultClient } from "./reelVault";
+import {
+  loadClients, saveClients, persistKeyFor, makeClientId,
+  exportClientBundle, importClientBundle, purgeClient,
+  type ClientMeta, type ClientId, type ClientBundle,
+} from "./clients";
 
 export interface Upload {
   id: string;
@@ -187,31 +194,35 @@ export function restoreDemo(): Partial<AppState> {
 type Patch = Partial<AppState> | ((s: AppState) => Partial<AppState>);
 
 /**
- * Workspaces — separate accounts in one app (the admin/test setup: a realtor
- * test user and the owner's real solar business). Each workspace persists to
- * its own localStorage key; "default" keeps the original key so the existing
- * realtor account is untouched. Switching swaps the whole working state.
+ * Operator multi-client mode (E1) — the founder services many client accounts
+ * from one browser. Each client is isolated: its own app-state localStorage key
+ * and its own IndexedDB vaults. The registry + storage keys live in ./clients;
+ * "default" (realtor test user) and "solar" (the real account) are seeded with
+ * their original keys so all existing data loads untouched. WorkspaceId is kept
+ * as an alias of the string ClientId for back-compat.
  */
-export type WorkspaceId = "default" | "solar";
-export const WORKSPACES: { id: WorkspaceId; label: string; emoji: string }[] = [
-  { id: "default", label: "Realtor · test user", emoji: "🏠" },
-  { id: "solar", label: "My Solar · real", emoji: "☀️" },
-];
+export type WorkspaceId = ClientId;
 
 interface Store {
   state: AppState;
   set: (patch: Patch) => void;
   copy: (text: string) => void;
   dragId: React.MutableRefObject<string | null>;
-  workspace: WorkspaceId;
-  switchWorkspace: (ws: WorkspaceId) => void;
+  /** active client id (a.k.a. workspace, back-compat name) */
+  workspace: ClientId;
+  switchWorkspace: (ws: ClientId) => void;
+  /** the full client roster the switcher renders */
+  clients: ClientMeta[];
+  addClient: (label: string, opts?: { emoji?: string; vertical?: "realtor" | "solar" }) => ClientId;
+  renameClient: (id: ClientId, label: string, emoji?: string) => void;
+  removeClient: (id: ClientId) => void;
+  exportClient: (id: ClientId) => Promise<void>;
+  importClient: (bundle: ClientBundle) => Promise<ClientId | null>;
 }
 
 const StoreContext = createContext<Store | null>(null);
 
-const PERSIST_KEY = "farmhand-studio-v1";
 const WS_ACTIVE_KEY = "farmhand-ws-active";
-const persistKeyFor = (ws: WorkspaceId) => (ws === "default" ? PERSIST_KEY : `${PERSIST_KEY}::${ws}`);
 const PERSIST_FIELDS = [
   "stStudio",
   "stAssets",
@@ -332,10 +343,19 @@ function solarSeed(): AppState {
   };
 }
 
+/** Fresh state for a brand-new client the founder is onboarding: not onboarded
+    (lands on intake), no demo data, seeded to the chosen vertical's engine. */
+function newClientSeed(vertical: "realtor" | "solar"): AppState {
+  if (vertical === "solar") return { ...solarSeed(), onboarded: false };
+  return { ...initialState };
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppState>(initialState);
-  const [workspace, setWorkspace] = useState<WorkspaceId>("default");
-  const workspaceRef = useRef<WorkspaceId>("default");
+  const [workspace, setWorkspace] = useState<ClientId>("default");
+  const [clients, setClients] = useState<ClientMeta[]>([]);
+  const clientsRef = useRef<ClientMeta[]>([]);
+  const workspaceRef = useRef<ClientId>("default");
   const hydrated = useRef(false);
   // cloud pull finished (or skipped) → safe to push. STATE, not a ref, so the
   // push effect re-runs when it flips true and flushes any edit queued during
@@ -347,12 +367,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     []
   ) as React.MutableRefObject<string | null>;
 
-  // hydrate the active workspace's persisted state
+  // hydrate the active client's persisted state
   useEffect(() => {
     try {
-      const ws = (localStorage.getItem(WS_ACTIVE_KEY) as WorkspaceId) === "solar" ? "solar" : "default";
+      const roster = loadClients();
+      clientsRef.current = roster;
+      setClients(roster);
+      const savedActive = localStorage.getItem(WS_ACTIVE_KEY) || "default";
+      // never activate a client that isn't in the registry (stale id → default)
+      const ws = roster.some((c) => c.id === savedActive) ? savedActive : "default";
       workspaceRef.current = ws;
       setWorkspace(ws);
+      setVaultClient(ws);
+      setReelVaultClient(ws);
       const raw = localStorage.getItem(persistKeyFor(ws));
       if (raw) {
         setState((s) => ({ ...s, ...parseSaved(raw) }));
@@ -489,15 +516,48 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("message", onMsg);
   }, []);
 
-  // save on change (persisted fields only) — always to the ACTIVE workspace's key
-  useEffect(() => {
+  // save on change (persisted fields only) — always to the ACTIVE workspace's
+  // key. DEBOUNCED: serializing stAssets (base64 images) is a multi-MB
+  // JSON.stringify that froze the main thread on every keystroke — clicks
+  // during the freeze silently died ("sticky buttons"). The debounce batches
+  // bursts; flushSave() runs synchronously before anything that reads the key
+  // (workspace switch, export) and on tab hide, so no edit is ever lost.
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushSave = useCallback(() => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
     if (!hydrated.current) return;
     try {
       const out: Record<string, unknown> = {};
-      PERSIST_FIELDS.forEach((k) => (out[k] = state[k]));
+      PERSIST_FIELDS.forEach((k) => (out[k] = stateRef.current[k]));
       localStorage.setItem(persistKeyFor(workspaceRef.current), JSON.stringify(out));
     } catch {}
+  }, []);
+  useEffect(() => {
+    if (!hydrated.current) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(flushSave, 350);
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
   }, [state.stStudio, state.stAssets, state.compStatus, state.compIdea, state.compAiCopy, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.leadTraining, state.doneActions, state.contentResponses, state.briefs, state.energyIntel, state.demoMode, state.streak]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // the debounce must never lose the last edit when the tab closes or hides
+  useEffect(() => {
+    const onHide = () => {
+      if (typeof document === "undefined" || document.visibilityState === "hidden") flushSave();
+    };
+    window.addEventListener("pagehide", flushSave);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("pagehide", flushSave);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, [flushSave]);
 
   // Shared Memory Layer (Supabase) sync — completely inert until the project is
   // configured (memoryConfigured() caches false → both effects no-op, so the app
@@ -546,25 +606,91 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => { if (pushTimer.current) clearTimeout(pushTimer.current); };
   }, [state.contacts, state.opportunities, state.plannedPosts, syncReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // switch between workspaces (test users / the owner's real solar account).
-  // Current state is already persisted on every change, so no flush needed —
-  // just point at the target key and load (or seed) it.
-  const switchWorkspace = useCallback((target: WorkspaceId) => {
+  // switch between clients: flush the (debounced) save to the CURRENT client's
+  // key first, then point the vaults + keys at the target and load (or seed)
+  // it. A never-seen client with no saved state seeds by its vertical.
+  const switchWorkspace = useCallback((target: ClientId) => {
     if (target === workspaceRef.current) return;
-    try {
-      localStorage.setItem(WS_ACTIVE_KEY, target);
-    } catch {}
+    const meta = clientsRef.current.find((c) => c.id === target);
+    if (!meta) return; // guard: never switch to an unregistered client
+    flushSave();
+    try { localStorage.setItem(WS_ACTIVE_KEY, target); } catch {}
+    setVaultClient(target);
+    setReelVaultClient(target);
     let next: AppState;
     try {
       const raw = localStorage.getItem(persistKeyFor(target));
-      next = raw ? { ...initialState, ...parseSaved(raw) } : target === "solar" ? solarSeed() : { ...initialState };
+      next = raw ? { ...initialState, ...parseSaved(raw) }
+        : target === "solar" ? solarSeed() : newClientSeed(meta.vertical || "realtor");
     } catch {
-      next = target === "solar" ? solarSeed() : { ...initialState };
+      next = target === "solar" ? solarSeed() : newClientSeed(meta.vertical || "realtor");
     }
     workspaceRef.current = target;
     setWorkspace(target);
     setState(next);
+  }, [flushSave]);
+
+  // ——— client roster management (E1) ———
+  const persistRoster = useCallback((list: ClientMeta[]) => {
+    clientsRef.current = list;
+    setClients(list);
+    saveClients(list);
   }, []);
+
+  /** Create a new client and switch to it (lands on onboarding for that vertical). */
+  const addClient = useCallback((label: string, opts?: { emoji?: string; vertical?: "realtor" | "solar" }): ClientId => {
+    flushSave(); // settle the current client's pending save before leaving it
+    const vertical = opts?.vertical || "solar"; // solar is the beachhead
+    const id = makeClientId(label || "client", clientsRef.current);
+    const meta: ClientMeta = { id, label: (label || "New client").slice(0, 60), emoji: opts?.emoji || (vertical === "solar" ? "☀️" : "🏠"), vertical, createdAt: Date.now() };
+    persistRoster([...clientsRef.current, meta]);
+    // switchWorkspace reads the ref we just set, so the new client is switchable
+    try { localStorage.setItem(WS_ACTIVE_KEY, id); } catch {}
+    setVaultClient(id);
+    setReelVaultClient(id);
+    workspaceRef.current = id;
+    setWorkspace(id);
+    setState(newClientSeed(vertical));
+    return id;
+  }, [persistRoster, flushSave]);
+
+  const renameClient = useCallback((id: ClientId, label: string, emoji?: string) => {
+    persistRoster(clientsRef.current.map((c) => (c.id === id ? { ...c, label: label.slice(0, 60) || c.label, emoji: emoji || c.emoji } : c)));
+  }, [persistRoster]);
+
+  /** Remove a client and its data. Seed accounts can't be removed. Switches to
+      "default" first if the removed client is active, so nothing renders stale. */
+  const removeClient = useCallback((id: ClientId) => {
+    if (id === "default" || id === "solar") return;
+    if (workspaceRef.current === id) switchWorkspace("default");
+    persistRoster(clientsRef.current.filter((c) => c.id !== id));
+    void purgeClient(id);
+  }, [persistRoster, switchWorkspace]);
+
+  /** Download a client bundle (app state + all vault images) — the backup. */
+  const exportClient = useCallback(async (id: ClientId) => {
+    const meta = clientsRef.current.find((c) => c.id === id);
+    if (!meta) return;
+    flushSave(); // the bundle reads localStorage — make sure the latest edit is in it
+    const bundle = await exportClientBundle(meta);
+    try {
+      const blob = new Blob([JSON.stringify(bundle)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `farmhand-${id}-${new Date(bundle.exportedAt).toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {}
+  }, [flushSave]);
+
+  /** Restore a bundle as a NEW client (never overwrites). Returns its id. */
+  const importClient = useCallback(async (bundle: ClientBundle): Promise<ClientId | null> => {
+    const meta = await importClientBundle(bundle, clientsRef.current);
+    if (!meta) return null;
+    persistRoster([...clientsRef.current, meta]);
+    return meta.id;
+  }, [persistRoster]);
 
   const set = useCallback((patch: Patch) => {
     setState((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));
@@ -577,8 +703,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ state, set, copy, dragId, workspace, switchWorkspace }),
-    [state, set, copy, dragId, workspace, switchWorkspace]
+    () => ({ state, set, copy, dragId, workspace, switchWorkspace, clients, addClient, renameClient, removeClient, exportClient, importClient }),
+    [state, set, copy, dragId, workspace, switchWorkspace, clients, addClient, renameClient, removeClient, exportClient, importClient]
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

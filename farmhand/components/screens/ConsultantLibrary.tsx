@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { CONSULTANT_SHOTS, composePrompt, type ConsultantShot } from "@/lib/consultantLibrary";
 import { processImageURL } from "@/lib/studio";
 import { vaultAdd, vaultAll, vaultDelete, type VaultImage } from "@/lib/vault";
+import { useStore } from "@/lib/store";
+import { record as meterRecord, imageAllowance } from "@/lib/meter";
 
 /**
  * Consultant Library — the system generates a library of real-looking
@@ -13,10 +15,13 @@ import { vaultAdd, vaultAll, vaultDelete, type VaultImage } from "@/lib/vault";
  */
 
 type Status = "idle" | "rendering" | "done" | "failed";
-const SOUL_KEY = "fh-soul-id";
+// per-client: each client is a different person's likeness, so the Soul ID
+// must never leak across accounts. "default" keeps the original key.
+const soulKeyFor = (client: string) => (client === "default" ? "fh-soul-id" : `fh-soul-id::${client}`);
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
 export default function ConsultantLibrary() {
+  const { workspace } = useStore();
   const [soulId, setSoulId] = useState("");
   const [status, setStatus] = useState<Record<string, Status>>({});
   const [preview, setPreview] = useState<Record<string, string>>({});
@@ -25,18 +30,26 @@ export default function ConsultantLibrary() {
   const [vault, setVault] = useState<VaultImage[]>([]);
   const [configured, setConfigured] = useState<boolean | null>(null);
 
+  // re-reads on client switch so the Soul ID + vault always match the active
+  // client (the store points the vault at the active client on switch).
   useEffect(() => {
-    try { setSoulId(localStorage.getItem(SOUL_KEY) || ""); } catch {}
+    try { setSoulId(localStorage.getItem(soulKeyFor(workspace)) || ""); } catch {}
     vaultAll().then(setVault);
     fetch("/api/higgsfield").then((r) => r.json()).then((j) => setConfigured(!!j.configured)).catch(() => setConfigured(false));
-  }, []);
+  }, [workspace]);
 
   function saveSoul(v: string) {
     setSoulId(v);
-    try { localStorage.setItem(SOUL_KEY, v.trim()); } catch {}
+    try { localStorage.setItem(soulKeyFor(workspace), v.trim()); } catch {}
   }
 
   async function generateShot(shot: ConsultantShot): Promise<boolean> {
+    // E4 allowance guard: never spend past this client's monthly image cap.
+    if (imageAllowance(workspace, 1).blocked) {
+      setMsg("This client's monthly image cap is reached — raise it in Settings › Generation usage to continue.");
+      setStatus((s) => ({ ...s, [shot.id]: "failed" }));
+      return false;
+    }
     setStatus((s) => ({ ...s, [shot.id]: "rendering" }));
     try {
       const prompt = composePrompt(shot);
@@ -63,6 +76,7 @@ export default function ConsultantLibrary() {
           const p = await processImageURL(`/api/higgsfield?img=${encodeURIComponent(url)}`, 1200, 0.85);
           if (p) {
             await vaultAdd({ id: uid(), dataURL: p.dataURL, lum: p.lum, busy: p.busy, prompt, label: `Consultant · ${shot.label}`, createdAt: Date.now() });
+            meterRecord(workspace, "image", 1); // E4: log against this client's ledger
             setPreview((pv) => ({ ...pv, [shot.id]: p.dataURL }));
             setStatus((s) => ({ ...s, [shot.id]: "done" }));
             vaultAll().then(setVault);
