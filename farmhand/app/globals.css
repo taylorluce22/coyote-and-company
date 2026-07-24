@@ -132,9 +132,12 @@ button { font-family: inherit; }
   transition: transform 0.3s var(--ease), box-shadow 0.3s ease, background 0.25s ease, border-color 0.25s ease;
   will-change: transform;
 }
-.fh-navitem:hover { transform: translateZ(26px) translateX(5px); }
+/* Hover feedback is brightness-only: a transform here moves the hit target
+   under the cursor mid-click (mousedown and mouseup land on different
+   elements → the click silently dies), which made nav feel "sticky". The
+   settled active state keeps its depth — by then the click already landed. */
+.fh-navitem:hover { filter: brightness(1.16); }
 .fh-navitem.on { transform: translateZ(18px); }
-.fh-navitem.on:hover { transform: translateZ(30px) translateX(4px); }
 
 /* ---------- main column ---------- */
 .fh-main { flex: 1; min-width: 0; position: relative; z-index: 1; padding: 26px 34px 60px; }
@@ -151,8 +154,10 @@ button { font-family: inherit; }
   transition: transform 0.35s var(--ease), box-shadow 0.35s ease;
   will-change: transform;
 }
+/* brightness-only hover: the old flatten+lift moved the buttons inside the
+   card several px under the cursor, eating fast clicks */
 .fh-card3d:hover {
-  transform: perspective(900px) rotateY(0deg) rotateX(0deg) translateY(-6px) scale(1.02);
+  filter: brightness(1.05);
 }
 .fh-glass {
   background: linear-gradient(165deg, var(--glass-2), var(--glass));
@@ -233,17 +238,18 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .fh-hscroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.16); border-radius: 4px; }
 .fh-hscroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.28); }
 
-/* ---------- micro-interactions: hover lift, press, focus glow ----------
-   The tiny animations users feel but never name. Hover = slight lift +
-   brighten; press = compress; inputs get a warm focus ring. Kept subtle and
-   transform-only so nothing reflows; disabled with prefers-reduced-motion
-   via the global rule above. */
+/* ---------- micro-interactions: hover glow, press dim, focus glow ----------
+   The tiny animations users feel but never name. IMPORTANT: interactive
+   elements must never transform on hover/press — a moving/shrinking hit
+   target means mousedown and mouseup can land on different elements and the
+   click silently dies (buttons felt "sticky", tabs needed two tries). All
+   feedback is filter/color-based, which never moves the hit area. */
 button:not(:disabled) {
-  transition: transform 0.16s ease, filter 0.16s ease, box-shadow 0.16s ease,
+  transition: filter 0.16s ease, box-shadow 0.16s ease,
     background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
-button:not(:disabled):hover { transform: translateY(-1px); filter: brightness(1.09); }
-button:not(:disabled):active { transform: translateY(0) scale(0.965); filter: brightness(0.97); }
+button:not(:disabled):hover { filter: brightness(1.09); }
+button:not(:disabled):active { filter: brightness(0.92); }
 
 input, textarea, select {
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;

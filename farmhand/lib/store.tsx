@@ -516,15 +516,48 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("message", onMsg);
   }, []);
 
-  // save on change (persisted fields only) — always to the ACTIVE workspace's key
-  useEffect(() => {
+  // save on change (persisted fields only) — always to the ACTIVE workspace's
+  // key. DEBOUNCED: serializing stAssets (base64 images) is a multi-MB
+  // JSON.stringify that froze the main thread on every keystroke — clicks
+  // during the freeze silently died ("sticky buttons"). The debounce batches
+  // bursts; flushSave() runs synchronously before anything that reads the key
+  // (workspace switch, export) and on tab hide, so no edit is ever lost.
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushSave = useCallback(() => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
     if (!hydrated.current) return;
     try {
       const out: Record<string, unknown> = {};
-      PERSIST_FIELDS.forEach((k) => (out[k] = state[k]));
+      PERSIST_FIELDS.forEach((k) => (out[k] = stateRef.current[k]));
       localStorage.setItem(persistKeyFor(workspaceRef.current), JSON.stringify(out));
     } catch {}
+  }, []);
+  useEffect(() => {
+    if (!hydrated.current) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(flushSave, 350);
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
   }, [state.stStudio, state.stAssets, state.compStatus, state.compIdea, state.compAiCopy, state.pexelsKey, state.plannedPosts, state.weekBrief, state.integrations, state.onboarded, state.strategy, state.contacts, state.opportunities, state.sources, state.leadTraining, state.doneActions, state.contentResponses, state.briefs, state.energyIntel, state.demoMode, state.streak]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // the debounce must never lose the last edit when the tab closes or hides
+  useEffect(() => {
+    const onHide = () => {
+      if (typeof document === "undefined" || document.visibilityState === "hidden") flushSave();
+    };
+    window.addEventListener("pagehide", flushSave);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("pagehide", flushSave);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, [flushSave]);
 
   // Shared Memory Layer (Supabase) sync — completely inert until the project is
   // configured (memoryConfigured() caches false → both effects no-op, so the app
@@ -573,13 +606,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => { if (pushTimer.current) clearTimeout(pushTimer.current); };
   }, [state.contacts, state.opportunities, state.plannedPosts, syncReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // switch between clients. Current state is already persisted on every change,
-  // so no flush needed — point the vaults + keys at the target and load (or
-  // seed) it. A never-seen client with no saved state seeds by its vertical.
+  // switch between clients: flush the (debounced) save to the CURRENT client's
+  // key first, then point the vaults + keys at the target and load (or seed)
+  // it. A never-seen client with no saved state seeds by its vertical.
   const switchWorkspace = useCallback((target: ClientId) => {
     if (target === workspaceRef.current) return;
     const meta = clientsRef.current.find((c) => c.id === target);
     if (!meta) return; // guard: never switch to an unregistered client
+    flushSave();
     try { localStorage.setItem(WS_ACTIVE_KEY, target); } catch {}
     setVaultClient(target);
     setReelVaultClient(target);
@@ -594,7 +628,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     workspaceRef.current = target;
     setWorkspace(target);
     setState(next);
-  }, []);
+  }, [flushSave]);
 
   // ——— client roster management (E1) ———
   const persistRoster = useCallback((list: ClientMeta[]) => {
@@ -605,6 +639,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   /** Create a new client and switch to it (lands on onboarding for that vertical). */
   const addClient = useCallback((label: string, opts?: { emoji?: string; vertical?: "realtor" | "solar" }): ClientId => {
+    flushSave(); // settle the current client's pending save before leaving it
     const vertical = opts?.vertical || "solar"; // solar is the beachhead
     const id = makeClientId(label || "client", clientsRef.current);
     const meta: ClientMeta = { id, label: (label || "New client").slice(0, 60), emoji: opts?.emoji || (vertical === "solar" ? "☀️" : "🏠"), vertical, createdAt: Date.now() };
@@ -617,7 +652,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setWorkspace(id);
     setState(newClientSeed(vertical));
     return id;
-  }, [persistRoster]);
+  }, [persistRoster, flushSave]);
 
   const renameClient = useCallback((id: ClientId, label: string, emoji?: string) => {
     persistRoster(clientsRef.current.map((c) => (c.id === id ? { ...c, label: label.slice(0, 60) || c.label, emoji: emoji || c.emoji } : c)));
@@ -636,6 +671,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const exportClient = useCallback(async (id: ClientId) => {
     const meta = clientsRef.current.find((c) => c.id === id);
     if (!meta) return;
+    flushSave(); // the bundle reads localStorage — make sure the latest edit is in it
     const bundle = await exportClientBundle(meta);
     try {
       const blob = new Blob([JSON.stringify(bundle)], { type: "application/json" });
@@ -646,7 +682,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch {}
-  }, []);
+  }, [flushSave]);
 
   /** Restore a bundle as a NEW client (never overwrites). Returns its id. */
   const importClient = useCallback(async (bundle: ClientBundle): Promise<ClientId | null> => {
