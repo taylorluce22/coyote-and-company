@@ -267,13 +267,9 @@ export const SET_IMG_PREFS = [
   { key: "desert", label: "Desert landscaping only (no green lawns)", def: true },
   { key: "noreuse", label: "Never reuse stock near other agents", def: true },
 ];
-export const SET_CONNECTIONS = [
-  { name: "Claude — content", status: "connected", color: "#41D98A" },
-  { name: "Perplexity — local intel", status: "connected", color: "#41D98A" },
-  { name: "Instagram", status: "connected", color: "#41D98A" },
-  { name: "Facebook Page", status: "connected", color: "#41D98A" },
-  { name: "Nextdoor Business", status: "connect →", color: "#FFC23D" },
-];
+// (the old SET_CONNECTIONS demo card was removed 2026-07-24 — it showed
+// hardcoded "connected" statuses and misled the owner during launch setup;
+// real, probed statuses live on the Connectors screen)
 
 /* ---- Dashboard ---- */
 export const TICKER_POOL = [
