@@ -23,7 +23,7 @@ export interface IdeaCopyPack {
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 /** theme → [primary, alternate] KB angles, resolved per utility. */
-function factsFor(theme: string, u: "aps" | "srp" | "unknown"): [string, string] {
+function factsFor(theme: string, u: "aps" | "unknown"): [string, string] {
   switch (theme) {
     case "bill-breakdown":
       return [KB.rates[u], KB.ratePlanCheck[u]];
@@ -46,9 +46,9 @@ function factsFor(theme: string, u: "aps" | "srp" | "unknown"): [string, string]
 }
 
 /** Resolve an idea's utility + its two same-subject KB facts (for the AI writer). */
-export function ideaFactPair(idea: Idea): { utility: "aps" | "srp" | "unknown"; facts: [string, string] } {
+export function ideaFactPair(idea: Idea): { utility: "aps" | "unknown"; facts: [string, string] } {
   const rawU = utilityForTerritory(idea.territory);
-  const u: "aps" | "srp" | "unknown" = rawU === "aps" || rawU === "srp" ? rawU : "unknown";
+  const u: "aps" | "unknown" = rawU === "aps" ? "aps" : "unknown";
   return { utility: u, facts: factsFor(idea.theme, u) };
 }
 
@@ -94,7 +94,7 @@ export function ideaCopy(idea: Idea, strategy: StrategyProfile, channel: "ig" | 
     "azsolar",
     cityTag,
     nameTag !== cityTag ? nameTag : "phoenixmetro",
-    u === "srp" ? "srp" : "aps",
+    "aps",
     "solarenergy",
     "azliving",
     "energybills",

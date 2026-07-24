@@ -97,7 +97,7 @@ premium**, per slide:
   trio = positioning/flagship/proof-of-work.
 
 ## Editorial spine (see [[Editorial Direction]])
-APS-first (SRP-focused posts ≤ ~1 in 20). Rising-cost thesis: no rate plan
+APS-ONLY (SRP retired 2026-07-24 — zero SRP posts). Rising-cost thesis: no rate plan
 opts you out of the climb; the hedge is owning your production. Build the
 pain, never soothe it. Value over price. Soft CTAs, Valley-general.
 

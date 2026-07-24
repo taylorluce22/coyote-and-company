@@ -18,8 +18,9 @@ export interface Territory {
   img?: string;
   hex: string;
   kind?: "neighborhood" | "zip" | "subdivision" | "school-zone";
-  // solar vertical: which electric utility serves this territory (aps | srp |
-  // ed3 | ed2 | verify). Drives which rate math the pulse/content/replies use.
+  // solar vertical: which electric utility serves this territory (aps |
+  // verify — the business is APS-only). Anything not confirmed APS gets
+  // verify-first framing, never APS rate math.
   utility?: string;
 }
 
@@ -77,20 +78,19 @@ export const PLATFORM_OPTS = [
 ];
 
 /**
- * Solar-vertical default territories — metro Valley cities picked for utility
- * coverage (Phoenix/Scottsdale lean APS, Mesa is SRP country), not realtor
- * farm neighborhoods. City-level names matter: hunts search these as literal
- * place words and content titles read "…in Phoenix", so hyper-local realtor
- * neighborhoods like "Val Vista Lakes" are both too narrow to find solar
- * leads and wrong-sounding on a solar account.
+ * Solar-vertical default territories — West Valley APS growth cities, not
+ * realtor farm neighborhoods. APS-only since the July 2026 pivot (SRP/East
+ * Valley doesn't pencil). City-level names matter: hunts search these as
+ * literal place words and content titles read "…in Buckeye", so hyper-local
+ * realtor neighborhoods like "Val Vista Lakes" are both too narrow to find
+ * solar leads and wrong-sounding on a solar account.
  */
 export const SOLAR_TERRITORIES: Territory[] = [
   // actual solar hot spots per the territory research — West Valley APS
-  // growth corridors + the East Valley's top SRP market, not the saturated
-  // central cities (Phoenix/Scottsdale/Mesa were placeholder defaults)
+  // growth corridors, not the saturated central cities
   { slug: "buckeye-city", name: "Buckeye", city: "Buckeye", segment: "growth", hex: "#FF9A62", status: "building", utility: "aps" },
   { slug: "peoria-city", name: "Peoria", city: "Peoria", segment: "growth", hex: "#C9A8FF", status: "building", utility: "aps" },
-  { slug: "queen-creek-city", name: "Queen Creek", city: "Queen Creek", segment: "growth", hex: "#26E0C8", status: "building", utility: "srp" },
+  { slug: "surprise-city", name: "Surprise", city: "Surprise", segment: "growth", hex: "#26E0C8", status: "building", utility: "aps" },
 ];
 
 export const DEFAULT_STRATEGY: StrategyProfile = {
@@ -171,7 +171,7 @@ const SOLAR_IDEA_BANK: { title: string; angle: string; format: "carousel" | "ree
     theme: "buyer-education",
     deck: [
       "1. Who's actually on my roof — your crew or subs — and how is every penetration flashed?",
-      "2. Which export rate and rate plan does your savings math assume? (APS ~6.2¢/kWh, SRP ~3.45¢.)",
+      "2. Which export rate and rate plan does your savings math assume? (APS credits ~6.2¢/kWh, locked 10 years.)",
       "3. Who answers the phone in year five if something goes wrong?",
     ],
   },
@@ -203,7 +203,7 @@ const SOLAR_IDEA_BANK: { title: string; angle: string; format: "carousel" | "ree
     format: "carousel",
     theme: "bill-breakdown",
     deck: [
-      "APS runs three main plans. SRP rebuilt theirs in late 2025. Being on the wrong one costs real money.",
+      "APS runs three main plans — flat, time-of-use, and demand. Being on the wrong one costs real money.",
       "Matching your plan to how you actually live is free and takes about ten minutes.",
       "I run this check before quoting anyone — sometimes it shrinks the bill enough to change the system size.",
     ],
@@ -237,7 +237,7 @@ const SOLAR_IDEA_BANK: { title: string; angle: string; format: "carousel" | "ree
     theme: "new-homeowner",
     deck: [
       "Builder solar rolls into the mortgage — convenient, but compare its price per watt against outside quotes first.",
-      "Ask which utility serves the lot: APS credits exports ~6.2¢/kWh, SRP ~3.45¢. It changes the right system size.",
+      "Confirm the lot is on APS and ask which rate plan the builder's math assumes — exports credit ~6.2¢/kWh, locked 10 years.",
       "Get the rate plan and export terms in writing before closing — 'solar-ready' and 'solar-smart' are not the same thing.",
     ],
   },

@@ -20,7 +20,7 @@ extension pull. The [[Data Analyst]] owns keeping this current.
    + DM for a consultation" is a salesperson bio. The whole brand thesis
    is resource-first. Proposed rewrite (owner approves before changing):
    - `Arizona power bills & solar, explained honestly`
-   - `APS & SRP rate breakdowns · quote red flags · no pitch`
+   - `APS rate breakdowns · quote red flags · no pitch`
    - `📲 DM "AZ" for a free rate-plan check`
    Keep the "DM AZ" keyword funnel — it's genuinely good — but attach it
    to a free VALUE action (rate-plan check), not "a consultation".
@@ -62,7 +62,7 @@ extension pull. The [[Data Analyst]] owns keeping this current.
 Support layer: geotag every post (rotate Valley cities) · local hashtag
 stack (already standard on queue posts) · Stories on posting days with a
 poll/question sticker · Highlights once ~10 posts exist ("Start here",
-"APS vs SRP", "Quote check") · saved reply wired to the "AZ" DM keyword.
+"APS rates", "Quote check") · saved reply wired to the "AZ" DM keyword.
 
 ## Measurement (Analyst, weekly once posting starts)
 

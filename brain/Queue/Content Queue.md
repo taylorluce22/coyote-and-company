@@ -57,13 +57,13 @@ reason teaches the agents — be specific.
 - **format**: realistic-moment single · **look**: Blue Hour Cinematic
 - **CTA**: Valley-general · **hook structure**: question/contrarian
 
-**Caption**: Both APS and SRP now pay homeowners to let them tap your home battery during peak demand — around $110 per kW a year (APS calls it Storage Rewards; SRP, Battery Partner). So stop and ask the obvious question: if your evening power weren't valuable to them, they wouldn't be paying to borrow it. That's the whole story of Arizona's grid right now — the high-demand evening hours are where everything is tight, which is exactly why the expensive on-peak power lands in the evening, why what you export at midday pays so little, and why they'll now pay for access to your battery. A battery doesn't just back you up in an outage — it puts you on the paid side of that equation. Want to understand how it works for your home? DM me. No pitch.
+**Caption**: APS now pays homeowners to let it tap your home battery during peak demand — around $110 per average kW a year (it's called Storage Rewards). So stop and ask the obvious question: if your evening power weren't valuable to them, they wouldn't be paying to borrow it. That's the whole story of Arizona's grid right now — the high-demand evening hours are where everything is tight, which is exactly why the expensive on-peak power lands in the evening, why what you export at midday pays so little, and why they'll now pay for access to your battery. A battery doesn't just back you up in an outage — it puts you on the paid side of that equation. Want to understand how it works for your home? DM me. No pitch.
 **Hashtags**: solarbattery · homebattery · arizonaenergy · aps · energybills · vpp · azliving · phoenixmetro · arizonasolar
 
 **Visual plan** (Art Director): single Higgsfield image, ~1 credit. "a sleek wall-mounted home battery / energy-storage unit on an exterior desert-home wall or in a clean garage at dusk, a subtle indicator light, no people, no brand logos. Phoenix Arizona desert suburb. blue-hour dusk, warm interior glow against a cool sky, cinematic, 35mm, photorealistic, no text, no lettering, no watermarks."
 
-**Fact-check (2026-07-21): PASS**
-- APS Storage Rewards + SRP Battery Partner both ~$110/avg kW per year → az-rising-costs-heat-datacenters-2026.md §7 [fact, verified 2026-07-21 via both program pages]; do NOT say either pays more
+**Fact-check (2026-07-21): PASS** · *(2026-07-24: caption reworked APS-only per the SRP retirement — same APS facts, no new claims)*
+- APS Storage Rewards ~$110/avg kW per year → az-rising-costs-heat-datacenters-2026.md §7 [fact, verified 2026-07-21 via the program page]
 - expensive on-peak lands in the evening; midday export pays little → same §5/§6 [fact] (APS TOU-E 34.4¢ on-peak / 12.3¢ off-peak, RCP export 6.17¢) — stated qualitatively/utility-general
 - "worth to them" framing → honest VPP framing; does NOT claim grid instability (honors §4 guardrail)
 - battery outage-backup value → same §8 [fact]
@@ -122,7 +122,7 @@ reason teaches the agents — be specific.
 - **CTA**: Valley-general · **hook structure**: number-led (caption)
 
 **Caption**: Your power bill isn't going back down. Arizona's average residential bill climbed about 33% in the last decade — roughly $120 a month in 2014 to $160 in 2024 (EIA). And the pace is picking up: on the last five years' trend, a typical bill doubles in about 15 years — and even on the slower decade pace, it's still up every single year. APS already raised rates about 8% in 2024 and is asking for ~14% more — about $20 a month — for 2026. Here's the part nobody tells you: no rate plan opts you out of that climb. Every plan rides the same rising baseline; shuffling plans just changes how the increase is shaped, not whether it's coming. The only real way off the escalator is producing more of your own power. Save this for the next bill — and Valley homeowners, DM me if you want your own numbers looked at. No pitch.
-**Hashtags**: aps · srp · energybills · arizonaenergy · risingcosts · buckeye · westvalley · phoenixmetro · azliving · arizonasolar
+**Hashtags**: aps · energybills · arizonaenergy · risingcosts · buckeye · westvalley · phoenixmetro · azliving · arizonasolar
 
 **Visual plan** (Art Director): single Higgsfield image, ~1 credit. Face-neutral until the standing decision: "over-the-shoulder view of a person at a kitchen table holding a paper utility bill, face not visible, morning light through a window, modern desert home interior. Buckeye Arizona desert suburb. warm golden-hour light, honeyed tones, soft long shadows, 35mm, shallow depth of field, photorealistic, no text, no lettering, no logos, no watermarks."
 
@@ -135,14 +135,12 @@ reason teaches the agents — be specific.
 - DROPPED the old "checking/switching is free takes a bite out of the bill" reassurance per owner 2026-07-21 (we do not sell plan-switching as a fix)
 
 ## SRP's rate design: why solar alone won't save you
-- **status**: fact-checked · **priority**: LOW — SRP cadence slot (~1 in 20)
+- **status**: rejected: owner 2026-07-24 — APS-only pivot. SRP doesn't
+  pencil and is out of the business entirely (territories, hunts, content).
+  The old ~1-in-20 SRP cadence is retired; zero SRP-focused posts going
+  forward. Kept below for the fact-check record only.
 - **format**: message-card carousel (5 slides) · **look**: Editorial Minimal
 - **CTA**: Valley-general (SRP households) · **hook structure**: contrarian
-
-> ℹ **SRP cadence (owner 2026-07-21)**: SRP-focused, so this is the rare
-> ~1-in-20 SRP piece, not a priority-queue post. Kept ready and accurate
-> (good educational value), but APS/utility-general posts lead. Don't
-> stack SRP content.
 
 **Hook**: SRP built its rates so solar alone won't save you
 
@@ -173,14 +171,13 @@ reason teaches the agents — be specific.
 - **format**: realistic-moment single · **look**: Blue Hour Cinematic
 - **CTA**: Valley-general · **hook structure**: question
 
-**Caption**: Talking to a solar company this month? Ask these three before price ever comes up. 1) Who's actually on my roof — your crew or subcontractors — and how is every roof penetration flashed? 2) Which export rate and rate plan does your savings math assume? APS pays about 6.2¢/kWh, SRP about 3.45¢ — inflated assumptions mean fantasy savings. 3) Who answers the phone in year five if something goes wrong? One honest thing about price: the cheapest bid isn't automatically the best deal — price usually reflects the labor, the process, and the service behind it. Save this — and if you're in the Valley with quote questions you want answered, DM me.
+**Caption**: Talking to a solar company this month? Ask these three before price ever comes up. 1) Who's actually on my roof — your crew or subcontractors — and how is every roof penetration flashed? 2) Which export rate and rate plan does your savings math assume? APS pays about 6.2¢/kWh, locked for 10 years from interconnection — inflated assumptions mean fantasy savings. 3) Who answers the phone in year five if something goes wrong? One honest thing about price: the cheapest bid isn't automatically the best deal — price usually reflects the labor, the process, and the service behind it. Save this — and if you're in the Valley with quote questions you want answered, DM me.
 **Hashtags**: arizonasolar · solarquote · buckeye · westvalley · aps · energybills · azliving · phoenixmetro
 
 **Visual plan** (Art Director): single Higgsfield image, ~1 credit. "consultant in a plain dark polo holding a tablet at the front door of a desert home, homeowner seen from behind, rooftop solar panels visible on the roofline, no prominent faces, no visible logos. Buckeye Arizona desert suburb. blue-hour dusk, warm window glow against a cool sky, cinematic teal-and-orange grade, 24mm wide, photorealistic, no text, no lettering, no watermarks."
 
-**Fact-check (2026-07-20, reworked per owner value-over-price rule): PASS**
-- APS export ~6.2¢/kWh (6.171¢ RCP) → az-solar-market-2026.md [fact]; "about 6.2¢" matches KB rounding
-- SRP export ~3.45¢ flat → same [fact]
+**Fact-check (2026-07-20, reworked per owner value-over-price rule): PASS** · *(2026-07-24: SRP figure dropped from the caption per the APS-only pivot; 10-yr lock added from KB.export [fact])*
+- APS export ~6.2¢/kWh (6.171¢ RCP), locked 10 yrs from interconnection → az-solar-market-2026.md / az-energy-knowledge-2026.md [fact]; "about 6.2¢" matches KB rounding
 - flashing / crew / year-five-service framing → questions + advice in owner voice, per [owner-expertise] section of az-solar-market-2026.md; no unverified program names stated as fact
 - "cheapest bid isn't automatically the best deal / price reflects labor+process" → [owner-expertise], worded as advice not statistic
 - exactly 3 questions promised and delivered → promise check pass

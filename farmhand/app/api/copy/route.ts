@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   const facts = (Array.isArray(b.facts) ? b.facts : []).map((f) => clamp(f, 500)).filter(Boolean).slice(0, 3);
   if (!title || !facts.length) return NextResponse.json({ configured: true, error: "missing idea or facts" });
 
-  const utilityName = utility === "aps" ? "APS" : utility === "srp" ? "SRP" : "their utility";
+  const utilityName = utility === "aps" ? "APS" : "their utility";
   const channelName = channel === "nd" ? "Nextdoor (neighborly, first-person, talking to actual neighbors)" : channel === "fb" ? "Facebook (community tone)" : "Instagram (punchy, saveable)";
 
   const system =

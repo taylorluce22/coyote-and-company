@@ -6,7 +6,8 @@ fact (`farmhand/docs/`), tagged with a format + archetype + objective so it
 drops straight into the production spec. Newest clusters on top. When an idea
 gets built it moves to [[Content Queue]] as `drafted`.
 
-**Rules carried in:** APS-first (SRP ≤ ~1 in 20) · build the pain, never soothe ·
+**Rules carried in:** APS-ONLY (SRP retired 2026-07-24 — doesn't pencil;
+zero SRP-focused posts, ever) · build the pain, never soothe ·
 grid is NOT called unstable (NERC reserves are fine — VPP = strain, not
 instability) · data-center bill impact stays `[contested]` · every number
 traces verbatim to the KB. Format key: **R**=reel · **C**=carousel · **S**=single.
@@ -38,7 +39,7 @@ Objective: reach / save / share / DM.
 17. **"It's 114° — here's when your house gets expensive."** *R · heat-day field test · DM (HEAT checklist)* [§6]
 
 ## Cluster 4 — Battery, VPP & the hedge
-18. **"They'll pay to use your battery. Ask why."** APS Storage Rewards + SRP Battery Partner ~$110/kW/yr. *S · single · save* [§7 fact]
+18. **"They'll pay to use your battery. Ask why."** APS Storage Rewards ~$110/avg kW/yr. *S · single · save* [§7 fact]
 19. **"If the grid were stable, why rent your battery?"** VPP as evidence of strain — NOT instability. *C · concept poster · share* [Editorial guardrail]
 20. **"How a battery beats 4–7pm."** Charge midday sun, discharge on-peak. *C · cutaway diagram · save* [§8 projection]
 21. **"A battery isn't just for outages."** Backup + the paid side of peak. *C · small multiples (2 jobs) · save* [§8]
@@ -65,8 +66,10 @@ Objective: reach / save / share / DM.
 34. **"What makes up your summer bill."** Cooling ≈ half. *C · ring/wheel · save* [DOE/EIA]
 35. **"You asked: do batteries only help in outages?"** *R · comment-answer · reach* [§8]
 
-## SRP lane (rare — ~1 in 20, kept accurate)
-36. **"SRP built its rates so solar alone won't save you."** Export 3.45¢ vs E-28 on-peak 40.26¢ (~10x); battery banks cheap daytime for the 5–10pm hit; grandfather ends Nov 2029. *C · single-chart · save* [§5 fact] — deploy sparingly.
+## ~~SRP lane~~ — RETIRED (owner 2026-07-24)
+The APS-only pivot removed SRP from the business entirely (territories,
+hunts, content). No SRP-focused ideas get pitched or built; the old idea 36
+was rejected in [[Content Queue]] with the record kept.
 
 ---
 

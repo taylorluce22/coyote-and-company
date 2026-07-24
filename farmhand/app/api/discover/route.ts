@@ -53,14 +53,14 @@ export async function GET(req: NextRequest) {
   const segment = searchParams.get("segment") || "";
 
   // Live energy intel — real, current news turned into post angles for the
-  // solar content engine. Arizona-focused: APS customers are the primary
-  // audience, SRP second. Covers rate cases, data-center demand growth,
+  // solar content engine. Arizona-focused: APS customers are the audience
+  // (the business is APS-only). Covers rate cases, data-center demand growth,
   // grid infrastructure, and national solar/energy policy with local impact.
   if (mode === "intel") {
     const iprompt =
       `Search for REAL, RECENT news (last 21 days) that an Arizona residential solar consultant's audience — ` +
-      `primarily APS customers, secondarily SRP customers, in the Phoenix metro — would care about. Cover these ` +
-      `categories: (1) APS and SRP rate cases, rate/plan changes, and Arizona Corporation Commission decisions; ` +
+      `APS customers in the West Valley / Phoenix metro — would care about. Cover these ` +
+      `categories: (1) APS rate cases, rate/plan changes, and Arizona Corporation Commission decisions; ` +
       `(2) data center construction and growth in Arizona/Phoenix metro and its impact on electricity demand and ` +
       `rates; (3) grid infrastructure, reliability, capacity, and summer-demand news in Arizona; (4) national ` +
       `solar/energy policy with Arizona impact (tax credits, tariffs, net metering / export-rate changes); (5) ` +
@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
       `"summary": "2 sentences with the concrete facts and numbers", ` +
       `"source": "publication name", "url": "direct link to the article", ` +
       `"date": "how recent, e.g. 3d ago or Jul 2", ` +
-      `"utility": "APS"|"SRP"|"both"|"general", ` +
+      `"utility": "APS"|"general", ` +
       `"angle": "one line homeowner-facing post angle that names the pain (rising bills, new charges) or the ` +
       `tactic (what the utility tried), with the concrete number — never reassurance"}. ` +
       `Up to 8 items, most consequential first. Only include real articles whose links you can cite.`;
@@ -120,7 +120,7 @@ export async function GET(req: NextRequest) {
           source: String(x.source ?? "").slice(0, 80),
           url: String(x.url ?? "").slice(0, 600),
           date: String(x.date ?? "").slice(0, 30),
-          utility: ["APS", "SRP", "both", "general"].includes(String(x.utility)) ? String(x.utility) : "general",
+          utility: String(x.utility) === "APS" ? "APS" : "general",
           angle: String(x.angle ?? "").slice(0, 300),
         }))
         .filter((x) => x.headline.length > 5 && /^https?:\/\//.test(x.url))

@@ -134,7 +134,7 @@ export const GRAPH_NODES: [string, NodeGroup][] = [
   ["Editorial Direction", "brand"], ["Visual Style", "brand"], ["Voice", "brand"],
   ["Content Queue", "queue"], ["Lead Pipeline", "pipelines"],
   ["Rising-cost / heat KB", "knowledge"], ["Installer-quality KB", "knowledge"], ["Solar-market KB", "knowledge"], ["Rates / supply KB", "knowledge"], ["AZ energy KB", "knowledge"], ["IG / Higgsfield playbook", "knowledge"],
-  ["Data centers heat", "content"], ["Hottest year", "content"], ["Battery VPP", "content"], ["APS bill climbs", "content"], ["Bill isn't going down", "content"], ["SRP rate design", "content"],
+  ["Data centers heat", "content"], ["Hottest year", "content"], ["Battery VPP", "content"], ["APS bill climbs", "content"], ["Bill isn't going down", "content"],
 ];
 
 export const GRAPH_LINKS: [string, string][] = [
@@ -165,9 +165,9 @@ export const GRAPH_LINKS: [string, string][] = [
   ["Schedule", "Content Queue"], ["Schedule", "Log"], ["Schedule", "Tools"],
   ["Log", "Content Queue"], ["Log", "Editorial Direction"], ["Log", "Competitor Audit"], ["Log", "Growth Strategy"], ["Log", "Visual Style"], ["Log", "Tasks"],
   // content queue → the posts
-  ["Content Queue", "Editorial Direction"], ["Content Queue", "Data centers heat"], ["Content Queue", "Hottest year"], ["Content Queue", "Battery VPP"], ["Content Queue", "APS bill climbs"], ["Content Queue", "Bill isn't going down"], ["Content Queue", "SRP rate design"],
+  ["Content Queue", "Editorial Direction"], ["Content Queue", "Data centers heat"], ["Content Queue", "Hottest year"], ["Content Queue", "Battery VPP"], ["Content Queue", "APS bill climbs"], ["Content Queue", "Bill isn't going down"],
   // posts → their KB source
-  ["Data centers heat", "Rising-cost / heat KB"], ["Hottest year", "Rising-cost / heat KB"], ["Battery VPP", "Rising-cost / heat KB"], ["APS bill climbs", "Rates / supply KB"], ["APS bill climbs", "Rising-cost / heat KB"], ["Bill isn't going down", "Rising-cost / heat KB"], ["SRP rate design", "Rising-cost / heat KB"],
+  ["Data centers heat", "Rising-cost / heat KB"], ["Hottest year", "Rising-cost / heat KB"], ["Battery VPP", "Rising-cost / heat KB"], ["APS bill climbs", "Rates / supply KB"], ["APS bill climbs", "Rising-cost / heat KB"], ["Bill isn't going down", "Rising-cost / heat KB"],
 ];
 
 export const GRAPH_TAGS: Record<NodeGroup, string[]> = {

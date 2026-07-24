@@ -11,9 +11,9 @@ Buckeye/Peoria/Queen Creek homeowners like neighbors. Comfortable saying
 
 ## Rules
 
-1. **Numbers are the personality.** APS 34¢ on-peak, 6.2¢ exports, SRP
-   3.45¢, $0 federal credit after 2025 — exact, sourced from the KB, never
-   rounded into vagueness or inflated.
+1. **Numbers are the personality.** APS 34¢ on-peak, 6.2¢ exports, $0
+   federal credit after 2025 — exact, sourced from the KB, never rounded
+   into vagueness or inflated.
 2. **One post = one argument.** The hook makes a promise; the body delivers
    exactly that promise, item for item.
 3. **Plain 8th-grade language.** Short sentences. Second person.

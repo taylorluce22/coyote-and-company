@@ -1,16 +1,18 @@
 /**
- * AZ solar territory catalog — metro Phoenix new-construction hot spots mapped
- * by electric utility, from the July 2026 territory deep-research (utility
- * boundary maps, builder sites, Zillow/Redfin, ACS census tracts). These are
- * the actual development/master-plan names a consultant works: they double as
- * literal search keywords for hunts and as content labels.
+ * AZ solar territory catalog — the West Valley + North Phoenix APS
+ * new-construction hot spots from the July 2026 territory deep-research
+ * (utility boundary maps, builder sites, Zillow/Redfin, ACS census tracts).
+ * These are the actual development/master-plan names a consultant works: they
+ * double as literal search keywords for hunts and as content labels.
  *
- * Utility matters commercially: APS pitches export-rate lock + TOU, SRP
- * pitches demand-management + batteries, ED3/ED2 have their own tariffs and
- * must never be quoted APS/SRP numbers.
+ * The business runs APS-only — SRP (East Valley) and ED3/ED2 (outskirts)
+ * economics don't pencil, so those territories were removed from the catalog
+ * entirely (July 2026 decision). "verify" remains only as a guard for split
+ * streets and custom picks: anything not confirmed APS gets flagged, not
+ * quoted.
  */
 
-export type TerritoryUtility = "aps" | "srp" | "ed3" | "ed2" | "verify";
+export type TerritoryUtility = "aps" | "verify";
 
 export interface AzTerritoryDef {
   slug: string;
@@ -24,17 +26,11 @@ export interface AzTerritoryDef {
 
 export const UTILITY_LABEL: Record<TerritoryUtility, string> = {
   aps: "APS",
-  srp: "SRP",
-  ed3: "ED3",
-  ed2: "ED2",
   verify: "VERIFY UTILITY",
 };
 
 export const UTILITY_COLOR: Record<TerritoryUtility, string> = {
   aps: "#FF9A62",
-  srp: "#26E0C8",
-  ed3: "#C9A8FF",
-  ed2: "#C9A8FF",
   verify: "#FFC23D",
 };
 
@@ -42,20 +38,13 @@ export const AZ_TERRITORY_CATALOG: AzTerritoryDef[] = [
   // ---- WEST VALLEY cities (APS) — whole-corridor picks; the research's
   // growth engines, NOT the saturated central cities ----
   { slug: "buckeye-city", name: "Buckeye", city: "Buckeye", utility: "aps", tier: 1, kind: "city", label: "One of America's fastest-growing cities — Verrado, Tartesso, Sundance, Tyler Ranch, Copper Falls + Teravalis coming" },
-  { slug: "goodyear-city", name: "Goodyear", city: "Goodyear", utility: "aps", tier: 1, kind: "city", label: "Estrella + Canyon Trails + Sedella corridors; pools and big cooling loads (verify east-of-Agua-Fria = SRP)" },
+  { slug: "goodyear-city", name: "Goodyear", city: "Goodyear", utility: "aps", tier: 1, kind: "city", label: "Estrella + Canyon Trails + Sedella corridors; pools and big cooling loads (east of the Agua Fria isn't APS — skip those streets)" },
   { slug: "surprise-city", name: "Surprise", city: "Surprise", utility: "aps", tier: 1, kind: "city", label: "Marley Park, Asante, Sterling Grove, North Copper Canyon — huge fresh-roof volume" },
   { slug: "peoria-city", name: "Peoria", city: "Peoria", utility: "aps", tier: 1, kind: "city", label: "Vistancia corridor + 67th/Happy Valley (Aloravita, Mystic) — affluent new construction" },
-  { slug: "avondale-city", name: "Avondale", city: "Avondale", utility: "aps", tier: 2, kind: "city", label: "Alamar + Del Rio Ranch; dense affordable new-family roofs (verify east-of-Agua-Fria = SRP)" },
-  { slug: "glendale-city", name: "Glendale", city: "Glendale", utility: "aps", tier: 2, kind: "city", label: "Stonehaven + Arrowhead infill — split city: north Glendale APS, south SRP, verify by address" },
+  { slug: "avondale-city", name: "Avondale", city: "Avondale", utility: "aps", tier: 2, kind: "city", label: "Alamar + Del Rio Ranch; dense affordable new-family roofs (east of the Agua Fria isn't APS — skip those streets)" },
+  { slug: "glendale-city", name: "Glendale", city: "Glendale", utility: "aps", tier: 2, kind: "city", label: "Stonehaven + Arrowhead infill — split city: work the APS north side only, verify every address" },
 
-  // ---- EAST VALLEY cities (SRP) ----
-  { slug: "queen-creek-city", name: "Queen Creek", city: "Queen Creek", utility: "srp", tier: 1, kind: "city", label: "Top-growth city: Barney Farms, Harvest, Madera, Wales Ranch — affluent families, ~$135k+ incomes" },
-  { slug: "mesa-gateway", name: "Mesa Gateway", city: "Mesa", utility: "srp", tier: 1, kind: "city", label: "The Gateway boom: Hawes Crossing (2025 launch), Eastmark, Cadence — best fresh SRP roofs" },
-  { slug: "san-tan-valley-city", name: "San Tan Valley", city: "San Tan Valley", utility: "srp", tier: 1, kind: "city", label: "Bella Vista Farms, Soleo, San Tan Heights — Pinal County's unsaturated family boom" },
-  { slug: "gilbert-city", name: "Gilbert", city: "Gilbert", utility: "srp", tier: 2, kind: "city", label: "Waterston, Cooley Station, Morrison Ranch — premium established + fresh releases" },
-  { slug: "chandler-city", name: "Chandler", city: "Chandler", utility: "srp", tier: 3, kind: "city", label: "Low new-build volume but luxury tickets: Viviendo, Vistara — battery/backup market" },
-
-  // ---- APS · West Valley + North Phoenix ----
+  // ---- APS · West Valley + North Phoenix developments ----
   { slug: "teravalis", name: "Teravalis", city: "Buckeye", utility: "aps", tier: 1, label: "Massive greenfield — Floreo village launched 2025, up to 100k homes planned, almost zero legacy solar" },
   { slug: "estrella", name: "Estrella", city: "Goodyear", utility: "aps", tier: 1, label: "High-usage family master plan, pools + fresh Montecito/Lucero releases, ~$105k incomes" },
   { slug: "aloravita", name: "Aloravita", city: "Peoria", utility: "aps", tier: 1, label: "Affluent new construction at 67th & Happy Valley, large roofs, ~$115k incomes, low saturation" },
@@ -78,47 +67,36 @@ export const AZ_TERRITORY_CATALOG: AzTerritoryDef[] = [
   { slug: "trilogy-vistancia", name: "Trilogy at Vistancia", city: "Peoria", utility: "aps", tier: 3, label: "Affluent active-adult — comfort, backup and pool priorities" },
   { slug: "cantamia", name: "CantaMia", city: "Goodyear", utility: "aps", tier: 3, label: "Estrella's 55+ village — battery/backup pitch over export math" },
   { slug: "blackstone-vistancia", name: "Blackstone at Vistancia", city: "Peoria", utility: "aps", tier: 3, label: "Luxury/custom, ~$160k incomes — big tickets and referral households" },
-
-  // ---- SRP · East Valley ----
-  { slug: "hawes-crossing", name: "Hawes Crossing", city: "Mesa", utility: "srp", tier: 1, label: "The best fresh-roof SRP territory — major 2025 launch, 4 builders, near-zero saturation" },
-  { slug: "barney-farms", name: "Barney Farms", city: "Queen Creek", utility: "srp", tier: 1, label: "Fulton lake community, ~$140k incomes, large homes + pools, low saturation" },
-  { slug: "harvest-qc", name: "Harvest", city: "Queen Creek", utility: "srp", tier: 1, label: "Affluent amenity-rich families, ~$135k incomes, high discretionary usage" },
-  { slug: "madera-qc", name: "Madera", city: "Queen Creek", utility: "srp", tier: 1, label: "Premium new construction, strong financing capacity for battery systems" },
-  { slug: "bella-vista-farms", name: "Bella Vista Farms", city: "San Tan Valley", utility: "srp", tier: 1, label: "One of the largest unsaturated family territories in Pinal County" },
-  { slug: "wales-ranch", name: "Wales Ranch", city: "Queen Creek", utility: "srp", tier: 1, label: "High-income 2024+ construction — capture before competitors do" },
-  { slug: "waterston", name: "Waterston", city: "Gilbert", utility: "srp", tier: 1, label: "Tri Pointe's multi-collection plan — entry to premium bands, steady fresh roofs" },
-  { slug: "eastmark", name: "Eastmark", city: "Mesa", utility: "srp", tier: 2, label: "Mature high-income community — referrals outperform cold starts here" },
-  { slug: "cadence-gateway", name: "Cadence at Gateway", city: "Mesa", utility: "srp", tier: 2, label: "Dense newer roofs, referral-ready homeowner base" },
-  { slug: "morrison-ranch", name: "Morrison Ranch", city: "Gilbert", utility: "srp", tier: 2, label: "Premium established homes, high bills, strong referrals" },
-  { slug: "soleo", name: "Soleo", city: "San Tan Valley", utility: "srp", tier: 2, label: "1,400+ homes under way — concentrated early-adopter opportunity" },
-  { slug: "encanterra", name: "Encanterra", city: "San Tan Valley", utility: "srp", tier: 2, label: "Active-adult resort — battery, comfort and referral fit" },
-  { slug: "viviendo", name: "Viviendo", city: "Chandler", utility: "srp", tier: 3, label: "Luxury boutique ($713k–$1.4M) — whole-home backup sells here" },
-  { slug: "vistara", name: "Vistara", city: "Chandler", utility: "srp", tier: 3, label: "Small luxury territory, high ticket sizes and referral value" },
-  { slug: "san-tan-heights", name: "San Tan Heights", city: "San Tan Valley", utility: "srp", tier: 3, label: "Active family territory with affordable entry points" },
-  { slug: "laveen", name: "Laveen", city: "Phoenix", utility: "srp", tier: 3, label: "South Phoenix growth corridor — Estrella Vista, Tres Rios, affordable new roofs" },
-
-  // ---- Other utilities — different tariffs, never quote APS/SRP numbers ----
-  { slug: "rancho-el-dorado", name: "Rancho El Dorado", city: "Maricopa", utility: "ed3", tier: 3, label: "Big roofs + high usage, but ED3's own export rules — sell self-consumption + storage" },
-  { slug: "tortosa", name: "Tortosa", city: "Maricopa", utility: "ed3", tier: 3, label: "Young-family roofs where batteries matter more than export promises" },
-  { slug: "anthem-merrill-ranch", name: "Anthem at Merrill Ranch", city: "Florence", utility: "ed2", tier: 3, label: "Large affordable roofs — verify ED2 export economics before quoting" },
 ];
 
 /**
  * Best-effort utility inference for territories that predate the catalog
- * (e.g., the plain Phoenix/Scottsdale/Mesa defaults). City-level heuristic
- * from the verified boundary map; split cities return the dominant side.
+ * (custom picks, older saved profiles). City-level heuristic from the
+ * verified boundary map; split cities return the dominant side. Anything in
+ * SRP/ED3/ED2 country resolves to "verify" — those areas are out of market
+ * and must never get APS rate math.
  */
 export function utilityForTerritory(t: { slug?: string; name?: string; city?: string; utility?: string }): TerritoryUtility {
-  if (t.utility && ["aps", "srp", "ed3", "ed2", "verify"].includes(t.utility)) return t.utility as TerritoryUtility;
+  if (t.utility === "aps" || t.utility === "verify") return t.utility;
   const cat = AZ_TERRITORY_CATALOG.find((c) => c.slug === t.slug || c.name.toLowerCase() === (t.name || "").toLowerCase());
   if (cat) return cat.utility;
   const c = `${t.city || ""} ${t.name || ""}`.toLowerCase();
-  if (/(mesa|gilbert|chandler|tempe|queen creek|san tan|ahwatukee|apache junction)/.test(c)) return "srp";
-  if (/maricopa/.test(c) && !/maricopa county/.test(c)) return "ed3";
-  if (/(florence|coolidge|eloy)/.test(c)) return "ed2";
   if (/(peoria|surprise|buckeye|goodyear|litchfield|el mirage|waddell|tolleson|wickenburg|sun city|youngtown|paradise valley|avondale)/.test(c)) return "aps";
   if (/(phoenix|scottsdale|glendale)/.test(c)) return "aps"; // split cities — dominant side; verify by address
   return "verify";
+}
+
+/**
+ * Out-of-market check for saved/custom territories: explicit SRP/ED3/ED2 tags
+ * or East Valley / outskirts geography. Used by the store migration to strip
+ * these from persisted profiles — the business doesn't serve them.
+ */
+export function isOutOfMarket(t: { slug?: string; name?: string; city?: string; utility?: string }): boolean {
+  if (t.utility === "srp" || t.utility === "ed3" || t.utility === "ed2") return true;
+  const c = `${t.city || ""} ${t.name || ""}`.toLowerCase();
+  if (/(mesa|gilbert|chandler|tempe|queen creek|san tan|ahwatukee|apache junction|florence|coolidge|eloy|laveen)/.test(c)) return true;
+  if (/maricopa/.test(c) && !/maricopa county/.test(c)) return true;
+  return false;
 }
 
 /** Palette for newly selected territories, cycled by index. */

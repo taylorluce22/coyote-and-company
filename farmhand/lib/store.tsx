@@ -14,6 +14,7 @@ import type { TabId } from "./data";
 import type { Asset, Bg, StudioDesign } from "./studio";
 import { DEFAULT_DESIGN } from "./studio";
 import { SEED_POSTS, type Integrations, type PlannedPost } from "./planner";
+import { isOutOfMarket } from "./azTerritories";
 import { DEFAULT_STRATEGY, SOLAR_TERRITORIES, type Idea, type StrategyProfile } from "./strategy";
 import { normalizeContact, SEED_CONTACTS, type Contact } from "./pipeline";
 import { tagOpportunity, type Opportunity } from "./engage";
@@ -296,6 +297,17 @@ function parseSaved(raw: string): Partial<AppState> {
       // drop stale knowledge-base source suggestions (they were realtor cards
       // for the old territories) so the solar bank reseeds for the new ones —
       // anything the user explicitly added to their rotation is kept
+      if (Array.isArray(saved.sources)) {
+        saved.sources = saved.sources.filter((s: { origin?: string; status?: string }) => s.origin !== "knowledge-base" || s.status === "added");
+      }
+    }
+    // APS-only pivot (Jul 2026): SRP / East Valley / ED2-ED3 territories are
+    // out of market — "doesn't pencil" — so strip any a profile still carries
+    // (picked before the catalog was cut) and their knowledge-base sources.
+    // Falls back to the solar defaults if the whole set was out of market.
+    const inMarket = saved.strategy.territories.filter((t: { slug?: string; name?: string; city?: string; utility?: string }) => !isOutOfMarket(t));
+    if (inMarket.length !== saved.strategy.territories.length) {
+      saved.strategy = { ...saved.strategy, territories: inMarket.length ? inMarket : SOLAR_TERRITORIES };
       if (Array.isArray(saved.sources)) {
         saved.sources = saved.sources.filter((s: { origin?: string; status?: string }) => s.origin !== "knowledge-base" || s.status === "added");
       }
