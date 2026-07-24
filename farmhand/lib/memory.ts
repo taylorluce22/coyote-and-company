@@ -6,16 +6,22 @@
  * when Supabase isn't configured, so nothing here can break the app before the
  * project exists — it simply does nothing until the env vars land.
  *
- * Workspaces: "default" (realtor test user) and "solar" (the real business)
- * share one memory layer, namespaced by the `workspace` column.
+ * Operator multi-client mode: each client is its own row-space in the shared
+ * memory layer, keyed by the `workspace` column = the real client id. The id is
+ * sanitized (safe charset, bounded length) but NEVER collapsed to a single
+ * bucket — collapsing it would merge every client's records together.
  */
 
 import { sbSelect, sbUpsert, sbInsert, sbDelete, sbEq, supabaseEnabled } from "./supabase";
 
 export const memoryEnabled = supabaseEnabled;
 
-export type Workspace = "default" | "solar";
-const ws = (w?: string): Workspace => (w === "default" ? "default" : "solar");
+export type Workspace = string;
+/** Preserve the real client id; only sanitize to a safe, bounded key. */
+const ws = (w?: string): Workspace => {
+  const s = (w || "").trim().toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 64);
+  return s || "default";
+};
 
 /* ---- agent_runs — the shared run log ------------------------------------ */
 

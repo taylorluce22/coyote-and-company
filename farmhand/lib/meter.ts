@@ -76,3 +76,28 @@ export function imageAllowance(client: string, need = 0): AllowanceState {
 }
 
 export const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+
+// ——— ledger portability (client bundle export/import + purge) ———
+
+export interface MeterExport { ledger: unknown; cap: string | null }
+
+/** Snapshot a client's meter ledger + cap for a bundle. */
+export function exportMeter(client: string): MeterExport {
+  let ledger: unknown = null;
+  let cap: string | null = null;
+  try { ledger = JSON.parse(localStorage.getItem(LEDGER_KEY(client)) || "null"); } catch {}
+  try { cap = localStorage.getItem(CAP_KEY(client)); } catch {}
+  return { ledger, cap };
+}
+
+/** Restore a meter ledger + cap into a client (used on bundle import). */
+export function importMeter(client: string, data?: MeterExport): void {
+  if (!data) return;
+  try { if (Array.isArray(data.ledger)) localStorage.setItem(LEDGER_KEY(client), JSON.stringify(data.ledger)); } catch {}
+  try { if (data.cap != null) localStorage.setItem(CAP_KEY(client), data.cap); } catch {}
+}
+
+/** Remove a client's meter ledger + cap (when the client is purged). */
+export function purgeMeter(client: string): void {
+  try { localStorage.removeItem(LEDGER_KEY(client)); localStorage.removeItem(CAP_KEY(client)); } catch {}
+}

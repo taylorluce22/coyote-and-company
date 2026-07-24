@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { processImageURL, uid, type Asset } from "@/lib/studio";
 import { vaultAdd } from "@/lib/vault";
+import { record as meterRecord, imageAllowance } from "@/lib/meter";
 import { AESTHETIC_PACKS, singlePrompt } from "@/lib/postVisuals";
 
 /* ============================================================
@@ -158,7 +159,7 @@ const HF_SEEDS: Record<string, string> = {
 };
 
 function HiggsfieldGen({ addAsset }: { addAsset: (a: Omit<Asset, "id">) => void }) {
-  const { state } = useStore();
+  const { state, workspace } = useStore();
   const vertical = ((state.strategy as { vertical?: string })?.vertical) === "solar" ? "solar" : "realtor";
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [prompt, setPrompt] = useState(HF_SEEDS[vertical]);
@@ -176,6 +177,11 @@ function HiggsfieldGen({ addAsset }: { addAsset: (a: Omit<Asset, "id">) => void 
 
   const generate = async () => {
     if (busy || !prompt.trim()) return;
+    // E4 allowance guard: don't spend past this client's monthly image cap.
+    if (imageAllowance(workspace, 1).blocked) {
+      setGErr("Monthly image cap reached for this client — raise it in Settings › Generation usage.");
+      return;
+    }
     setBusy(true);
     setGErr("");
     setImages([]);
@@ -203,6 +209,7 @@ function HiggsfieldGen({ addAsset }: { addAsset: (a: Omit<Asset, "id">) => void 
       addAsset({ name: "higgsfield-" + Date.now(), dataURL: p.dataURL, lum: p.lum, busy: p.busy, source: "higgsfield" });
       // permanent vault copy — generated images cost credits, never lose them
       vaultAdd({ id: uid(), dataURL: p.dataURL, lum: p.lum, busy: p.busy, prompt, label: "Single image", createdAt: Date.now() });
+      meterRecord(workspace, "image", 1); // E4: count against this client's ledger
     }
     setSaving(null);
   };

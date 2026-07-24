@@ -16,7 +16,12 @@ import { memoryEnabled, pullWorkspace, pushWorkspace, logAgentRun, type Workspac
 
 export const dynamic = "force-dynamic";
 
-const clean = (w: unknown): "default" | "solar" => (w === "default" ? "default" : "solar");
+// Preserve the real client id (multi-client isolation); only sanitize it.
+// NEVER collapse to a single bucket — that would merge every client's records.
+const clean = (w: unknown): string => {
+  const s = (typeof w === "string" ? w : "").trim().toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 64);
+  return s || "default";
+};
 
 export async function GET(req: NextRequest) {
   const configured = memoryEnabled();

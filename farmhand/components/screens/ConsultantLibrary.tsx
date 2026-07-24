@@ -15,7 +15,9 @@ import { record as meterRecord, imageAllowance } from "@/lib/meter";
  */
 
 type Status = "idle" | "rendering" | "done" | "failed";
-const SOUL_KEY = "fh-soul-id";
+// per-client: each client is a different person's likeness, so the Soul ID
+// must never leak across accounts. "default" keeps the original key.
+const soulKeyFor = (client: string) => (client === "default" ? "fh-soul-id" : `fh-soul-id::${client}`);
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
 export default function ConsultantLibrary() {
@@ -28,15 +30,17 @@ export default function ConsultantLibrary() {
   const [vault, setVault] = useState<VaultImage[]>([]);
   const [configured, setConfigured] = useState<boolean | null>(null);
 
+  // re-reads on client switch so the Soul ID + vault always match the active
+  // client (the store points the vault at the active client on switch).
   useEffect(() => {
-    try { setSoulId(localStorage.getItem(SOUL_KEY) || ""); } catch {}
+    try { setSoulId(localStorage.getItem(soulKeyFor(workspace)) || ""); } catch {}
     vaultAll().then(setVault);
     fetch("/api/higgsfield").then((r) => r.json()).then((j) => setConfigured(!!j.configured)).catch(() => setConfigured(false));
-  }, []);
+  }, [workspace]);
 
   function saveSoul(v: string) {
     setSoulId(v);
-    try { localStorage.setItem(SOUL_KEY, v.trim()); } catch {}
+    try { localStorage.setItem(soulKeyFor(workspace), v.trim()); } catch {}
   }
 
   async function generateShot(shot: ConsultantShot): Promise<boolean> {

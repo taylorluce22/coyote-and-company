@@ -12,6 +12,8 @@
  */
 
 import { vaultAllFor, vaultAddManyTo, deleteVaultDb, type VaultImage } from "./vault";
+import { reelVaultAllFor, reelVaultAddManyTo, deleteReelVaultDb, type VaultReel } from "./reelVault";
+import { exportMeter, importMeter, purgeMeter, type MeterExport } from "./meter";
 
 export type ClientId = string;
 
@@ -76,18 +78,22 @@ export interface ClientBundle {
   client: ClientMeta;
   state: unknown; // the persisted app-state snapshot (PERSIST_FIELDS)
   images: VaultImage[];
+  reels?: VaultReel[]; // reel-coach analyses
+  meter?: MeterExport; // generation ledger + cap
   exportedAt: number;
 }
 
-/** Snapshot a client to a portable bundle (app state + every vault image). */
+/** Snapshot a client to a portable bundle — LOSSLESS: app state, every vault
+    image, every reel analysis, and the generation ledger + cap. */
 export async function exportClientBundle(client: ClientMeta): Promise<ClientBundle> {
   let state: unknown = null;
   try {
     const raw = localStorage.getItem(persistKeyFor(client.id));
     state = raw ? JSON.parse(raw) : null;
   } catch {}
-  const images = await vaultAllFor(client.id);
-  return { version: 1, kind: "farmhand-client-bundle", client, state, images, exportedAt: Date.now() };
+  const [images, reels] = await Promise.all([vaultAllFor(client.id), reelVaultAllFor(client.id)]);
+  const meter = exportMeter(client.id);
+  return { version: 1, kind: "farmhand-client-bundle", client, state, images, reels, meter, exportedAt: Date.now() };
 }
 
 /**
@@ -103,9 +109,9 @@ export async function importClientBundle(bundle: ClientBundle, existing: ClientM
   try {
     if (bundle.state) localStorage.setItem(persistKeyFor(id), JSON.stringify(bundle.state));
   } catch {}
-  if (Array.isArray(bundle.images) && bundle.images.length) {
-    await vaultAddManyTo(id, bundle.images);
-  }
+  if (Array.isArray(bundle.images) && bundle.images.length) await vaultAddManyTo(id, bundle.images);
+  if (Array.isArray(bundle.reels) && bundle.reels.length) await reelVaultAddManyTo(id, bundle.reels);
+  importMeter(id, bundle.meter);
   return meta;
 }
 
@@ -114,5 +120,6 @@ export async function importClientBundle(bundle: ClientBundle, existing: ClientM
 export async function purgeClient(id: ClientId): Promise<void> {
   if (id === "default" || id === "solar") return;
   try { localStorage.removeItem(persistKeyFor(id)); } catch {}
-  await deleteVaultDb(id);
+  purgeMeter(id);
+  await Promise.all([deleteVaultDb(id), deleteReelVaultDb(id)]);
 }
