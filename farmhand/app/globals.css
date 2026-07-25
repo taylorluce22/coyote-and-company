@@ -324,3 +324,15 @@ input:focus, textarea:focus, select:focus {
   border-color: rgba(255, 154, 98, 0.55) !important;
   box-shadow: 0 0 0 3px rgba(255, 154, 98, 0.14);
 }
+
+/* Reel Coach: indeterminate progress shimmer — shown whenever a run is
+   live but exact percent isn't known, so the bar never looks frozen */
+.fh-progress-indet {
+  background: linear-gradient(90deg, rgba(38, 224, 200, 0.25), #26e0c8 40%, #7dd3fc 60%, rgba(38, 224, 200, 0.25));
+  background-size: 200% 100%;
+  animation: fhProgressSlide 1.4s linear infinite;
+}
+@keyframes fhProgressSlide {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}

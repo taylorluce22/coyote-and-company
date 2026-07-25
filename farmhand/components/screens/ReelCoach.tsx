@@ -6,6 +6,8 @@ import { useStore } from "@/lib/store";
 import { ideasFor, type StrategyProfile } from "@/lib/strategy";
 import { reelVaultAdd, reelVaultAll, reelVaultDelete, type ReelAnalysis, type VaultReel } from "@/lib/reelVault";
 
+const STEP_LABELS = ["Upload", "Hand-off", "Gemini processing", "Writing breakdown"];
+
 const SOURCE_LABEL: Record<VaultReel["source"], string> = { own: "My content", reference: "Reference / competitor" };
 const SOURCE_COLOR: Record<VaultReel["source"], string> = { own: "#26E0C8", reference: "#C9A8FF" };
 
@@ -280,6 +282,10 @@ export default function ReelCoach() {
   const topic = ideas.find((i) => i.id === topicId) || null;
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState("");
+  // visual progress: real % while upload events arrive (null = shimmer),
+  // and which of the 4 steps the run is on
+  const [uploadPct, setUploadPct] = useState<number | null>(null);
+  const [step, setStep] = useState(0);
   // live timing: upload ETA computed from the real transfer rate; all other
   // stages show elapsed seconds so a long wait never looks like a hang
   const upStartRef = useRef(0);
@@ -399,6 +405,7 @@ export default function ReelCoach() {
       analysis is safely in the vault. */
   const pollAndAnalyze = async (rec: PendingReel, tag: string) => {
     crumb("poll: waiting for Gemini processing");
+    setStep(2);
     setStage("Gemini is processing the clip… (usually under 2 minutes)");
     const deadline = Date.now() + 180000; // client-owned poll budget
     let fileState = "PROCESSING";
@@ -433,6 +440,7 @@ export default function ReelCoach() {
       throw new Error("Gemini is still processing the clip — your upload is safe. Hit ⟳ Resume analysis in a minute.");
     }
 
+    setStep(3);
     setStage("Gemini is watching the clip and writing your breakdown… (usually 1–2 minutes)");
     crumb("analyze: sent to Gemini");
     const j = await phasePost(
@@ -575,6 +583,7 @@ export default function ReelCoach() {
         throw new Error(msg);
       }
       if (js === "received" || js === "none") {
+        setStep(1);
         setStage("Handing the clip to Gemini… (the server does this part — usually 30–90s for a big clip)");
         // a platform-killed ingest leaves "received" as the latest record —
         // job-continue re-runs the ingest from the journaled video url
@@ -583,6 +592,7 @@ export default function ReelCoach() {
           throw new Error("The hand-off to Gemini is taking too long — hit ⟳ Resume analysis in a minute; if it keeps happening, re-upload.");
         }
       } else if (js === "processing") {
+        setStep(2);
         setStage("Gemini is processing the clip… ✅ safe to close the app — the server finishes on its own; check back in a few minutes");
         if (String(j.geminiState || "") === "ACTIVE") {
           // ingest invocation spent its budget before analyzing — fresh one
@@ -592,6 +602,7 @@ export default function ReelCoach() {
           throw new Error("Gemini has been processing this clip for a long time — your upload is safe; hit ⟳ Resume analysis later, or trim the clip and re-upload.");
         }
       } else if (js === "analyzing") {
+        setStep(3);
         setStage("Gemini is watching the clip and writing your breakdown… (usually 1–2 minutes)");
         if (!analyzingSince) analyzingSince = Date.now();
         // a platform-killed analyze leaves "analyzing" as the latest record;
@@ -633,6 +644,7 @@ export default function ReelCoach() {
             const elapsed = Math.max(0.5, (Date.now() - upStartRef.current) / 1000);
             const rate = loaded / elapsed;
             const remain = rate > 0 && total > loaded ? (total - loaded) / rate : 0;
+            setUploadPct(percentage);
             setStage(`Uploading… ${Math.round(percentage)}%${remain > 1 ? ` · about ${fmtSecs(remain)} left` : ""}`);
             const m = Math.floor(percentage / 25) * 25;
             if (m > lastMilestone) {
@@ -671,6 +683,8 @@ export default function ReelCoach() {
       // ⟳ Resume (or the next visit's auto-check) peeks the same jobId
       writePendingReel(rec, workspace);
       setPending(rec);
+      setUploadPct(null);
+      setStep(1);
       setStage("Handing the clip to Gemini…");
       await phasePost(
         {
@@ -702,6 +716,8 @@ export default function ReelCoach() {
       (window as unknown as { __fhSuspendBg?: boolean }).__fhSuspendBg = false;
       setBusy(false);
       setStage("");
+      setStep(0);
+      setUploadPct(null);
     }
   };
 
@@ -716,6 +732,7 @@ export default function ReelCoach() {
     const tag = `[reel-link ${Date.now()}]`;
     setBusy(true);
     setError(null);
+    setStep(1);
     setStage("Server is fetching the video from your link…");
     crumb(`link: ${url.slice(0, 60)}`);
     try {
@@ -759,6 +776,8 @@ export default function ReelCoach() {
     } finally {
       setBusy(false);
       setStage("");
+      setStep(0);
+      setUploadPct(null);
     }
   };
 
@@ -784,6 +803,8 @@ export default function ReelCoach() {
       (window as unknown as { __fhSuspendBg?: boolean }).__fhSuspendBg = false;
       setBusy(false);
       setStage("");
+      setStep(0);
+      setUploadPct(null);
     }
   };
 
@@ -1012,11 +1033,54 @@ export default function ReelCoach() {
             </span>
           </div>
         )}
-        {busy && stage && (
-          <div style={{ fontSize: 11.5, color: "#7DD3FC", marginTop: 10 }}>
-            {stage}
-            {!stage.includes("left") && busyStartRef.current > 0 && (
-              <span style={{ color: "#5E5C72" }}> · {fmtSecs((Date.now() - busyStartRef.current) / 1000)} elapsed</span>
+        {busy && (
+          <div style={{ marginTop: 12, textAlign: "left", maxWidth: 460, marginInline: "auto" }}>
+            {/* step tracker — the run is a journey, not a stuck timer */}
+            <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+              {STEP_LABELS.map((s, i) => (
+                <span
+                  key={s}
+                  style={{
+                    fontSize: 9.5,
+                    fontWeight: 700,
+                    letterSpacing: 0.4,
+                    textTransform: "uppercase",
+                    padding: "3px 8px",
+                    borderRadius: 999,
+                    background: i < step ? "rgba(38,224,200,0.14)" : i === step ? "rgba(125,211,252,0.16)" : "rgba(255,255,255,0.05)",
+                    color: i < step ? "#26E0C8" : i === step ? "#7DD3FC" : "#5E5C72",
+                    border: `1px solid ${i === step ? "rgba(125,211,252,0.45)" : "transparent"}`,
+                  }}
+                >
+                  {i < step ? "✓ " : ""}
+                  {s}
+                </span>
+              ))}
+            </div>
+            {/* the bar: real % when progress events arrive, moving shimmer
+                when they don't — it must NEVER look frozen */}
+            <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.08)", marginTop: 9, overflow: "hidden" }}>
+              {uploadPct != null ? (
+                <div
+                  style={{
+                    height: "100%",
+                    borderRadius: 3,
+                    width: `${Math.max(2, Math.min(100, uploadPct))}%`,
+                    background: "linear-gradient(90deg, #26E0C8, #7DD3FC)",
+                    transition: "width 0.5s ease",
+                  }}
+                />
+              ) : (
+                <div className="fh-progress-indet" style={{ height: "100%", borderRadius: 3 }} />
+              )}
+            </div>
+            {stage && (
+              <div style={{ fontSize: 11.5, color: "#7DD3FC", marginTop: 7, textAlign: "center" }}>
+                {stage}
+                {!stage.includes("left") && busyStartRef.current > 0 && (
+                  <span style={{ color: "#5E5C72" }}> · {fmtSecs((Date.now() - busyStartRef.current) / 1000)} elapsed</span>
+                )}
+              </div>
             )}
           </div>
         )}
