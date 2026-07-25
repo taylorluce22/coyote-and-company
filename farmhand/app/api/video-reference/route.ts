@@ -427,7 +427,9 @@ async function geminiAnalyze(
   mimeType: string,
   topic: { title: string; angle: string; facts: string[] } | null
 ): Promise<{ analysis: Record<string, unknown> } | Fail> {
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  // default tracks the deployed GEMINI_MODEL env var (set in Vercel) — the
+  // old gemini-2.5-flash default started failing when Google retired it
+  const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
   const genRes = await fetch(`${GEMINI_BASE}/v1beta/models/${model}:generateContent?key=${key}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -583,13 +585,17 @@ async function runJobPipeline(
       } else {
         up = await geminiUploadFromBlob(key, opts.blobUrl || "", opts.contentType, opts.label);
       }
-      // the clip has either landed at Gemini or the attempt failed — either
-      // way the Blob copy is done; never leak blobs (they cost storage)
-      if (opts.blobUrl) del(opts.blobUrl).catch(() => {});
       if (isFail(up)) {
-        await writeJob(jobId, "error", { error: up.error, retryable: false });
+        // KEEP the Blob copy on a failed ingest — the received record's
+        // videoUrl lets job-continue re-run this exact ingest without a
+        // re-upload (deleting it here is why an early retry 404'd).
+        // job-ack cleans it up once the job resolves either way.
+        await writeJob(jobId, "error", { error: up.error, retryable: !opts.remoteUrl });
         return;
       }
+      // the clip is safely at Gemini — the Blob copy is done; never leak
+      // blobs (they cost storage)
+      if (opts.blobUrl) del(opts.blobUrl).catch(() => {});
       fileName = up.name || "";
       fileUri = up.uri || "";
       mimeType = up.mimeType || mimeType;
