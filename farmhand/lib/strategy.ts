@@ -5,6 +5,7 @@
  */
 
 import { SOLAR_KB_CONTENT } from "./azEnergyKb";
+import { AZ_TERRITORY_CATALOG, TERRITORY_HEXES } from "./azTerritories";
 
 export type ProspectingMode = "observer" | "participant" | "connector";
 export type Segment = "luxury" | "growth" | "entry" | "custom";
@@ -78,20 +79,21 @@ export const PLATFORM_OPTS = [
 ];
 
 /**
- * Solar-vertical default territories — West Valley APS growth cities, not
- * realtor farm neighborhoods. APS-only since the July 2026 pivot (SRP/East
- * Valley doesn't pencil). City-level names matter: hunts search these as
- * literal place words and content titles read "…in Buckeye", so hyper-local
- * realtor neighborhoods like "Val Vista Lakes" are both too narrow to find
- * solar leads and wrong-sounding on a solar account.
+ * Solar-vertical default territories — the owner's REAL configuration, so a
+ * fresh device (phone, new browser) boots straight into the all-West-Valley
+ * APS-only strategy with nothing to re-select. This is the "run all West
+ * Valley" decision (July 2026 pivot) applied as the default: the entire
+ * territory catalog, not a starter subset.
  */
-export const SOLAR_TERRITORIES: Territory[] = [
-  // actual solar hot spots per the territory research — West Valley APS
-  // growth corridors, not the saturated central cities
-  { slug: "buckeye-city", name: "Buckeye", city: "Buckeye", segment: "growth", hex: "#FF9A62", status: "building", utility: "aps" },
-  { slug: "peoria-city", name: "Peoria", city: "Peoria", segment: "growth", hex: "#C9A8FF", status: "building", utility: "aps" },
-  { slug: "surprise-city", name: "Surprise", city: "Surprise", segment: "growth", hex: "#26E0C8", status: "building", utility: "aps" },
-];
+export const SOLAR_TERRITORIES: Territory[] = AZ_TERRITORY_CATALOG.map((c, i) => ({
+  slug: c.slug,
+  name: c.name,
+  city: c.city,
+  segment: "growth" as const,
+  status: "building" as const,
+  hex: TERRITORY_HEXES[i % TERRITORY_HEXES.length],
+  utility: c.utility,
+}));
 
 export const DEFAULT_STRATEGY: StrategyProfile = {
   name: "Jess",
