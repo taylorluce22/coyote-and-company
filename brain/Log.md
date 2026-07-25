@@ -9,6 +9,37 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-25 · Depth pass + Style Match (owner friction catch #4: "flat and 2d")
+Owner: "everything just looks flat and 2d… we need things to pop… with the
+right pictures and animation." Ran the motion/visual research agent — key
+finding: the spec's own §1.4 depth treatments (grain, light direction,
+glows, scrims) were never implemented in the renderer, and box-shadow/CSS
+filters don't survive html2canvas, so all depth must be gradient+SVG built.
+
+**Shipped — depth pass (DGSlide.tsx):** directional light on every surface
+(paper radial, night linear — no more flat fills), inline-SVG film grain on
+every slide, radial glow behind A01 hero numbers, warm ember wash on night
+covers/closers, chart-as-object (area fill + terminal halo + paper-stroked
+label), gradient hot bars, layered edges + contact shadow on the myth-bust
+verdict bar, oversized edge-clipped ghost numerals on listicle slides. All
+html2canvas-safe. Verified via Playwright render.
+
+**Shipped — 🎬 Style Match (Reel Coach):** the owner asked "can I record my
+screen and upload a video for an agent to review so we can reproduce a
+similar style with my topics?" Yes — the Gemini video-analysis plumbing
+already existed (reference mode). Extended it: pick any of the 44 topics
+next to the upload, and the same Gemini pass that watches the reference now
+also returns styleDna (beat-by-beat: visuals, on-screen text treatment,
+transitions, energy) AND a shot-for-shot remake script — hook line, what to
+film, spoken lines word-for-word, on-screen text, beat durations, CTA —
+constrained to KB facts, APS-only, solar landing. Renders in the analysis
+card + copies out as markdown.
+
+**Queued from the brief (next):** photo-hybrid covers (auto-attach vault/
+stock/Higgsfield photos to A06/A16 with scrim + duotone — the "pictures
+already attached" ask) and the animated cover-teaser recorder (WebM: number
+count-up / chart draw-on via canvas captureStream — the real "animation").
+
 ## 2026-07-25 · CONTENT ENGINE OVERHAUL — the craft laws finally consumed (owner friction catch #3)
 Owner, after his first Studio session: "only rotating 3 ideas… I hate the
 way the content looks… the template is redundant and doesn't follow high

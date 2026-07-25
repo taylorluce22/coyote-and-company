@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useId } from "react";
 import { DG, type Bg, type Slide } from "@/lib/desertGrid";
 
 /**
@@ -14,14 +14,35 @@ import { DG, type Bg, type Slide } from "@/lib/desertGrid";
 const DISPLAY = `"Inter Tight", "Inter", var(--font-space-grotesk), system-ui, sans-serif`;
 const BODY = `"Inter", var(--font-geist), system-ui, sans-serif`;
 
+/* Depth pass (July 2026 visual brief): light has a direction — every surface
+   is a lit object, never a flat fill. All treatments are html2canvas-safe:
+   linear/radial gradients + inline SVG only (box-shadow and CSS filters do
+   NOT survive capture). */
 function bgColor(bg: Bg) {
-  if (bg === "night") return DG.night;
+  if (bg === "night") return "linear-gradient(158deg, #1A2530 0%, #101820 55%, #0B1017 100%)";
   if (bg === "photo") return `linear-gradient(158deg, #2a2118, ${DG.night} 62%, #0c0a07)`;
-  return DG.paper;
+  return "radial-gradient(130% 100% at 18% 0%, #FBF8F0 0%, #F4F0E6 52%, #EAE4D3 100%)";
 }
 function fg(bg: Bg) {
   return bg === "paper" ? DG.ink : DG.paper;
 }
+
+/** Film grain — the premium print signal. Inline SVG feTurbulence rasterizes
+    natively, so it survives html2canvas where CSS filters don't. */
+function Grain({ id, night }: { id: string; night: boolean }) {
+  return (
+    <svg aria-hidden style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: night ? 0.075 : 0.055, pointerEvents: "none" }}>
+      <filter id={id}>
+        <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" />
+        <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0" />
+      </filter>
+      <rect width="100%" height="100%" filter={`url(#${id})`} />
+    </svg>
+  );
+}
+
+/** Warm ember low in frame — the night cover/closer's light source. */
+const EMBER = "radial-gradient(70% 45% at 78% 96%, rgba(232,98,44,0.12), transparent 70%)";
 
 function Furniture({ bg, idx, total, source, wordmark, k }: { bg: Bg; idx: number; total: number; source?: string; wordmark: string; k: number }) {
   const c = fg(bg);
@@ -51,17 +72,23 @@ function LineChart({ points, startLabel, endLabel, note, k }: { points: [number,
   const px = (x: number) => 34 + ((x - minX) / (maxX - minX || 1)) * 190;
   const py = (y: number) => 92 - ((y - minY) / (maxY - minY || 1)) * 64;
   const poly = points.map((p) => `${px(p[0])},${py(p[1])}`).join(" ");
+  const last = points[points.length - 1];
+  // the chart is an object, not a diagram: area wash under the line, halo on
+  // the terminal point, paper-stroked end label (all pure SVG — capture-safe)
+  const area = `${px(points[0][0])},96 ${poly} ${px(last[0])},96`;
   return (
     <svg viewBox="0 0 250 120" style={{ width: "100%", marginTop: 8 * k }}>
       <line x1="24" y1="16" x2="24" y2="96" stroke={DG.ink} strokeOpacity="0.25" />
       <line x1="24" y1="96" x2="238" y2="96" stroke={DG.ink} strokeOpacity="0.25" />
       <line x1="24" y1="42" x2="238" y2="42" stroke={DG.ink} strokeOpacity="0.1" />
       <line x1="24" y1="69" x2="238" y2="69" stroke={DG.ink} strokeOpacity="0.1" />
+      <polygon points={area} fill={DG.hot} fillOpacity="0.08" />
       <polyline points={poly} fill="none" stroke={DG.hot} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
       <circle cx={px(points[0][0])} cy={py(points[0][1])} r="3.4" fill={DG.hot} />
-      <circle cx={px(points[points.length - 1][0])} cy={py(points[points.length - 1][1])} r="3.8" fill={DG.hot} />
+      <circle cx={px(last[0])} cy={py(last[1])} r="7" fill={DG.hot} fillOpacity="0.18" />
+      <circle cx={px(last[0])} cy={py(last[1])} r="3.8" fill={DG.hot} />
       <text x="28" y="12" fontSize="8" fontWeight="700" fill={DG.ink} fontFamily="system-ui">{startLabel}</text>
-      <text x="196" y={py(points[points.length - 1][1]) + 13} fontSize="8.5" fontWeight="700" fill={DG.hot} fontFamily="system-ui">{endLabel}</text>
+      <text x="196" y={py(last[1]) + 13} fontSize="8.5" fontWeight="700" fill={DG.hot} fontFamily="system-ui" paintOrder="stroke" stroke={DG.paper} strokeWidth="3">{endLabel}</text>
       {note && <text x="120" y="112" fontSize="7.5" fill={DG.ink} fillOpacity="0.55" fontFamily="system-ui">{note}</text>}
     </svg>
   );
@@ -82,6 +109,8 @@ export const DGSlideView = forwardRef<HTMLDivElement, DGSlideProps>(function DGS
   ref
 ) {
   const k = width / 336;
+  // useId emits colons, which break url(#…) fragment refs in SVG — sanitize
+  const grainId = "grain" + useId().replace(/[^a-zA-Z0-9]/g, "");
   const h = height ?? width * 1.25;
   const c = fg(s.bg);
   const base: React.CSSProperties = {
@@ -105,6 +134,7 @@ export const DGSlideView = forwardRef<HTMLDivElement, DGSlideProps>(function DGS
     case "A06":
       body = (
         <>
+          {s.bg === "night" && <div aria-hidden style={{ position: "absolute", inset: 0, background: EMBER, pointerEvents: "none" }} />}
           <Eyebrow text={s.eyebrow} bg={s.bg} k={k} />
           <div style={{ marginTop: "auto", fontFamily: DISPLAY, fontWeight: 800, fontSize: 34 * k, lineHeight: 1.04, letterSpacing: "-0.03em" }}>
             {s.hotWord ? s.headline.split(s.hotWord).flatMap((part, i) => i === 0 ? [part] : [<span key={i} style={{ color: DG.hot }}>{s.hotWord}</span>, part]) : s.headline}
@@ -118,12 +148,14 @@ export const DGSlideView = forwardRef<HTMLDivElement, DGSlideProps>(function DGS
       body = (
         <>
           <Eyebrow text={s.eyebrow} bg={s.bg} k={k} />
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <div style={{ fontFamily: DISPLAY, fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 0.86, fontSize: 104 * k, fontVariantNumeric: "tabular-nums" }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", position: "relative" }}>
+            {/* the hero number gets a light source — radial wash, not a type effect */}
+            <div style={{ position: "absolute", width: 340 * k, height: 250 * k, left: -40 * k, top: "50%", transform: "translateY(-58%)", background: s.bg === "night" ? "radial-gradient(closest-side, rgba(232,98,44,0.30), rgba(232,98,44,0.10) 55%, transparent 78%)" : "radial-gradient(closest-side, rgba(232,98,44,0.16), rgba(232,98,44,0.06) 55%, transparent 78%)", pointerEvents: "none" }} />
+            <div style={{ position: "relative", fontFamily: DISPLAY, fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 0.86, fontSize: 104 * k, fontVariantNumeric: "tabular-nums" }}>
               {s.num}{s.unit && <span style={{ fontSize: 28 * k, fontWeight: 700, opacity: 0.6, marginLeft: 4 * k }}>{s.unit}</span>}
             </div>
-            <div style={{ fontSize: 14.5 * k, fontWeight: 600, lineHeight: 1.25, marginTop: 14 * k, maxWidth: "22ch" }}>{s.sub}</div>
-            {s.ctx && <div style={{ fontSize: 11.5 * k, opacity: 0.7, lineHeight: 1.35, marginTop: 10 * k, maxWidth: "26ch" }}>{s.ctx}</div>}
+            <div style={{ position: "relative", fontSize: 14.5 * k, fontWeight: 600, lineHeight: 1.25, marginTop: 14 * k, maxWidth: "22ch" }}>{s.sub}</div>
+            {s.ctx && <div style={{ position: "relative", fontSize: 11.5 * k, opacity: 0.7, lineHeight: 1.35, marginTop: 10 * k, maxWidth: "26ch" }}>{s.ctx}</div>}
           </div>
         </>
       );
@@ -148,7 +180,8 @@ export const DGSlideView = forwardRef<HTMLDivElement, DGSlideProps>(function DGS
             {s.rows.map((r) => (
               <div key={r.label} style={{ display: "flex", alignItems: "center", gap: 8 * k, marginTop: 9 * k }}>
                 <span style={{ fontSize: 11 * k, fontWeight: 600, width: 60 * k, flex: `0 0 ${60 * k}px` }}>{r.label}</span>
-                <span style={{ flex: 1, height: 16 * k }}><span style={{ display: "block", height: 16 * k, width: `${r.pct}%`, background: r.hot ? DG.hot : DG.neutral }} /></span>
+                {/* the subject has depth; the comparison stays flat */}
+                <span style={{ flex: 1, height: 16 * k }}><span style={{ display: "block", height: 16 * k, width: `${r.pct}%`, background: r.hot ? "linear-gradient(90deg, #E8622C, #D4551F)" : DG.neutral, borderBottom: r.hot ? "1px solid rgba(20,22,26,0.18)" : "none" }} /></span>
                 <span style={{ fontSize: 11 * k, fontVariantNumeric: "tabular-nums", fontWeight: 700, width: 42 * k, textAlign: "right" }}>{r.value}</span>
               </div>
             ))}
@@ -157,12 +190,17 @@ export const DGSlideView = forwardRef<HTMLDivElement, DGSlideProps>(function DGS
         </div>
       );
       break;
-    case "A08":
+    case "A08": {
       source = s.source;
+      // ghost numeral: oversized, edge-clipped — depth via overlap + crop
+      const ghostNum = s.label.match(/(?:QUESTION|RED FLAG|STEP|RULE|LOAD|POINT)\s0?(\d+)/i)?.[1];
       body = (
         <>
+          {ghostNum && (
+            <div aria-hidden style={{ position: "absolute", right: -30 * k, top: -20 * k, fontFamily: DISPLAY, fontWeight: 900, fontSize: 210 * k, lineHeight: 1, color: c, opacity: 0.06, pointerEvents: "none" }}>{ghostNum}</div>
+          )}
           <Eyebrow text={s.eyebrow} bg={s.bg} k={k} />
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: 14 * k }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: 14 * k, position: "relative" }}>
             <div style={{ fontSize: 10 * k, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 800, color: DG.hot }}>{s.label}</div>
             {s.bullets.map((b, i) => (
               <div key={i} style={{ display: "flex", gap: 9 * k, fontSize: 13 * k, lineHeight: 1.3 }}>
@@ -174,13 +212,14 @@ export const DGSlideView = forwardRef<HTMLDivElement, DGSlideProps>(function DGS
         </>
       );
       break;
+    }
     case "A10":
       source = s.source;
       body = (
         <>
           <Eyebrow text={s.eyebrow} bg={s.bg} k={k} />
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", flex: 1, margin: `${12 * k}px ${-24 * k}px 0` }}>
-            <div style={{ background: DG.night, color: DG.paper, padding: `${14 * k}px ${16 * k}px`, display: "flex", flexDirection: "column" }}>
+            <div style={{ background: `linear-gradient(to bottom, rgba(255,255,255,0.06), transparent 14%), linear-gradient(158deg, #1A2530, ${DG.night} 70%)`, color: DG.paper, padding: `${14 * k}px ${16 * k}px`, display: "flex", flexDirection: "column" }}>
               <span style={{ fontSize: 8 * k, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 800, opacity: 0.7 }}>What you&apos;ve heard</span>
               <span style={{ fontSize: 13 * k, fontWeight: 600, lineHeight: 1.25, marginTop: 8 * k }}>{s.myth}</span>
             </div>
@@ -189,7 +228,10 @@ export const DGSlideView = forwardRef<HTMLDivElement, DGSlideProps>(function DGS
               <span style={{ fontSize: 13 * k, fontWeight: 600, lineHeight: 1.25, marginTop: 8 * k }}>{s.fact}</span>
             </div>
           </div>
-          <div style={{ background: DG.hot, color: DG.paper, fontSize: 11.5 * k, fontWeight: 700, lineHeight: 1.25, padding: `${11 * k}px ${24 * k}px`, margin: `0 ${-24 * k}px` }}>{s.verdict}</div>
+          <div style={{ position: "relative", background: "linear-gradient(90deg, #E8622C, #D4551F)", color: DG.paper, fontSize: 11.5 * k, fontWeight: 700, lineHeight: 1.25, padding: `${11 * k}px ${24 * k}px`, margin: `0 ${-24 * k}px` }}>
+            <span style={{ position: "absolute", left: 0, right: 0, top: -10 * k, height: 10 * k, background: "linear-gradient(to top, rgba(20,22,26,0.20), transparent)", pointerEvents: "none" }} />
+            {s.verdict}
+          </div>
         </>
       );
       break;
@@ -210,6 +252,7 @@ export const DGSlideView = forwardRef<HTMLDivElement, DGSlideProps>(function DGS
     case "A16":
       body = (
         <>
+          {s.bg === "night" && <div aria-hidden style={{ position: "absolute", inset: 0, background: EMBER, pointerEvents: "none" }} />}
           <Eyebrow text={s.eyebrow} bg={s.bg} k={k} />
           <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
             <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 20 * k, lineHeight: 1.1, letterSpacing: "-0.02em", marginBottom: 12 * k }}>{s.headline}</div>
@@ -285,6 +328,7 @@ export const DGSlideView = forwardRef<HTMLDivElement, DGSlideProps>(function DGS
     <div ref={ref} style={base}>
       {body}
       <Furniture bg={s.bg} idx={idx} total={total} source={source} wordmark={wordmark} k={k} />
+      <Grain id={grainId} night={s.bg !== "paper"} />
     </div>
   );
 });
