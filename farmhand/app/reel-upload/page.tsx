@@ -17,7 +17,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
-import { uploadInWorker, WORKER_UNAVAILABLE, type UploadProgress } from "@/lib/reelUploadClient";
+import { uploadInWorker, probeFileReadable, WORKER_UNAVAILABLE, type UploadProgress } from "@/lib/reelUploadClient";
 import { ideasFor, DEFAULT_STRATEGY, type StrategyProfile } from "@/lib/strategy";
 import { reelVaultAdd, type ReelAnalysis, type VaultReel } from "@/lib/reelVault";
 
@@ -99,6 +99,10 @@ export default function ReelUploadLite() {
   const [workspace, setWorkspace] = useState("default");
   const [strategy, setStrategy] = useState<StrategyProfile>(DEFAULT_STRATEGY);
   const [file, setFile] = useState<File | null>(null);
+  // name/size/type captured ONCE at attach time, inside a defensive try —
+  // render and start() never re-read metadata off the File object (with
+  // Photos-library placeholders even .name/.size can block or throw)
+  const [fileMeta, setFileMeta] = useState<{ name: string; size: number; type: string } | null>(null);
   const [label, setLabel] = useState("");
   const [source, setSource] = useState<"own" | "reference">("reference");
   const [topicId, setTopicId] = useState("");
@@ -232,14 +236,14 @@ export default function ReelUploadLite() {
   };
 
   const start = async () => {
-    if (!file || busy) return;
+    if (!file || !fileMeta || busy) return;
     setBusy(true);
     setError(null);
     setDone(null);
     setStep(0);
     setUploadPct(null);
     setStage("Uploading clip…");
-    crumb(`lite: starting (${fmtBytes(file.size)})`);
+    crumb(`lite: starting (${fmtBytes(fileMeta.size)})`);
     try {
       const t0 = Date.now();
       let lastProg = 0;
@@ -252,15 +256,21 @@ export default function ReelUploadLite() {
         setUploadPct(percentage);
         setStage(`Uploading… ${Math.round(percentage)}%${remain > 1 ? ` · about ${fmtSecs(remain)} left` : ""}`);
       };
-      const pathname = `reels/${Date.now()}-${file.name.replace(/[^a-z0-9.\-_]/gi, "_")}`;
-      const ctype = file.type || "video/mp4";
+      const pathname = `reels/${Date.now()}-${fileMeta.name.replace(/[^a-z0-9.\-_]/gi, "_")}`;
+      const ctype = fileMeta.type || "video/mp4";
       let blobUrl = "";
       try {
+        // uploadInWorker runs a 64KB canary read first (fails fast with
+        // Photos-placeholder guidance instead of wedging the tab), then
+        // hands the File to the worker
         blobUrl = await uploadInWorker(file, pathname, ctype, onProg);
         crumb("lite: upload done (worker)");
       } catch (we) {
         if (!(we instanceof Error) || we.message !== WORKER_UNAVAILABLE) throw we;
         crumb("lite: worker unavailable — main-thread fallback");
+        // the worker never ran, so the canary probe hasn't either — probe
+        // before letting the blob SDK read the whole File on the main thread
+        await probeFileReadable(file);
         const blob = await upload(pathname, file, {
           access: "public",
           handleUploadUrl: "/api/video-reference/blob-upload",
@@ -277,7 +287,7 @@ export default function ReelUploadLite() {
         fileName: "",
         fileUri: "",
         mimeType: ctype,
-        label: label.trim() || file.name,
+        label: label.trim() || fileMeta.name,
         source,
         topic:
           source === "reference" && topic
@@ -306,6 +316,7 @@ export default function ReelUploadLite() {
       await watch(rec);
       setDone(rec.label);
       setFile(null);
+      setFileMeta(null);
       setLabel("");
       if (fileRef.current) fileRef.current.value = "";
     } catch (e) {
@@ -410,20 +421,46 @@ export default function ReelUploadLite() {
             disabled={busy}
             style={{ display: "none" }}
             onChange={(e) => {
-              const f = e.target.files?.[0] || null;
-              if (f && f.size > MAX_FILE_BYTES) {
-                setError(`"${f.name}" is ${fmtBytes(f.size)} — over the 1GB cap. Trim or compress it first.`);
-                return;
+              // DEFENSIVE WRAPPER (same as ReelCoach.pickFile): with
+              // promise-backed files picked out of the Photos library, even
+              // reading name/size/type can block or throw — that must never
+              // escape and wedge the tab. Crumb before/after so a freeze
+              // here is visible in the trail afterwards.
+              try {
+                const f = e.target.files?.[0] || null;
+                if (!f) {
+                  crumb("lite attach: none");
+                  setFile(null);
+                  setFileMeta(null);
+                  return;
+                }
+                crumb("lite attach: reading file metadata");
+                const meta = { name: f.name, size: f.size, type: f.type };
+                crumb(`lite attach: ${meta.name} · ${fmtBytes(meta.size)} · ${meta.type || "no-type"}`);
+                if (meta.size > MAX_FILE_BYTES) {
+                  crumb("lite attach rejected: over 1GB cap");
+                  setError(`"${meta.name}" is ${fmtBytes(meta.size)} — over the 1GB cap. Trim or compress it first.`);
+                  return;
+                }
+                setError(null);
+                setDone(null);
+                setFile(f);
+                setFileMeta(meta);
+                crumb("lite attach ok — Start enabled");
+              } catch (err) {
+                crumb(`lite attach FAILED reading file metadata: ${err instanceof Error ? err.message.slice(0, 60) : "unknown"}`);
+                setFile(null);
+                setFileMeta(null);
+                if (fileRef.current) fileRef.current.value = "";
+                setError(
+                  "That video couldn't be read — it's probably still living in the Photos library. Save it to Files (or your Desktop/Dropbox) first, then pick that copy here."
+                );
               }
-              setError(null);
-              setDone(null);
-              setFile(f);
-              if (f) crumb(`lite attach: ${f.name} · ${fmtBytes(f.size)}`);
             }}
           />
-          {file ? (
+          {file && fileMeta ? (
             <div style={{ fontSize: 12.5 }}>
-              <strong>{file.name}</strong> <span style={{ color: "#6E6C82" }}>({fmtBytes(file.size)})</span>
+              <strong>{fileMeta.name}</strong> <span style={{ color: "#6E6C82" }}>({fmtBytes(fileMeta.size)})</span>
               <div style={{ fontSize: 11, color: "#7DD3FC", marginTop: 4 }}>ready — tap Start below</div>
             </div>
           ) : (
