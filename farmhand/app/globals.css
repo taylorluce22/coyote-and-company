@@ -146,11 +146,49 @@ body.fh-bg-suspended .fh-aurora2 { animation-play-state: paused; }
 
 /* ---------- main column ---------- */
 .fh-main { flex: 1; min-width: 0; position: relative; z-index: 1; padding: 26px 34px 60px; }
+/* ---------- phone layout ----------
+   On desktop the rail is a slim side column. The old mobile rule stacked it
+   full-width ABOVE the screen content — fifteen giant nav cards filled the
+   whole viewport, so tapping a tab looked like "nothing happens" (the screen
+   changed... two viewports further down). Phone gets a compact sticky
+   chip-bar instead: nav is one swipeable row, content starts right under it. */
 @media (max-width: 900px) {
   .fh-app { flex-direction: column; }
-  .fh-rail { position: static; width: 100%; min-height: 0; padding: 16px; }
-  .fh-nav3d { transform: none; }
-  .fh-main { padding: 18px; }
+  .fh-rail {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    min-height: 0;
+    padding: 8px 10px;
+    z-index: 200;
+    background: rgba(11, 11, 22, 0.94);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+  .fh-nav3d {
+    transform: none;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 6px !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .fh-nav3d::-webkit-scrollbar { display: none; }
+  /* brand block: shrink to just the logo square so the row starts with nav */
+  .fh-nav3d > div:first-child { padding: 0 4px 0 0 !important; }
+  .fh-nav3d > div:first-child > div:last-child { display: none; }
+  .fh-navitem {
+    flex: 0 0 auto;
+    width: auto !important;
+    white-space: nowrap;
+    padding: 7px 11px !important;
+    border-radius: 999px !important;
+  }
+  .fh-navitem.on { transform: none; }
+  /* the rail's agent-status block is desktop furniture — hide on phones */
+  .fh-rail > *:not(.fh-nav3d) { display: none !important; }
+  .fh-main { padding: 14px 14px 70px; }
 }
 
 /* ---------- signature card / button classes ---------- */
