@@ -1,7 +1,8 @@
 "use client";
 
-import { Component, useEffect, type ErrorInfo, type ReactNode } from "react";
+import { Component, useEffect, useRef, useState, type ErrorInfo, type ReactNode } from "react";
 import { StoreProvider, useStore } from "@/lib/store";
+import { parseHandoff, unpackHandoff } from "@/lib/handoff";
 import BackgroundFx from "./BackgroundFx";
 import Rail from "./Rail";
 import TopBar from "./TopBar";
@@ -67,20 +68,74 @@ function Screen() {
   }
 }
 
+/**
+ * Phone handoff receiver — a link created in Settings → 📱 Use on phone
+ * carries an encrypted client bundle (key in the #fragment, ciphertext in a
+ * Blob). This runs on EVERY load, before the onboarding gate, so a brand-new
+ * phone lands, imports the full setup, switches into it, deletes the blob,
+ * and scrubs the URL.
+ */
+function HandoffReceiver() {
+  const { importClient, switchWorkspace } = useStore();
+  const [msg, setMsg] = useState<string | null>(null);
+  const ran = useRef(false);
+  useEffect(() => {
+    if (ran.current) return;
+    ran.current = true;
+    const h = parseHandoff();
+    if (!h) return;
+    (async () => {
+      setMsg("📱 Importing your setup…");
+      try {
+        const res = await fetch(h.blobUrl, { signal: AbortSignal.timeout(60000) });
+        if (!res.ok) throw new Error("link expired");
+        const bundle = await unpackHandoff(await res.arrayBuffer(), h.key);
+        const id = await importClient(bundle);
+        if (!id) throw new Error("bad bundle");
+        // clean the URL BEFORE switching (switch may re-render everything)
+        try {
+          history.replaceState(null, "", location.pathname);
+        } catch {}
+        // one-time link: burn the blob
+        fetch("/api/handoff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ del: h.blobUrl }) }).catch(() => {});
+        setMsg("✓ Setup imported — loading your workspace…");
+        switchWorkspace(id);
+        setTimeout(() => setMsg(null), 4000);
+      } catch (e) {
+        setMsg(
+          `Couldn't import: ${e instanceof Error && e.message === "link expired" ? "this link was already used or expired" : "the link looks damaged"} — create a fresh one on your computer (Settings → 📱 Use on phone).`
+        );
+      }
+    })();
+  }, [importClient, switchWorkspace]);
+  if (!msg) return null;
+  return (
+    <div style={{ position: "fixed", top: 12, left: "50%", transform: "translateX(-50%)", zIndex: 9999, background: "rgba(10,10,18,0.92)", border: "1px solid rgba(125,211,252,0.4)", color: "#D8D6E6", borderRadius: 12, padding: "10px 18px", fontSize: 12.5, maxWidth: "90vw", lineHeight: 1.5 }}>
+      {msg}
+    </div>
+  );
+}
+
 function Shell() {
   const { state } = useStore();
-  if (!state.onboarded) return <Onboarding />;
   return (
-    <div className="fh-app">
-      <BackgroundFx />
-      <Rail />
-      <main className="fh-main">
-        <TopBar />
-        <div key={state.tab} className="fh-rise">
-          <Screen />
+    <>
+      <HandoffReceiver />
+      {!state.onboarded ? (
+        <Onboarding />
+      ) : (
+        <div className="fh-app">
+          <BackgroundFx />
+          <Rail />
+          <main className="fh-main">
+            <TopBar />
+            <div key={state.tab} className="fh-rise">
+              <Screen />
+            </div>
+          </main>
         </div>
-      </main>
-    </div>
+      )}
+    </>
   );
 }
 

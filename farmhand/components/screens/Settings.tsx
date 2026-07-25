@@ -1,7 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { upload } from "@vercel/blob/client";
 import { cleanSlate, restoreDemo, useStore } from "@/lib/store";
+import { exportClientBundle } from "@/lib/clients";
+import { handoffLink, packHandoff } from "@/lib/handoff";
 import type { ClientMeta, ClientBundle, ClientId } from "@/lib/clients";
 import { monthUsage, imageAllowance, imageCap, setImageCap, dollars, UNIT_COST_CENTS, type MonthUsage } from "@/lib/meter";
 import { Switch } from "@/components/ui";
@@ -207,6 +210,92 @@ function MiniBtn({ label, onClick, on, danger }: { label: string; onClick: () =>
     <button onClick={onClick} style={{ cursor: "pointer", fontSize: 11, fontWeight: 650, padding: "5px 10px", borderRadius: 7, background: on ? "rgba(0,0,0,0.16)" : "rgba(255,255,255,0.06)", color: danger ? "#FF7A7A" : on ? "#04110E" : "#C8C6D8", border: on ? "none" : "1px solid rgba(255,255,255,0.12)" }}>
       {label}
     </button>
+  );
+}
+
+/**
+ * 📱 Use on phone — one-tap device handoff. Exports the active client's full
+ * bundle, encrypts it in the browser (key never leaves this device except
+ * inside the link's #fragment), parks the ciphertext in Blob, and gives a
+ * one-time link. Open it on the phone → the app imports everything and
+ * switches in. No accounts, no keys, nothing to configure.
+ */
+function PhoneLinkCard() {
+  const { workspace, clients, copy } = useStore();
+  const [busy, setBusy] = useState(false);
+  const [link, setLink] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const create = async () => {
+    if (busy) return;
+    setBusy(true);
+    setErr(null);
+    setLink(null);
+    setCopied(false);
+    try {
+      const meta = clients.find((c) => c.id === workspace) || clients[0];
+      if (!meta) throw new Error("no active client");
+      const bundle = await exportClientBundle(meta);
+      const { payload, key } = await packHandoff(bundle);
+      const blob = await upload(`handoff/${Date.now()}.bin`, new Blob([payload as BlobPart], { type: "application/octet-stream" }), {
+        access: "public",
+        handleUploadUrl: "/api/handoff",
+        contentType: "application/octet-stream",
+      });
+      setLink(handoffLink(blob.url, key));
+    } catch (e) {
+      setErr(
+        e instanceof Error && /token|configured|blob/i.test(e.message)
+          ? "The transfer store isn't reachable — check the Vercel Blob row on the Connectors screen."
+          : "Couldn't create the link — try again."
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card title="📱 Use on phone">
+      <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.55, marginBottom: 10 }}>
+        Your data lives on this device — there are no accounts. This creates a <b style={{ color: "#D8D6E6" }}>one-time
+        encrypted link</b> that moves your entire setup (territories, content, settings, vaults) to your phone: text or
+        email it to yourself, open it there, done. The link self-destructs after import.
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <button
+          onClick={create}
+          disabled={busy}
+          style={{ cursor: busy ? "wait" : "pointer", fontSize: 12.5, fontWeight: 700, color: "#04110E", background: "#41D98A", border: "none", borderRadius: 9, padding: "9px 16px", opacity: busy ? 0.7 : 1 }}
+        >
+          {busy ? "Packing your setup…" : "Create phone link"}
+        </button>
+        {link && (
+          <button
+            onClick={() => {
+              copy(link);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1600);
+            }}
+            style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#7DD3FC", background: "rgba(125,211,252,0.1)", border: "1px solid rgba(125,211,252,0.4)", borderRadius: 9, padding: "8px 14px" }}
+          >
+            {copied ? "Copied ✓" : "Copy link"}
+          </button>
+        )}
+      </div>
+      {link && (
+        <div style={{ marginTop: 10, fontFamily: "var(--mono)", fontSize: 10, color: "#8B89A0", wordBreak: "break-all", background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "8px 10px" }}>
+          {link}
+        </div>
+      )}
+      {link && (
+        <div style={{ marginTop: 8, fontSize: 11, color: "#41D98A", lineHeight: 1.5 }}>
+          Send this to your phone and open it there. On the phone, use the browser&apos;s <b>Add to Home Screen</b> after
+          it loads — the app installs like a real app.
+        </div>
+      )}
+      {err && <div style={{ marginTop: 8, fontSize: 11.5, color: "#FF6B6B" }}>{err}</div>}
+    </Card>
   );
 }
 
@@ -503,6 +592,8 @@ export default function Settings() {
           )}
         </div>
       </Card>
+
+      <PhoneLinkCard />
 
       <Card title="Connections">
         <div style={{ fontSize: 12, color: "#8B89A0", lineHeight: 1.55, marginBottom: 10 }}>

@@ -9,6 +9,27 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-25 · Phone support: encrypted device handoff + home-screen install
+Owner wanted the app on his phone "as if logged in" — but there are no
+accounts; data is per-device localStorage. Built the no-setup path:
+
+- **Settings → 📱 Use on phone**: exports the active client's lossless
+  bundle, AES-GCM encrypts it in the browser (key travels only in the
+  link's #fragment — never reaches a server), parks the ciphertext in
+  Vercel Blob (already-configured infra), and yields a one-time link.
+  Open on the phone → the app imports the whole setup, switches into it,
+  burns the blob, scrubs the URL. Works even on a fresh, not-onboarded
+  device (receiver runs above the onboarding gate).
+- **PWA install**: manifest + generated brand icons (night bg, ember
+  glow, DG diamond) + apple-touch-icon + standalone display — "Add to
+  Home Screen" makes it a real app icon, full-screen.
+- New /api/handoff route: upload tokens scoped to handoff/ paths
+  (100MB cap) + a delete callback so blobs never linger.
+
+Caveat logged for the owner: handoff is a snapshot, not a live sync —
+edits on one device don't flow to the other. The Supabase memory layer
+(scaffolded, needs 3 keys) remains the real multi-device answer.
+
 ## 2026-07-25 · Reel Coach crash FIXED — phased flow + adversarial review (owner friction catch #5)
 Owner: "it wont analyze and it crashes the app… every time." Root causes
 (fix agent, high confidence): (1) the monolithic /api/video-reference
