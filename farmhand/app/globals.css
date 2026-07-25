@@ -114,6 +114,11 @@ button { font-family: inherit; }
   bottom: -220px; left: 180px; filter: blur(54px);
   animation: fh-aurora2 24s ease-in-out infinite;
 }
+/* Reel Coach sets window.__fhSuspendBg during big uploads; BackgroundFx
+   mirrors it onto this body class so ALL ambient motion (WebGL render loop
+   AND these compositor-driven blur animations) goes idle for the duration. */
+body.fh-bg-suspended .fh-aurora1,
+body.fh-bg-suspended .fh-aurora2 { animation-play-state: paused; }
 
 /* ---------- floating 3D nav rail ---------- */
 .fh-rail {

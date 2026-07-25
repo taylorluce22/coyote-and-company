@@ -9,6 +9,38 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-25 · Reel Coach crash FIXED — phased flow + adversarial review (owner friction catch #5)
+Owner: "it wont analyze and it crashes the app… every time." Root causes
+(fix agent, high confidence): (1) the monolithic /api/video-reference
+invocation ran up to ~450s of work against a ≤300s function ceiling — real
+clips died mid-flight every time = "won't analyze"; (2) the browser sent
+the whole 100–200MB clip as ONE buffered request (no multipart) while the
+three.js background scene kept running = the tab-OOM crash profile.
+
+Fix (same crash-proof shape as the Higgsfield pollBatch): multipart chunked
+upload with live progress; server split into client-driven phases
+start/status/analyze from shared helpers (monolithic path kept for
+back-compat); blob always deleted; PendingReel record persisted the moment
+the clip lands at Gemini (per-client, 40h TTL) with a ⟳ Resume strip — a
+crash can no longer lose an upload; __fhSuspendBg now also freezes the
+aurora CSS animations; every failure lands in the error strip in plain
+English with trim-the-clip guidance.
+
+Then a 4-lens adversarial review workflow (state machine, regressions,
+memory, error-UX) confirmed 3 additional majors, all fixed before merge:
+- vault write result was DISCARDED — a failed IndexedDB save silently lost
+  the analysis AND pruned the pending record; now enforced (throw before
+  cleanup, Resume survives)
+- client start timeout (240s) undercut the server's 260s worst case — a
+  SUCCESSFUL Gemini hand-off could be discarded with no resume record;
+  now 280s
+- a mid-run client switch wrote the analysis into the WRONG client's vault;
+  reelVaultAdd now pins to the run's client
+
+Style-match mode untouched. Build green. Practical owner guidance: trim
+references to the best ~90 seconds — Gemini needs the style, not the
+runtime.
+
 ## 2026-07-25 · Depth pass + Style Match (owner friction catch #4: "flat and 2d")
 Owner: "everything just looks flat and 2d… we need things to pop… with the
 right pictures and animation." Ran the motion/visual research agent — key

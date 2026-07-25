@@ -68,8 +68,11 @@ function openDb(client: string = activeClient): Promise<IDBDatabase | null> {
   });
 }
 
-export async function reelVaultAdd(reel: VaultReel): Promise<boolean> {
-  const db = await openDb();
+/** Pass `client` to pin the write to a specific client's vault — a long
+    phased analysis must save into the vault of the client it STARTED under,
+    even if the operator switched clients mid-run. */
+export async function reelVaultAdd(reel: VaultReel, client?: string): Promise<boolean> {
+  const db = await openDb(client);
   if (!db) return false;
   return new Promise((resolve) => {
     try {
