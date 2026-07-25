@@ -9,6 +9,40 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-25 · JOB INBOX — agents anywhere, results in the app (owner friction catch #10)
+Owner: "get Claude to complete this task by using Cowork… so I don't
+have to keep going back and forth." The missing bridge: jobs can be
+STARTED from outside any browser (Cowork terminal: blob upload via
+@vercel/blob + phase job-start), but results only landed in whichever
+browser held the pending record. New phase `job-inbox` lists finished
+jobs; Reel Coach sweeps it on open and banks anything waiting — so
+"agent uploads from the Mac, breakdown appears in the app" needs zero
+manual hand-off. Jobs now carry a `client` tag end-to-end and bank
+into their HOME client's vault.
+
+Adversarially verified (3 lenses) — 13 confirmed defects fixed before
+ship: banked-set now written by EVERY banking path (failed acks no
+longer re-import duplicates); sweep concurrency guard + cancellation
+(StrictMode double-mount / workspace switch); per-entry error isolation;
+per-iteration banked-set re-reads; server-side dedupe by jobId (a job
+with two done records imported twice); 3-minute grace window so an
+active watcher always banks before the inbox can ack a result away;
+list pagination + 48h journal GC; re-ack of lingering journals; cap
+100 banked ids (20 could evict inside the 40h journal window).
+
+KNOWN LIMITATION (documented, accepted for a single-owner unlisted
+tool): the app has no auth anywhere, and job-inbox makes finished-job
+ids enumerable — a stranger with the URL could read or ack unbanked
+analyses during the brief window before the owner banks them. Optional
+gate shipped: set REEL_JOB_TOKEN (server) + NEXT_PUBLIC_REEL_JOB_TOKEN
+(app) in Vercel and the enumerate/delete phases require the token.
+Real per-user auth is the proper fix if this app ever gets more users.
+
+Also: upload preflight speed check + 90s stall watchdog shipped earlier
+today after the diag trail proved every upload ever attempted stalled
+at zero bytes (network path, not machine). Owner's Safari run confirmed
+alive; Chrome-on-his-Mac remains the one environment that hard-freezes.
+
 ## 2026-07-25 · Photos-placeholder canary + attach hardening (owner friction catch #9)
 Owner: still a complete freeze, "doesn't work at all", even post-worker.
 Freeze-hazard audit agent (with 20x-CPU-throttle Playwright verification)

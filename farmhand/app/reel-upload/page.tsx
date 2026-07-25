@@ -70,6 +70,17 @@ const readStrategy = (client: string): StrategyProfile => {
   return DEFAULT_STRATEGY;
 };
 
+/* same dedupe set Reel Coach maintains — a banked job must never re-import */
+const BANKED_KEY = "fh-reel-banked-jobs";
+const markBanked = (id: string) => {
+  try {
+    const list = JSON.parse(localStorage.getItem(BANKED_KEY) || "[]") as string[];
+    localStorage.setItem(BANKED_KEY, JSON.stringify([...list, id].slice(-100)));
+  } catch {}
+};
+/** Optional shared secret for the destructive job phases (see Reel Coach). */
+const jobToken = () => (process.env.NEXT_PUBLIC_REEL_JOB_TOKEN ? { token: process.env.NEXT_PUBLIC_REEL_JOB_TOKEN } : {});
+
 const newJobId = (): string => {
   try {
     return crypto.randomUUID();
@@ -193,9 +204,10 @@ export default function ReelUploadLite() {
         };
         const saved = await reelVaultAdd(reel, workspace);
         if (!saved) throw new Error("The analysis finished but couldn't be saved on this device — open the main app and hit ⟳ Resume analysis.");
+        markBanked(jobId);
         clearPending(workspace);
         setPending(null);
-        jobPost({ phase: "job-ack", jobId }, 15000).catch(() => {});
+        jobPost({ phase: "job-ack", jobId, ...jobToken() }, 15000).catch(() => {});
         crumb("done ✓ (lite) analysis in the vault");
         return;
       }
@@ -211,7 +223,7 @@ export default function ReelUploadLite() {
         if (j.retryable !== true) {
           clearPending(workspace);
           setPending(null);
-          jobPost({ phase: "job-ack", jobId }, 15000).catch(() => {});
+          jobPost({ phase: "job-ack", jobId, ...jobToken() }, 15000).catch(() => {});
         }
         throw new Error(msg);
       }
@@ -321,6 +333,7 @@ export default function ReelUploadLite() {
           jobId,
           url: blobUrl,
           contentType: ctype,
+          client: workspace,
           label: label.trim(),
           source,
           ...(rec.topic ? { topic: rec.topic } : {}),
