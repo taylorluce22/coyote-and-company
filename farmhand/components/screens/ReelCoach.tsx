@@ -15,6 +15,81 @@ function formatBytes(n: number): string {
 }
 
 const MAX_FILE_BYTES = 200 * 1024 * 1024;
+// soft warning only — big clips upload and analyze slower and are the #1
+// reason the flow used to die; Gemini only needs the style, not the runtime
+const SOFT_WARN_BYTES = 80 * 1024 * 1024;
+
+/* ---- pending analysis, persisted the moment the clip lands at Gemini ----
+   Same crash-proof pattern as Composer's pendingBatch: if the tab dies, the
+   connection drops, or a later phase fails, the uploaded clip is NOT lost —
+   Gemini keeps files ~48h, and ⟳ Resume analysis picks up from here without
+   re-uploading. Per-client key so analyses never cross client vaults. */
+type PendingReel = {
+  fileName: string;
+  fileUri: string;
+  mimeType: string;
+  label: string;
+  source: VaultReel["source"];
+  topic: { title: string; angle: string; facts: string[] } | null;
+  createdAt: number;
+};
+const pendingReelKey = (client: string) => (client === "default" ? "fh-reel-pending" : `fh-reel-pending::${client}`);
+function readPendingReel(client: string): PendingReel | null {
+  try {
+    const raw = localStorage.getItem(pendingReelKey(client));
+    if (!raw) return null;
+    const p = JSON.parse(raw) as PendingReel;
+    if (!p.fileName || !p.fileUri) return null;
+    // Gemini files live ~48h — stop offering resume shortly before that
+    if (!(p.createdAt > Date.now() - 40 * 3600000)) {
+      localStorage.removeItem(pendingReelKey(client));
+      return null;
+    }
+    return p;
+  } catch {
+    return null;
+  }
+}
+function writePendingReel(rec: PendingReel, client: string) {
+  try {
+    localStorage.setItem(pendingReelKey(client), JSON.stringify(rec));
+  } catch {}
+}
+function clearPendingReel(client: string) {
+  try {
+    localStorage.removeItem(pendingReelKey(client));
+  } catch {}
+}
+
+const TRIM_HINT =
+  "the clip may be too long — trim it to under ~90 seconds of the reference (Gemini only needs the style, not the full runtime) and retry.";
+
+/** One short phased call to /api/video-reference. Throws plain-English on any failure. */
+async function phasePost(body: Record<string, unknown>, timeoutMs: number, timeoutMsg: string): Promise<Record<string, unknown>> {
+  let r: Response;
+  try {
+    r = await fetch("/api/video-reference", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch {
+    throw new Error(timeoutMsg);
+  }
+  let j: Record<string, unknown>;
+  try {
+    j = await r.json();
+  } catch {
+    // a platform-killed function returns an HTML error page, not JSON
+    throw new Error(r.status === 504 || r.status === 502 ? `The server ran out of time — ${TRIM_HINT}` : timeoutMsg);
+  }
+  if (j.configured === false) {
+    throw new Error("Needs GEMINI_API_KEY set in Vercel — ask Taylor to add it, then try again.");
+  }
+  if (typeof j.error === "string" && j.error) throw new Error(j.error);
+  return j;
+}
 
 function noteFor(reel: VaultReel): string {
   const a = reel.analysis || {};
@@ -152,7 +227,7 @@ function AnalysisCard({ analysis }: { analysis: ReelAnalysis }) {
 }
 
 export default function ReelCoach() {
-  const { state, copy } = useStore();
+  const { state, copy, workspace } = useStore();
   const strategy = state.strategy as StrategyProfile;
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -170,10 +245,12 @@ export default function ReelCoach() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [pending, setPending] = useState<PendingReel | null>(null);
 
   useEffect(() => {
     reelVaultAll().then(setList);
-  }, []);
+    setPending(readPendingReel(workspace));
+  }, [workspace]);
 
   const pickFile = (f: File | null | undefined) => {
     console.log("[reel-coach] pickFile", f ? { name: f.name, size: f.size, type: f.type } : null);
@@ -189,6 +266,71 @@ export default function ReelCoach() {
     setFile(f || null);
   };
 
+  /** Phases 2+3 (poll processing, then analyze) — shared by a fresh analyze
+      and by ⟳ Resume, so an interrupted run picks up exactly where it died.
+      Throws plain-English on failure; the pending record stays until the
+      analysis is safely in the vault. */
+  const pollAndAnalyze = async (rec: PendingReel, tag: string) => {
+    setStage("Gemini is processing the clip…");
+    const deadline = Date.now() + 180000; // client-owned poll budget
+    let fileState = "PROCESSING";
+    while (fileState === "PROCESSING" && Date.now() < deadline) {
+      try {
+        const j = await phasePost(
+          { phase: "status", fileName: rec.fileName },
+          20000,
+          "Lost the connection while checking on the clip — your upload is safe, hit ⟳ Resume analysis."
+        );
+        fileState = String(j.state || "PROCESSING");
+      } catch (e) {
+        // one flaky poll shouldn't kill the run — only a hard config error should
+        if (e instanceof Error && e.message.includes("GEMINI_API_KEY")) throw e;
+        console.warn(tag, "status poll hiccup", e);
+      }
+      if (fileState === "PROCESSING") await new Promise((r) => setTimeout(r, 3000));
+    }
+    console.log(tag, "file state", fileState);
+    if (fileState === "NOT_FOUND") {
+      clearPendingReel(workspace);
+      setPending(null);
+      throw new Error("That upload expired on Gemini's side — upload the clip again.");
+    }
+    if (fileState === "FAILED") {
+      clearPendingReel(workspace);
+      setPending(null);
+      throw new Error(`Gemini couldn't process that video — ${TRIM_HINT}`);
+    }
+    if (fileState !== "ACTIVE") {
+      throw new Error("Gemini is still processing the clip — your upload is safe. Hit ⟳ Resume analysis in a minute.");
+    }
+
+    setStage("Gemini is watching the clip — this can take a minute…");
+    const j = await phasePost(
+      {
+        phase: "analyze",
+        fileUri: rec.fileUri,
+        mimeType: rec.mimeType,
+        label: rec.label,
+        source: rec.source,
+        ...(rec.topic ? { topic: rec.topic } : {}),
+      },
+      150000,
+      `The analysis didn't come back in time — your upload is safe, hit ⟳ Resume analysis to retry without re-uploading. If it keeps failing, ${TRIM_HINT}`
+    );
+    const reel: VaultReel = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      label: rec.label,
+      source: rec.source,
+      analysis: j.analysis as ReelAnalysis,
+      createdAt: Date.now(),
+    };
+    await reelVaultAdd(reel); // vault FIRST — analysis is safe before cleanup
+    clearPendingReel(workspace);
+    setPending(null);
+    setList(await reelVaultAll());
+    setExpanded(reel.id);
+  };
+
   const analyze = async () => {
     if (!file || busy) return;
     const tag = `[reel-coach ${Date.now()}]`;
@@ -198,58 +340,85 @@ export default function ReelCoach() {
     setStage("Uploading clip…");
     (window as unknown as { __fhSuspendBg?: boolean }).__fhSuspendBg = true;
     try {
+      // Phase 0: browser → Vercel Blob. multipart chunks the file (~8MB parts
+      // with retries) instead of one giant buffered request — the old
+      // single-shot upload of a 100-200MB reel is what OOM-crashed the tab.
       console.log(tag, "calling blob upload()…");
-      const blob = await upload(`reels/${Date.now()}-${file.name.replace(/[^a-z0-9.\-_]/gi, "_")}`, file, {
-        access: "public",
-        handleUploadUrl: "/api/video-reference/blob-upload",
-        contentType: file.type || "video/mp4",
-      });
+      let blob;
+      try {
+        blob = await upload(`reels/${Date.now()}-${file.name.replace(/[^a-z0-9.\-_]/gi, "_")}`, file, {
+          access: "public",
+          handleUploadUrl: "/api/video-reference/blob-upload",
+          contentType: file.type || "video/mp4",
+          multipart: true,
+          onUploadProgress: ({ percentage }) => setStage(`Uploading… ${Math.round(percentage)}%`),
+        });
+      } catch (e) {
+        console.error(tag, "blob upload failed", e);
+        throw new Error(
+          "The upload didn't finish — check your connection and try again. If the clip is big, trim it to under ~90 seconds first (Gemini only needs the style, not the full runtime)."
+        );
+      }
       console.log(tag, "blob upload() resolved", blob.url);
 
-      setStage("Gemini is watching the clip — this can take a minute…");
-      console.log(tag, "calling /api/video-reference…");
-      const r = await fetch("/api/video-reference", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: blob.url,
-          contentType: file.type,
-          label: label.trim(),
-          source,
-          ...(source === "reference" && topic
-            ? { topic: { title: topic.title, angle: topic.angle, facts: topic.deck?.length ? topic.deck : [topic.angle] } }
-            : {}),
-        }),
-        signal: AbortSignal.timeout(290000),
-      });
-      console.log(tag, "/api/video-reference responded", r.status);
-      const j = await r.json();
-      console.log(tag, "response parsed", { configured: j.configured, hasError: !!j.error });
-      if (!j.configured) {
-        setError("Needs GEMINI_API_KEY set in Vercel — ask Taylor to add it, then try again.");
-        return;
-      }
-      if (j.error) {
-        setError(j.error);
-        return;
-      }
-      const reel: VaultReel = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      // Phase 1: server moves blob → Gemini Files API and returns fast
+      setStage("Handing the clip to Gemini…");
+      const start = await phasePost(
+        { phase: "start", url: blob.url, contentType: file.type, label: label.trim() },
+        240000,
+        `The hand-off to Gemini didn't finish in time — ${TRIM_HINT}`
+      );
+      const rec: PendingReel = {
+        fileName: String(start.fileName || ""),
+        fileUri: String(start.fileUri || ""),
+        mimeType: String(start.mimeType || file.type || "video/mp4"),
         label: label.trim() || file.name,
         source,
-        analysis: j.analysis,
+        topic:
+          source === "reference" && topic
+            ? { title: topic.title, angle: topic.angle, facts: topic.deck?.length ? topic.deck : [topic.angle] }
+            : null,
         createdAt: Date.now(),
       };
-      await reelVaultAdd(reel);
-      setList(await reelVaultAll());
-      setExpanded(reel.id);
+      if (!rec.fileName || !rec.fileUri) throw new Error("Gemini didn't accept the clip — try again.");
+      // record the upload BEFORE polling — from here on, a crash, closed tab,
+      // or dead connection can't strand it (Gemini keeps files ~48h)
+      writePendingReel(rec, workspace);
+      setPending(rec);
+      console.log(tag, "gemini file", rec.fileName);
+
+      // Phases 2+3: poll processing, then analyze — shared with ⟳ Resume
+      await pollAndAnalyze(rec, tag);
+
       setFile(null);
       setLabel("");
       if (fileRef.current) fileRef.current.value = "";
       console.log(tag, "done");
     } catch (e) {
       console.error(tag, "analyze() threw", e);
-      setError(e instanceof Error ? e.message : "upload failed");
+      setError(e instanceof Error ? e.message : "Something went wrong during the upload — try again.");
+    } finally {
+      (window as unknown as { __fhSuspendBg?: boolean }).__fhSuspendBg = false;
+      setBusy(false);
+      setStage("");
+    }
+  };
+
+  /** Pick an interrupted run back up — no re-upload, no extra Gemini cost. */
+  const resumePending = async () => {
+    const rec = readPendingReel(workspace);
+    if (!rec || busy) return;
+    const tag = `[reel-coach resume ${Date.now()}]`;
+    setBusy(true);
+    setError(null);
+    setStage("⟳ Checking Gemini for your clip…");
+    (window as unknown as { __fhSuspendBg?: boolean }).__fhSuspendBg = true;
+    try {
+      await pollAndAnalyze(rec, tag);
+      console.log(tag, "recovered");
+    } catch (e) {
+      console.error(tag, "resume threw", e);
+      setError(e instanceof Error ? e.message : "Couldn't resume — try again in a minute.");
     } finally {
       (window as unknown as { __fhSuspendBg?: boolean }).__fhSuspendBg = false;
       setBusy(false);
@@ -310,6 +479,12 @@ export default function ReelCoach() {
               <strong>{file.name}</strong>{" "}
               <span style={{ color: "#6E6C82" }}>({formatBytes(file.size)})</span>
               <div style={{ fontSize: 11, color: "#7DD3FC", marginTop: 4 }}>selected — click to swap, or Analyze below</div>
+              {file.size > SOFT_WARN_BYTES && (
+                <div style={{ fontSize: 10.5, color: "#FFC23D", marginTop: 5, lineHeight: 1.45, maxWidth: 420, marginInline: "auto" }}>
+                  ⚠ {formatBytes(file.size)} is a big clip — it&apos;ll work, but uploads this size are slow and can time out.
+                  Gemini only needs the style, not the full runtime: trimming to ~90 seconds of the reference gives the same coaching, way faster.
+                </div>
+              )}
             </div>
           ) : (
             <div style={{ fontSize: 12.5, color: "#8B89A0" }}>
@@ -389,6 +564,33 @@ export default function ReelCoach() {
         {busy && stage && <div style={{ fontSize: 11.5, color: "#7DD3FC", marginTop: 10 }}>{stage}</div>}
         {error && <div style={{ fontSize: 11.5, color: "#FF6B6B", marginTop: 10 }}>{error}</div>}
       </div>
+
+      {pending && !busy && (
+        <div
+          className="fh-glass"
+          style={{ borderRadius: 14, padding: "13px 17px", marginBottom: 20, border: "1px solid rgba(255,194,61,0.35)", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}
+        >
+          <div style={{ fontSize: 12, color: "#D9D7E4", lineHeight: 1.5, flex: 1, minWidth: 220 }}>
+            An analysis didn&apos;t finish — <b style={{ color: "#F4F3F8" }}>{pending.label}</b> is already uploaded and waiting at
+            Gemini (uploads live ~48h). Resume picks up right where it stopped, no re-upload.
+          </div>
+          <button
+            onClick={resumePending}
+            style={{ background: "rgba(255,194,61,0.12)", color: "#FFC23D", border: "1px solid rgba(255,194,61,0.4)", borderRadius: 8, padding: "7px 14px", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}
+          >
+            ⟳ Resume analysis
+          </button>
+          <button
+            onClick={() => {
+              clearPendingReel(workspace);
+              setPending(null);
+            }}
+            style={{ background: "transparent", color: "#8B89A0", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "7px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {list.length === 0 && !busy && (
         <div style={{ fontSize: 12, color: "#6E6C82", padding: "20px 4px" }}>No reels analyzed yet.</div>

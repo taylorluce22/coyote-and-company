@@ -84,12 +84,20 @@ export default function BackgroundFx() {
     window.addEventListener("resize", onResize);
 
     let raf = 0;
+    let wasSuspended = false;
     const animate = () => {
       // Heavy client-side work (Reel Coach upload/analysis) sets this flag so
       // this GPU-continuous render loop isn't also competing for the GPU/
       // compositor during the exact window a large local video is being
       // read/uploaded — see ReelCoach.tsx.
-      if (!(window as unknown as { __fhSuspendBg?: boolean }).__fhSuspendBg) {
+      const suspended = !!(window as unknown as { __fhSuspendBg?: boolean }).__fhSuspendBg;
+      if (suspended !== wasSuspended) {
+        wasSuspended = suspended;
+        // also freeze the aurora CSS animations (globals.css) so the
+        // compositor goes fully idle, not just the WebGL layer
+        document.body.classList.toggle("fh-bg-suspended", suspended);
+      }
+      if (!suspended) {
         const t = performance.now() / 1000;
         layers.forEach((p, i) => {
           p.rotation.y = t * (p.userData.speed as number);
@@ -106,6 +114,7 @@ export default function BackgroundFx() {
 
     return () => {
       cancelAnimationFrame(raf);
+      document.body.classList.remove("fh-bg-suspended");
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("resize", onResize);
       layers.forEach((p) => {
