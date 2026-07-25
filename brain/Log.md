@@ -9,7 +9,36 @@ What was done · what was spent · what needs a human
 
 ---
 
-## 2026-07-24 · Removed the fake "Connections" demo card in Settings
+## 2026-07-25 · DESERT GRID editorial slides wired into the Studio (owner friction catch #2)
+Owner's first production run surfaced the gap: posts still generated in the
+old big-bold-letters photo style — no charts, no data slides — and the copy
+educated on APS rules without ever landing back on solar. The DESERT GRID
+system existed but only as a sample gallery; nothing compiled real ideas
+into it.
+
+Built the missing bridge:
+- `lib/dgCompile.ts` — idea → DGPost compiler: editorial cover (A06), an
+  authored data slide when the subject has chartable KB numbers (rate-case
+  ranked bars, export step-down line, 34¢/12¢ on-peak bars, 20 GW / $660 /
+  ~100-bankruptcies / 7-in-10-lease hero numbers, credit-gone + terms-
+  transfer myth-busts), smart-brevity bullets from the idea's deck, and
+  ALWAYS an A16 closer that lands the education on the solar decision
+  (theme-matched: "You can't rate-plan your way off the escalator →
+  producing your own power is the hedge").
+- `components/DGSlide.tsx` — the shared scalable archetype renderer (336px
+  preview ↔ 1080×1350 export, same component).
+- Composer: new **Editorial · data / ✨ Photo** toggle (editorial is the
+  default when an idea loads). Editorial slides export via the existing
+  html2canvas path — **zero image credits**. Photo mode unchanged. Also
+  fixed the leftover "monsoon-roof-check" download filename.
+- AI writer (/api/copy): new hard rule — every post must END connected to
+  the solar/ownership decision; utility education with no solar landing is
+  a failed post.
+- Verified visually with Playwright on 4 real KB posts before shipping.
+
+Needs a human: nothing — flip to the Studio, the editorial deck is the
+default. Photo mode is still one click away when a post wants a photoreal
+cover.
 First real friction-log catch from the launch run: the owner opened
 Settings, saw the demo Connections card (hardcoded "connected" for
 Claude/Perplexity/Instagram/Facebook), and reasonably took it as the key

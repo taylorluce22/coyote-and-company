@@ -22,6 +22,9 @@ import { textures } from "@/lib/textures";
 import { COMP_COPY, type CompCh } from "@/lib/data";
 import { ideaCopy, ideaFactPair } from "@/lib/ideaCopy";
 import { ideasFor, type Idea, type StrategyProfile } from "@/lib/strategy";
+import { compileDG } from "@/lib/dgCompile";
+import { DGSlideView } from "@/components/DGSlide";
+import { ARCHETYPES } from "@/lib/desertGrid";
 import { buildSlidePrompts, pushPackLog, readPackLog } from "@/lib/postVisuals";
 import { vaultAdd, vaultAll, vaultDelete, type VaultImage } from "@/lib/vault";
 import { record as meterRecord, imageAllowance } from "@/lib/meter";
@@ -268,6 +271,19 @@ export default function Composer() {
   const [idx, setIdx] = useState(0);
   const cur = Math.min(idx, total - 1);
   const slide = slides[cur];
+
+  /* ---- Editorial (DESERT GRID) look: the idea compiles into chart/data
+     slides (hero numbers, ranked bars, trend lines, myth-busts) with a
+     closer that lands every post back on the solar decision. Rendered by
+     the shared archetype renderer and exported by html2canvas — ZERO image
+     credits. Photo mode is the original Higgsfield/big-type deck. ---- */
+  const [look, setLook] = useState<"editorial" | "photo">("editorial");
+  const dgPost = useMemo(() => (idea ? compileDG(idea) : null), [idea]);
+  const editorial = look === "editorial" && !!dgPost;
+  const dgSlides = editorial && dgPost ? dgPost.slides : null;
+  const navTotal = dgSlides ? dgSlides.length : total;
+  const navCur = Math.min(idx, navTotal - 1);
+  const dgWordmark = ideaPack ? `@${ideaPack.handle}` : "◆ Coyote & Co.";
 
   /* per-channel persisted studio look (design + per-slide backgrounds) */
   const studio: ChannelStudio = useMemo(() => {
@@ -659,26 +675,27 @@ export default function Composer() {
     return canvas.toDataURL("image/png");
   }, [ratio.w, ratio.h]);
 
+  const dlName = slugify((idea ? idea.title : "monsoon-roof-check") + "-" + ch);
   async function downloadCurrent() {
     setBusy(true);
     try {
       const url = await capture();
-      if (url) downloadDataUrl(url, `${slugify("monsoon-roof-check-" + ch)}-${String(cur + 1).padStart(2, "0")}.png`);
+      if (url) downloadDataUrl(url, `${dlName}-${String(navCur + 1).padStart(2, "0")}.png`);
     } catch {}
     setBusy(false);
   }
   const raf = () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   async function downloadAll() {
-    if (total <= 1) return downloadCurrent();
+    if (navTotal <= 1) return downloadCurrent();
     setBusy(true);
     try {
-      for (let i = 0; i < total; i++) {
+      for (let i = 0; i < navTotal; i++) {
         setIdx(i);
         await raf();
         await sleep(170);
         const url = await capture();
-        if (url) downloadDataUrl(url, `${slugify("monsoon-roof-check-" + ch)}-${String(i + 1).padStart(2, "0")}.png`);
+        if (url) downloadDataUrl(url, `${dlName}-${String(i + 1).padStart(2, "0")}.png`);
         await sleep(380);
       }
     } catch {}
@@ -722,6 +739,19 @@ export default function Composer() {
             </span>
           )}
           {idea && (
+            <Seg
+              value={look}
+              onChange={(v) => {
+                setLook(v as "editorial" | "photo");
+                setIdx(0);
+              }}
+              options={[
+                { id: "editorial", label: "▤ Editorial · data" },
+                { id: "photo", label: "✨ Photo" },
+              ]}
+            />
+          )}
+          {idea && (
             <button
               onClick={sharpenCopy}
               disabled={copyBusy}
@@ -731,7 +761,7 @@ export default function Composer() {
               {copyBusy ? "✍️ Writing…" : ai ? "✍️ Re-write" : "✍️ Sharpen copy"}
             </button>
           )}
-          <button
+          {!editorial && <button
             onClick={() => {
               if (genBusy) return;
               if (!genArm) {
@@ -757,7 +787,7 @@ export default function Composer() {
             }}
           >
             {genBusy ? "✨ Directing…" : genArm ? `✓ Confirm — ~${Math.min(total, 6)} credits` : "✨ Post visuals"}
-          </button>
+          </button>}
           {ai ? (
             <button
               onClick={() => set({ compAiCopy: null, compRegen: false, compShort: false })}
@@ -793,7 +823,7 @@ export default function Composer() {
               disabled={busy}
               style={{ background: "rgba(255,194,61,0.14)", color: "#FFC23D", border: "1px solid rgba(255,194,61,0.4)", borderRadius: 9, padding: "7px 13px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
             >
-              {busy ? "Exporting…" : total > 1 ? `↓ Download all (${total})` : "↓ Download PNG"}
+              {busy ? "Exporting…" : navTotal > 1 ? `↓ Download all (${navTotal})` : "↓ Download PNG"}
             </button>
             <select
               value={status}
@@ -884,7 +914,17 @@ export default function Composer() {
             }}
           >
             <div style={{ position: "absolute", top: 0, left: 0, transform: `scale(${scale})`, transformOrigin: "top left" }}>
-              {slide && (
+              {dgSlides ? (
+                <DGSlideView
+                  ref={slideRef}
+                  s={dgSlides[navCur]}
+                  idx={navCur + 1}
+                  total={navTotal}
+                  width={ratio.w}
+                  height={ratio.h}
+                  wordmark={dgWordmark}
+                />
+              ) : slide && (
                 <PostSlide
                   ref={slideRef}
                   slide={slide}
@@ -903,36 +943,36 @@ export default function Composer() {
         </div>
 
         {/* slide nav */}
-        {total > 1 && (
+        {navTotal > 1 && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginTop: 14 }}>
             <button
               onClick={() => setIdx((i) => Math.max(0, i - 1))}
-              disabled={cur === 0}
+              disabled={navCur === 0}
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "#A6A4B8", borderRadius: 8, width: 30, height: 30, cursor: "pointer" }}
             >
               ‹
             </button>
             <div style={{ display: "flex", gap: 6 }}>
-              {slides.map((s, i) => (
+              {(dgSlides ?? slides).map((s, i) => (
                 <button
                   key={i}
                   onClick={() => setIdx(i)}
-                  title={s.role}
+                  title={"role" in s ? s.role : ARCHETYPES.find((a) => a.id === s.a)?.name || s.a}
                   style={{
                     width: 10,
                     height: 10,
                     borderRadius: "50%",
                     border: "none",
                     cursor: "pointer",
-                    background: i === cur ? "#FFC23D" : "rgba(255,255,255,0.12)",
-                    boxShadow: i === cur ? "0 0 8px #FFC23D" : "none",
+                    background: i === navCur ? "#FFC23D" : "rgba(255,255,255,0.12)",
+                    boxShadow: i === navCur ? "0 0 8px #FFC23D" : "none",
                   }}
                 />
               ))}
             </div>
             <button
-              onClick={() => setIdx((i) => Math.min(total - 1, i + 1))}
-              disabled={cur === total - 1}
+              onClick={() => setIdx((i) => Math.min(navTotal - 1, i + 1))}
+              disabled={navCur === navTotal - 1}
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "#A6A4B8", borderRadius: 8, width: 30, height: 30, cursor: "pointer" }}
             >
               ›
@@ -941,15 +981,26 @@ export default function Composer() {
         )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 10, gap: 8, color: "#6E6C82", fontSize: 12 }}>
           <span style={{ fontSize: 10, fontWeight: 700, fontFamily: "var(--mono)", color: "#8D89C0", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 5, padding: "2px 8px" }}>
-            {slide ? slide.role : ""}
+            {dgSlides ? `${dgSlides[navCur].a} · ${ARCHETYPES.find((a) => a.id === dgSlides[navCur].a)?.name || "slide"}` : slide ? slide.role : ""}
           </span>
           <span>
             {ratio.label} · {ratio.w}×{ratio.h}
           </span>
         </div>
 
+        {/* editorial mode: slides compile from the idea's deck + KB charts */}
+        {editorial && (
+          <div className="fh-glass" style={{ borderRadius: 14, padding: "12px 14px", marginTop: 14, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 11.5, color: "#8B89A0", lineHeight: 1.5, flex: 1, minWidth: 220 }}>
+              <b style={{ color: "#E8622C" }}>Editorial · data</b> — these slides compile from this idea&apos;s deck and the KB&apos;s real numbers
+              (charts included when the subject has them), and the last slide always lands back on solar. Export is free — no image credits.
+              Want the photoreal look instead? Flip to <b style={{ color: "#D8D6E6" }}>✨ Photo</b> above.
+            </span>
+          </div>
+        )}
+
         {/* direct slide text editing — type straight into the post */}
-        <div className="fh-glass" style={{ borderRadius: 14, padding: "12px 14px", marginTop: 14 }}>
+        {!editorial && <div className="fh-glass" style={{ borderRadius: 14, padding: "12px 14px", marginTop: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
             <span className="fh-kicker" style={{ fontSize: 9.5 }}>Slide text</span>
             <span style={{ fontSize: 10, color: "#6E6C82" }}>
@@ -975,10 +1026,10 @@ export default function Composer() {
               resize: "vertical",
             }}
           />
-        </div>
+        </div>}
 
         {/* backgrounds & images — two stacked scrollable rows under the preview */}
-        <div className="fh-glass" style={{ borderRadius: 14, padding: "12px 14px 10px", marginTop: 14 }}>
+        {!editorial && <div className="fh-glass" style={{ borderRadius: 14, padding: "12px 14px 10px", marginTop: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
             <span className="fh-kicker" style={{ fontSize: 9.5 }}>Backgrounds</span>
             <span style={{ fontSize: 10, color: "#6E6C82" }}>
@@ -1099,7 +1150,7 @@ export default function Composer() {
               </span>
             )}
           </div>
-        </div>
+        </div>}
 
         {/* caption & hashtags */}
         <div className="fh-glass" style={{ borderRadius: 14, padding: 16, marginTop: 18 }}>
@@ -1134,10 +1185,10 @@ export default function Composer() {
 
       {/* ============ SIDE: controls ============ */}
       <div className="fh-engpv" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <StockPanel pillar="tips" />
+        {!editorial && <StockPanel pillar="tips" />}
 
-        {/* Background */}
-        <div className="fh-glass" style={{ borderRadius: 14, padding: 14 }}>
+        {/* Background — photo mode only; editorial slides bring their own system */}
+        {!editorial && <div className="fh-glass" style={{ borderRadius: 14, padding: 14 }}>
           <div className="fh-kicker" style={{ fontSize: 10, marginBottom: 12 }}>
             Background
           </div>
@@ -1202,7 +1253,7 @@ export default function Composer() {
               </div>
             </>
           )}
-        </div>
+        </div>}
 
         {/* Layout & format */}
         <div className="fh-glass" style={{ borderRadius: 14, padding: 14 }}>
@@ -1211,7 +1262,13 @@ export default function Composer() {
           </div>
           <label style={FIELD_LABEL}>Format</label>
           <Seg value={design.ratio} onChange={(v) => setD("ratio", v)} options={STUDIO_RATIOS.map((r) => ({ id: r.id, label: r.label }))} />
-          <div style={{ height: 14 }} />
+          {editorial && (
+            <div style={{ fontSize: 10.5, color: "#6E6C82", marginTop: 10, lineHeight: 1.45 }}>
+              Editorial slides follow the DESERT GRID system — colors, type and layout are locked to the brand. Text
+              position, fonts and accents below apply to ✨ Photo mode.
+            </div>
+          )}
+          {!editorial && <><div style={{ height: 14 }} />
           <label style={FIELD_LABEL}>Text position</label>
           <Seg
             value={design.layout}
@@ -1290,7 +1347,7 @@ export default function Composer() {
           />
           <div style={{ fontSize: 10.5, color: "#6E6C82", marginTop: 6, lineHeight: 1.4 }}>
             Darken the photo/scene behind your text — push it up for bright images, down to let the image breathe.
-          </div>
+          </div></>}
         </div>
       </div>
     </div>
