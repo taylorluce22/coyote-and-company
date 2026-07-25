@@ -176,7 +176,7 @@ export default function Connectors() {
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 9, flexWrap: "wrap" }}>
                     <span style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: "#77758C", background: "rgba(0,0,0,0.28)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 6, padding: "3px 7px" }}>{c.env}</span>
                     {c.getUrl && s !== "live" && (
-                      <a href={c.getUrl} target="_blank" rel="noreferrer" style={{ fontSize: 10.5, color: g.accent, textDecoration: "none", fontFamily: "var(--mono)" }}>get key ↗</a>
+                      <a href={c.getUrl} target="_blank" rel="noreferrer" style={{ display: "inline-block", fontSize: 10.5, color: g.accent, textDecoration: "none", fontFamily: "var(--mono)", padding: "8px 12px", margin: "-5px 0", border: `1px solid ${g.accent}44`, borderRadius: 8, background: `${g.accent}0D` }}>get key ↗</a>
                     )}
                   </div>
                   {c.note && <div style={{ fontSize: 10.5, color: "#6E6C82", lineHeight: 1.45, marginTop: 8 }}>{c.note}</div>}

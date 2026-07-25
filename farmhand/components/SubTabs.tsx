@@ -20,7 +20,7 @@ export default function SubTabs<T extends string>({
           style={{
             border: "none",
             borderRadius: 8,
-            padding: "7px 16px",
+            padding: "10px 16px",
             fontSize: 11.5,
             fontWeight: 700,
             letterSpacing: "0.05em",

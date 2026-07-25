@@ -189,6 +189,17 @@ body.fh-bg-suspended .fh-aurora2 { animation-play-state: paused; }
   /* the rail's agent-status block is desktop furniture — hide on phones */
   .fh-rail > *:not(.fh-nav3d) { display: none !important; }
   .fh-main { padding: 14px 14px 70px; }
+  /* Knowledge Vault: overlays buried ~25% of the phone-size graph — flow
+     them into the document instead (audit MAJOR #4) */
+  .fh-kv-legend, .fh-kv-detail { position: static !important; width: 100% !important; margin-top: 10px; }
+  /* touch-copy swap ("Hover a node" means nothing on a phone) */
+  .fh-desktop-only { display: none; }
+}
+
+/* copy variants: phone text hidden on desktop, shown under 900px */
+.fh-phone-only { display: none; }
+@media (max-width: 900px) {
+  .fh-phone-only { display: inline; }
   /* top bar tool cluster (client pill · search · status · clock · user) has a
      ~660px min-content width — without wrapping it forced the layout viewport
      wide and the browser zoomed the WHOLE app out to ~58% */

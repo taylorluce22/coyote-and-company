@@ -75,7 +75,7 @@ export default function Progress() {
           <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
             <div style={{ textAlign: "center", lineHeight: 1 }}>
               <div style={{ fontSize: 27, fontWeight: 800, color: "#F4F3F8", fontFamily: "var(--mono)" }}>{overallPct}%</div>
-              <div className="fh-kicker" style={{ fontSize: 7.5, marginTop: 4 }}>to launch</div>
+              <div className="fh-kicker" style={{ fontSize: 9.5, marginTop: 4 }}>to launch</div>
             </div>
           </div>
         </div>
