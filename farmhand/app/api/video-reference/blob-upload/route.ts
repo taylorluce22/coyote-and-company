@@ -20,11 +20,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const jsonResponse = await handleUpload({
       body,
       request,
-      onBeforeGenerateToken: async () => ({
-        allowedContentTypes: ["video/mp4", "video/quicktime", "video/webm", "video/x-m4v", "video/3gpp", "video/x-msvideo"],
-        addRandomSuffix: true,
-        maximumSizeInBytes: 200 * 1024 * 1024,
-      }),
+      onBeforeGenerateToken: async (pathname) => {
+        // the reels/ prefix is what authorizes /api/video-reference to
+        // fetch AND delete these urls — nothing else may live under it
+        if (!pathname.startsWith("reels/")) throw new Error("uploads must live under reels/");
+        return {
+          allowedContentTypes: ["video/mp4", "video/quicktime", "video/webm", "video/x-m4v", "video/3gpp", "video/x-msvideo"],
+          addRandomSuffix: true,
+          // 1GB — the server relays blob → Gemini in streamed chunks, so big
+          // files never sit in serverless memory (Gemini's own cap is 2GB)
+          maximumSizeInBytes: 1024 * 1024 * 1024,
+        };
+      },
     });
     return NextResponse.json(jsonResponse);
   } catch (e) {

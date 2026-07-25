@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { del } from "@vercel/blob";
+import { NextRequest, NextResponse, after } from "next/server";
+import { del, list, put } from "@vercel/blob";
 
 /**
  * Reel coach — watches an actual video (visuals + audio together, via
@@ -25,6 +25,30 @@ import { del } from "@vercel/blob";
  *        → single Files API GET → { state }         (client polls every ~3s)
  *   POST { phase: "analyze", fileUri, mimeType, source, label, topic? }
  *        → generateContent only → { analysis }
+ *
+ * SERVER-DRIVEN JOBS (the phone-can-leave shape): the phased flow above
+ * still needs the BROWSER to hold a request open for every step — on a
+ * phone, a locked screen or a backgrounded tab kills whichever request is
+ * in flight and the run "never finishes". Jobs flip ownership: the client
+ * uploads to Blob, then fires ONE fast call and the SERVER runs the whole
+ * pipeline in the background (`after()`), journaling progress as immutable
+ * records in Blob at reeljobs/<jobId>/<ms>-<state>.json. The client (or a
+ * later visit — records survive the tab) just peeks:
+ *
+ *   POST { phase: "job-start", jobId, url|remoteUrl, contentType, label, source, topic? }
+ *        → responds { accepted } immediately; after(): blob/link → Gemini
+ *          → poll ACTIVE → analyze → "done" record (video blob deleted)
+ *   POST { phase: "job-status", jobId }
+ *        → { jobState: received|processing|analyzing|error|done, ... }
+ *   POST { phase: "job-continue", jobId }
+ *        → re-enters the pipeline from the journaled Gemini file when the
+ *          first invocation ran out of budget (big clip, slow processing)
+ *   POST { phase: "job-ack", jobId }
+ *        → deletes the job records (client has banked the analysis)
+ *
+ * Records are IMMUTABLE — each state transition is a NEW pathname, so CDN
+ * caching can never serve a stale state. "done" wins over anything later
+ * (a raced retry's error can't mask a finished analysis).
  *
  * No `phase` field = the original monolithic flow (kept for back-compat),
  * built from the exact same helpers so there is one implementation of each
@@ -126,8 +150,39 @@ type Fail = { error: string };
 const fail = (error: string): Fail => ({ error });
 const isFail = (x: unknown): x is Fail => !!x && typeof x === "object" && "error" in (x as Record<string, unknown>);
 
+/** The `url` params must actually point at OUR Blob store — this route
+    fetches them server-side, so an arbitrary URL here would be an SSRF
+    read primitive (fetch internal address → forward bytes to Gemini →
+    read them back out of the analysis). */
+function isBlobStoreUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    return u.protocol === "https:" && u.hostname.endsWith(".blob.vercel-storage.com");
+  } catch {
+    return false;
+  }
+}
+
+/** Stricter still for urls we also DELETE: they must live under the reel
+    upload prefix (enforced at token time in blob-upload/route.ts), so a
+    crafted url can never point this route's store-wide token at someone
+    else's blob (e.g. a handoff bundle). */
+function isReelBlobUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    return (
+      u.protocol === "https:" &&
+      u.hostname.endsWith(".blob.vercel-storage.com") &&
+      u.pathname.replace(/^\/+/, "").startsWith("reels/")
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** Step 1a: pull the clip bytes back out of Vercel Blob. */
 async function fetchBlobBytes(blobUrl: string): Promise<ArrayBuffer | Fail> {
+  if (!isReelBlobUrl(blobUrl)) return fail("bad video url");
   try {
     const videoRes = await fetch(blobUrl, { signal: AbortSignal.timeout(60000) });
     if (!videoRes.ok) return fail(`couldn't read the uploaded clip: ${videoRes.status}`);
@@ -250,6 +305,108 @@ async function geminiUpload(key: string, bytes: ArrayBuffer, contentType: string
   return fileInfo;
 }
 
+/** Step 1a+1b for BIG clips: stream Blob → Gemini in 32MB resumable-upload
+    chunks, so a 1GB clip never sits in serverless memory (the buffered
+    geminiUpload above would OOM the function well before that). Chunk
+    offsets must be multiples of 256KB per the protocol — 32MB is. */
+async function geminiUploadFromBlob(key: string, blobUrl: string, contentType: string, label: string): Promise<GeminiFile | Fail> {
+  if (!isReelBlobUrl(blobUrl)) return fail("bad video url");
+  let videoRes: Response;
+  try {
+    // one signal covers headers AND the whole body read below
+    videoRes = await fetch(blobUrl, { signal: AbortSignal.timeout(240000) });
+  } catch {
+    return fail("couldn't read the uploaded clip");
+  }
+  if (!videoRes.ok || !videoRes.body) return fail(`couldn't read the uploaded clip: ${videoRes.status}`);
+  const size = Number(videoRes.headers.get("content-length") || 0);
+  if (!size) {
+    // no length header — fall back to buffering (only plausible for small clips)
+    try {
+      return await geminiUpload(key, await videoRes.arrayBuffer(), contentType, label);
+    } catch {
+      return fail("couldn't read the uploaded clip");
+    }
+  }
+
+  const startRes = await fetch(`${GEMINI_BASE}/upload/v1beta/files?key=${key}`, {
+    method: "POST",
+    headers: {
+      "X-Goog-Upload-Protocol": "resumable",
+      "X-Goog-Upload-Command": "start",
+      "X-Goog-Upload-Header-Content-Length": String(size),
+      "X-Goog-Upload-Header-Content-Type": contentType,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ file: { display_name: label || "reel" } }),
+    signal: AbortSignal.timeout(20000),
+  });
+  const uploadUrl = startRes.headers.get("x-goog-upload-url");
+  if (!startRes.ok || !uploadUrl) return fail(`Gemini upload start failed: ${startRes.status}`);
+
+  const CHUNK = 32 * 1024 * 1024;
+  let offset = 0;
+  const send = async (bytes: Uint8Array, last: boolean): Promise<Response> => {
+    const res = await fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        "Content-Length": String(bytes.byteLength),
+        "X-Goog-Upload-Offset": String(offset),
+        "X-Goog-Upload-Command": last ? (bytes.byteLength ? "upload, finalize" : "finalize") : "upload",
+      },
+      body: bytes as unknown as BodyInit,
+      signal: AbortSignal.timeout(120000),
+    });
+    if (!res.ok) throw new Error(`Gemini upload failed: ${res.status}`);
+    offset += bytes.byteLength;
+    return res;
+  };
+
+  let final: Response;
+  try {
+    const reader = videoRes.body.getReader();
+    let held: Uint8Array[] = [];
+    let heldLen = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (value) {
+        held.push(value);
+        heldLen += value.byteLength;
+      }
+      // forward every FULL chunk; the finalize always happens after the loop
+      while (heldLen >= CHUNK) {
+        const chunk = new Uint8Array(CHUNK);
+        let filled = 0;
+        while (filled < CHUNK) {
+          const head = held[0];
+          const take = Math.min(head.byteLength, CHUNK - filled);
+          chunk.set(head.subarray(0, take), filled);
+          filled += take;
+          if (take === head.byteLength) held.shift();
+          else held[0] = head.subarray(take);
+        }
+        heldLen -= CHUNK;
+        await send(chunk, false);
+      }
+      if (done) break;
+    }
+    const rest = new Uint8Array(heldLen);
+    let f = 0;
+    for (const p of held) {
+      rest.set(p, f);
+      f += p.byteLength;
+    }
+    held = [];
+    final = await send(rest, true);
+  } catch (e) {
+    return fail(e instanceof Error ? e.message.slice(0, 120) : "Gemini upload failed");
+  }
+  const uploaded = await final.json().catch(() => null);
+  const fileInfo: GeminiFile = uploaded?.file || {};
+  if (!fileInfo.uri || !fileInfo.name) return fail("Gemini upload returned no file");
+  return fileInfo;
+}
+
 /** Step 2: one Files API GET — the client polls this in the phased flow.
     NOT_FOUND state means the upload expired on Gemini's side (~48h TTL). */
 async function geminiFileStatus(key: string, fileName: string): Promise<GeminiFile | Fail> {
@@ -310,6 +467,170 @@ function parseTopic(b: Record<string, unknown>, source: "own" | "reference") {
     : null;
 }
 
+/* ------------------------------------------------------------------ */
+/* job machinery — immutable state journal in Blob + the background   */
+/* pipeline that job-start / job-continue hand to after()             */
+/* ------------------------------------------------------------------ */
+
+type Topic = { title: string; angle: string; facts: string[] } | null;
+type JobState = "received" | "processing" | "analyzing" | "error" | "done";
+type JobRecord = { pathname: string; url: string; ms: number; state: JobState };
+
+const JOB_ID_RE = /^[a-z0-9][a-z0-9-]{7,63}$/i;
+
+/** Journal a state transition. New pathname per write — never overwritten,
+    so a CDN-cached read can't be stale. Best-effort: the pipeline must not
+    die because the journal hiccupped. */
+async function writeJob(jobId: string, state: JobState, data: Record<string, unknown>): Promise<void> {
+  const attempt = () =>
+    put(`reeljobs/${jobId}/${Date.now()}-${state}.json`, JSON.stringify({ state, at: Date.now(), ...data }), {
+      access: "public",
+      addRandomSuffix: false,
+      contentType: "application/json",
+    });
+  try {
+    await attempt();
+  } catch {
+    // one retry — a swallowed journal write on done/error would strand the job
+    try {
+      await new Promise((r) => setTimeout(r, 1000));
+      await attempt();
+    } catch {}
+  }
+}
+
+async function listJobRecords(jobId: string): Promise<JobRecord[]> {
+  try {
+    const { blobs } = await list({ prefix: `reeljobs/${jobId}/`, limit: 100 });
+    return blobs
+      .map((bl) => {
+        const base = bl.pathname.split("/").pop() || "";
+        const m = base.match(/^(\d+)-(received|processing|analyzing|error|done)\.json$/);
+        return m ? { pathname: bl.pathname, url: bl.url, ms: Number(m[1]), state: m[2] as JobState } : null;
+      })
+      .filter((r): r is JobRecord => !!r)
+      .sort((a, b) => a.ms - b.ms);
+  } catch {
+    return [];
+  }
+}
+
+async function readJobRecord(rec: JobRecord): Promise<Record<string, unknown>> {
+  try {
+    const res = await fetch(rec.url, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) return {};
+    return (await res.json()) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+/** "done" beats everything (a raced retry's late error must not mask a
+    finished analysis); otherwise latest write wins. */
+function effectiveRecord(records: JobRecord[]): JobRecord | null {
+  if (!records.length) return null;
+  return records.find((r) => r.state === "done") || records[records.length - 1];
+}
+
+/** Re-sanitize a topic that round-tripped through the public journal. */
+function sanitizeStoredTopic(raw: unknown): Topic {
+  const t = raw as { title?: string; angle?: string; facts?: string[] } | null;
+  return t && t.title
+    ? {
+        title: clamp(t.title, 160),
+        angle: clamp(t.angle, 300),
+        facts: (Array.isArray(t.facts) ? t.facts : []).map((f) => clamp(f, 400)).filter(Boolean).slice(0, 5),
+      }
+    : null;
+}
+
+/** The whole post-upload pipeline, run inside after() with the response
+    already gone — every outcome lands in the journal, nowhere else.
+    Continue-calls re-enter with fileUri set and skip the ingest step. */
+async function runJobPipeline(
+  key: string,
+  jobId: string,
+  opts: {
+    blobUrl?: string;
+    remoteUrl?: string;
+    contentType: string;
+    label: string;
+    source: "own" | "reference";
+    topic: Topic;
+    fileName?: string;
+    fileUri?: string;
+    mimeType?: string;
+    t0: number;
+  }
+): Promise<void> {
+  const timeLeft = () => 280000 - (Date.now() - opts.t0);
+  try {
+    let fileName = opts.fileName || "";
+    let fileUri = opts.fileUri || "";
+    let mimeType = opts.mimeType || opts.contentType;
+
+    if (!fileUri) {
+      // ingest: video → Gemini Files API
+      let up: GeminiFile | Fail;
+      if (opts.remoteUrl) {
+        const got = await fetchRemoteBytes(opts.remoteUrl);
+        if (isFail(got)) {
+          await writeJob(jobId, "error", { error: got.error, retryable: false });
+          return;
+        }
+        up = await geminiUpload(key, got.bytes, got.contentType, opts.label);
+      } else {
+        up = await geminiUploadFromBlob(key, opts.blobUrl || "", opts.contentType, opts.label);
+      }
+      // the clip has either landed at Gemini or the attempt failed — either
+      // way the Blob copy is done; never leak blobs (they cost storage)
+      if (opts.blobUrl) del(opts.blobUrl).catch(() => {});
+      if (isFail(up)) {
+        await writeJob(jobId, "error", { error: up.error, retryable: false });
+        return;
+      }
+      fileName = up.name || "";
+      fileUri = up.uri || "";
+      mimeType = up.mimeType || mimeType;
+      // journal everything a continue-invocation needs to finish the job
+      await writeJob(jobId, "processing", { fileName, fileUri, mimeType, source: opts.source, label: opts.label, topic: opts.topic });
+    }
+
+    // wait for Gemini processing, reserving 140s of budget for the analyze
+    let state = "PROCESSING";
+    while (state === "PROCESSING" && timeLeft() > 140000) {
+      const info = await geminiFileStatus(key, fileName);
+      if (!isFail(info)) state = String(info.state || "PROCESSING");
+      if (state === "PROCESSING") await new Promise((r) => setTimeout(r, 4000));
+    }
+    if (state === "NOT_FOUND") {
+      await writeJob(jobId, "error", { error: "That upload expired on Gemini's side — upload the clip again.", retryable: false });
+      return;
+    }
+    if (state === "FAILED") {
+      await writeJob(jobId, "error", { error: `Gemini couldn't process that video — trim it shorter and retry.`, retryable: false });
+      return;
+    }
+    // budget spent while Gemini still chews — the journal's latest state
+    // stays "processing"; job-status will see ACTIVE later and the client
+    // kicks job-continue, which re-enters here with a fresh budget
+    if (state !== "ACTIVE") return;
+
+    await writeJob(jobId, "analyzing", {});
+    const out = await geminiAnalyze(key, fileUri, mimeType, opts.topic);
+    if (isFail(out)) {
+      await writeJob(jobId, "error", { error: out.error, retryable: true });
+      return;
+    }
+    await writeJob(jobId, "done", { analysis: out.analysis, source: opts.source, label: opts.label });
+  } catch (e) {
+    await writeJob(jobId, "error", {
+      error: e instanceof Error ? e.message.slice(0, 200) : "analysis pipeline failed",
+      retryable: true,
+    });
+  }
+}
+
 export async function GET(req: NextRequest) {
   const key = process.env.GEMINI_API_KEY;
 
@@ -345,11 +666,169 @@ export async function POST(req: NextRequest) {
   const source = b.source === "reference" ? "reference" : "own";
   const contentType = clamp(b.contentType, 60) || "video/mp4";
 
+  /* ---- phase "job-start": journal the job, respond fast, pipeline runs
+          in the background — the phone is free to leave from here on ---- */
+  if (phase === "job-start") {
+    const jobId = clamp(b.jobId, 64);
+    if (!JOB_ID_RE.test(jobId)) return NextResponse.json({ configured: true, error: "bad job id" });
+    const blobUrl = clamp(b.url, 600);
+    const remoteUrl = clamp(b.remoteUrl, 800);
+    if (!blobUrl && !remoteUrl) return NextResponse.json({ configured: true, error: "no video url" });
+    if (blobUrl && !isReelBlobUrl(blobUrl)) return NextResponse.json({ configured: true, error: "bad video url" });
+    const topic = parseTopic(b, source);
+    const t0 = Date.now();
+    // journal EVERYTHING a continue-invocation needs to redo the ingest —
+    // a platform-killed ingest must be re-runnable, and job-ack needs the
+    // videoUrl to clean up a clip whose pipeline delete never ran
+    await writeJob(jobId, "received", {
+      label,
+      source,
+      contentType,
+      topic,
+      videoUrl: blobUrl || undefined,
+      remoteUrl: remoteUrl || undefined,
+    });
+    after(() =>
+      runJobPipeline(key, jobId, {
+        blobUrl: blobUrl || undefined,
+        remoteUrl: remoteUrl || undefined,
+        contentType,
+        label,
+        source,
+        topic,
+        t0,
+      })
+    );
+    return NextResponse.json({ configured: true, accepted: true, jobId });
+  }
+
+  /* ---- phase "job-status": read the journal, one fast peek ---- */
+  if (phase === "job-status") {
+    const jobId = clamp(b.jobId, 64);
+    if (!JOB_ID_RE.test(jobId)) return NextResponse.json({ configured: true, error: "bad job id" });
+    const records = await listJobRecords(jobId);
+    const eff = effectiveRecord(records);
+    if (!eff) return NextResponse.json({ configured: true, jobState: "none" });
+    if (eff.state === "done") {
+      const data = await readJobRecord(eff);
+      // a flaky read of the done record must NOT report done — the client
+      // would bank nothing and ack away the only copy of the analysis
+      if (!data.analysis) return NextResponse.json({ configured: true, jobState: "processing", geminiState: "" });
+      return NextResponse.json({ configured: true, jobState: "done", analysis: data.analysis, source: data.source, label: data.label });
+    }
+    if (eff.state === "error") {
+      const data = await readJobRecord(eff);
+      // NB: key is jobError, not error — phasePost treats a non-empty
+      // `error` as a transport failure and would throw before the client's
+      // error branch ever ran
+      return NextResponse.json({ configured: true, jobState: "error", jobError: String(data.error || "The analysis failed — try again."), retryable: data.retryable === true });
+    }
+    if (eff.state === "processing") {
+      // is Gemini done chewing? tells the client whether to kick job-continue
+      const proc = await readJobRecord(eff);
+      const fileName = String(proc.fileName || "");
+      let geminiState = "";
+      if (/^files\/[A-Za-z0-9._-]+$/.test(fileName)) {
+        const info = await geminiFileStatus(key, fileName);
+        if (!isFail(info)) geminiState = String(info.state || "");
+      }
+      // no pipeline is alive to journal a terminal Gemini state — converge
+      // the journal here so every device sees the same ending
+      if (geminiState === "FAILED" || geminiState === "NOT_FOUND") {
+        const msg =
+          geminiState === "NOT_FOUND"
+            ? "That upload expired on Gemini's side — upload the clip again."
+            : "Gemini couldn't process that video — trim it shorter and retry.";
+        await writeJob(jobId, "error", { error: msg, retryable: false });
+        return NextResponse.json({ configured: true, jobState: "error", jobError: msg, retryable: false });
+      }
+      return NextResponse.json({ configured: true, jobState: "processing", geminiState });
+    }
+    return NextResponse.json({ configured: true, jobState: eff.state });
+  }
+
+  /* ---- phase "job-continue": fresh budget for a stalled job ---- */
+  if (phase === "job-continue") {
+    const jobId = clamp(b.jobId, 64);
+    if (!JOB_ID_RE.test(jobId)) return NextResponse.json({ configured: true, error: "bad job id" });
+    const records = await listJobRecords(jobId);
+    if (records.some((r) => r.state === "done")) return NextResponse.json({ configured: true, jobState: "done" });
+    // in-flight guard: a fresh analyzing claim means a pipeline is (very
+    // likely) still working — don't spawn a duplicate generateContent
+    const anal = records.filter((r) => r.state === "analyzing").pop();
+    if (anal && Date.now() - anal.ms < 3 * 60000) return NextResponse.json({ configured: true, jobState: "analyzing" });
+    const t0 = Date.now();
+
+    const procs = records.filter((r) => r.state === "processing");
+    if (procs.length) {
+      const proc = await readJobRecord(procs[procs.length - 1]);
+      const fileUri = String(proc.fileUri || "");
+      if (!fileUri.startsWith(`${GEMINI_BASE}/`)) return NextResponse.json({ configured: true, error: "nothing to continue — start the analysis again" });
+      // claim BEFORE responding, so the very next job-status/continue sees
+      // this invocation as in-flight (after() spin-up + list consistency
+      // would otherwise leave a kick-again window)
+      await writeJob(jobId, "analyzing", {});
+      after(() =>
+        runJobPipeline(key, jobId, {
+          contentType,
+          label: String(proc.label || ""),
+          source: proc.source === "reference" ? "reference" : "own",
+          topic: sanitizeStoredTopic(proc.topic),
+          fileName: String(proc.fileName || ""),
+          fileUri,
+          mimeType: String(proc.mimeType || "video/mp4"),
+          t0,
+        })
+      );
+      return NextResponse.json({ configured: true, resumed: true });
+    }
+
+    // no processing record — the ingest invocation was killed before the
+    // Gemini hand-off finished. The received record has everything needed
+    // to re-run the ingest with a fresh budget.
+    const rcvs = records.filter((r) => r.state === "received");
+    if (!rcvs.length) return NextResponse.json({ configured: true, error: "nothing to continue — start the analysis again" });
+    const rcv = await readJobRecord(rcvs[rcvs.length - 1]);
+    const videoUrl = String(rcv.videoUrl || "");
+    const rcvRemote = String(rcv.remoteUrl || "");
+    if (!(videoUrl && isReelBlobUrl(videoUrl)) && !rcvRemote)
+      return NextResponse.json({ configured: true, error: "nothing to continue — start the analysis again" });
+    after(() =>
+      runJobPipeline(key, jobId, {
+        blobUrl: videoUrl && isReelBlobUrl(videoUrl) ? videoUrl : undefined,
+        remoteUrl: rcvRemote || undefined,
+        contentType: clamp(rcv.contentType, 60) || "video/mp4",
+        label: clamp(rcv.label, 120),
+        source: rcv.source === "reference" ? "reference" : "own",
+        topic: sanitizeStoredTopic(rcv.topic),
+        t0,
+      })
+    );
+    return NextResponse.json({ configured: true, resumed: true });
+  }
+
+  /* ---- phase "job-ack": the analysis is banked — burn the journal ---- */
+  if (phase === "job-ack") {
+    const jobId = clamp(b.jobId, 64);
+    if (!JOB_ID_RE.test(jobId)) return NextResponse.json({ configured: true, error: "bad job id" });
+    const records = await listJobRecords(jobId);
+    const received = records.find((r) => r.state === "received");
+    if (received) {
+      const data = await readJobRecord(received);
+      const videoUrl = String(data.videoUrl || "");
+      if (videoUrl && isReelBlobUrl(videoUrl)) del(videoUrl).catch(() => {});
+    }
+    if (records.length) del(records.map((r) => r.url)).catch(() => {});
+    return NextResponse.json({ configured: true, ok: true });
+  }
+
   /* ---- phase "start": blob → Gemini Files API, blob deleted, out fast ---- */
   if (phase === "start") {
     const blobUrl = clamp(b.url, 600);
     const remoteUrl = clamp(b.remoteUrl, 800);
     if (!blobUrl && !remoteUrl) return NextResponse.json({ configured: true, error: "no video url" });
+    // validated before the finally-block del can ever see it
+    if (blobUrl && !isReelBlobUrl(blobUrl)) return NextResponse.json({ configured: true, error: "bad video url" });
     try {
       let bytes: ArrayBuffer;
       let ct = contentType;
@@ -409,6 +888,7 @@ export async function POST(req: NextRequest) {
   /* ---- no phase: original monolithic flow (back-compat), same helpers ---- */
   const blobUrl = clamp(b.url, 600);
   if (!blobUrl) return NextResponse.json({ configured: true, error: "no video url" });
+  if (!isReelBlobUrl(blobUrl)) return NextResponse.json({ configured: true, error: "bad video url" });
   const topic = parseTopic(b, source);
 
   try {
