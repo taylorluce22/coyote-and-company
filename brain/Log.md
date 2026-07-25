@@ -9,7 +9,37 @@ What was done · what was spent · what needs a human
 
 ---
 
-## 2026-07-25 · Phone support: encrypted device handoff + home-screen install
+## 2026-07-25 · FULL MOBILE PASS — three agents in parallel (owner friction catch #6)
+Owner on phone: "when i click on content nothing happens." Root cause: the
+app never had a phone layout — the side rail stacked as 15 full-screen
+cards with the selected screen rendering below the fold, AND desktop-width
+elements (topbar tool cluster ~663px, subtab strips) forced the layout
+viewport to ~680px so mobile Chrome zoomed the whole app to ~58%.
+
+Ran three agents in parallel (verifier in-repo; Studio fixer + full-screen
+auditor in isolated worktrees, own ports):
+
+- **Verifier**: chip-bar nav confirmed (59px tall, all tabs open on tap);
+  found+fixed the topbar wrap, subtab wrap (Reel Coach tab was literally
+  unreachable on phones), and enggrid collapse. **Reel Coach 60MB attach
+  test PASSED**: attach feedback in 37ms, max main-thread gap 58ms vs a
+  3000ms freeze threshold, graceful errors, breadcrumbs verified.
+- **Auditor**: all 16 screens now 390/390, canvases render correctly at
+  phone size. Ranked 4 majors — all fixed: Connectors get-key links
+  became real buttons, Settings toggle rows are whole-row tap targets,
+  MiniBtns tappable height, Knowledge Vault legend/detail flow below the
+  canvas on phones ("Tap a node" copy swap). Plus: SubTabs height bump,
+  Progress ring label 9.5px, Template Studio slides fit 320px phones,
+  BackgroundFx sizes from clientWidth (innerWidth misreports under
+  transient overflow and baked the canvas wrong).
+- **Studio fixer**: Composer single-column on phones (useIsPhone hook —
+  inline grid style needed runtime collapse), fit() padding + Resize-
+  Observer, 38px slide-nav targets with 26px dot tap areas — AND caught a
+  pre-existing DESKTOP bug: html2canvas exports through the stage's
+  ancestor scale() were corrupted; capture() now shoots a hidden unscaled
+  clone → pixel-perfect 2160×2700 exports verified on phone and desktop.
+
+Everything built green and merged. The phone is now a first-class device.
 Owner wanted the app on his phone "as if logged in" — but there are no
 accounts; data is per-device localStorage. Built the no-setup path:
 

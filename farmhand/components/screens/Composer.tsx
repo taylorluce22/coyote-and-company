@@ -218,8 +218,25 @@ const FIELD_LABEL: React.CSSProperties = {
   marginBottom: 7,
 };
 
+/* phone breakpoint — same 900px switch the app rail/chip-bar uses in
+   globals.css, so the Studio collapses in step with the rest of the shell.
+   The root grid columns are INLINE styles (they override the .fh-enggrid
+   media queries), so the collapse has to happen at runtime. */
+function useIsPhone() {
+  const [isPhone, setIsPhone] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 900px)");
+    const apply = () => setIsPhone(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+  return isPhone;
+}
+
 export default function Composer() {
   const { state, set, workspace } = useStore();
+  const isPhone = useIsPhone();
   const ch = state.compChannel;
   const strategy = state.strategy as StrategyProfile;
   // idea mode: copy generated from the idea engine + knowledge base (what
@@ -638,44 +655,71 @@ export default function Composer() {
     function fit() {
       const stage = stageRef.current;
       if (!stage) return;
-      setScale(Math.min((stage.clientWidth - 24) / ratio.w, 620 / ratio.h));
+      // subtract the stage's real padding so the slide never pokes past it on
+      // narrow screens (clientWidth includes padding)
+      const cs = window.getComputedStyle(stage);
+      const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+      const avail = Math.max(80, stage.clientWidth - Math.max(24, padX + 2));
+      setScale(Math.min(avail / ratio.w, 620 / ratio.h));
     }
     fit();
     window.addEventListener("resize", fit);
-    return () => window.removeEventListener("resize", fit);
+    // the stage width also changes without a window resize (e.g. the grid
+    // collapsing to one column on phones) — track the element itself
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(fit) : null;
+    if (ro && stageRef.current) ro.observe(stageRef.current);
+    return () => {
+      window.removeEventListener("resize", fit);
+      ro?.disconnect();
+    };
   }, [ratio.w, ratio.h, total]);
 
-  /* ---- capture & export (html2canvas, studio parity) ---- */
+  /* ---- capture & export (html2canvas, studio parity) ----
+     html2canvas cannot see through the stage's CSS scale() transform — it
+     collapses the glyph positions and paints the slide at its on-screen size
+     in the corner of the canvas (desktop and phone alike). So the capture
+     mounts a hidden UNSCALED copy of the current slide at the full export
+     size behind the app (z-index -1) and shoots that node instead. */
   const [busy, setBusy] = useState(false);
+  const [exportOn, setExportOn] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
   const capture = useCallback(async (): Promise<string | null> => {
-    if (!slideRef.current) return null;
+    const raf2 = () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+    setExportOn(true);
     try {
-      await document.fonts.ready;
-    } catch {}
-    const imgs = Array.from(slideRef.current.querySelectorAll("img"));
-    await Promise.all(
-      imgs.map((im) =>
-        im.complete && im.naturalWidth
-          ? Promise.resolve()
-          : im.decode
-            ? im.decode().catch(() => {})
-            : new Promise<void>((r) => {
-                im.onload = im.onerror = () => r();
-              })
-      )
-    );
-    const canvas = await html2canvas(slideRef.current, {
-      scale: 2,
-      backgroundColor: "#0A0A0A",
-      useCORS: true,
-      allowTaint: true,
-      logging: false,
-      width: ratio.w,
-      height: ratio.h,
-      windowWidth: ratio.w,
-      windowHeight: ratio.h,
-    });
-    return canvas.toDataURL("image/png");
+      await raf2(); // let React commit the hidden export node
+      const node = exportRef.current;
+      if (!node) return null;
+      try {
+        await document.fonts.ready;
+      } catch {}
+      const imgs = Array.from(node.querySelectorAll("img"));
+      await Promise.all(
+        imgs.map((im) =>
+          im.complete && im.naturalWidth
+            ? Promise.resolve()
+            : im.decode
+              ? im.decode().catch(() => {})
+              : new Promise<void>((r) => {
+                  im.onload = im.onerror = () => r();
+                })
+        )
+      );
+      const canvas = await html2canvas(node, {
+        scale: 2,
+        backgroundColor: "#0A0A0A",
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        width: ratio.w,
+        height: ratio.h,
+        windowWidth: ratio.w,
+        windowHeight: ratio.h,
+      });
+      return canvas.toDataURL("image/png");
+    } finally {
+      setExportOn(false);
+    }
   }, [ratio.w, ratio.h]);
 
   const dlName = slugify((idea ? idea.title : "monsoon-roof-check") + "-" + ch);
@@ -715,7 +759,9 @@ export default function Composer() {
   return (
     <div
       className="fh-enggrid"
-      style={{ gridTemplateColumns: "minmax(0,1fr) 330px" }}
+      /* phones: single-column stack — the fixed 330px side column would
+         otherwise crush the stage and overlap the toolbar */
+      style={{ gridTemplateColumns: isPhone ? "minmax(0,1fr)" : "minmax(0,1fr) 330px" }}
     >
       {/* ============ MAIN: stage ============ */}
       <div style={{ minWidth: 0 }}>
@@ -903,8 +949,8 @@ export default function Composer() {
             background: "radial-gradient(600px 400px at 50% 30%, rgba(255,255,255,0.03), transparent), rgba(0,0,0,0.3)",
             border: "1px solid rgba(255,255,255,0.07)",
             borderRadius: 18,
-            padding: 22,
-            minHeight: 420,
+            padding: isPhone ? 12 : 22,
+            minHeight: isPhone ? 0 : 420,
           }}
         >
           <div
@@ -945,38 +991,89 @@ export default function Composer() {
           </div>
         </div>
 
+        {/* hidden full-res export node — html2canvas shoots this unscaled
+            copy instead of the transformed stage (see capture()) */}
+        {exportOn && (
+          <div
+            aria-hidden
+            style={{ position: "fixed", top: 0, left: 0, width: ratio.w, height: ratio.h, zIndex: -1, pointerEvents: "none" }}
+          >
+            {dgSlides ? (
+              <DGSlideView
+                ref={exportRef}
+                s={dgSlides[navCur]}
+                idx={navCur + 1}
+                total={navTotal}
+                width={ratio.w}
+                height={ratio.h}
+                wordmark={dgWordmark}
+              />
+            ) : slide ? (
+              <PostSlide
+                ref={exportRef}
+                slide={slide}
+                index={cur}
+                total={total}
+                design={design}
+                bg={activeBg}
+                accent={accent}
+                pillar={idea ? null : PILLAR}
+                handle={ideaPack ? `@${ideaPack.handle}` : "@jess.sells.gilbert"}
+              />
+            ) : null}
+          </div>
+        )}
+
         {/* slide nav */}
         {navTotal > 1 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginTop: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: isPhone ? 10 : 14, marginTop: 14 }}>
             <button
               onClick={() => setIdx((i) => Math.max(0, i - 1))}
               disabled={navCur === 0}
-              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "#A6A4B8", borderRadius: 8, width: 30, height: 30, cursor: "pointer" }}
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "#A6A4B8", borderRadius: 8, width: isPhone ? 38 : 30, height: isPhone ? 38 : 30, cursor: "pointer" }}
             >
               ‹
             </button>
-            <div style={{ display: "flex", gap: 6 }}>
+            <div style={{ display: "flex", gap: isPhone ? 2 : 6 }}>
               {(dgSlides ?? slides).map((s, i) => (
                 <button
                   key={i}
                   onClick={() => setIdx(i)}
                   title={"role" in s ? s.role : ARCHETYPES.find((a) => a.id === s.a)?.name || s.a}
+                  /* phones: keep the dot small but give the finger a real
+                     target — the visual dot is drawn by the inner span */
                   style={{
-                    width: 10,
-                    height: 10,
+                    width: isPhone ? 26 : 10,
+                    height: isPhone ? 26 : 10,
                     borderRadius: "50%",
                     border: "none",
+                    padding: 0,
                     cursor: "pointer",
-                    background: i === navCur ? "#FFC23D" : "rgba(255,255,255,0.12)",
-                    boxShadow: i === navCur ? "0 0 8px #FFC23D" : "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: isPhone ? "transparent" : i === navCur ? "#FFC23D" : "rgba(255,255,255,0.12)",
+                    boxShadow: !isPhone && i === navCur ? "0 0 8px #FFC23D" : "none",
                   }}
-                />
+                >
+                  {isPhone && (
+                    <span
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        background: i === navCur ? "#FFC23D" : "rgba(255,255,255,0.12)",
+                        boxShadow: i === navCur ? "0 0 8px #FFC23D" : "none",
+                      }}
+                    />
+                  )}
+                </button>
               ))}
             </div>
             <button
               onClick={() => setIdx((i) => Math.min(navTotal - 1, i + 1))}
               disabled={navCur === navTotal - 1}
-              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "#A6A4B8", borderRadius: 8, width: 30, height: 30, cursor: "pointer" }}
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "#A6A4B8", borderRadius: 8, width: isPhone ? 38 : 30, height: isPhone ? 38 : 30, cursor: "pointer" }}
             >
               ›
             </button>
