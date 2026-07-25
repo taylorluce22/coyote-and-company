@@ -263,6 +263,18 @@ export default function ReelCoach() {
   const topic = ideas.find((i) => i.id === topicId) || null;
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState("");
+  // live timing: upload ETA computed from the real transfer rate; all other
+  // stages show elapsed seconds so a long wait never looks like a hang
+  const upStartRef = useRef(0);
+  const busyStartRef = useRef(0);
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (!busy) return;
+    busyStartRef.current = Date.now();
+    const t = setInterval(() => tick((x) => x + 1), 1000);
+    return () => clearInterval(t);
+  }, [busy]);
+  const fmtSecs = (s: number) => (s >= 60 ? `${Math.floor(s / 60)}m ${Math.round(s % 60)}s` : `${Math.max(1, Math.round(s))}s`);
   const [error, setError] = useState<string | null>(null);
   const [list, setList] = useState<VaultReel[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -309,7 +321,7 @@ export default function ReelCoach() {
       analysis is safely in the vault. */
   const pollAndAnalyze = async (rec: PendingReel, tag: string) => {
     crumb("poll: waiting for Gemini processing");
-    setStage("Gemini is processing the clip…");
+    setStage("Gemini is processing the clip… (usually under 2 minutes)");
     const deadline = Date.now() + 180000; // client-owned poll budget
     let fileState = "PROCESSING";
     while (fileState === "PROCESSING" && Date.now() < deadline) {
@@ -343,7 +355,7 @@ export default function ReelCoach() {
       throw new Error("Gemini is still processing the clip — your upload is safe. Hit ⟳ Resume analysis in a minute.");
     }
 
-    setStage("Gemini is watching the clip — this can take a minute…");
+    setStage("Gemini is watching the clip and writing your breakdown… (usually 1–2 minutes)");
     crumb("analyze: sent to Gemini");
     const j = await phasePost(
       {
@@ -397,6 +409,7 @@ export default function ReelCoach() {
       // single-shot upload of a 100-200MB reel is what OOM-crashed the tab.
       console.log(tag, "calling blob upload()…");
       crumb(`upload: starting (${formatBytes(file.size)})`);
+      upStartRef.current = Date.now();
       let blob;
       let lastMilestone = 0;
       try {
@@ -405,8 +418,13 @@ export default function ReelCoach() {
           handleUploadUrl: "/api/video-reference/blob-upload",
           contentType: file.type || "video/mp4",
           multipart: true,
-          onUploadProgress: ({ percentage }) => {
-            setStage(`Uploading… ${Math.round(percentage)}%`);
+          onUploadProgress: ({ loaded, total, percentage }) => {
+            // ETA from the measured transfer rate — the thing the owner
+            // actually wants to know: "how long will this take"
+            const elapsed = Math.max(0.5, (Date.now() - upStartRef.current) / 1000);
+            const rate = loaded / elapsed;
+            const remain = rate > 0 && total > loaded ? (total - loaded) / rate : 0;
+            setStage(`Uploading… ${Math.round(percentage)}%${remain > 1 ? ` · about ${fmtSecs(remain)} left` : ""}`);
             const m = Math.floor(percentage / 25) * 25;
             if (m > lastMilestone) {
               lastMilestone = m;
@@ -424,7 +442,7 @@ export default function ReelCoach() {
       console.log(tag, "blob upload() resolved", blob.url);
 
       // Phase 1: server moves blob → Gemini Files API and returns fast
-      setStage("Handing the clip to Gemini…");
+      setStage("Handing the clip to Gemini… (usually 30–90s for a big clip)");
       // 280s: must exceed the server's worst-case internal budget for the
       // start phase (60s blob fetch + 20s upload start + 180s finalize =
       // 260s) — a shorter client timeout would discard a SUCCESSFUL start
@@ -767,7 +785,14 @@ export default function ReelCoach() {
             </span>
           </div>
         )}
-        {busy && stage && <div style={{ fontSize: 11.5, color: "#7DD3FC", marginTop: 10 }}>{stage}</div>}
+        {busy && stage && (
+          <div style={{ fontSize: 11.5, color: "#7DD3FC", marginTop: 10 }}>
+            {stage}
+            {!stage.includes("left") && busyStartRef.current > 0 && (
+              <span style={{ color: "#5E5C72" }}> · {fmtSecs((Date.now() - busyStartRef.current) / 1000)} elapsed</span>
+            )}
+          </div>
+        )}
         {error && <div style={{ fontSize: 11.5, color: "#FF6B6B", marginTop: 10 }}>{error}</div>}
 
         {/* crash-surviving diagnostics: the build you're ACTUALLY running +
