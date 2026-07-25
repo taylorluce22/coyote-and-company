@@ -15,6 +15,19 @@ export interface ReelAnalysis {
   audio?: { spokenContent?: string; tone?: string; music?: string };
   contentPattern?: string;
   coachingNotes?: string[];
+  /* style-match mode (reference clips analyzed against one of the owner's topics) */
+  styleDna?: {
+    beats?: { t?: string; visual?: string; onScreenText?: string; textStyle?: string; transition?: string }[];
+    textTreatment?: string;
+    colorAndGrade?: string;
+    energy?: string;
+  };
+  remake?: {
+    hookLine?: string;
+    beats?: { shot?: string; say?: string; onScreenText?: string; duration?: string }[];
+    cta?: string;
+    productionNotes?: string[];
+  };
   [key: string]: unknown;
 }
 

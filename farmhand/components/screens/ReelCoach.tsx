@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
 import { useStore } from "@/lib/store";
+import { ideasFor, type StrategyProfile } from "@/lib/strategy";
 import { reelVaultAdd, reelVaultAll, reelVaultDelete, type ReelAnalysis, type VaultReel } from "@/lib/reelVault";
 
 const SOURCE_LABEL: Record<VaultReel["source"], string> = { own: "My content", reference: "Reference / competitor" };
@@ -26,6 +27,11 @@ function noteFor(reel: VaultReel): string {
     a.audio?.spokenContent && a.audio.spokenContent !== "no speech" ? `- Audio: "${a.audio.spokenContent}"` : "",
     a.contentPattern ? `- Pattern: ${a.contentPattern}` : "",
     a.coachingNotes?.length ? `- Coaching notes:\n${a.coachingNotes.map((n) => `  - ${n}`).join("\n")}` : "",
+    a.remake?.beats?.length
+      ? `\n**Remake script**${a.remake.hookLine ? `\nHOOK: "${a.remake.hookLine}"` : ""}\n${a.remake.beats
+          .map((b, i) => `${i + 1}. [${b.duration || "~"}] ${b.shot || ""}${b.say ? ` — SAY: "${b.say}"` : ""}${b.onScreenText && b.onScreenText !== "none" ? ` — TEXT: ${b.onScreenText}` : ""}`)
+          .join("\n")}${a.remake.cta ? `\nCTA: "${a.remake.cta}"` : ""}`
+      : "",
   ].filter(Boolean);
   return lines.join("\n");
 }
@@ -92,16 +98,71 @@ function AnalysisCard({ analysis }: { analysis: ReelAnalysis }) {
           </ul>
         </div>
       )}
+
+      {!!analysis.styleDna?.beats?.length && (
+        <div>
+          <div className="fh-kicker" style={{ fontSize: 9, marginBottom: 6, color: "#C9A8FF" }}>Style DNA · beat by beat</div>
+          {analysis.styleDna.energy && <div style={{ fontSize: 12, color: "#D9D7E4", lineHeight: 1.5, marginBottom: 6 }}>{analysis.styleDna.energy}</div>}
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            {analysis.styleDna.beats.map((b, i) => (
+              <div key={i} style={{ display: "flex", gap: 8, fontSize: 11.5, lineHeight: 1.45, background: "rgba(201,168,255,0.05)", border: "1px solid rgba(201,168,255,0.14)", borderRadius: 8, padding: "6px 10px" }}>
+                <span style={{ color: "#C9A8FF", fontWeight: 800, fontFamily: "var(--mono)", flexShrink: 0, minWidth: 44 }}>{b.t}</span>
+                <span style={{ color: "#D9D7E4" }}>
+                  {b.visual}
+                  {b.onScreenText && b.onScreenText !== "none" && <> · <b style={{ color: "#EDEBF6" }}>“{b.onScreenText}”</b> ({b.textStyle})</>}
+                  {b.transition && <span style={{ color: "#77758C" }}> → {b.transition}</span>}
+                </span>
+              </div>
+            ))}
+          </div>
+          {analysis.styleDna.textTreatment && (
+            <div style={{ fontSize: 11.5, color: "#A6A4B8", lineHeight: 1.5, marginTop: 6 }}><b style={{ color: "#C9A8FF" }}>Text system:</b> {analysis.styleDna.textTreatment}</div>
+          )}
+        </div>
+      )}
+
+      {!!analysis.remake?.beats?.length && (
+        <div style={{ background: "rgba(232,98,44,0.06)", border: "1px solid rgba(232,98,44,0.3)", borderRadius: 12, padding: "12px 14px" }}>
+          <div className="fh-kicker" style={{ fontSize: 9, marginBottom: 8, color: "#E8622C" }}>🎬 Your remake · shot for shot</div>
+          {analysis.remake.hookLine && (
+            <div style={{ fontSize: 13.5, fontWeight: 800, color: "#F4F3F8", lineHeight: 1.35, marginBottom: 10 }}>HOOK: “{analysis.remake.hookLine}”</div>
+          )}
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+            {analysis.remake.beats.map((b, i) => (
+              <div key={i} style={{ fontSize: 12, lineHeight: 1.5, borderLeft: "2px solid rgba(232,98,44,0.5)", paddingLeft: 10 }}>
+                <div style={{ color: "#FF9A62", fontWeight: 800, fontSize: 10.5, fontFamily: "var(--mono)" }}>SHOT {i + 1}{b.duration ? ` · ${b.duration}` : ""}</div>
+                <div style={{ color: "#D9D7E4" }}>{b.shot}</div>
+                {b.say && <div style={{ color: "#EDEBF6" }}>🗣 “{b.say}”</div>}
+                {b.onScreenText && b.onScreenText !== "none" && <div style={{ color: "#FFC23D" }}>📝 {b.onScreenText}</div>}
+              </div>
+            ))}
+          </div>
+          {analysis.remake.cta && <div style={{ fontSize: 12.5, fontWeight: 700, color: "#F4F3F8", marginTop: 10 }}>CTA: “{analysis.remake.cta}”</div>}
+          {!!analysis.remake.productionNotes?.length && (
+            <ul style={{ margin: "8px 0 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 3 }}>
+              {analysis.remake.productionNotes.map((n, i) => (
+                <li key={i} style={{ fontSize: 11.5, color: "#A6A4B8", lineHeight: 1.45 }}>{n}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 export default function ReelCoach() {
-  const { copy } = useStore();
+  const { state, copy } = useStore();
+  const strategy = state.strategy as StrategyProfile;
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [label, setLabel] = useState("");
   const [source, setSource] = useState<VaultReel["source"]>("own");
+  // style-match: pick one of your topics and the analysis also returns a
+  // shot-for-shot remake script in the reference's style
+  const [topicId, setTopicId] = useState("");
+  const ideas = useMemo(() => ideasFor(strategy), [strategy]);
+  const topic = ideas.find((i) => i.id === topicId) || null;
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -150,7 +211,15 @@ export default function ReelCoach() {
       const r = await fetch("/api/video-reference", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: blob.url, contentType: file.type, label: label.trim(), source }),
+        body: JSON.stringify({
+          url: blob.url,
+          contentType: file.type,
+          label: label.trim(),
+          source,
+          ...(source === "reference" && topic
+            ? { topic: { title: topic.title, angle: topic.angle, facts: topic.deck?.length ? topic.deck : [topic.angle] } }
+            : {}),
+        }),
         signal: AbortSignal.timeout(290000),
       });
       console.log(tag, "/api/video-reference responded", r.status);
@@ -297,6 +366,26 @@ export default function ReelCoach() {
             {busy ? "Watching…" : "▶ Analyze"}
           </button>
         </div>
+        {source === "reference" && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: "#C9A8FF" }}>🎬 Style match</span>
+            <select
+              value={topicId}
+              onChange={(e) => setTopicId(e.target.value)}
+              disabled={busy}
+              style={{ background: "rgba(0,0,0,0.28)", color: "#F4F3F8", border: "1px solid rgba(201,168,255,0.35)", borderRadius: 8, padding: "7px 10px", fontSize: 11.5, maxWidth: 340, fontFamily: "var(--body)" }}
+            >
+              <option value="">Coaching only — no remake script</option>
+              {ideas.map((i) => (
+                <option key={i.id} value={i.id}>{i.title}</option>
+              ))}
+            </select>
+            <span style={{ fontSize: 10.5, color: "#8B89A0", lineHeight: 1.4, flex: 1, minWidth: 200 }}>
+              Pick a topic and the analysis also returns a shot-for-shot script that remakes this video&apos;s
+              style with YOUR content — hook, spoken lines, on-screen text, beat timings.
+            </span>
+          </div>
+        )}
         {busy && stage && <div style={{ fontSize: 11.5, color: "#7DD3FC", marginTop: 10 }}>{stage}</div>}
         {error && <div style={{ fontSize: 11.5, color: "#FF6B6B", marginTop: 10 }}>{error}</div>}
       </div>

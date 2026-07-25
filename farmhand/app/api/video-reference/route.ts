@@ -57,6 +57,39 @@ const SCHEMA_PROMPT = `You are coaching a solar consultant's Instagram content s
 
 Be specific and concrete — this feeds a content-strategy knowledge base, not a general video description. If something can't be determined, say so plainly rather than guessing.`;
 
+/** Style-match mode: decode the reference's style DNA beat by beat AND write
+    the shot-for-shot remake script using the owner's topic — same Gemini
+    pass, since the model is already watching the video. */
+const styleMatchPrompt = (topic: { title: string; angle: string; facts: string[] }) =>
+  SCHEMA_PROMPT.replace(
+    `  "coachingNotes": ["specific actionable takeaway", "another one", "..."]
+}`,
+    `  "coachingNotes": ["specific actionable takeaway", "another one", "..."],
+  "styleDna": {
+    "beats": [{ "t": "0-2s", "visual": "what's on screen", "onScreenText": "text shown or 'none'", "textStyle": "how the text looks/appears/animates", "transition": "cut/zoom/swipe/etc" }],
+    "textTreatment": "the overall on-screen text system: font vibe, size, color, placement, animation style",
+    "colorAndGrade": "color palette and grade of the footage",
+    "energy": "the pacing/energy signature in one sentence"
+  },
+  "remake": {
+    "hookLine": "the opening line (spoken or on-screen) that applies THIS reel's hook technique to the topic below",
+    "beats": [{ "shot": "exactly what to film or show", "say": "the spoken line, word for word", "onScreenText": "the on-screen text for this beat", "duration": "~Ns" }],
+    "cta": "the closing call-to-action in this reel's style",
+    "productionNotes": ["location/gear/edit note needed to nail this style", "..."]
+  }
+}`
+  ) +
+  `
+
+STYLE-MATCH BRIEF: after analyzing the clip, use "styleDna" to decode its style beat by beat (5-10 beats covering the full runtime), then write "remake" — a complete shot-for-shot script that reproduces THIS clip's format, pacing, text treatment and energy, but about the topic below. The remake must be filmable by one person with a phone in a day.
+
+THE TOPIC: ${topic.title}
+Angle: ${topic.angle}
+VERIFIED FACTS (the only numbers/claims the remake may use — keep them exact):
+${topic.facts.map((f, i) => `${i + 1}. ${f}`).join("\n")}
+
+Remake rules: an Arizona residential solar consultant is the on-camera voice; APS territory only (never SRP); the script must end connected to the solar/ownership decision; call-to-action stays Valley-general ("Valley homeowners", never one city); no emojis in on-screen text; every number must come from the verified facts verbatim.`;
+
 export async function GET(req: NextRequest) {
   const key = process.env.GEMINI_API_KEY;
 
@@ -92,6 +125,17 @@ export async function POST(req: NextRequest) {
   const source = b.source === "reference" ? "reference" : "own";
   const contentType = clamp(b.contentType, 60) || "video/mp4";
   if (!blobUrl) return NextResponse.json({ configured: true, error: "no video url" });
+
+  // optional style-match topic (reference clips only)
+  const rawTopic = (b.topic || null) as { title?: unknown; angle?: unknown; facts?: unknown } | null;
+  const topic =
+    source === "reference" && rawTopic && rawTopic.title
+      ? {
+          title: clamp(rawTopic.title, 160),
+          angle: clamp(rawTopic.angle, 300),
+          facts: (Array.isArray(rawTopic.facts) ? rawTopic.facts : []).map((f) => clamp(f, 400)).filter(Boolean).slice(0, 5),
+        }
+      : null;
 
   let bytes: ArrayBuffer;
   try {
@@ -155,7 +199,7 @@ export async function POST(req: NextRequest) {
         contents: [
           {
             role: "user",
-            parts: [{ fileData: { fileUri: fileInfo.uri, mimeType: fileInfo.mimeType || contentType } }, { text: SCHEMA_PROMPT }],
+            parts: [{ fileData: { fileUri: fileInfo.uri, mimeType: fileInfo.mimeType || contentType } }, { text: topic ? styleMatchPrompt(topic) : SCHEMA_PROMPT }],
           },
         ],
         generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
