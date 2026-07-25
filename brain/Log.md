@@ -9,6 +9,32 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-25 · Reel Coach "once and for all": link lane + one-tap diagnostics
+Owner still hits browser freezes on his own machines (Mac + phone) even
+though the flow passes instrumented freeze tests in emulation — the
+remaining failures are environment-specific and invisible from here. Two
+moves close the loop permanently:
+
+- **🔗 Analyze-from-link lane**: paste a Dropbox/Drive share link and the
+  SERVER fetches the video (SSRF-guarded: https-only, private IPv4+IPv6
+  ranges blocked, redirects followed manually with every hop re-checked,
+  ~200MB cap, HTML responses rejected with fix-your-link guidance,
+  Dropbox/Drive links auto-converted to direct download). The browser
+  never touches the file — nothing to freeze. Reuses the phased
+  poll/analyze client, pending-resume, and style-match wiring.
+- **📋 Copy report for Claude**: one tap copies build stamp, user agent,
+  screen/DPR/PWA state, current error, pending status, and the full
+  breadcrumb trail. "Read me the trail" is now one tap + one paste.
+- Photo-album smoothing: album-reality copy on quicktime/big attaches
+  (iPhone converts during picking — use Files or the link lane), Mac
+  drag-out-of-Photos-first guidance, pickFile fully try/caught.
+
+Verified by agent on iPhone 13 emulation AND 1440px desktop: attach
+feedback 34-36ms, graceful errors everywhere, link-lane error paths
+clean, diagnostic report contents asserted, main-thread max gap 240ms.
+Agent also caught an IPv6 SSRF bypass (fixed) and the redirect-hop gap
+(fixed in review).
+
 ## 2026-07-25 · FULL MOBILE PASS — three agents in parallel (owner friction catch #6)
 Owner on phone: "when i click on content nothing happens." Root cause: the
 app never had a phone layout — the side rail stacked as 15 full-screen

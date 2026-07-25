@@ -277,22 +277,30 @@ export default function ReelCoach() {
   }, [workspace]);
 
   const pickFile = (f: File | null | undefined) => {
-    // breadcrumb FIRST — if the tab wedges during attach, this is the last
-    // thing that survives and tells us exactly what file did it
-    crumb(f ? `attach: ${f.name} · ${formatBytes(f.size)} · ${f.type || "no-type"}` : "attach: none");
-    if (f && !(f.type.startsWith("video/") || f.type === "")) {
-      crumb("attach rejected: not a video type");
-      setError(`"${f.name}" doesn't look like a video file (${f.type || "unknown type"}) — pick a video clip.`);
-      return;
+    // DEFENSIVE WRAPPER: with promise-backed files dragged straight out of
+    // Photos.app, even reading name/size/type can throw — that must never
+    // escape and wedge the tab. Catch → crumb → plain-English guidance.
+    try {
+      // breadcrumb FIRST — if the tab wedges during attach, this is the last
+      // thing that survives and tells us exactly what file did it
+      crumb(f ? `attach: ${f.name} · ${formatBytes(f.size)} · ${f.type || "no-type"}` : "attach: none");
+      if (f && !(f.type.startsWith("video/") || f.type === "")) {
+        crumb("attach rejected: not a video type");
+        setError(`"${f.name}" doesn't look like a video file (${f.type || "unknown type"}) — pick a video clip.`);
+        return;
+      }
+      if (f && f.size > MAX_FILE_BYTES) {
+        crumb("attach rejected: over 200MB cap");
+        setError(`"${f.name}" is ${formatBytes(f.size)} — that's over the 200MB cap. Trim or compress it first.`);
+        return;
+      }
+      setError(null);
+      setFile(f || null);
+      if (f) crumb("attach ok — Analyze enabled");
+    } catch (e) {
+      crumb(`attach FAILED reading file metadata: ${e instanceof Error ? e.message.slice(0, 60) : "unknown"}`);
+      setError("That file couldn't be read — drag it to your Desktop first, then upload the copy.");
     }
-    if (f && f.size > MAX_FILE_BYTES) {
-      crumb("attach rejected: over 200MB cap");
-      setError(`"${f.name}" is ${formatBytes(f.size)} — that's over the 200MB cap. Trim or compress it first.`);
-      return;
-    }
-    setError(null);
-    setFile(f || null);
-    if (f) crumb("attach ok — Analyze enabled");
   };
 
   /** Phases 2+3 (poll processing, then analyze) — shared by a fresh analyze
@@ -540,6 +548,62 @@ export default function ReelCoach() {
     if (expanded === id) setExpanded(null);
   };
 
+  /** ONE-TAP FAILURE REPORT — turns "read me the trail over the phone" into
+      one tap + one paste. Everything a remote debugger needs to reproduce an
+      environment-specific freeze: exact build, device/browser, display mode,
+      the full crash-surviving breadcrumb trail, current error, pending state. */
+  const [reportCopied, setReportCopied] = useState(false);
+  const copyDiagReport = async () => {
+    const trail = readCrumbs();
+    const pend = readPendingReel(workspace);
+    // covers installed-PWA on both platforms: display-mode media query
+    // (Android/desktop) and legacy navigator.standalone (iOS Safari)
+    let standalone = false;
+    try {
+      standalone =
+        window.matchMedia?.("(display-mode: standalone)")?.matches === true ||
+        (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    } catch {}
+    const report = [
+      "FARMHAND REEL COACH — DIAGNOSTIC REPORT",
+      `build: ${BUILD_STAMP}`,
+      `when: ${new Date().toISOString()}`,
+      `ua: ${navigator.userAgent}`,
+      `screen: ${window.screen?.width}x${window.screen?.height} @${window.devicePixelRatio}x · viewport ${window.innerWidth}x${window.innerHeight}`,
+      `pwa-standalone: ${standalone ? "yes" : "no"}`,
+      `error: ${error || "none"}`,
+      pend
+        ? `pending: yes — "${pend.label}" · ${Math.max(0, Math.round((Date.now() - pend.createdAt) / 60000))} min old`
+        : "pending: none",
+      `trail (${trail.length} entries):`,
+      ...(trail.length ? trail.map((c) => `  ${c}`) : ["  (empty)"]),
+    ].join("\n");
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(report);
+      ok = true;
+    } catch {
+      // clipboard API blocked — invisible-textarea fallback
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = report;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand("copy");
+        ta.remove();
+      } catch {}
+    }
+    crumb(ok ? "diag report copied" : "diag report copy FAILED");
+    if (ok) {
+      setReportCopied(true);
+      setTimeout(() => setReportCopied(false), 2600);
+    } else {
+      setError("Couldn't copy the report on this browser — open the trail below and screenshot it instead.");
+    }
+  };
+
   return (
     <div>
       <div style={{ fontSize: 13, color: "#A6A4B8", marginBottom: 16, lineHeight: 1.5, maxWidth: 640 }}>
@@ -587,10 +651,18 @@ export default function ReelCoach() {
               <strong>{file.name}</strong>{" "}
               <span style={{ color: "#6E6C82" }}>({formatBytes(file.size)})</span>
               <div style={{ fontSize: 11, color: "#7DD3FC", marginTop: 4 }}>selected — click to swap, or Analyze below</div>
-              {file.size > SOFT_WARN_BYTES && (
+              {(file.size > SOFT_WARN_BYTES || file.type === "video/quicktime") && (
                 <div style={{ fontSize: 10.5, color: "#FFC23D", marginTop: 5, lineHeight: 1.45, maxWidth: 420, marginInline: "auto" }}>
-                  ⚠ {formatBytes(file.size)} is a big clip — it&apos;ll work, but uploads this size are slow and can time out.
-                  Gemini only needs the style, not the full runtime: trimming to ~90 seconds of the reference gives the same coaching, way faster.
+                  ⚠{" "}
+                  {file.size > SOFT_WARN_BYTES && (
+                    <>
+                      {formatBytes(file.size)} is a big clip — it&apos;ll work, but uploads this size are slow and can time out.
+                      Gemini only needs the style, not the full runtime: trimming to ~90 seconds of the reference gives the same coaching, way faster.{" "}
+                    </>
+                  )}
+                  From the Photos app? iPhone converts the video during picking — if selection seems stuck, that&apos;s iOS
+                  working, not the app. Tip: share the clip to Files first and pick it from there, or save it to Dropbox
+                  and paste the link below.
                 </div>
               )}
             </div>
@@ -598,6 +670,9 @@ export default function ReelCoach() {
             <div style={{ fontSize: 12.5, color: "#8B89A0" }}>
               Drag a clip here, or click to browse
               <div style={{ fontSize: 10.5, color: "#5E5C72", marginTop: 3 }}>video files only — .mov, .mp4, up to 200MB</div>
+              <div style={{ fontSize: 10.5, color: "#5E5C72", marginTop: 3 }}>
+                on a Mac: drag videos out of the Photos app onto the Desktop first (Photos hands over a placeholder some browsers choke on), then upload from there
+              </div>
             </div>
           )}
         </div>
@@ -703,12 +778,31 @@ export default function ReelCoach() {
           <div style={{ fontSize: 9.5, color: "#5E5C72", fontFamily: "var(--mono)" }}>
             build {BUILD_STAMP} — if this doesn&apos;t match the latest fix, fully close this tab and reopen the app
           </div>
-          <details style={{ marginTop: 4 }}>
-            <summary style={{ fontSize: 10, color: "#77758C", cursor: "pointer" }}>Last run trail (survives crashes — read this back if it freezes)</summary>
-            <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: "#8B89A0", lineHeight: 1.6, marginTop: 4, whiteSpace: "pre-wrap" }}>
-              {readCrumbs().slice(-10).join("\n") || "no runs yet"}
-            </div>
-          </details>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
+            <details style={{ flex: 1, minWidth: 200 }}>
+              <summary style={{ fontSize: 10, color: "#77758C", cursor: "pointer" }}>Last run trail (survives crashes — read this back if it freezes)</summary>
+              <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: "#8B89A0", lineHeight: 1.6, marginTop: 4, whiteSpace: "pre-wrap" }}>
+                {readCrumbs().slice(-10).join("\n") || "no runs yet"}
+              </div>
+            </details>
+            {/* one tap → full diagnostic report on the clipboard, ready to paste */}
+            <button
+              onClick={copyDiagReport}
+              style={{
+                background: reportCopied ? "rgba(65,217,138,0.12)" : "rgba(125,211,252,0.1)",
+                color: reportCopied ? "#41D98A" : "#7DD3FC",
+                border: `1px solid ${reportCopied ? "rgba(65,217,138,0.45)" : "rgba(125,211,252,0.35)"}`,
+                borderRadius: 7,
+                padding: "4px 11px",
+                fontSize: 10.5,
+                fontWeight: 700,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              {reportCopied ? "Copied ✓ — paste it to Claude" : "📋 Copy report for Claude"}
+            </button>
+          </div>
         </div>
       </div>
 

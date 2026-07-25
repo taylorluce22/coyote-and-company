@@ -145,6 +145,7 @@ const MAX_REMOTE_BYTES = 220 * 1024 * 1024;
 function remoteUrlBlocked(u: URL): string | null {
   if (u.protocol !== "https:") return "the link must be https";
   const h = u.hostname.toLowerCase();
+  if (h.startsWith("[")) return "that link points somewhere private"; // IPv6 literals — the private-range checks below are IPv4-only
   if (
     h === "localhost" ||
     /^(127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(h) ||
@@ -179,12 +180,27 @@ async function fetchRemoteBytes(rawUrl: string): Promise<{ bytes: ArrayBuffer; c
   } catch {
     return fail("that doesn't look like a link");
   }
-  const blocked = remoteUrlBlocked(u);
-  if (blocked) return fail(blocked);
   try {
     // 90s cap keeps the whole start phase (fetch + Gemini upload) inside
-    // the 300s function budget: 90 + 20 + 180 = 290
-    const res = await fetch(u.toString(), { signal: AbortSignal.timeout(90000), redirect: "follow" });
+    // the 300s function budget: 90 + 20 + 180 = 290. Redirects are followed
+    // MANUALLY so every hop is re-checked against the private-host guard —
+    // a public link 302-ing to an internal address must not be fetched.
+    const deadline = AbortSignal.timeout(90000);
+    let res: Response | null = null;
+    for (let hop = 0; hop < 6; hop++) {
+      const blocked = remoteUrlBlocked(u);
+      if (blocked) return fail(blocked);
+      res = await fetch(u.toString(), { signal: deadline, redirect: "manual" });
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get("location");
+        if (!loc) return fail("the link redirected nowhere — use a direct video link");
+        u = new URL(loc, u);
+        res = null;
+        continue;
+      }
+      break;
+    }
+    if (!res) return fail("that link redirects too many times — use a direct video link");
     if (!res.ok) return fail(`the link answered ${res.status} — make sure it's a direct, public video link`);
     const len = Number(res.headers.get("content-length") || 0);
     if (len > MAX_REMOTE_BYTES) return fail("that video is over the ~200MB cap — trim it shorter first");
