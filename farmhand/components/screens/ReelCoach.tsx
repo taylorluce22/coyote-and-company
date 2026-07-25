@@ -64,6 +64,29 @@ function clearPendingReel(client: string) {
 const TRIM_HINT =
   "the clip may be too long — trim it to under ~90 seconds of the reference (Gemini only needs the style, not the full runtime) and retry.";
 
+/* ---- crash-surviving diagnostics ----
+   The owner has hit repeated freezes here that never reproduce for the
+   devs. Every step writes a breadcrumb SYNCHRONOUSLY to localStorage, so
+   after a freeze/crash the next visit shows exactly where the last run
+   died — plus a build stamp so "am I even running the fixed code?" is
+   answerable at a glance. */
+const BUILD_STAMP = `${process.env.NEXT_PUBLIC_COMMIT_SHA || "dev"} · ${process.env.NEXT_PUBLIC_BUILD_TIME || ""}`;
+const CRUMB_KEY = "fh-reel-crumbs";
+function crumb(msg: string) {
+  try {
+    const list = JSON.parse(localStorage.getItem(CRUMB_KEY) || "[]") as string[];
+    list.push(`${new Date().toISOString().slice(11, 19)} ${msg}`);
+    localStorage.setItem(CRUMB_KEY, JSON.stringify(list.slice(-25)));
+  } catch {}
+}
+function readCrumbs(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(CRUMB_KEY) || "[]") as string[];
+  } catch {
+    return [];
+  }
+}
+
 /** One short phased call to /api/video-reference. Throws plain-English on any failure. */
 async function phasePost(body: Record<string, unknown>, timeoutMs: number, timeoutMsg: string): Promise<Record<string, unknown>> {
   let r: Response;
@@ -248,22 +271,28 @@ export default function ReelCoach() {
   const [pending, setPending] = useState<PendingReel | null>(null);
 
   useEffect(() => {
+    crumb(`screen open · build ${BUILD_STAMP}`);
     reelVaultAll().then(setList);
     setPending(readPendingReel(workspace));
   }, [workspace]);
 
   const pickFile = (f: File | null | undefined) => {
-    console.log("[reel-coach] pickFile", f ? { name: f.name, size: f.size, type: f.type } : null);
-    if (f && !f.type.startsWith("video/")) {
+    // breadcrumb FIRST — if the tab wedges during attach, this is the last
+    // thing that survives and tells us exactly what file did it
+    crumb(f ? `attach: ${f.name} · ${formatBytes(f.size)} · ${f.type || "no-type"}` : "attach: none");
+    if (f && !(f.type.startsWith("video/") || f.type === "")) {
+      crumb("attach rejected: not a video type");
       setError(`"${f.name}" doesn't look like a video file (${f.type || "unknown type"}) — pick a video clip.`);
       return;
     }
     if (f && f.size > MAX_FILE_BYTES) {
+      crumb("attach rejected: over 200MB cap");
       setError(`"${f.name}" is ${formatBytes(f.size)} — that's over the 200MB cap. Trim or compress it first.`);
       return;
     }
     setError(null);
     setFile(f || null);
+    if (f) crumb("attach ok — Analyze enabled");
   };
 
   /** Phases 2+3 (poll processing, then analyze) — shared by a fresh analyze
@@ -271,6 +300,7 @@ export default function ReelCoach() {
       Throws plain-English on failure; the pending record stays until the
       analysis is safely in the vault. */
   const pollAndAnalyze = async (rec: PendingReel, tag: string) => {
+    crumb("poll: waiting for Gemini processing");
     setStage("Gemini is processing the clip…");
     const deadline = Date.now() + 180000; // client-owned poll budget
     let fileState = "PROCESSING";
@@ -290,6 +320,7 @@ export default function ReelCoach() {
       if (fileState === "PROCESSING") await new Promise((r) => setTimeout(r, 3000));
     }
     console.log(tag, "file state", fileState);
+    crumb(`poll done: ${fileState}`);
     if (fileState === "NOT_FOUND") {
       clearPendingReel(workspace);
       setPending(null);
@@ -305,6 +336,7 @@ export default function ReelCoach() {
     }
 
     setStage("Gemini is watching the clip — this can take a minute…");
+    crumb("analyze: sent to Gemini");
     const j = await phasePost(
       {
         phase: "analyze",
@@ -329,6 +361,7 @@ export default function ReelCoach() {
     // reports failure via its boolean (it never throws), so ENFORCE the
     // "analysis is safe before cleanup" invariant here: on a failed save the
     // pending record survives and ⟳ Resume retries without re-uploading.
+    crumb("analyze: result received, saving");
     const saved = await reelVaultAdd(reel, workspace);
     if (!saved) {
       throw new Error(
@@ -339,6 +372,7 @@ export default function ReelCoach() {
     setPending(null);
     setList(await reelVaultAll());
     setExpanded(reel.id);
+    crumb("done ✓ analysis in the vault");
   };
 
   const analyze = async () => {
@@ -354,17 +388,27 @@ export default function ReelCoach() {
       // with retries) instead of one giant buffered request — the old
       // single-shot upload of a 100-200MB reel is what OOM-crashed the tab.
       console.log(tag, "calling blob upload()…");
+      crumb(`upload: starting (${formatBytes(file.size)})`);
       let blob;
+      let lastMilestone = 0;
       try {
         blob = await upload(`reels/${Date.now()}-${file.name.replace(/[^a-z0-9.\-_]/gi, "_")}`, file, {
           access: "public",
           handleUploadUrl: "/api/video-reference/blob-upload",
           contentType: file.type || "video/mp4",
           multipart: true,
-          onUploadProgress: ({ percentage }) => setStage(`Uploading… ${Math.round(percentage)}%`),
+          onUploadProgress: ({ percentage }) => {
+            setStage(`Uploading… ${Math.round(percentage)}%`);
+            const m = Math.floor(percentage / 25) * 25;
+            if (m > lastMilestone) {
+              lastMilestone = m;
+              crumb(`upload: ${m}%`);
+            }
+          },
         });
       } catch (e) {
         console.error(tag, "blob upload failed", e);
+        crumb("upload FAILED");
         throw new Error(
           "The upload didn't finish — check your connection and try again. If the clip is big, trim it to under ~90 seconds first (Gemini only needs the style, not the full runtime)."
         );
@@ -395,6 +439,7 @@ export default function ReelCoach() {
         createdAt: Date.now(),
       };
       if (!rec.fileName || !rec.fileUri) throw new Error("Gemini didn't accept the clip — try again.");
+      crumb("gemini: clip accepted");
       // record the upload BEFORE polling — from here on, a crash, closed tab,
       // or dead connection can't strand it (Gemini keeps files ~48h)
       writePendingReel(rec, workspace);
@@ -410,6 +455,7 @@ export default function ReelCoach() {
       console.log(tag, "done");
     } catch (e) {
       console.error(tag, "analyze() threw", e);
+      crumb(`error: ${e instanceof Error ? e.message.slice(0, 80) : "unknown"}`);
       setError(e instanceof Error ? e.message : "Something went wrong during the upload — try again.");
     } finally {
       (window as unknown as { __fhSuspendBg?: boolean }).__fhSuspendBg = false;
@@ -577,6 +623,22 @@ export default function ReelCoach() {
         )}
         {busy && stage && <div style={{ fontSize: 11.5, color: "#7DD3FC", marginTop: 10 }}>{stage}</div>}
         {error && <div style={{ fontSize: 11.5, color: "#FF6B6B", marginTop: 10 }}>{error}</div>}
+
+        {/* crash-surviving diagnostics: the build you're ACTUALLY running +
+            the last run's breadcrumb trail. If this screen ever freezes,
+            reopen it and read this trail back — it shows the exact last step
+            that completed before the freeze. */}
+        <div style={{ marginTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 8 }}>
+          <div style={{ fontSize: 9.5, color: "#5E5C72", fontFamily: "var(--mono)" }}>
+            build {BUILD_STAMP} — if this doesn&apos;t match the latest fix, fully close this tab and reopen the app
+          </div>
+          <details style={{ marginTop: 4 }}>
+            <summary style={{ fontSize: 10, color: "#77758C", cursor: "pointer" }}>Last run trail (survives crashes — read this back if it freezes)</summary>
+            <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: "#8B89A0", lineHeight: 1.6, marginTop: 4, whiteSpace: "pre-wrap" }}>
+              {readCrumbs().slice(-10).join("\n") || "no runs yet"}
+            </div>
+          </details>
+        </div>
       </div>
 
       {pending && !busy && (
