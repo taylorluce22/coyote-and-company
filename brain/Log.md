@@ -9,6 +9,36 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-25 · Photos-placeholder canary + attach hardening (owner friction catch #9)
+Owner: still a complete freeze, "doesn't work at all", even post-worker.
+Freeze-hazard audit agent (with 20x-CPU-throttle Playwright verification)
+found the remaining wedge class: macOS Photos-library-backed Files are
+promise-backed placeholders — reading .name/.size, or structured-cloning
+the File into the worker via postMessage, can force full materialization
+on the main thread and hard-wedge a memory-pressured tab. Six fixes:
+
+- **probeFileReadable()**: 64KB canary read raced vs 10s timeout runs
+  BEFORE the worker ever sees the File. Timeout/failure → fast
+  plain-English "save it to Files/Desktop/Dropbox first" instead of a
+  freeze; crumbs before/after so a wedge during the probe names itself.
+- Lite page onChange metadata reads now defensively wrapped (was the one
+  gap vs pickFile); metadata snapshotted ONCE into state — render and
+  start() never touch the File object again.
+- FILE_UNREADABLE is distinct from WORKER_UNAVAILABLE so an unreadable
+  file can never fall through to the main-thread upload (which would
+  wedge worse); ReelCoach rethrows it past the generic upload catch.
+- ReelCoach onDrop dataTransfer access wrapped; analyze()'s unguarded
+  metadata console.log moved inside try.
+- Reported, not fixed: ReelCoach JSX re-reads file.name/.size in render
+  (post-successful-pickFile, judged safe; refactor too broad).
+
+Under 20x CPU throttle: attach 973ms, worst main-thread stall 470ms,
+errors surface cleanly, crumb order verified. Owner's Mac (via Cowork
+health snapshot): M5 16GB, ~70MB free, 2GB swap, three browsers — the
+machine-side amplifier. VPS/Mac-mini ruled out with data: CPU relaxed,
+no throttling, 295GB disk free; RAM pressure + main-thread file work
+was the collision, and both sides are now addressed.
+
 ## 2026-07-25 · Worker uploads + LITE UPLOADER page (owner friction catch #8)
 Owner: "i had to force quit chrome again when trying to upload" and "have
 the content be a separate app that doesnt share GCU with the main app."

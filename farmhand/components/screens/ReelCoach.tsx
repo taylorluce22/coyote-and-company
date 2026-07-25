@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
-import { uploadInWorker, WORKER_UNAVAILABLE, type UploadProgress } from "@/lib/reelUploadClient";
+import { uploadInWorker, FILE_UNREADABLE, WORKER_UNAVAILABLE, type UploadProgress } from "@/lib/reelUploadClient";
 import { useStore } from "@/lib/store";
 import { ideasFor, type StrategyProfile } from "@/lib/strategy";
 import { reelVaultAdd, reelVaultAll, reelVaultDelete, type ReelAnalysis, type VaultReel } from "@/lib/reelVault";
@@ -619,12 +619,14 @@ export default function ReelCoach() {
   const analyze = async () => {
     if (!file || busy) return;
     const tag = `[reel-coach ${Date.now()}]`;
-    console.log(tag, "analyze() start", { name: file.name, size: file.size, type: file.type });
     setBusy(true);
     setError(null);
     setStage("Uploading clip…");
     (window as unknown as { __fhSuspendBg?: boolean }).__fhSuspendBg = true;
     try {
+      // metadata reads live INSIDE the try — with a Photos-library
+      // placeholder even .name/.size can block or throw
+      console.log(tag, "analyze() start", { name: file.name, size: file.size, type: file.type });
       // Phase 0: browser → Vercel Blob. multipart chunks the file (~8MB parts
       // with retries) instead of one giant buffered request — the old
       // single-shot upload of a 100-200MB reel is what OOM-crashed the tab.
@@ -677,6 +679,9 @@ export default function ReelCoach() {
       } catch (e) {
         console.error(tag, "blob upload failed", e);
         crumb("upload FAILED");
+        // the canary probe's Photos-placeholder guidance must reach the
+        // owner verbatim — don't bury it under the generic retry message
+        if (e instanceof Error && e.message === FILE_UNREADABLE) throw e;
         throw new Error(
           "The upload didn't finish — check your connection and try again. If the clip is big, trim it to under ~90 seconds first (Gemini only needs the style, not the full runtime)."
         );
@@ -912,7 +917,15 @@ export default function ReelCoach() {
             e.preventDefault();
             setDragOver(false);
             if (busy) return;
-            pickFile(e.dataTransfer.files?.[0]);
+            // pulling the File out of a Photos.app drag can itself throw —
+            // the accessor runs before pickFile's own try/catch, so keep it
+            // inside the same defensive net
+            try {
+              pickFile(e.dataTransfer.files?.[0]);
+            } catch (err) {
+              crumb(`attach FAILED reading dropped file: ${err instanceof Error ? err.message.slice(0, 60) : "unknown"}`);
+              setError("That dropped file couldn't be read — save it to Files or your Desktop first, then upload the copy.");
+            }
           }}
           style={{
             border: `1.5px dashed ${dragOver ? "#FF9A62" : "rgba(255,255,255,0.16)"}`,
