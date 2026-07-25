@@ -807,6 +807,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ configured: true, resumed: true });
   }
 
+  /* ---- phase "job-inbox": finished jobs started ANYWHERE (a Cowork
+          terminal, another device) that no client has banked yet. Lets the
+          app auto-collect results it never knew were started — the bridge
+          that makes "agent uploads from the Mac, breakdown appears in the
+          app" work with zero manual hand-off. ---- */
+  if (phase === "job-inbox") {
+    try {
+      const { blobs } = await list({ prefix: "reeljobs/", limit: 1000 });
+      const dones = blobs
+        .map((bl) => {
+          const m = bl.pathname.match(/^reeljobs\/([A-Za-z0-9-]+)\/(\d+)-done\.json$/);
+          return m ? { jobId: m[1], ms: Number(m[2]), url: bl.url } : null;
+        })
+        .filter((x): x is { jobId: string; ms: number; url: string } => !!x)
+        .filter((x) => x.ms > Date.now() - 40 * 3600000)
+        .sort((a, b) => b.ms - a.ms)
+        .slice(0, 5);
+      const jobs: Array<Record<string, unknown>> = [];
+      for (const d of dones) {
+        const rec = await readJobRecord({ pathname: "", url: d.url, ms: d.ms, state: "done" });
+        if (rec.analysis) {
+          jobs.push({ jobId: d.jobId, label: clamp(rec.label, 120), source: rec.source === "reference" ? "reference" : "own", at: d.ms });
+        }
+      }
+      return NextResponse.json({ configured: true, jobs });
+    } catch {
+      return NextResponse.json({ configured: true, jobs: [] });
+    }
+  }
+
   /* ---- phase "job-ack": the analysis is banked — burn the journal ---- */
   if (phase === "job-ack") {
     const jobId = clamp(b.jobId, 64);

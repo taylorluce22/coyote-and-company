@@ -71,6 +71,23 @@ function clearPendingReel(client: string) {
   } catch {}
 }
 
+/* ---- inbox dedupe: job ids this DEVICE has already banked. Without it,
+   an ack that fails to land would make the same finished job re-import as
+   a duplicate vault card on every visit. ---- */
+const BANKED_KEY = "fh-reel-banked-jobs";
+function bankedJobs(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(BANKED_KEY) || "[]") as string[];
+  } catch {
+    return [];
+  }
+}
+function markJobBanked(id: string) {
+  try {
+    localStorage.setItem(BANKED_KEY, JSON.stringify([...bankedJobs(), id].slice(-20)));
+  } catch {}
+}
+
 const TRIM_HINT =
   "the clip may be too long — trim it to under ~90 seconds of the reference (Gemini only needs the style, not the full runtime) and retry.";
 
@@ -343,6 +360,39 @@ export default function ReelCoach() {
         }
       })();
     }
+    // INBOX SWEEP: jobs started OUTSIDE this browser entirely — a Cowork
+    // terminal upload, another device — finished on the server and waiting.
+    // Bank them into the vault automatically; no manual hand-off ever.
+    (async () => {
+      try {
+        const inbox = await phasePost({ phase: "job-inbox" }, 15000, "");
+        const jobs = Array.isArray(inbox.jobs) ? (inbox.jobs as Array<{ jobId?: string; label?: string; source?: string }>) : [];
+        const already = bankedJobs();
+        for (const jb of jobs.slice(0, 3)) {
+          const jobId = String(jb.jobId || "");
+          if (!jobId || already.includes(jobId)) continue;
+          // this device's own pending run banks through its own path — the
+          // sweep must not race it into a duplicate
+          if (readPendingReel(workspace)?.jobId === jobId) continue;
+          const j = await phasePost({ phase: "job-status", jobId }, 20000, "");
+          if (j.jobState !== "done" || !j.analysis) continue;
+          const reel: VaultReel = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            label: String(j.label || jb.label || "imported reel"),
+            source: j.source === "reference" || jb.source === "reference" ? "reference" : "own",
+            analysis: j.analysis as ReelAnalysis,
+            createdAt: Date.now(),
+          };
+          const saved = await reelVaultAdd(reel, workspace);
+          if (!saved) continue; // vault blocked — leave the job on the server for later
+          markJobBanked(jobId);
+          phasePost({ phase: "job-ack", jobId }, 15000, "").catch(() => {});
+          crumb(`inbox: banked "${reel.label}" ✓`);
+          setList(await reelVaultAll());
+          setExpanded(reel.id);
+        }
+      } catch {}
+    })();
   }, [workspace]);
 
   // hold the screen awake while a run is live — phone auto-lock mid-upload
