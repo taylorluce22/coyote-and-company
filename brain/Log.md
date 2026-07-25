@@ -39,6 +39,20 @@ tab kills whichever request is in flight. Ownership flipped:
 Legacy phases + monolithic flow kept for back-compat with open tabs on
 older builds; legacy pending records still resume through the old path.
 
+Adversarial review (11 agents, 3 lenses + refute-verify) confirmed 8
+majors, all fixed before ship: job-status error responses used the
+`error` key phasePost treats as transport failure (error branch was
+unreachable → renamed jobError); a flaky read of the done record could
+bank an empty analysis and ack away the only copy (guarded both sides);
+retryable errors were a Resume dead-end (client now auto-kicks
+job-continue, capped); Gemini FAILED/NOT_FOUND during a client-less gap
+wedged the loop (journal converges server-side); store-wide blob
+deletion via crafted url (reels/ path-prefix binding at token + every
+fetch/del); ingest killed mid-relay stranded the job + orphaned up-to-
+1GB blob (received record journals enough to re-ingest, Dismiss acks);
+kick-spam could spawn duplicate generateContent pipelines (shared
+client cooldown + server in-flight claim record).
+
 ## 2026-07-25 · Reel Coach "once and for all": link lane + one-tap diagnostics
 Owner still hits browser freezes on his own machines (Mac + phone) even
 though the flow passes instrumented freeze tests in emulation — the

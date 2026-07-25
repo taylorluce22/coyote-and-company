@@ -507,7 +507,22 @@ export default function ReelCoach() {
     if (!jobId) throw new Error("no job id");
     const t0 = Date.now();
     let analyzingSince = 0;
+    let lastKick = 0;
+    let errorKicks = 0;
     let lastState = "";
+    // ONE continue-kick per cooldown window no matter which branch asks —
+    // journal-visibility lag must not fan out into duplicate pipelines
+    const kick = async (why: string, minGapMs: number) => {
+      if (Date.now() - lastKick < minGapMs) return;
+      lastKick = Date.now();
+      crumb(why);
+      try {
+        await phasePost({ phase: "job-continue", jobId }, 25000, "couldn't restart the analysis — will retry");
+        analyzingSince = Date.now();
+      } catch (e) {
+        console.warn(tag, "job-continue hiccup", e);
+      }
+    };
     for (;;) {
       let j: Record<string, unknown> = {};
       try {
@@ -530,35 +545,51 @@ export default function ReelCoach() {
           setList(await reelVaultAll());
           return;
         }
+        // "done" with no payload = flaky read of the done record — banking
+        // it would ack away the only copy of the analysis. Re-peek instead.
+        if (!j.analysis) {
+          await new Promise((r) => setTimeout(r, 4000));
+          continue;
+        }
         await bankAnalysis(rec, j.analysis as ReelAnalysis);
         return;
       }
       if (js === "error") {
-        const msg = String(j.error || "The analysis failed — try again.");
+        const msg = String(j.jobError || "The analysis failed — try again.");
         if (j.retryable === true) {
+          // an error record is the newest journal entry forever — "hit
+          // Resume" alone would just re-read it. Retry FOR the owner: a
+          // fresh job-continue writes newer records that supersede it.
+          if (errorKicks < 2) {
+            errorKicks += 1;
+            setStage("That try failed — giving it another shot…");
+            await kick("job: retryable error — re-kicking", 30000);
+            await new Promise((r) => setTimeout(r, 4000));
+            continue;
+          }
           throw new Error(`${msg} Your clip is still at Gemini — hit ⟳ Resume analysis to retry without re-uploading.`);
         }
         clearPendingReel(workspace);
         setPending(null);
-        if (rec.jobId) phasePost({ phase: "job-ack", jobId: rec.jobId }, 15000, "").catch(() => {});
+        phasePost({ phase: "job-ack", jobId }, 15000, "").catch(() => {});
         throw new Error(msg);
       }
       if (js === "received" || js === "none") {
         setStage("Handing the clip to Gemini… (the server does this part — usually 30–90s for a big clip)");
-        if (Date.now() - t0 > 8 * 60000) {
+        // a platform-killed ingest leaves "received" as the latest record —
+        // job-continue re-runs the ingest from the journaled video url
+        if (Date.now() - t0 > 75000) await kick("job: hand-off stalled — re-kicking ingest", 3 * 60000);
+        if (Date.now() - t0 > 10 * 60000) {
           throw new Error("The hand-off to Gemini is taking too long — hit ⟳ Resume analysis in a minute; if it keeps happening, re-upload.");
         }
       } else if (js === "processing") {
         setStage("Gemini is processing the clip… ✅ safe to close the app — the server finishes on its own; check back in a few minutes");
         if (String(j.geminiState || "") === "ACTIVE") {
           // ingest invocation spent its budget before analyzing — fresh one
-          crumb("job: kicking analysis");
-          try {
-            await phasePost({ phase: "job-continue", jobId }, 25000, "couldn't kick the analysis — will retry");
-          } catch (e) {
-            console.warn(tag, "job-continue hiccup", e);
-          }
-          analyzingSince = Date.now();
+          await kick("job: kicking analysis", 3 * 60000);
+        }
+        if (Date.now() - t0 > 30 * 60000) {
+          throw new Error("Gemini has been processing this clip for a long time — your upload is safe; hit ⟳ Resume analysis later, or trim the clip and re-upload.");
         }
       } else if (js === "analyzing") {
         setStage("Gemini is watching the clip and writing your breakdown… (usually 1–2 minutes)");
@@ -566,13 +597,7 @@ export default function ReelCoach() {
         // a platform-killed analyze leaves "analyzing" as the latest record;
         // a live one can't run past ~2min — after 3min of silence, re-kick
         if (Date.now() - analyzingSince > 3 * 60000) {
-          crumb("job: analysis stalled — re-kicking");
-          try {
-            await phasePost({ phase: "job-continue", jobId }, 25000, "couldn't restart the analysis — will retry");
-          } catch (e) {
-            console.warn(tag, "job-continue hiccup", e);
-          }
-          analyzingSince = Date.now();
+          await kick("job: analysis stalled — re-kicking", 3 * 60000);
         }
       }
       await new Promise((r) => setTimeout(r, 4000));
@@ -1050,6 +1075,9 @@ export default function ReelCoach() {
           </button>
           <button
             onClick={() => {
+              // burn the server journal too — it may hold an orphaned clip
+              const rec = readPendingReel(workspace);
+              if (rec?.jobId) phasePost({ phase: "job-ack", jobId: rec.jobId }, 15000, "").catch(() => {});
               clearPendingReel(workspace);
               setPending(null);
             }}
