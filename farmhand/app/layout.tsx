@@ -70,6 +70,16 @@ export const metadata: Metadata = {
     title: "Farmhand — Local Presence OS",
     description: "The lead engine, content studio, and local-presence system for commission-based professionals.",
   },
+  // installable on phones: home-screen icon + standalone (no browser chrome)
+  icons: {
+    icon: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Farmhand",
+  },
 };
 
 export const viewport: Viewport = {
