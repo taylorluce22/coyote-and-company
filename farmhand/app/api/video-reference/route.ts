@@ -137,6 +137,85 @@ async function fetchBlobBytes(blobUrl: string): Promise<ArrayBuffer | Fail> {
   }
 }
 
+/** Remote-link lane: the browser never touches the file — the server fetches
+    a direct video URL (Dropbox/Drive/iCloud direct links) and hands it to
+    Gemini. Built for the owner's machines, where local file handling kept
+    freezing the tab. */
+const MAX_REMOTE_BYTES = 220 * 1024 * 1024;
+function remoteUrlBlocked(u: URL): string | null {
+  if (u.protocol !== "https:") return "the link must be https";
+  const h = u.hostname.toLowerCase();
+  if (h.startsWith("[")) return "that link points somewhere private"; // IPv6 literals — the private-range checks below are IPv4-only
+  if (
+    h === "localhost" ||
+    /^(127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(h) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
+    h.endsWith(".internal") ||
+    h.endsWith(".local")
+  )
+    return "that link points somewhere private";
+  return null;
+}
+/** Normalize common share links into direct-download form. */
+function directify(raw: string): string {
+  try {
+    const u = new URL(raw);
+    // Dropbox share → direct content
+    if (/(^|\.)dropbox\.com$/.test(u.hostname)) {
+      u.searchParams.set("dl", "1");
+      return u.toString();
+    }
+    // Google Drive share → direct download
+    const gd = raw.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
+    if (gd) return `https://drive.google.com/uc?export=download&id=${gd[1]}`;
+    return raw;
+  } catch {
+    return raw;
+  }
+}
+async function fetchRemoteBytes(rawUrl: string): Promise<{ bytes: ArrayBuffer; contentType: string } | Fail> {
+  let u: URL;
+  try {
+    u = new URL(directify(rawUrl));
+  } catch {
+    return fail("that doesn't look like a link");
+  }
+  try {
+    // 90s cap keeps the whole start phase (fetch + Gemini upload) inside
+    // the 300s function budget: 90 + 20 + 180 = 290. Redirects are followed
+    // MANUALLY so every hop is re-checked against the private-host guard —
+    // a public link 302-ing to an internal address must not be fetched.
+    const deadline = AbortSignal.timeout(90000);
+    let res: Response | null = null;
+    for (let hop = 0; hop < 6; hop++) {
+      const blocked = remoteUrlBlocked(u);
+      if (blocked) return fail(blocked);
+      res = await fetch(u.toString(), { signal: deadline, redirect: "manual" });
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get("location");
+        if (!loc) return fail("the link redirected nowhere — use a direct video link");
+        u = new URL(loc, u);
+        res = null;
+        continue;
+      }
+      break;
+    }
+    if (!res) return fail("that link redirects too many times — use a direct video link");
+    if (!res.ok) return fail(`the link answered ${res.status} — make sure it's a direct, public video link`);
+    const len = Number(res.headers.get("content-length") || 0);
+    if (len > MAX_REMOTE_BYTES) return fail("that video is over the ~200MB cap — trim it shorter first");
+    const ct = (res.headers.get("content-type") || "").split(";")[0].trim();
+    if (ct.startsWith("text/") || ct.includes("html"))
+      return fail("the link returned a web page, not a video — use a DIRECT download link (Dropbox: change ?dl=0 to ?dl=1)");
+    const bytes = await res.arrayBuffer();
+    if (bytes.byteLength > MAX_REMOTE_BYTES) return fail("that video is over the ~200MB cap — trim it shorter first");
+    if (bytes.byteLength < 50_000) return fail("the link returned almost no data — make sure it's a direct video link");
+    return { bytes, contentType: ct.startsWith("video/") ? ct : "video/mp4" };
+  } catch {
+    return fail("couldn't fetch that link — check it opens the raw video in an incognito tab");
+  }
+}
+
 /** Step 1b: resumable-upload the bytes to Gemini's Files API. */
 async function geminiUpload(key: string, bytes: ArrayBuffer, contentType: string, label: string): Promise<GeminiFile | Fail> {
   const startRes = await fetch(`${GEMINI_BASE}/upload/v1beta/files?key=${key}`, {
@@ -269,17 +348,29 @@ export async function POST(req: NextRequest) {
   /* ---- phase "start": blob → Gemini Files API, blob deleted, out fast ---- */
   if (phase === "start") {
     const blobUrl = clamp(b.url, 600);
-    if (!blobUrl) return NextResponse.json({ configured: true, error: "no video url" });
+    const remoteUrl = clamp(b.remoteUrl, 800);
+    if (!blobUrl && !remoteUrl) return NextResponse.json({ configured: true, error: "no video url" });
     try {
-      const bytes = await fetchBlobBytes(blobUrl);
-      if (isFail(bytes)) return NextResponse.json({ configured: true, error: bytes.error });
-      const fileInfo = await geminiUpload(key, bytes, contentType, label);
+      let bytes: ArrayBuffer;
+      let ct = contentType;
+      if (remoteUrl) {
+        // link lane: server fetches the video — the browser never read it
+        const got = await fetchRemoteBytes(remoteUrl);
+        if (isFail(got)) return NextResponse.json({ configured: true, error: got.error });
+        bytes = got.bytes;
+        ct = got.contentType;
+      } else {
+        const got = await fetchBlobBytes(blobUrl);
+        if (isFail(got)) return NextResponse.json({ configured: true, error: got.error });
+        bytes = got;
+      }
+      const fileInfo = await geminiUpload(key, bytes, ct, label);
       if (isFail(fileInfo)) return NextResponse.json({ configured: true, error: fileInfo.error });
       return NextResponse.json({
         configured: true,
         fileName: fileInfo.name,
         fileUri: fileInfo.uri,
-        mimeType: fileInfo.mimeType || contentType,
+        mimeType: fileInfo.mimeType || ct,
         state: fileInfo.state || "PROCESSING",
       });
     } catch (e) {
@@ -287,7 +378,7 @@ export async function POST(req: NextRequest) {
     } finally {
       // the clip has either landed at Gemini or the attempt failed — either
       // way the Blob copy is done; never leak blobs (they cost storage)
-      del(blobUrl).catch(() => {});
+      if (blobUrl) del(blobUrl).catch(() => {});
     }
   }
 
