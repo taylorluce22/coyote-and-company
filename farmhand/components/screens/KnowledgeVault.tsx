@@ -186,8 +186,10 @@ export default function KnowledgeVault() {
       >
         <canvas ref={canvasRef} style={{ display: "block", width: "100%", height: "100%", cursor: "grab" }} />
 
-        {/* legend */}
+        {/* legend — absolute on desktop; the fh-kv-legend class flows it
+            below the canvas on phones so it stops burying graph nodes */}
         <div
+          className="fh-kv-legend"
           style={{
             position: "absolute", left: 14, bottom: 14, background: "rgba(11,11,22,0.82)",
             border: "1px solid rgba(255,255,255,0.09)", borderRadius: 12, padding: "10px 12px",
@@ -206,8 +208,9 @@ export default function KnowledgeVault() {
           ))}
         </div>
 
-        {/* detail */}
+        {/* detail — same phone treatment via fh-kv-detail */}
         <div
+          className="fh-kv-detail"
           style={{
             position: "absolute", right: 14, top: 14, width: 262, maxWidth: "calc(100% - 28px)",
             background: "rgba(11,11,22,0.92)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 14,
@@ -216,7 +219,8 @@ export default function KnowledgeVault() {
         >
           {!detail ? (
             <div style={{ fontSize: 12, color: "#A6A4B8", lineHeight: 1.55 }}>
-              Hover a node to trace its links. Drag to rearrange. Click a connection to jump.
+              <span className="fh-desktop-only">Hover a node to trace its links. Drag to rearrange. Click a connection to jump.</span>
+              <span className="fh-phone-only">Tap a node to trace its links. Drag to rearrange.</span>
             </div>
           ) : (
             <div>

@@ -68,6 +68,7 @@ export default function TopBar() {
 
   return (
     <div
+      className="fh-topbar"
       style={{
         display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap", marginBottom: 22,
       }}

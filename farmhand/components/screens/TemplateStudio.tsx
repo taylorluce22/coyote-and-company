@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DG, ARCHETYPES, SAMPLE_POSTS, PILLARS, type DGPost } from "@/lib/desertGrid";
 import { DGSlideView } from "@/components/DGSlide";
 
@@ -14,6 +14,15 @@ import { DGSlideView } from "@/components/DGSlide";
 export default function TemplateStudio() {
   const [postId, setPostId] = useState(SAMPLE_POSTS[0].id);
   const post = SAMPLE_POSTS.find((p) => p.id === postId) as DGPost;
+  // slide width fits 320px-class phones; measured post-mount so SSR and the
+  // first client render agree (hydration-safe)
+  const [slideW, setSlideW] = useState(336);
+  useEffect(() => {
+    const fit = () => setSlideW(Math.min(336, document.documentElement.clientWidth - 44));
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, []);
 
   return (
     <div>
@@ -49,7 +58,7 @@ export default function TemplateStudio() {
       <div style={{ display: "flex", gap: 18, overflowX: "auto", padding: "4px 2px 20px", scrollSnapType: "x mandatory" }}>
         {post.slides.map((s, i) => (
           <div key={i} style={{ flex: "0 0 auto", scrollSnapAlign: "center", boxShadow: "0 14px 34px rgba(0,0,0,0.34)", border: "1px solid rgba(0,0,0,0.1)" }}>
-            <DGSlideView s={s} idx={i + 1} total={post.slides.length} width={336} />
+            <DGSlideView s={s} idx={i + 1} total={post.slides.length} width={slideW} />
           </div>
         ))}
       </div>

@@ -24,8 +24,17 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 function Row({ label, on, color, onToggle }: { label: string; on: boolean; color: string; onToggle: () => void }) {
+  // the whole row is the tap target (a 40x22 switch alone is brutal on a
+  // phone); the inner Switch stops propagation via its own onClick, so
+  // guard against double-toggles by only handling row-level clicks
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+    <div
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest("button")) return;
+        onToggle();
+      }}
+      style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.06)", cursor: "pointer" }}
+    >
       <span style={{ flex: 1, fontSize: 13.5, color: "#D8D6E6" }}>{label}</span>
       <Switch on={on} color={color} onToggle={onToggle} label={label} />
     </div>
@@ -207,7 +216,7 @@ function useRefreshOnClient(client: ClientId, refresh: () => void) {
 
 function MiniBtn({ label, onClick, on, danger }: { label: string; onClick: () => void; on: boolean; danger?: boolean }) {
   return (
-    <button onClick={onClick} style={{ cursor: "pointer", fontSize: 11, fontWeight: 650, padding: "5px 10px", borderRadius: 7, background: on ? "rgba(0,0,0,0.16)" : "rgba(255,255,255,0.06)", color: danger ? "#FF7A7A" : on ? "#04110E" : "#C8C6D8", border: on ? "none" : "1px solid rgba(255,255,255,0.12)" }}>
+    <button onClick={onClick} style={{ cursor: "pointer", fontSize: 11, fontWeight: 650, padding: "9px 14px", borderRadius: 8, background: on ? "rgba(0,0,0,0.16)" : "rgba(255,255,255,0.06)", color: danger ? "#FF7A7A" : on ? "#04110E" : "#C8C6D8", border: on ? "none" : "1px solid rgba(255,255,255,0.12)" }}>
       {label}
     </button>
   );

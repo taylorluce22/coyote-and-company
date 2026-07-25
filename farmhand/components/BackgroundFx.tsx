@@ -18,9 +18,14 @@ export default function BackgroundFx() {
       "(prefers-reduced-motion: reduce)"
     ).matches;
 
+    // clientWidth, not innerWidth: under a transient layout overflow mobile
+    // Chrome reports a zoomed-out innerWidth (e.g. 682 on a 390px phone) and
+    // the canvas bakes at the wrong size, amplifying the overflow
+    const vw = () => document.documentElement.clientWidth || window.innerWidth;
+    const vh = () => document.documentElement.clientHeight || window.innerHeight;
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false });
     renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(vw(), vh());
     el.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
@@ -76,8 +81,8 @@ export default function BackgroundFx() {
       mouse.y = (e.clientY / window.innerHeight - 0.5) * 2;
     };
     const onResize = () => {
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      camera.aspect = window.innerWidth / window.innerHeight;
+      renderer.setSize(vw(), vh());
+      camera.aspect = vw() / vh();
       camera.updateProjectionMatrix();
     };
     if (!reduced) window.addEventListener("mousemove", onMove);

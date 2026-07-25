@@ -12,7 +12,7 @@ export default function SubTabs<T extends string>({
   onPick: (id: T) => void;
 }) {
   return (
-    <div style={{ display: "inline-flex", gap: 2, background: "rgba(8,8,18,0.6)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 10, padding: 3, marginBottom: 18 }}>
+    <div className="fh-subtabs" style={{ display: "inline-flex", gap: 2, background: "rgba(8,8,18,0.6)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 10, padding: 3, marginBottom: 18 }}>
       {tabs.map((t) => (
         <button
           key={t.id}
@@ -20,7 +20,7 @@ export default function SubTabs<T extends string>({
           style={{
             border: "none",
             borderRadius: 8,
-            padding: "7px 16px",
+            padding: "10px 16px",
             fontSize: 11.5,
             fontWeight: 700,
             letterSpacing: "0.05em",
