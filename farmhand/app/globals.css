@@ -189,6 +189,18 @@ body.fh-bg-suspended .fh-aurora2 { animation-play-state: paused; }
   /* the rail's agent-status block is desktop furniture — hide on phones */
   .fh-rail > *:not(.fh-nav3d) { display: none !important; }
   .fh-main { padding: 14px 14px 70px; }
+  /* top bar tool cluster (client pill · search · status · clock · user) has a
+     ~660px min-content width — without wrapping it forced the layout viewport
+     wide and the browser zoomed the WHOLE app out to ~58% */
+  .fh-topbar > div:last-child { flex-wrap: wrap; }
+  /* sub-tab strips (Ideas/Studio/Week/…): the inline-flex row overflowed the
+     phone viewport, hiding trailing tabs (Reel Coach was unreachable) — wrap */
+  .fh-subtabs { display: flex !important; flex-wrap: wrap; max-width: 100%; }
+  /* content-engine grid: Composer pins a 330px preview column via inline
+     style, so the 1180px collapse rule never applied — force one column
+     (!important is required to beat the inline gridTemplateColumns) */
+  .fh-enggrid { grid-template-columns: minmax(0, 1fr) !important; }
+  .fh-engpv { position: static; max-width: 100%; }
 }
 
 /* ---------- signature card / button classes ---------- */
