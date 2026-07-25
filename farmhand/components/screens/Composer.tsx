@@ -284,6 +284,9 @@ export default function Composer() {
   const navTotal = dgSlides ? dgSlides.length : total;
   const navCur = Math.min(idx, navTotal - 1);
   const dgWordmark = ideaPack ? `@${ideaPack.handle}` : "◆ Coyote & Co.";
+  // editorial caption = the LESSON (structured, distinct from the slides);
+  // AI-sharpened copy still wins when the user ran the writer
+  const captionText = editorial && ideaPack && !ai ? ideaPack.caption : copyText;
 
   /* per-channel persisted studio look (design + per-slide backgrounds) */
   const studio: ChannelStudio = useMemo(() => {
@@ -990,8 +993,13 @@ export default function Composer() {
 
         {/* editorial mode: slides compile from the idea's deck + KB charts */}
         {editorial && (
-          <div className="fh-glass" style={{ borderRadius: 14, padding: "12px 14px", marginTop: 14, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 11.5, color: "#8B89A0", lineHeight: 1.5, flex: 1, minWidth: 220 }}>
+          <div className="fh-glass" style={{ borderRadius: 14, padding: "12px 14px", marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+            {idea?.perishable && (
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: "#FFC23D", lineHeight: 1.45 }}>
+                ⚠ News-lane post — re-verify the numbers against the primary source before posting (they age fast).
+              </span>
+            )}
+            <span style={{ fontSize: 11.5, color: "#8B89A0", lineHeight: 1.5 }}>
               <b style={{ color: "#E8622C" }}>Editorial · data</b> — these slides compile from this idea&apos;s deck and the KB&apos;s real numbers
               (charts included when the subject has them), and the last slide always lands back on solar. Export is free — no image credits.
               Want the photoreal look instead? Flip to <b style={{ color: "#D8D6E6" }}>✨ Photo</b> above.
@@ -1160,9 +1168,9 @@ export default function Composer() {
           <div style={{ background: "rgba(0,0,0,0.22)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 11, padding: "12px 14px", marginBottom: 10 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
               <span style={{ fontSize: 10.5, fontWeight: 700, fontFamily: "var(--mono)", color: "#8B89A0" }}>CAPTION</span>
-              <CopyBtn text={copyText} />
+              <CopyBtn text={captionText} />
             </div>
-            <div style={{ fontSize: 13, lineHeight: 1.6, color: "#D8D6E6", whiteSpace: "pre-line" }}>{copyText}</div>
+            <div style={{ fontSize: 13, lineHeight: 1.6, color: "#D8D6E6", whiteSpace: "pre-line" }}>{captionText}</div>
           </div>
           <div style={{ background: "rgba(0,0,0,0.22)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 11, padding: "12px 14px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>

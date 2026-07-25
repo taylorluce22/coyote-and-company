@@ -40,10 +40,12 @@ export const ARCHETYPES: ArchetypeMeta[] = [
   { id: "A02", name: "Ranked bar", shape: "a ranking / who pays most" },
   { id: "A03", name: "Annotated line", shape: "a trend over time" },
   { id: "A06", name: "Editorial cover", shape: "opening any explainer" },
+  { id: "A07", name: "Highlighter statement", shape: "one interpretive sentence" },
   { id: "A08", name: "Smart-brevity bullets", shape: "a 3-beat argument" },
   { id: "A09", name: "Photo + scrim", shape: "field proof / on location" },
   { id: "A10", name: "Split myth-bust", shape: "correcting a belief" },
-  { id: "A14", name: "Comparison scorecard", shape: "choosing between options" },
+  { id: "A11", name: "Timeline ladder", shape: "a sequence with dates" },
+  { id: "A12", name: "Pull-quote receipt", shape: "an official statement" },
   { id: "A16", name: "Closer + CTA", shape: "the last slide" },
 ];
 
@@ -53,9 +55,11 @@ export type Slide =
   | { a: "A01"; bg: Bg; eyebrow: string; num: string; unit: string; sub: string; ctx?: string; source: string }
   | { a: "A03"; bg: Bg; title: string; standfirst: string; points: [number, number][]; startLabel: string; endLabel: string; note?: string; source: string }
   | { a: "A02"; bg: Bg; title: string; standfirst: string; rows: { label: string; pct: number; value: string; hot?: boolean }[]; ctx?: string; source: string }
+  | { a: "A07"; bg: Bg; statement: string; highlights: string[]; micro?: string; source?: string }
   | { a: "A08"; bg: Bg; eyebrow: string; label: string; bullets: { lead: string; body: string }[]; source?: string }
   | { a: "A10"; bg: Bg; eyebrow: string; myth: string; fact: string; verdict: string; source: string }
-  | { a: "A14"; bg: Bg; title: string; cols: string[]; rows: { attr: string; cells: string[] }[]; bestCol: number; source: string }
+  | { a: "A11"; bg: Bg; headline: string; nodes: { date: string; event: string; state: "past" | "now" | "future" }[]; source: string }
+  | { a: "A12"; bg: Bg; quote: string; attrib: string; provenance: string; source: string }
   | { a: "A09"; bg: "photo"; eyebrow: string; caption: string; hotWord?: string; micro: string }
   | { a: "A16"; bg: Bg; eyebrow: string; headline: string; recap: string[]; cta1: string; cta2: string };
 

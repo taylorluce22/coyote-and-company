@@ -9,6 +9,54 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-25 · CONTENT ENGINE OVERHAUL — the craft laws finally consumed (owner friction catch #3)
+Owner, after his first Studio session: "only rotating 3 ideas… I hate the
+way the content looks… the template is redundant and doesn't follow high
+quality pages' viral posting laws… that information was not consumed or
+added to this system." He was right on every count. Ran a research agent
+over the full craft corpus (content-engine-spec-2026.md, Design & Format
+Playbook, Editorial Direction, Idea Bank) → gap audit → implemented:
+
+**Idea supply (the "3 ideas" bug):** `ideasFor` sliced 5+4+3 items from
+fixed windows — HALF the KB bank was mathematically unreachable, and 29
+territories duplicated the same titles. Now: full banks, deduped by title
+(territory is a label, not a multiplier), themes interleaved so no two
+consecutive ideas repeat a pillar. **44 unique ideas surface (was ~12
+repeating)** — including 12 newly authored entries ingesting the brain
+Idea Bank clusters that never made it into the app: doubling clock, no-
+plan-opts-you-out, data-center trio (64k homes / 4° waste heat / who pays
+for the boom), VPP rent-your-battery, battery-beats-4–7pm, off-peak cheat
+sheet, summer-bill anatomy, rate-case timeline, transformers 3–4yr,
+efficiency-mandate repeal (news-lane entries tagged perishable with a
+re-verify banner in the Studio).
+
+**Compiler v2 (the redundancy):** slide plans now selected by content
+shape — hero-number / trend / myth-bust / listicle / news-react /
+timeline — instead of one fixed cover→chart→bullets→closer sandwich.
+Each deck line used exactly once; the closer is takeaway + ONE quotable +
+ONE objective-mapped CTA (share/save/dm/comment/reach ladder), with an
+echo-guard so it can never repeat the cover. Cover law enforced: ≤9
+words, authored hooks on the key posts ("34¢ vs 12¢. Three hours do the
+damage." / "September 1: your export rate drops again." / "APS will pay
+to use your battery."). Backgrounds rotate per post. Source lines on
+every data-bearing slide (GATE 10).
+
+**New archetypes:** A07 highlighter statement, A11 timeline ladder (the
+rate case with a YOU ARE HERE node), A12 pull-quote receipt. A14 stub
+removed. **Articles→posts:** intel cards now have "Build post →" — a
+news item compiles into a receipt-led news-react deck. **Captions:** now
+the LESSON (hook line → education → solar landing → source → CTA +
+2-local/3-topical/2-category hashtags), never the slides re-joined; AI
+writer rules tightened (≤52-char hooks, one number per slide, no
+repetition). Retired `KB.azContext` (owner-rejected framing).
+
+Deliberately left out of the auto bank: the heat-death posts (430 / early
+heat) — templated CTAs on those would be tone-deaf; they stay in the
+brain Idea Bank for hand-crafting.
+
+Verified with Playwright across all six shapes before shipping. Build
+green. Nothing spent.
+
 ## 2026-07-25 · DESERT GRID editorial slides wired into the Studio (owner friction catch #2)
 Owner's first production run surfaced the gap: posts still generated in the
 old big-bold-letters photo style — no charts, no data slides — and the copy

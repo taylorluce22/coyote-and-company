@@ -8,6 +8,7 @@
 
 import { KB } from "./azEnergyKb";
 import { utilityForTerritory } from "./azTerritories";
+import { solarLanding } from "./dgCompile";
 import type { Idea, StrategyProfile } from "./strategy";
 
 export interface IdeaCopyPack {
@@ -18,6 +19,10 @@ export interface IdeaCopyPack {
   alt: string;
   cta: string;
   hashtags: string[];
+  /** Editorial-mode caption — the LESSON, structured per the content-engine
+      spec §3.8 (hook line → education → solar landing → source → CTA).
+      Distinct from `long`, which doubles as the photo-mode slide source. */
+  caption: string;
 }
 
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
@@ -87,18 +92,24 @@ export function ideaCopy(idea: Idea, strategy: StrategyProfile, channel: "ig" | 
     short = `${idea.title} — ${fact.split(" — ")[0]}. DM me for the numbers on your house.`;
   }
 
+  // hashtag law (spec §3.8): 5–10 hyper-relevant = 2 local + 3 topical + 2 category
   const cityTag = t.city.toLowerCase().replace(/[^a-z]/g, "");
-  const nameTag = t.name.toLowerCase().replace(/[^a-z]/g, "");
-  const hashtags = [
-    "arizonasolar",
-    "azsolar",
-    cityTag,
-    nameTag !== cityTag ? nameTag : "phoenixmetro",
-    "aps",
-    "solarenergy",
-    "azliving",
-    "energybills",
-  ];
+  const hashtags = [cityTag, "westvalleyaz", "aps", "arizonasolar", "energybills", "homeenergy", "utilitybills"];
+
+  // Editorial caption — the LESSON (spec §3.8): the slides carry fragments
+  // and proof objects; the caption carries the full sentences, the exact
+  // numbers (IG search indexes them), the solar landing, and the source.
+  const line1 = (idea.hook ? `${idea.hook.headline} ${idea.hook.kicker}` : `${idea.title}.`).slice(0, 125);
+  const captionBody = (deck || [cap(slideClause(fact)) + ".", cap(slideClause(altFact)) + "."]).map((d) => d.replace(/^\d+\.\s*/, "")).join("\n\n");
+  const caption = [
+    line1,
+    captionBody,
+    solarLanding(idea.theme),
+    idea.source ? `Source: ${idea.source}` : "",
+    cta,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   return {
     handle: strategy.name ? `${strategy.name.toLowerCase().replace(/\s+/g, ".")}.solar.az` : "solar.az",
@@ -108,5 +119,6 @@ export function ideaCopy(idea: Idea, strategy: StrategyProfile, channel: "ig" | 
     alt,
     cta,
     hashtags,
+    caption,
   };
 }
