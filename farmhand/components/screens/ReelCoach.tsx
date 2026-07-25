@@ -324,7 +324,17 @@ export default function ReelCoach() {
       analysis: j.analysis as ReelAnalysis,
       createdAt: Date.now(),
     };
-    await reelVaultAdd(reel); // vault FIRST — analysis is safe before cleanup
+    // vault FIRST — and pinned to the run's client, so a mid-run workspace
+    // switch can't leak the analysis into another client's vault. The write
+    // reports failure via its boolean (it never throws), so ENFORCE the
+    // "analysis is safe before cleanup" invariant here: on a failed save the
+    // pending record survives and ⟳ Resume retries without re-uploading.
+    const saved = await reelVaultAdd(reel, workspace);
+    if (!saved) {
+      throw new Error(
+        "The analysis finished but couldn't be saved on this device (browser storage blocked or full) — your upload is still safe at Gemini. Free up storage or exit private browsing, then hit ⟳ Resume analysis to retry without re-uploading."
+      );
+    }
     clearPendingReel(workspace);
     setPending(null);
     setList(await reelVaultAll());
@@ -363,9 +373,13 @@ export default function ReelCoach() {
 
       // Phase 1: server moves blob → Gemini Files API and returns fast
       setStage("Handing the clip to Gemini…");
+      // 280s: must exceed the server's worst-case internal budget for the
+      // start phase (60s blob fetch + 20s upload start + 180s finalize =
+      // 260s) — a shorter client timeout would discard a SUCCESSFUL start
+      // response and strand the Gemini file with no pending record to resume
       const start = await phasePost(
         { phase: "start", url: blob.url, contentType: file.type, label: label.trim() },
-        240000,
+        280000,
         `The hand-off to Gemini didn't finish in time — ${TRIM_HINT}`
       );
       const rec: PendingReel = {
