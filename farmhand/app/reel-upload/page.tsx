@@ -17,7 +17,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
-import { uploadInWorker, probeFileReadable, WORKER_UNAVAILABLE, type UploadProgress } from "@/lib/reelUploadClient";
+import { uploadInWorker, probeFileReadable, measureUpspeed, UPLOAD_STALLED, WORKER_UNAVAILABLE, type UploadProgress } from "@/lib/reelUploadClient";
 import { ideasFor, DEFAULT_STRATEGY, type StrategyProfile } from "@/lib/strategy";
 import { reelVaultAdd, type ReelAnalysis, type VaultReel } from "@/lib/reelVault";
 
@@ -242,9 +242,24 @@ export default function ReelUploadLite() {
     setDone(null);
     setStep(0);
     setUploadPct(null);
-    setStage("Uploading clip…");
+    setStage("Checking your connection speed…");
     crumb(`lite: starting (${fmtBytes(fileMeta.size)})`);
     try {
+      // preflight: measure the pipe before committing a big clip to it —
+      // a dead connection fails HERE in seconds, not silently 10 min in
+      const bps = await measureUpspeed();
+      if (bps === 0) {
+        crumb("lite upspeed: dead/blocked");
+        throw new Error(UPLOAD_STALLED);
+      }
+      if (bps && fileMeta.size > 0) {
+        const mbps = (bps * 8) / 1e6;
+        const est = (fileMeta.size / bps) * 1.15;
+        crumb(`lite upspeed: ~${mbps.toFixed(1)} Mbps · est ${fmtSecs(est)}`);
+        setStage(`Uploading clip… (≈${mbps.toFixed(1)} Mbps up — expect about ${fmtSecs(est)}${est > 300 ? "; a Dropbox link in the main app would be much faster" : ""})`);
+      } else {
+        setStage("Uploading clip…");
+      }
       const t0 = Date.now();
       let lastProg = 0;
       const onProg = ({ loaded, total, percentage }: UploadProgress) => {

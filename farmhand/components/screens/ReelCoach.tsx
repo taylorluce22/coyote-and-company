@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
-import { uploadInWorker, FILE_UNREADABLE, WORKER_UNAVAILABLE, type UploadProgress } from "@/lib/reelUploadClient";
+import { uploadInWorker, measureUpspeed, FILE_UNREADABLE, UPLOAD_STALLED, WORKER_UNAVAILABLE, type UploadProgress } from "@/lib/reelUploadClient";
 import { useStore } from "@/lib/store";
 import { ideasFor, type StrategyProfile } from "@/lib/strategy";
 import { reelVaultAdd, reelVaultAll, reelVaultDelete, type ReelAnalysis, type VaultReel } from "@/lib/reelVault";
@@ -632,6 +632,25 @@ export default function ReelCoach() {
       // single-shot upload of a 100-200MB reel is what OOM-crashed the tab.
       console.log(tag, "calling blob upload()…");
       crumb(`upload: starting (${formatBytes(file.size)})`);
+      // preflight: measure the pipe before committing a big clip to it —
+      // a dead connection fails HERE in seconds with guidance, and a slow
+      // one gets an honest time estimate up front
+      setStage("Checking your connection speed…");
+      const bps = await measureUpspeed();
+      if (bps === 0) {
+        crumb("upspeed: dead/blocked");
+        throw new Error(UPLOAD_STALLED);
+      }
+      if (bps) {
+        const mbps = (bps * 8) / 1e6;
+        const estSecs = (file.size / bps) * 1.15;
+        crumb(`upspeed: ~${mbps.toFixed(1)} Mbps · est ${fmtSecs(estSecs)}`);
+        setStage(
+          `Uploading clip… (your connection ≈${mbps.toFixed(1)} Mbps up — expect about ${fmtSecs(estSecs)}${estSecs > 300 ? "; the 🔗 link lane below would be much faster" : ""})`
+        );
+      } else {
+        setStage("Uploading clip…");
+      }
       upStartRef.current = Date.now();
       const pathname = `reels/${Date.now()}-${file.name.replace(/[^a-z0-9.\-_]/gi, "_")}`;
       const ctype = file.type || "video/mp4";
@@ -679,9 +698,10 @@ export default function ReelCoach() {
       } catch (e) {
         console.error(tag, "blob upload failed", e);
         crumb("upload FAILED");
-        // the canary probe's Photos-placeholder guidance must reach the
-        // owner verbatim — don't bury it under the generic retry message
-        if (e instanceof Error && e.message === FILE_UNREADABLE) throw e;
+        // the canary probe's Photos-placeholder guidance and the stall
+        // watchdog's dead-connection guidance must reach the owner
+        // verbatim — don't bury them under the generic retry message
+        if (e instanceof Error && (e.message === FILE_UNREADABLE || e.message === UPLOAD_STALLED)) throw e;
         throw new Error(
           "The upload didn't finish — check your connection and try again. If the clip is big, trim it to under ~90 seconds first (Gemini only needs the style, not the full runtime)."
         );
@@ -957,7 +977,8 @@ export default function ReelCoach() {
                   {file.size > SOFT_WARN_BYTES && (
                     <>
                       {formatBytes(file.size)} is a big clip — it&apos;ll work, and once the upload finishes you can close the app
-                      while the server does the rest. Trimming to ~90 seconds of the reference still gives the same coaching, way faster.{" "}
+                      while the server does the rest. Mac screen recordings are HUGE for their length: in QuickTime use
+                      File → Export As → 1080p and the copy is ~8x smaller with zero loss for analysis.{" "}
                     </>
                   )}
                   From the Photos app? iPhone converts the video during picking — if selection seems stuck, that&apos;s iOS
