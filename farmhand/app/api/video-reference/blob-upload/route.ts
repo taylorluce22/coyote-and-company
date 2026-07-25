@@ -23,7 +23,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       onBeforeGenerateToken: async () => ({
         allowedContentTypes: ["video/mp4", "video/quicktime", "video/webm", "video/x-m4v", "video/3gpp", "video/x-msvideo"],
         addRandomSuffix: true,
-        maximumSizeInBytes: 200 * 1024 * 1024,
+        // 1GB — the server relays blob → Gemini in streamed chunks, so big
+        // files never sit in serverless memory (Gemini's own cap is 2GB)
+        maximumSizeInBytes: 1024 * 1024 * 1024,
       }),
     });
     return NextResponse.json(jsonResponse);

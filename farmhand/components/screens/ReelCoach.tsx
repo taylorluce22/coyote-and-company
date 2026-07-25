@@ -11,13 +11,16 @@ const SOURCE_COLOR: Record<VaultReel["source"], string> = { own: "#26E0C8", refe
 
 function formatBytes(n: number): string {
   if (n < 1024 * 1024) return `${Math.max(1, Math.round(n / 1024))} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
-const MAX_FILE_BYTES = 200 * 1024 * 1024;
-// soft warning only — big clips upload and analyze slower and are the #1
-// reason the flow used to die; Gemini only needs the style, not the runtime
-const SOFT_WARN_BYTES = 80 * 1024 * 1024;
+// 1GB — matches the blob-upload token cap; the server streams the clip to
+// Gemini in chunks, so big files never sit in anyone's memory
+const MAX_FILE_BYTES = 1024 * 1024 * 1024;
+// soft warning only — big clips upload and analyze slower; Gemini only
+// needs the style, not the runtime
+const SOFT_WARN_BYTES = 200 * 1024 * 1024;
 
 /* ---- pending analysis, persisted the moment the clip lands at Gemini ----
    Same crash-proof pattern as Composer's pendingBatch: if the tab dies, the
@@ -25,6 +28,10 @@ const SOFT_WARN_BYTES = 80 * 1024 * 1024;
    Gemini keeps files ~48h, and ⟳ Resume analysis picks up from here without
    re-uploading. Per-client key so analyses never cross client vaults. */
 type PendingReel = {
+  // jobId set = server-driven job (the server owns the pipeline and journals
+  // progress — this device only peeks). fileName/fileUri set = legacy phased
+  // record from an older build; resumed via the old client-driven path.
+  jobId?: string;
   fileName: string;
   fileUri: string;
   mimeType: string;
@@ -39,7 +46,7 @@ function readPendingReel(client: string): PendingReel | null {
     const raw = localStorage.getItem(pendingReelKey(client));
     if (!raw) return null;
     const p = JSON.parse(raw) as PendingReel;
-    if (!p.fileName || !p.fileUri) return null;
+    if (!p.jobId && (!p.fileName || !p.fileUri)) return null;
     // Gemini files live ~48h — stop offering resume shortly before that
     if (!(p.createdAt > Date.now() - 40 * 3600000)) {
       localStorage.removeItem(pendingReelKey(client));
@@ -63,6 +70,16 @@ function clearPendingReel(client: string) {
 
 const TRIM_HINT =
   "the clip may be too long — trim it to under ~90 seconds of the reference (Gemini only needs the style, not the full runtime) and retry.";
+
+/** Client-minted job id — minted BEFORE the job-start call so a lost
+    response can never strand a job the client doesn't know about. */
+function newJobId(): string {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  }
+}
 
 /* ---- crash-surviving diagnostics ----
    The owner has hit repeated freezes here that never reproduce for the
@@ -281,12 +298,73 @@ export default function ReelCoach() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [pending, setPending] = useState<PendingReel | null>(null);
+  // guards the silent on-open job peek against double-banking a result
+  const autoBankRef = useRef(false);
 
   useEffect(() => {
     crumb(`screen open · build ${BUILD_STAMP}`);
     reelVaultAll().then(setList);
-    setPending(readPendingReel(workspace));
+    const rec = readPendingReel(workspace);
+    setPending(rec);
+    // server-driven jobs finish while the phone is away — one silent peek on
+    // open, and a finished breakdown is banked without any tap at all
+    if (rec?.jobId && !autoBankRef.current) {
+      autoBankRef.current = true;
+      (async () => {
+        try {
+          const j = await phasePost({ phase: "job-status", jobId: rec.jobId }, 15000, "");
+          if (j.jobState === "done" && j.analysis && readPendingReel(workspace)) {
+            const reel: VaultReel = {
+              id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              label: rec.label,
+              source: rec.source,
+              analysis: j.analysis as ReelAnalysis,
+              createdAt: Date.now(),
+            };
+            if (await reelVaultAdd(reel, workspace)) {
+              clearPendingReel(workspace);
+              setPending(null);
+              setList(await reelVaultAll());
+              setExpanded(reel.id);
+              phasePost({ phase: "job-ack", jobId: rec.jobId }, 15000, "").catch(() => {});
+              crumb("auto-banked a finished analysis ✓");
+            }
+          }
+        } catch {
+        } finally {
+          autoBankRef.current = false;
+        }
+      })();
+    }
   }, [workspace]);
+
+  // hold the screen awake while a run is live — phone auto-lock mid-upload
+  // was the silent killer; once the job is with the server this matters
+  // less, but the upload itself still needs the tab alive
+  const wakeRef = useRef<{ release?: () => Promise<void> } | null>(null);
+  useEffect(() => {
+    if (!busy) return;
+    type WakeNav = Navigator & { wakeLock?: { request: (t: "screen") => Promise<{ release: () => Promise<void> }> } };
+    let gone = false;
+    const grab = async () => {
+      try {
+        const wl = await (navigator as WakeNav).wakeLock?.request("screen");
+        if (gone) wl?.release().catch(() => {});
+        else wakeRef.current = wl || null;
+      } catch {}
+    };
+    grab();
+    const onVis = () => {
+      if (document.visibilityState === "visible") grab();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      gone = true;
+      document.removeEventListener("visibilitychange", onVis);
+      wakeRef.current?.release?.().catch(() => {});
+      wakeRef.current = null;
+    };
+  }, [busy]);
 
   const pickFile = (f: File | null | undefined) => {
     // DEFENSIVE WRAPPER: with promise-backed files dragged straight out of
@@ -302,8 +380,8 @@ export default function ReelCoach() {
         return;
       }
       if (f && f.size > MAX_FILE_BYTES) {
-        crumb("attach rejected: over 200MB cap");
-        setError(`"${f.name}" is ${formatBytes(f.size)} — that's over the 200MB cap. Trim or compress it first.`);
+        crumb("attach rejected: over 1GB cap");
+        setError(`"${f.name}" is ${formatBytes(f.size)} — that's over the 1GB cap. Trim or compress it first.`);
         return;
       }
       setError(null);
@@ -395,6 +473,112 @@ export default function ReelCoach() {
     crumb("done ✓ analysis in the vault");
   };
 
+  /** Save a finished job's analysis. Vault FIRST (same invariant as
+      pollAndAnalyze: nothing is cleaned up until the analysis is safe on
+      this device), then burn the server-side job journal. */
+  const bankAnalysis = async (rec: PendingReel, analysis: ReelAnalysis) => {
+    const reel: VaultReel = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      label: rec.label,
+      source: rec.source,
+      analysis,
+      createdAt: Date.now(),
+    };
+    const saved = await reelVaultAdd(reel, workspace);
+    if (!saved) {
+      throw new Error(
+        "The analysis finished but couldn't be saved on this device (browser storage blocked or full) — it's still waiting on the server. Free up storage or exit private browsing, then hit ⟳ Resume analysis."
+      );
+    }
+    clearPendingReel(workspace);
+    setPending(null);
+    setList(await reelVaultAll());
+    setExpanded(reel.id);
+    if (rec.jobId) phasePost({ phase: "job-ack", jobId: rec.jobId }, 15000, "").catch(() => {});
+    crumb("done ✓ analysis in the vault");
+  };
+
+  /** Server-driven job watcher: the SERVER owns the pipeline — these are
+      status peeks, so a locked phone or closed tab can't kill the run.
+      If the ingest invocation ran out of budget while Gemini was still
+      processing, this kicks job-continue to finish on a fresh one. */
+  const watchJob = async (rec: PendingReel, tag: string) => {
+    const jobId = rec.jobId;
+    if (!jobId) throw new Error("no job id");
+    const t0 = Date.now();
+    let analyzingSince = 0;
+    let lastState = "";
+    for (;;) {
+      let j: Record<string, unknown> = {};
+      try {
+        j = await phasePost({ phase: "job-status", jobId }, 20000, "status check dropped");
+      } catch (e) {
+        // one flaky peek must never kill the run — only a hard config error
+        if (e instanceof Error && e.message.includes("GEMINI_API_KEY")) throw e;
+        console.warn(tag, "job-status hiccup", e);
+        await new Promise((r) => setTimeout(r, 5000));
+        continue;
+      }
+      const js = String(j.jobState || "");
+      if (js !== lastState) {
+        crumb(`job: ${js || "waiting"}`);
+        lastState = js;
+      }
+      if (js === "done") {
+        // auto-bank on mount may have won a race with this loop — that's success
+        if (!readPendingReel(workspace)) {
+          setList(await reelVaultAll());
+          return;
+        }
+        await bankAnalysis(rec, j.analysis as ReelAnalysis);
+        return;
+      }
+      if (js === "error") {
+        const msg = String(j.error || "The analysis failed — try again.");
+        if (j.retryable === true) {
+          throw new Error(`${msg} Your clip is still at Gemini — hit ⟳ Resume analysis to retry without re-uploading.`);
+        }
+        clearPendingReel(workspace);
+        setPending(null);
+        if (rec.jobId) phasePost({ phase: "job-ack", jobId: rec.jobId }, 15000, "").catch(() => {});
+        throw new Error(msg);
+      }
+      if (js === "received" || js === "none") {
+        setStage("Handing the clip to Gemini… (the server does this part — usually 30–90s for a big clip)");
+        if (Date.now() - t0 > 8 * 60000) {
+          throw new Error("The hand-off to Gemini is taking too long — hit ⟳ Resume analysis in a minute; if it keeps happening, re-upload.");
+        }
+      } else if (js === "processing") {
+        setStage("Gemini is processing the clip… ✅ safe to close the app — the server finishes on its own; check back in a few minutes");
+        if (String(j.geminiState || "") === "ACTIVE") {
+          // ingest invocation spent its budget before analyzing — fresh one
+          crumb("job: kicking analysis");
+          try {
+            await phasePost({ phase: "job-continue", jobId }, 25000, "couldn't kick the analysis — will retry");
+          } catch (e) {
+            console.warn(tag, "job-continue hiccup", e);
+          }
+          analyzingSince = Date.now();
+        }
+      } else if (js === "analyzing") {
+        setStage("Gemini is watching the clip and writing your breakdown… (usually 1–2 minutes)");
+        if (!analyzingSince) analyzingSince = Date.now();
+        // a platform-killed analyze leaves "analyzing" as the latest record;
+        // a live one can't run past ~2min — after 3min of silence, re-kick
+        if (Date.now() - analyzingSince > 3 * 60000) {
+          crumb("job: analysis stalled — re-kicking");
+          try {
+            await phasePost({ phase: "job-continue", jobId }, 25000, "couldn't restart the analysis — will retry");
+          } catch (e) {
+            console.warn(tag, "job-continue hiccup", e);
+          }
+          analyzingSince = Date.now();
+        }
+      }
+      await new Promise((r) => setTimeout(r, 4000));
+    }
+  };
+
   const analyze = async () => {
     if (!file || busy) return;
     const tag = `[reel-coach ${Date.now()}]`;
@@ -441,21 +625,15 @@ export default function ReelCoach() {
       }
       console.log(tag, "blob upload() resolved", blob.url);
 
-      // Phase 1: server moves blob → Gemini Files API and returns fast
-      setStage("Handing the clip to Gemini… (usually 30–90s for a big clip)");
-      // 280s: must exceed the server's worst-case internal budget for the
-      // start phase (60s blob fetch + 20s upload start + 180s finalize =
-      // 260s) — a shorter client timeout would discard a SUCCESSFUL start
-      // response and strand the Gemini file with no pending record to resume
-      const start = await phasePost(
-        { phase: "start", url: blob.url, contentType: file.type, label: label.trim() },
-        280000,
-        `The hand-off to Gemini didn't finish in time — ${TRIM_HINT}`
-      );
+      // The upload was the ONLY part that needed this device. From here the
+      // SERVER runs the whole pipeline as a background job — one fast call
+      // to hand it off, then this loop just peeks at the journal.
+      const jobId = newJobId();
       const rec: PendingReel = {
-        fileName: String(start.fileName || ""),
-        fileUri: String(start.fileUri || ""),
-        mimeType: String(start.mimeType || file.type || "video/mp4"),
+        jobId,
+        fileName: "",
+        fileUri: "",
+        mimeType: file.type || "video/mp4",
         label: label.trim() || file.name,
         source,
         topic:
@@ -464,16 +642,28 @@ export default function ReelCoach() {
             : null,
         createdAt: Date.now(),
       };
-      if (!rec.fileName || !rec.fileUri) throw new Error("Gemini didn't accept the clip — try again.");
-      crumb("gemini: clip accepted");
-      // record the upload BEFORE polling — from here on, a crash, closed tab,
-      // or dead connection can't strand it (Gemini keeps files ~48h)
+      // pending record BEFORE job-start: even a lost response strands nothing —
+      // ⟳ Resume (or the next visit's auto-check) peeks the same jobId
       writePendingReel(rec, workspace);
       setPending(rec);
-      console.log(tag, "gemini file", rec.fileName);
+      setStage("Handing the clip to Gemini…");
+      await phasePost(
+        {
+          phase: "job-start",
+          jobId,
+          url: blob.url,
+          contentType: file.type || "video/mp4",
+          label: label.trim(),
+          source,
+          ...(rec.topic ? { topic: rec.topic } : {}),
+        },
+        30000,
+        "Couldn't start the analysis — check your connection and try again."
+      );
+      crumb(`job started: ${jobId.slice(0, 8)}`);
+      console.log(tag, "job", jobId);
 
-      // Phases 2+3: poll processing, then analyze — shared with ⟳ Resume
-      await pollAndAnalyze(rec, tag);
+      await watchJob(rec, tag);
 
       setFile(null);
       setLabel("");
@@ -504,15 +694,12 @@ export default function ReelCoach() {
     setStage("Server is fetching the video from your link…");
     crumb(`link: ${url.slice(0, 60)}`);
     try {
-      const start = await phasePost(
-        { phase: "start", remoteUrl: url, contentType: "video/mp4", label: label.trim() },
-        295000,
-        "The server couldn't fetch that link in time — make sure it's a direct video link and the clip is under ~90 seconds."
-      );
+      const jobId = newJobId();
       const rec: PendingReel = {
-        fileName: String(start.fileName || ""),
-        fileUri: String(start.fileUri || ""),
-        mimeType: String(start.mimeType || "video/mp4"),
+        jobId,
+        fileName: "",
+        fileUri: "",
+        mimeType: "video/mp4",
         label: label.trim() || url.split("/").pop()?.split("?")[0] || "linked clip",
         source,
         topic:
@@ -521,11 +708,23 @@ export default function ReelCoach() {
             : null,
         createdAt: Date.now(),
       };
-      if (!rec.fileName || !rec.fileUri) throw new Error("Gemini didn't accept the clip — try again.");
       writePendingReel(rec, workspace);
       setPending(rec);
-      crumb("link: clip at Gemini");
-      await pollAndAnalyze(rec, tag);
+      await phasePost(
+        {
+          phase: "job-start",
+          jobId,
+          remoteUrl: url,
+          contentType: "video/mp4",
+          label: label.trim(),
+          source,
+          ...(rec.topic ? { topic: rec.topic } : {}),
+        },
+        30000,
+        "Couldn't start the analysis — check your connection and try again."
+      );
+      crumb(`link job started: ${jobId.slice(0, 8)}`);
+      await watchJob(rec, tag);
       setLinkUrl("");
       setLabel("");
     } catch (e) {
@@ -545,10 +744,13 @@ export default function ReelCoach() {
     const tag = `[reel-coach resume ${Date.now()}]`;
     setBusy(true);
     setError(null);
-    setStage("⟳ Checking Gemini for your clip…");
+    setStage("⟳ Checking on your clip…");
     (window as unknown as { __fhSuspendBg?: boolean }).__fhSuspendBg = true;
     try {
-      await pollAndAnalyze(rec, tag);
+      // job records resume via the server journal; legacy records (older
+      // build) still resume through the client-driven phases
+      if (rec.jobId) await watchJob(rec, tag);
+      else await pollAndAnalyze(rec, tag);
       console.log(tag, "recovered");
     } catch (e) {
       console.error(tag, "resume threw", e);
@@ -674,8 +876,8 @@ export default function ReelCoach() {
                   ⚠{" "}
                   {file.size > SOFT_WARN_BYTES && (
                     <>
-                      {formatBytes(file.size)} is a big clip — it&apos;ll work, but uploads this size are slow and can time out.
-                      Gemini only needs the style, not the full runtime: trimming to ~90 seconds of the reference gives the same coaching, way faster.{" "}
+                      {formatBytes(file.size)} is a big clip — it&apos;ll work, and once the upload finishes you can close the app
+                      while the server does the rest. Trimming to ~90 seconds of the reference still gives the same coaching, way faster.{" "}
                     </>
                   )}
                   From the Photos app? iPhone converts the video during picking — if selection seems stuck, that&apos;s iOS
@@ -687,7 +889,7 @@ export default function ReelCoach() {
           ) : (
             <div style={{ fontSize: 12.5, color: "#8B89A0" }}>
               Drag a clip here, or click to browse
-              <div style={{ fontSize: 10.5, color: "#5E5C72", marginTop: 3 }}>video files only — .mov, .mp4, up to 200MB</div>
+              <div style={{ fontSize: 10.5, color: "#5E5C72", marginTop: 3 }}>video files only — .mov, .mp4, up to 1GB</div>
               <div style={{ fontSize: 10.5, color: "#5E5C72", marginTop: 3 }}>
                 on a Mac: drag videos out of the Photos app onto the Desktop first (Photos hands over a placeholder some browsers choke on), then upload from there
               </div>

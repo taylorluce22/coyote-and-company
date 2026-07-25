@@ -9,6 +9,36 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-25 · Server-driven reel JOBS — the phone can leave (owner friction catch #7)
+Owner: 81.5MB run "never finished" + "we need something i can dump bigger
+files into." Root cause of never-finishing: the phased flow still made the
+BROWSER hold a request open for every step (hand-off up to 280s, then
+polling, then a ~2min analyze) — phone auto-lock or a backgrounded Safari
+tab kills whichever request is in flight. Ownership flipped:
+
+- **Job pipeline**: after the Blob upload, ONE fast `job-start` call and
+  the server runs everything in the background (Next `after()`): blob →
+  Gemini (streamed 32MB-chunk resumable relay — nothing big ever sits in
+  serverless memory), poll ACTIVE, analyze, journal each state as
+  IMMUTABLE Blob records `reeljobs/<id>/<ms>-<state>.json` (done always
+  wins; new pathname per write so CDN caching can't serve a stale state).
+  Client peeks `job-status` every 4s, kicks `job-continue` for a fresh
+  300s budget when a big clip outlives the first invocation, `job-ack`
+  burns the journal after banking. jobId minted CLIENT-side and persisted
+  before the start call — a lost response can strand nothing.
+- **1GB cap** (was 200MB) end to end: blob token, client gate, copy.
+- **Wake lock** while a run is live (auto-lock mid-upload was the silent
+  killer) + upload ETA from measured transfer rate + elapsed timers on
+  every stage (this morning's ask).
+- **Auto-bank on open**: jobs finish while the phone is away; opening the
+  screen silently banks a finished breakdown — zero taps.
+- Also closed: the legacy blob lane fetched ANY client-supplied `url`
+  server-side (SSRF read primitive) — every server-side fetch of a
+  client url now validates *.blob.vercel-storage.com.
+
+Legacy phases + monolithic flow kept for back-compat with open tabs on
+older builds; legacy pending records still resume through the old path.
+
 ## 2026-07-25 · Reel Coach "once and for all": link lane + one-tap diagnostics
 Owner still hits browser freezes on his own machines (Mac + phone) even
 though the flow passes instrumented freeze tests in emulation — the
