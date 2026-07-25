@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
+import { uploadInWorker, WORKER_UNAVAILABLE, type UploadProgress } from "@/lib/reelUploadClient";
 import { useStore } from "@/lib/store";
 import { ideasFor, type StrategyProfile } from "@/lib/strategy";
 import { reelVaultAdd, reelVaultAll, reelVaultDelete, type ReelAnalysis, type VaultReel } from "@/lib/reelVault";
@@ -630,29 +631,49 @@ export default function ReelCoach() {
       console.log(tag, "calling blob upload()…");
       crumb(`upload: starting (${formatBytes(file.size)})`);
       upStartRef.current = Date.now();
-      let blob;
+      const pathname = `reels/${Date.now()}-${file.name.replace(/[^a-z0-9.\-_]/gi, "_")}`;
+      const ctype = file.type || "video/mp4";
       let lastMilestone = 0;
+      let lastProg = 0;
+      const onProg = ({ loaded, total, percentage }: UploadProgress) => {
+        // throttle re-renders — flooding setState from progress events is
+        // main-thread work during the exact window the tab keeps freezing
+        const now = Date.now();
+        if (now - lastProg < 250 && percentage < 99) return;
+        lastProg = now;
+        // ETA from the measured transfer rate — the thing the owner
+        // actually wants to know: "how long will this take"
+        const elapsed = Math.max(0.5, (now - upStartRef.current) / 1000);
+        const rate = loaded / elapsed;
+        const remain = rate > 0 && total > loaded ? (total - loaded) / rate : 0;
+        setUploadPct(percentage);
+        setStage(`Uploading… ${Math.round(percentage)}%${remain > 1 ? ` · about ${fmtSecs(remain)} left` : ""}`);
+        const m = Math.floor(percentage / 25) * 25;
+        if (m > lastMilestone) {
+          lastMilestone = m;
+          crumb(`upload: ${m}%`);
+        }
+      };
+      let blobUrl = "";
       try {
-        blob = await upload(`reels/${Date.now()}-${file.name.replace(/[^a-z0-9.\-_]/gi, "_")}`, file, {
-          access: "public",
-          handleUploadUrl: "/api/video-reference/blob-upload",
-          contentType: file.type || "video/mp4",
-          multipart: true,
-          onUploadProgress: ({ loaded, total, percentage }) => {
-            // ETA from the measured transfer rate — the thing the owner
-            // actually wants to know: "how long will this take"
-            const elapsed = Math.max(0.5, (Date.now() - upStartRef.current) / 1000);
-            const rate = loaded / elapsed;
-            const remain = rate > 0 && total > loaded ? (total - loaded) / rate : 0;
-            setUploadPct(percentage);
-            setStage(`Uploading… ${Math.round(percentage)}%${remain > 1 ? ` · about ${fmtSecs(remain)} left` : ""}`);
-            const m = Math.floor(percentage / 25) * 25;
-            if (m > lastMilestone) {
-              lastMilestone = m;
-              crumb(`upload: ${m}%`);
-            }
-          },
-        });
+        try {
+          // preferred: the upload runs in a Web Worker — file slicing,
+          // multipart machinery and retries all happen OFF the main thread
+          blobUrl = await uploadInWorker(file, pathname, ctype, onProg);
+          crumb("upload done (worker)");
+        } catch (we) {
+          if (!(we instanceof Error) || we.message !== WORKER_UNAVAILABLE) throw we;
+          crumb("upload worker unavailable — main-thread fallback");
+          const blob = await upload(pathname, file, {
+            access: "public",
+            handleUploadUrl: "/api/video-reference/blob-upload",
+            contentType: ctype,
+            multipart: true,
+            onUploadProgress: onProg,
+          });
+          blobUrl = blob.url;
+          crumb("upload done (main thread)");
+        }
       } catch (e) {
         console.error(tag, "blob upload failed", e);
         crumb("upload FAILED");
@@ -660,7 +681,7 @@ export default function ReelCoach() {
           "The upload didn't finish — check your connection and try again. If the clip is big, trim it to under ~90 seconds first (Gemini only needs the style, not the full runtime)."
         );
       }
-      console.log(tag, "blob upload() resolved", blob.url);
+      console.log(tag, "blob upload resolved", blobUrl);
 
       // The upload was the ONLY part that needed this device. From here the
       // SERVER runs the whole pipeline as a background job — one fast call
@@ -690,7 +711,7 @@ export default function ReelCoach() {
         {
           phase: "job-start",
           jobId,
-          url: blob.url,
+          url: blobUrl,
           contentType: file.type || "video/mp4",
           label: label.trim(),
           source,
@@ -938,6 +959,18 @@ export default function ReelCoach() {
               <div style={{ fontSize: 10.5, color: "#5E5C72", marginTop: 3 }}>video files only — .mov, .mp4, up to 1GB</div>
               <div style={{ fontSize: 10.5, color: "#5E5C72", marginTop: 3 }}>
                 on a Mac: drag videos out of the Photos app onto the Desktop first (Photos hands over a placeholder some browsers choke on), then upload from there
+              </div>
+              <div style={{ fontSize: 10.5, marginTop: 6 }}>
+                <a
+                  href="/reel-upload"
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ color: "#7DD3FC", textDecoration: "none", fontWeight: 700 }}
+                >
+                  ⚡ Browser keeps freezing? Use the Lite Uploader →
+                </a>{" "}
+                <span style={{ color: "#5E5C72" }}>a bare page that does nothing but upload — the breakdown still lands here</span>
               </div>
             </div>
           )}

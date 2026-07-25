@@ -9,6 +9,34 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-25 · Worker uploads + LITE UPLOADER page (owner friction catch #8)
+Owner: "i had to force quit chrome again when trying to upload" and "have
+the content be a separate app that doesnt share GCU with the main app."
+He's right about the contention: the full app carries three.js, GSAP and
+the whole shell while an 81MB clip uploads on the main thread, and the
+ETA feature was re-rendering the screen on every progress event. Two
+structural moves:
+
+- **Web Worker uploads**: the entire blob upload (file slicing, multipart
+  machinery, retries) now runs in `workers/reelUpload.worker.ts` — the
+  tab's main thread only receives a throttled (300ms) progress message.
+  Main-thread fallback kept for browsers without worker support, itself
+  throttled to 250ms per re-render. Used by both Reel Coach and:
+- **/reel-upload — the Lite Uploader**: a standalone page that is exactly
+  what the owner asked for without a second deployment: no store, no
+  three.js, no GSAP, no app shell — 158kB first load vs 489kB for the
+  app. Pick clip → worker upload → job-start → same watch loop → banks
+  straight into the shared IndexedDB vault and clears the shared
+  fh-reel-pending record, so the breakdown appears in Reel Coach like it
+  was run there. Handles style-match topics (reads strategy from the
+  active workspace's localStorage), resumes an in-flight job ("⟳ Check on
+  it"), wake-locks while live. Linked from Reel Coach's drop zone
+  ("⚡ Browser keeps freezing? Use the Lite Uploader").
+
+Playwright smoke (iPhone 13 emulation, prod build): page renders clean,
+worker constructs and relays SDK errors correctly (verified via crumb
+trail — no fallback crumb), main-thread probe 1ms during a run.
+
 ## 2026-07-25 · Server-driven reel JOBS — the phone can leave (owner friction catch #7)
 Owner: 81.5MB run "never finished" + "we need something i can dump bigger
 files into." Root cause of never-finishing: the phased flow still made the
