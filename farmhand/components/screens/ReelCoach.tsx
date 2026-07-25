@@ -71,6 +71,30 @@ function clearPendingReel(client: string) {
   } catch {}
 }
 
+/* ---- inbox dedupe: job ids this DEVICE has already banked. Without it,
+   an ack that fails to land would make the same finished job re-import as
+   a duplicate vault card on every visit. ---- */
+const BANKED_KEY = "fh-reel-banked-jobs";
+function bankedJobs(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(BANKED_KEY) || "[]") as string[];
+  } catch {
+    return [];
+  }
+}
+function markJobBanked(id: string) {
+  try {
+    // cap 100: must comfortably outlast the 40h journal window — evicting
+    // an id whose failed-ack journal is still listable re-imports it
+    localStorage.setItem(BANKED_KEY, JSON.stringify([...bankedJobs(), id].slice(-100)));
+  } catch {}
+}
+
+/** Optional shared secret for the enumerating/destructive job phases —
+    active only when the owner sets REEL_JOB_TOKEN (server) and
+    NEXT_PUBLIC_REEL_JOB_TOKEN (app) in Vercel. */
+const jobToken = () => (process.env.NEXT_PUBLIC_REEL_JOB_TOKEN ? { token: process.env.NEXT_PUBLIC_REEL_JOB_TOKEN } : {});
+
 const TRIM_HINT =
   "the clip may be too long — trim it to under ~90 seconds of the reference (Gemini only needs the style, not the full runtime) and retry.";
 
@@ -307,6 +331,9 @@ export default function ReelCoach() {
   const [pending, setPending] = useState<PendingReel | null>(null);
   // guards the silent on-open job peek against double-banking a result
   const autoBankRef = useRef(false);
+  // one inbox sweep at a time — StrictMode double-mounts and workspace
+  // switches must not run two sweeps that double-bank the same job
+  const inboxSweepRef = useRef(false);
 
   useEffect(() => {
     crumb(`screen open · build ${BUILD_STAMP}`);
@@ -329,11 +356,12 @@ export default function ReelCoach() {
               createdAt: Date.now(),
             };
             if (await reelVaultAdd(reel, workspace)) {
+              if (rec.jobId) markJobBanked(rec.jobId);
               clearPendingReel(workspace);
               setPending(null);
               setList(await reelVaultAll());
               setExpanded(reel.id);
-              phasePost({ phase: "job-ack", jobId: rec.jobId }, 15000, "").catch(() => {});
+              phasePost({ phase: "job-ack", jobId: rec.jobId, ...jobToken() }, 15000, "").catch(() => {});
               crumb("auto-banked a finished analysis ✓");
             }
           }
@@ -343,6 +371,72 @@ export default function ReelCoach() {
         }
       })();
     }
+    // INBOX SWEEP: jobs started OUTSIDE this browser entirely — a Cowork
+    // terminal upload, another device — finished on the server and waiting.
+    // Bank them automatically; no manual hand-off ever. Every guard here
+    // exists because an adversarial review traced a duplicate or data-loss
+    // path without it.
+    let cancelled = false;
+    (async () => {
+      if (inboxSweepRef.current) return; // one sweep at a time (StrictMode double-mount, workspace switches)
+      inboxSweepRef.current = true;
+      try {
+        const inbox = await phasePost({ phase: "job-inbox", ...jobToken() }, 30000, "");
+        const jobs = Array.isArray(inbox.jobs)
+          ? (inbox.jobs as Array<{ jobId?: string; label?: string; source?: string; client?: string }>)
+          : [];
+        const seen = new Set<string>();
+        for (const jb of jobs.slice(0, 3)) {
+          if (cancelled) break;
+          try {
+            const jobId = String(jb.jobId || "");
+            if (!jobId || seen.has(jobId)) continue;
+            seen.add(jobId);
+            // re-read the banked-set EVERY iteration — a concurrent banker
+            // (auto-peek, watchJob) may have marked it mid-loop
+            if (bankedJobs().includes(jobId)) {
+              // journal outlived a failed ack — burn it so it stops
+              // occupying inbox slots
+              phasePost({ phase: "job-ack", jobId, ...jobToken() }, 15000, "").catch(() => {});
+              continue;
+            }
+            // the job's HOME client: tagged at job-start, else the active
+            // workspace. Banking into the wrong client's vault would strand
+            // the analysis where its owner never looks.
+            const home = String(jb.client || "") || workspace;
+            if (readPendingReel(home)?.jobId === jobId) continue; // its own watcher banks it
+            const j = await phasePost({ phase: "job-status", jobId }, 20000, "");
+            if (j.jobState !== "done" || !j.analysis) continue;
+            if (bankedJobs().includes(jobId)) continue; // raced a concurrent banker while fetching
+            const reel: VaultReel = {
+              id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              label: String(j.label || jb.label || "imported reel"),
+              source: j.source === "reference" || jb.source === "reference" ? "reference" : "own",
+              analysis: j.analysis as ReelAnalysis,
+              createdAt: Date.now(),
+            };
+            const saved = await reelVaultAdd(reel, home);
+            if (!saved) continue; // vault blocked — leave the job on the server for later
+            markJobBanked(jobId);
+            phasePost({ phase: "job-ack", jobId, ...jobToken() }, 15000, "").catch(() => {});
+            crumb(`inbox: banked "${reel.label}" ✓${home !== workspace ? ` → ${home}` : ""}`);
+            if (home === workspace) {
+              setList(await reelVaultAll());
+              setExpanded(reel.id);
+            }
+          } catch (e) {
+            // one bad entry must not abort the rest of the sweep
+            console.warn("[reel-inbox] entry failed", e);
+          }
+        }
+      } catch {
+      } finally {
+        inboxSweepRef.current = false;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [workspace]);
 
   // hold the screen awake while a run is live — phone auto-lock mid-upload
@@ -499,11 +593,12 @@ export default function ReelCoach() {
         "The analysis finished but couldn't be saved on this device (browser storage blocked or full) — it's still waiting on the server. Free up storage or exit private browsing, then hit ⟳ Resume analysis."
       );
     }
+    if (rec.jobId) markJobBanked(rec.jobId);
     clearPendingReel(workspace);
     setPending(null);
     setList(await reelVaultAll());
     setExpanded(reel.id);
-    if (rec.jobId) phasePost({ phase: "job-ack", jobId: rec.jobId }, 15000, "").catch(() => {});
+    if (rec.jobId) phasePost({ phase: "job-ack", jobId: rec.jobId, ...jobToken() }, 15000, "").catch(() => {});
     crumb("done ✓ analysis in the vault");
   };
 
@@ -580,7 +675,7 @@ export default function ReelCoach() {
         }
         clearPendingReel(workspace);
         setPending(null);
-        phasePost({ phase: "job-ack", jobId }, 15000, "").catch(() => {});
+        phasePost({ phase: "job-ack", jobId, ...jobToken() }, 15000, "").catch(() => {});
         throw new Error(msg);
       }
       if (js === "received" || js === "none") {
@@ -740,6 +835,7 @@ export default function ReelCoach() {
           contentType: file.type || "video/mp4",
           label: label.trim(),
           source,
+          client: workspace,
           ...(rec.topic ? { topic: rec.topic } : {}),
         },
         30000,
@@ -806,6 +902,7 @@ export default function ReelCoach() {
           contentType: "video/mp4",
           label: label.trim(),
           source,
+          client: workspace,
           ...(rec.topic ? { topic: rec.topic } : {}),
         },
         30000,
@@ -1208,7 +1305,7 @@ export default function ReelCoach() {
             onClick={() => {
               // burn the server journal too — it may hold an orphaned clip
               const rec = readPendingReel(workspace);
-              if (rec?.jobId) phasePost({ phase: "job-ack", jobId: rec.jobId }, 15000, "").catch(() => {});
+              if (rec?.jobId) phasePost({ phase: "job-ack", jobId: rec.jobId, ...jobToken() }, 15000, "").catch(() => {});
               clearPendingReel(workspace);
               setPending(null);
             }}

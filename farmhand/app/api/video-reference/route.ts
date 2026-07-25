@@ -556,6 +556,7 @@ async function runJobPipeline(
     contentType: string;
     label: string;
     source: "own" | "reference";
+    client?: string;
     topic: Topic;
     fileName?: string;
     fileUri?: string;
@@ -593,7 +594,7 @@ async function runJobPipeline(
       fileUri = up.uri || "";
       mimeType = up.mimeType || mimeType;
       // journal everything a continue-invocation needs to finish the job
-      await writeJob(jobId, "processing", { fileName, fileUri, mimeType, source: opts.source, label: opts.label, topic: opts.topic });
+      await writeJob(jobId, "processing", { fileName, fileUri, mimeType, source: opts.source, label: opts.label, client: opts.client, topic: opts.topic });
     }
 
     // wait for Gemini processing, reserving 140s of budget for the analyze
@@ -622,7 +623,7 @@ async function runJobPipeline(
       await writeJob(jobId, "error", { error: out.error, retryable: true });
       return;
     }
-    await writeJob(jobId, "done", { analysis: out.analysis, source: opts.source, label: opts.label });
+    await writeJob(jobId, "done", { analysis: out.analysis, source: opts.source, label: opts.label, client: opts.client });
   } catch (e) {
     await writeJob(jobId, "error", {
       error: e instanceof Error ? e.message.slice(0, 200) : "analysis pipeline failed",
@@ -665,6 +666,14 @@ export async function POST(req: NextRequest) {
   const label = clamp(b.label, 120);
   const source = b.source === "reference" ? "reference" : "own";
   const contentType = clamp(b.contentType, 60) || "video/mp4";
+  // optional shared-secret gate on the phases that ENUMERATE or DELETE
+  // results. jobIds were unguessable until job-inbox made them listable —
+  // when REEL_JOB_TOKEN is set (with NEXT_PUBLIC_REEL_JOB_TOKEN for the
+  // app), strangers can no longer browse or burn finished analyses.
+  const gate = process.env.REEL_JOB_TOKEN;
+  if (gate && (phase === "job-inbox" || phase === "job-ack") && clamp(b.token, 200) !== gate) {
+    return NextResponse.json({ configured: true, error: "not authorized" });
+  }
 
   /* ---- phase "job-start": journal the job, respond fast, pipeline runs
           in the background — the phone is free to leave from here on ---- */
@@ -680,9 +689,11 @@ export async function POST(req: NextRequest) {
     // journal EVERYTHING a continue-invocation needs to redo the ingest —
     // a platform-killed ingest must be re-runnable, and job-ack needs the
     // videoUrl to clean up a clip whose pipeline delete never ran
+    const client = clamp(b.client, 60);
     await writeJob(jobId, "received", {
       label,
       source,
+      client,
       contentType,
       topic,
       videoUrl: blobUrl || undefined,
@@ -695,6 +706,7 @@ export async function POST(req: NextRequest) {
         contentType,
         label,
         source,
+        client,
         topic,
         t0,
       })
@@ -714,7 +726,7 @@ export async function POST(req: NextRequest) {
       // a flaky read of the done record must NOT report done — the client
       // would bank nothing and ack away the only copy of the analysis
       if (!data.analysis) return NextResponse.json({ configured: true, jobState: "processing", geminiState: "" });
-      return NextResponse.json({ configured: true, jobState: "done", analysis: data.analysis, source: data.source, label: data.label });
+      return NextResponse.json({ configured: true, jobState: "done", analysis: data.analysis, source: data.source, label: data.label, client: clamp(data.client, 60) || undefined });
     }
     if (eff.state === "error") {
       const data = await readJobRecord(eff);
@@ -773,6 +785,7 @@ export async function POST(req: NextRequest) {
           contentType,
           label: String(proc.label || ""),
           source: proc.source === "reference" ? "reference" : "own",
+          client: clamp(proc.client, 60),
           topic: sanitizeStoredTopic(proc.topic),
           fileName: String(proc.fileName || ""),
           fileUri,
@@ -800,11 +813,82 @@ export async function POST(req: NextRequest) {
         contentType: clamp(rcv.contentType, 60) || "video/mp4",
         label: clamp(rcv.label, 120),
         source: rcv.source === "reference" ? "reference" : "own",
+        client: clamp(rcv.client, 60),
         topic: sanitizeStoredTopic(rcv.topic),
         t0,
       })
     );
     return NextResponse.json({ configured: true, resumed: true });
+  }
+
+  /* ---- phase "job-inbox": finished jobs started ANYWHERE (a Cowork
+          terminal, another device) that no client has banked yet. Lets the
+          app auto-collect results it never knew were started — the bridge
+          that makes "agent uploads from the Mac, breakdown appears in the
+          app" work with zero manual hand-off. ---- */
+  if (phase === "job-inbox") {
+    try {
+      // full listing (paginated) — a store carrying stale journals must
+      // never hide fresh results past the first page
+      const all: Array<{ pathname: string; url: string }> = [];
+      let cursor: string | undefined;
+      for (let page = 0; page < 5; page++) {
+        const res = await list({ prefix: "reeljobs/", limit: 1000, cursor });
+        all.push(...res.blobs);
+        if (!res.hasMore || !res.cursor) break;
+        cursor = res.cursor;
+      }
+      const newestAny = new Map<string, number>();
+      const newestDone = new Map<string, { ms: number; url: string }>();
+      const urlsByJob = new Map<string, string[]>();
+      for (const bl of all) {
+        const m = bl.pathname.match(/^reeljobs\/([A-Za-z0-9-]+)\/(\d+)-(received|processing|analyzing|error|done)\.json$/);
+        if (!m) continue;
+        const id = m[1];
+        const ms = Number(m[2]);
+        newestAny.set(id, Math.max(newestAny.get(id) || 0, ms));
+        if (!urlsByJob.has(id)) urlsByJob.set(id, []);
+        urlsByJob.get(id)!.push(bl.url);
+        if (m[3] === "done") {
+          const cur = newestDone.get(id);
+          // ONE entry per job, newest done record wins — a retry that wrote
+          // two done records must not import twice
+          if (!cur || ms > cur.ms) newestDone.set(id, { ms, url: bl.url });
+        }
+      }
+      // GC: a job untouched for 48h can never be resumed (Gemini file
+      // expired) — burn its journal in the background
+      const staleUrls: string[] = [];
+      for (const [id, ms] of newestAny) {
+        if (ms < Date.now() - 48 * 3600000) staleUrls.push(...(urlsByJob.get(id) || []));
+      }
+      if (staleUrls.length) after(() => del(staleUrls.slice(0, 300)).catch(() => {}));
+      // 3-minute grace window: an actively-watched job banks through its
+      // own path within seconds of done — the inbox must never race an
+      // active watcher and ack a result out from under it
+      const dones = [...newestDone.entries()]
+        .map(([jobId, d]) => ({ jobId, ...d }))
+        .filter((x) => x.ms > Date.now() - 40 * 3600000 && x.ms < Date.now() - 3 * 60000)
+        .sort((a, b) => b.ms - a.ms)
+        .slice(0, 5);
+      const reads = await Promise.all(dones.map((d) => readJobRecord({ pathname: "", url: d.url, ms: d.ms, state: "done" })));
+      const jobs: Array<Record<string, unknown>> = [];
+      dones.forEach((d, i) => {
+        const rec = reads[i];
+        if (rec.analysis) {
+          jobs.push({
+            jobId: d.jobId,
+            label: clamp(rec.label, 120),
+            source: rec.source === "reference" ? "reference" : "own",
+            client: clamp(rec.client, 60) || undefined,
+            at: d.ms,
+          });
+        }
+      });
+      return NextResponse.json({ configured: true, jobs });
+    } catch {
+      return NextResponse.json({ configured: true, jobs: [] });
+    }
   }
 
   /* ---- phase "job-ack": the analysis is banked — burn the journal ---- */
