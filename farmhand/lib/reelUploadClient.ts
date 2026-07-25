@@ -15,6 +15,11 @@ export const WORKER_UNAVAILABLE = "__worker_unavailable__";
 export const FILE_UNREADABLE =
   "That clip can't be read from where it's stored — it looks like a Photos-library placeholder, not a real file. Save it to Files (or your Desktop/Dropbox) first, then upload that copy.";
 
+/** The owner sat through a 10+ minute shimmer on an upload that moved ZERO
+    bytes — a dead transfer must kill itself and say why, never linger. */
+export const UPLOAD_STALLED =
+  "The upload isn't moving — 90 seconds with no bytes sent. Your connection to the upload service is stalled or extremely slow. Fastest fixes: put the clip in Dropbox and paste the share link (the server fetches it directly — your browser sends nothing), or try from your phone on cellular.";
+
 const CANARY_BYTES = 65536; // 64KB — enough to force the OS to prove the bytes exist
 const CANARY_TIMEOUT_MS = 10000;
 
@@ -29,6 +34,33 @@ const crumb = (msg: string) => {
 };
 
 export type UploadProgress = { loaded: number; total: number; percentage: number };
+
+/**
+ * Preflight: measure real upload throughput with a small POST BEFORE
+ * committing to a big transfer, so the UI can say "≈X Mbps — expect about
+ * Y minutes" up front (or refuse a clearly-dead connection) instead of
+ * letting the owner discover a stall ten minutes in.
+ * Returns bytes/second; 0 = effectively dead/blocked; null = unknown.
+ */
+export async function measureUpspeed(): Promise<number | null> {
+  const payload = new Uint8Array(384 * 1024);
+  const t0 = performance.now();
+  try {
+    const r = await fetch("/api/upspeed", {
+      method: "POST",
+      body: payload,
+      headers: { "Content-Type": "application/octet-stream" },
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!r.ok) return null;
+    const secs = (performance.now() - t0) / 1000;
+    return secs > 0 ? payload.byteLength / secs : null;
+  } catch (e) {
+    // a 384KB POST that can't finish in 12s = ~0.25 Mbps or blocked
+    if (e instanceof Error && e.name === "TimeoutError") return 0;
+    return null;
+  }
+}
 
 /**
  * Canary read: prove the first 64KB of the File is actually readable BEFORE
