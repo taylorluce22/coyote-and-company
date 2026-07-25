@@ -9,6 +9,29 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-25 · FIRST COMPLETE REEL RUN ✓ — and the real saboteur was the blob store
+The Cowork agent on the owner's Mac ran the whole pipeline end to end:
+exported the clip from the Photos library, compressed 81.5MB → small
+via avconvert, uploaded from the terminal, job-start with the
+data-center style-match topic — received → analyzing → done in ~40s.
+Analysis verified correct against the reference (3D caricature
+pattern-interrupt hook rated strong, ~5 cuts at 2–4s, synced yellow/
+white captions, billionaire-loans explainer structure).
+
+Root causes found by the on-Mac agent, invisible from the repo side:
+- **The original Vercel blob store was PRIVATE.** The app uploads with
+  access:"public"; a private store plausibly explains every "stalled at
+  zero bytes" upload across Chrome/Safari/builds. Agent created public
+  store `coyote-and-company-blob-2` and repointed the project env; the
+  old private store sits unused (safe to delete in Vercel someday).
+- **gemini-2.5-flash was retired by Google** — analyze 404'd. Env var
+  GEMINI_MODEL=gemini-3.6-flash now set in Vercel; code default updated
+  to match so a fresh deploy without the env var still works.
+- Pipeline used to delete the video blob even on a FAILED ingest,
+  which 404'd the agent's first retry — now the blob survives ingest
+  failure (received.videoUrl re-ingest path actually works) and is
+  cleaned up by job-ack; remote-lane failures stay non-retryable.
+
 ## 2026-07-25 · JOB INBOX — agents anywhere, results in the app (owner friction catch #10)
 Owner: "get Claude to complete this task by using Cowork… so I don't
 have to keep going back and forth." The missing bridge: jobs can be
