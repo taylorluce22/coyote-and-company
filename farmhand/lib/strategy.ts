@@ -152,7 +152,7 @@ const CONVERSION_BANK: { title: string; angle: string; format: "carousel" | "ree
 /* --------- solar content banks — AZ homeowner education, Instagram-first ---------- */
 
 /* decks = the post's actual slides, written to deliver the title's promise */
-const SOLAR_IDEA_BANK: { title: string; angle: string; format: "carousel" | "reel" | "story" | "text"; theme: string; deck?: string[] }[] = [
+const SOLAR_IDEA_BANK: IdeaSeed[] = [
   {
     title: "What a $320 APS bill looks like after solar in {n}",
     angle: "real before/after bill breakdown — screenshots get shared and saved",
@@ -265,7 +265,7 @@ const SOLAR_IDEA_BANK: { title: string; angle: string; format: "carousel" | "ree
   },
 ];
 
-const SOLAR_CONVERSION_BANK: { title: string; angle: string; format: "carousel" | "reel" | "story" | "text"; theme: string; deck?: string[] }[] = [
+const SOLAR_CONVERSION_BANK: IdeaSeed[] = [
   {
     title: "What my last {n} install actually cost per watt",
     angle: "radical transparency — real numbers are rare in solar and get remembered",
@@ -343,21 +343,74 @@ export interface Idea {
   theme: string;
   /** authored slide lines that deliver the title's promise ({n} resolved) */
   deck?: string[];
+  /* ---- content-engine metadata (July 2026 overhaul) — all optional so
+     persisted ideas and the realtor bank keep working; the compiler falls
+     back to theme defaults + heuristics when absent ---- */
+  pillar?: "P1" | "P2" | "P3" | "P4" | "P5";
+  objective?: "reach" | "save" | "share" | "dm" | "comment";
+  shape?: "hero-number" | "trend" | "myth-bust" | "listicle" | "news-react" | "timeline";
+  /** ≤9 words — the closer headline. NEVER a deck line. */
+  takeaway?: string;
+  /** authored cover passing the ≤9-word/≤52-char law */
+  hook?: { headline: string; kicker: string; hotWord?: string };
+  /** doc + date for the deck's numbers, e.g. "ACC docket · Jul 2026" */
+  source?: string;
+  /** news-lane item — Studio shows a re-verify banner */
+  perishable?: boolean;
+  /** verbatim public-record quote for the news-react receipt slide */
+  receipt?: { quote: string; attrib: string; provenance: string };
+}
+
+/** Bank-entry shape shared by all solar idea banks. */
+export type IdeaSeed = Omit<Idea, "id" | "territory">;
+
+const slugId = (s: string) => s.toLowerCase().replace(/\{n\}/g, "n").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+
+/** No two consecutive ideas share a theme — the list itself models the
+    playbook's "never two pillars in a row" rhythm. Greedy round-robin. */
+function interleaveByTheme(ideas: Idea[]): Idea[] {
+  const buckets = new Map<string, Idea[]>();
+  ideas.forEach((i) => buckets.set(i.theme, [...(buckets.get(i.theme) || []), i]));
+  const out: Idea[] = [];
+  let last = "";
+  while (out.length < ideas.length) {
+    // biggest bucket that isn't the last-used theme; fall back if forced
+    const order = [...buckets.entries()].filter(([, v]) => v.length).sort((a, b) => b[1].length - a[1].length);
+    const pick = order.find(([k]) => k !== last) || order[0];
+    if (!pick) break;
+    out.push(pick[1].shift() as Idea);
+    last = pick[0];
+  }
+  return out;
 }
 
 export function ideasFor(profile: StrategyProfile): Idea[] {
   const out: Idea[] = [];
+  if (profile.vertical === "solar") {
+    // v2 (July 2026 overhaul): territory is a LABEL, not a multiplier. One
+    // bank — the FULL banks, no slice windows (the old ti%4 slicing left
+    // half the KB permanently unreachable) — every idea surfaced exactly
+    // once, deduped by title, {n} labels rotated across the territory list.
+    const bank: IdeaSeed[] = [...SOLAR_KB_CONTENT, ...SOLAR_IDEA_BANK, ...SOLAR_CONVERSION_BANK];
+    const seen = new Set<string>();
+    const terrs = profile.territories.length ? profile.territories : DEFAULT_STRATEGY.territories;
+    bank.forEach((b, i) => {
+      if (seen.has(b.title)) return;
+      seen.add(b.title);
+      const t = terrs[i % terrs.length];
+      out.push({
+        ...b,
+        id: slugId(b.title),
+        territory: t,
+        title: b.title.replace(/\{n\}/g, t.name),
+        deck: b.deck?.map((d) => d.replace(/\{n\}/g, t.name)),
+      });
+    });
+    const rotated = interleaveByTheme(out);
+    return profile.cameraComfort === "avoid" ? rotated.filter((i) => i.format !== "reel") : rotated;
+  }
   profile.territories.forEach((t, ti) => {
-    const bank =
-      profile.vertical === "solar"
-        ? [
-            // knowledge-base ideas lead: real AZ numbers (rates, export step-downs,
-            // demand-charge math, VPP pay) beat generic solar content every time
-            ...SOLAR_KB_CONTENT.slice(ti % 4, (ti % 4) + 5),
-            ...SOLAR_IDEA_BANK.slice(ti % 3, (ti % 3) + 4),
-            ...SOLAR_CONVERSION_BANK.slice(ti % 2, (ti % 2) + 3),
-          ]
-        : [...(IDEA_BANK[t.segment] ?? IDEA_BANK.growth), ...CONVERSION_BANK.slice(ti % 2, (ti % 2) + 4)];
+    const bank = [...(IDEA_BANK[t.segment] ?? IDEA_BANK.growth), ...CONVERSION_BANK.slice(ti % 2, (ti % 2) + 4)];
     const price = t.segment === "luxury" ? "2M" : t.segment === "growth" ? "450K" : "350K";
     bank.forEach((b, i) => {
       const deck = (b as { deck?: string[] }).deck;

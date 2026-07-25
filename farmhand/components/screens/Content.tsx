@@ -9,7 +9,7 @@ import ContentEngine from "./ContentEngine";
 import ReelCoach from "./ReelCoach";
 import { ideasFor } from "@/lib/strategy";
 import Performance from "@/components/Performance";
-import type { StrategyProfile } from "@/lib/strategy";
+import type { Idea, StrategyProfile } from "@/lib/strategy";
 import { verticalOf } from "@/lib/verticals";
 import { offNarrative } from "@/lib/narrative";
 
@@ -25,9 +25,33 @@ const INTEL_TTL_MS = 12 * 60 * 60 * 1000; // refresh live intel twice a day
 function EnergyIntel() {
   const { state, set, copy } = useStore();
   const intel = state.energyIntel as { fetchedAt: number; items: { headline: string; summary: string; source: string; url: string; date: string; utility: string; angle: string }[] } | null;
+  const strategy = state.strategy as StrategyProfile;
   const [loading, setLoading] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const fetching = useRef(false);
+
+  // article → post: an intel item compiles like any idea (news-react shape:
+  // receipt slide from the verbatim headline, the numbers, the implication,
+  // the solar landing). Perishable — the Studio shows a re-verify banner.
+  const buildPost = (it: { headline: string; summary: string; source: string; url: string; date: string; angle: string }) => {
+    const t = strategy.territories[0];
+    const sentences = it.summary.split(/(?<=[.!?])\s+/).filter((s) => s.length > 15).slice(0, 2);
+    const idea: Idea = {
+      id: `intel-${it.url.replace(/[^a-z0-9]/gi, "").slice(-24)}`,
+      territory: t,
+      title: it.headline,
+      angle: it.angle,
+      format: "carousel",
+      theme: "authority",
+      objective: "share",
+      shape: "news-react",
+      perishable: true,
+      source: `${it.source}${it.date ? ` · ${it.date}` : ""}`,
+      receipt: { quote: it.headline, attrib: it.source, provenance: it.date ? `${it.source} · ${it.date}` : it.source },
+      deck: [...sentences, it.angle.replace(/^["“]|["”]$/g, "")],
+    };
+    set({ contentTab: "studio", compIdea: idea, compRegen: false, compShort: false, compAiCopy: null });
+  };
 
   const refresh = async () => {
     if (fetching.current) return;
@@ -92,8 +116,14 @@ function EnergyIntel() {
                   <span style={{ fontSize: 9.5, color: "#5E5C72", fontFamily: "var(--mono)" }}>{it.source}{it.date ? ` · ${it.date}` : ""}</span>
                   <a href={it.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: "#7DD3FC", textDecoration: "none", fontFamily: "var(--mono)" }}>read ↗</a>
                   <button
+                    onClick={() => buildPost(it)}
+                    style={{ marginLeft: "auto", background: "rgba(232,98,44,0.14)", color: "#E8622C", border: "1px solid rgba(232,98,44,0.45)", borderRadius: 7, padding: "4px 12px", fontSize: 10.5, fontWeight: 800, cursor: "pointer" }}
+                  >
+                    Build post →
+                  </button>
+                  <button
                     onClick={() => { copy(`${it.headline}\n\nPost angle: ${it.angle}\n\nSource: ${it.url}`); setCopiedIdx(i); setTimeout(() => setCopiedIdx(null), 1400); }}
-                    style={{ marginLeft: "auto", background: "rgba(38,224,200,0.1)", color: "#26E0C8", border: "1px solid rgba(38,224,200,0.35)", borderRadius: 7, padding: "4px 11px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}
+                    style={{ background: "rgba(38,224,200,0.1)", color: "#26E0C8", border: "1px solid rgba(38,224,200,0.35)", borderRadius: 7, padding: "4px 11px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}
                   >
                     {copiedIdx === i ? "Copied ✓" : "Copy angle"}
                   </button>

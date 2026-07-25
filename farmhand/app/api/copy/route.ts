@@ -69,8 +69,9 @@ Return JSON exactly in this shape:
 
 Rules:
 - The body must DELIVER exactly what the hook promises. If the hook promises N questions, steps, or red flags, the body is exactly those N items, numbered. Never promise a list and then talk about something else.
-- hook: max 9 words, and it must stop the scroll ON ITS OWN — lead with the number, the contradiction, or the cost of not knowing. Pick whichever structure fits this idea best: number-led, contrarian statement, curiosity gap, or direct question. No clickbait words, no emojis, no hashtags, no colons-into-nothing.
-- body: 2 or 3 strings. Each is ONE point supporting the hook, max 30 words, conversational second person, plain language an 8th grader gets. Use the facts' numbers exactly. Every string must be about the same single subject as the hook.
+- hook: max 9 words AND max 52 characters, and it must stop the scroll ON ITS OWN — lead with the number, the contradiction, or the cost of not knowing. Pick whichever structure fits this idea best: number-led, contrarian statement, curiosity gap, or direct question. No clickbait words, no emojis, no hashtags, no colons-into-nothing.
+- body: 2 or 3 strings. Each is ONE point supporting the hook, max 25 words, at most ONE number per string, conversational second person, plain language an 8th grader gets. Use the facts' numbers exactly. Every string must be about the same single subject as the hook. Fragments beat full sentences when they're punchier.
+- Never restate the same fact in two strings — each string adds something new (the assumption, the caveat, the implication). Repetition kills the post.
 - cta: max 16 words, low pressure, geography GENERAL — address "Valley homeowners" or "if you're in the Valley", never a single city name. No "link in bio", no urgency tricks.
 - LAND ON SOLAR: the post must end connected to the solar/ownership decision — the last body string or the cta ties the education back to producing your own power or getting the solar math checked. Utility education with no solar landing is a failed post. Don't force the word "solar" into every line; one clean landing at the end is right.
 - Never name a specific city anywhere in the copy unless the FACTS themselves are about that city. The education stays statewide/Valley-wide.

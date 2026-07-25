@@ -227,9 +227,57 @@ export const DGSlideView = forwardRef<HTMLDivElement, DGSlideProps>(function DGS
         </>
       );
       break;
-    case "A14":
+    case "A07": {
       source = s.source;
-      body = <div style={{ fontSize: 12 * k }}>{s.title}</div>;
+      // highlighter statement: one interpretive sentence, 1–3 accent-marked spans
+      let parts: (string | React.ReactElement)[] = [s.statement];
+      s.highlights.forEach((h, hi) => {
+        parts = parts.flatMap((p): (string | React.ReactElement)[] =>
+          typeof p === "string" && p.includes(h)
+            ? p.split(h).flatMap((seg, i): (string | React.ReactElement)[] => (i === 0 ? [seg] : [<mark key={`${hi}-${i}`} style={{ background: "rgba(232,98,44,0.35)", color: "inherit", padding: `0 ${2 * k}px` }}>{h}</mark>, seg]))
+            : [p]
+        );
+      });
+      body = (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 21 * k, lineHeight: 1.22, letterSpacing: "-0.02em", maxWidth: "20ch" }}>{parts}</div>
+          {s.micro && <div style={{ fontSize: 11 * k, opacity: 0.6, marginTop: 14 * k }}>{s.micro}</div>}
+        </div>
+      );
+      break;
+    }
+    case "A11":
+      source = s.source;
+      body = (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 19 * k, lineHeight: 1.1, letterSpacing: "-0.02em", marginBottom: 14 * k }}>{s.headline}</div>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: 13 * k, borderLeft: `${Math.max(2, 3 * k)}px solid ${c}22`, paddingLeft: 14 * k, marginLeft: 4 * k }}>
+            {s.nodes.slice(0, 6).map((n, i) => {
+              const hot = n.state === "now";
+              return (
+                <div key={i} style={{ position: "relative", opacity: n.state === "future" ? 0.65 : 1 }}>
+                  <span style={{ position: "absolute", left: -14 * k - Math.max(2, 3 * k) / 2 - 4.5 * k, top: 4 * k, width: 9 * k, height: 9 * k, borderRadius: "50%", background: hot ? DG.hot : n.state === "past" ? c : "transparent", border: n.state === "future" ? `${Math.max(1, 1.5 * k)}px solid ${DG.neutral}` : "none", boxShadow: hot ? `0 0 ${8 * k}px ${DG.hot}88` : "none" }} />
+                  <div style={{ fontSize: 9.5 * k, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: hot ? DG.hot : c, opacity: hot ? 1 : 0.6, fontVariantNumeric: "tabular-nums" }}>
+                    {n.date}{hot && " · YOU ARE HERE"}
+                  </div>
+                  <div style={{ fontSize: 12.5 * k, fontWeight: hot ? 750 : 600, lineHeight: 1.25, marginTop: 2 * k }}>{n.event}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+      break;
+    case "A12":
+      source = s.source;
+      body = (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", position: "relative" }}>
+          <div style={{ position: "absolute", top: -6 * k, left: -6 * k, fontFamily: DISPLAY, fontWeight: 900, fontSize: 130 * k, lineHeight: 1, color: DG.hot, opacity: 0.18, pointerEvents: "none" }}>“</div>
+          <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 20 * k, lineHeight: 1.24, letterSpacing: "-0.015em", position: "relative" }}>“{s.quote}”</div>
+          <div style={{ marginTop: 16 * k, fontSize: 12 * k, fontWeight: 700 }}>{s.attrib}</div>
+          <div style={{ fontSize: 10.5 * k, opacity: 0.6, marginTop: 3 * k }}>{s.provenance}</div>
+        </div>
+      );
       break;
   }
 
