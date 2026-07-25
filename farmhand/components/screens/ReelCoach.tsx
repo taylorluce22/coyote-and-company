@@ -464,6 +464,54 @@ export default function ReelCoach() {
     }
   };
 
+  /** Link lane — the browser never touches the file. Paste a direct video
+      link (Dropbox/Drive share of the clip) and the SERVER fetches it and
+      hands it to Gemini. Built because local file handling kept freezing
+      the owner's browsers; this path does zero file work in the tab. */
+  const [linkUrl, setLinkUrl] = useState("");
+  const analyzeFromLink = async () => {
+    const url = linkUrl.trim();
+    if (!url || busy) return;
+    const tag = `[reel-link ${Date.now()}]`;
+    setBusy(true);
+    setError(null);
+    setStage("Server is fetching the video from your link…");
+    crumb(`link: ${url.slice(0, 60)}`);
+    try {
+      const start = await phasePost(
+        { phase: "start", remoteUrl: url, contentType: "video/mp4", label: label.trim() },
+        295000,
+        "The server couldn't fetch that link in time — make sure it's a direct video link and the clip is under ~90 seconds."
+      );
+      const rec: PendingReel = {
+        fileName: String(start.fileName || ""),
+        fileUri: String(start.fileUri || ""),
+        mimeType: String(start.mimeType || "video/mp4"),
+        label: label.trim() || url.split("/").pop()?.split("?")[0] || "linked clip",
+        source,
+        topic:
+          source === "reference" && topic
+            ? { title: topic.title, angle: topic.angle, facts: topic.deck?.length ? topic.deck : [topic.angle] }
+            : null,
+        createdAt: Date.now(),
+      };
+      if (!rec.fileName || !rec.fileUri) throw new Error("Gemini didn't accept the clip — try again.");
+      writePendingReel(rec, workspace);
+      setPending(rec);
+      crumb("link: clip at Gemini");
+      await pollAndAnalyze(rec, tag);
+      setLinkUrl("");
+      setLabel("");
+    } catch (e) {
+      console.error(tag, "link analyze threw", e);
+      crumb(`error: ${e instanceof Error ? e.message.slice(0, 80) : "unknown"}`);
+      setError(e instanceof Error ? e.message : "Couldn't analyze from that link — try again.");
+    } finally {
+      setBusy(false);
+      setStage("");
+    }
+  };
+
   /** Pick an interrupted run back up — no re-upload, no extra Gemini cost. */
   const resumePending = async () => {
     const rec = readPendingReel(workspace);
@@ -601,6 +649,29 @@ export default function ReelCoach() {
             {busy ? "Watching…" : "▶ Analyze"}
           </button>
         </div>
+        {/* link lane: zero file handling in this tab — the server fetches it */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, flexWrap: "wrap", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 12 }}>
+          <span style={{ fontSize: 11.5, fontWeight: 700, color: "#41D98A", flexShrink: 0 }}>🔗 Or skip the upload</span>
+          <input
+            placeholder="paste a Dropbox / Google Drive link to the clip"
+            value={linkUrl}
+            onChange={(e) => setLinkUrl(e.target.value)}
+            disabled={busy}
+            style={{ background: "rgba(0,0,0,0.24)", border: "1px solid rgba(65,217,138,0.3)", borderRadius: 8, padding: "9px 11px", fontSize: 12, color: "#F4F3F8", flex: 1, minWidth: 200 }}
+          />
+          <button
+            onClick={analyzeFromLink}
+            disabled={!linkUrl.trim() || busy}
+            style={{ background: "rgba(65,217,138,0.14)", color: "#41D98A", border: "1px solid rgba(65,217,138,0.45)", borderRadius: 9, padding: "9px 15px", fontSize: 12, fontWeight: 700, cursor: !linkUrl.trim() || busy ? "default" : "pointer", opacity: !linkUrl.trim() || busy ? 0.6 : 1 }}
+          >
+            {busy ? "Working…" : "▶ Analyze link"}
+          </button>
+          <span style={{ fontSize: 10.5, color: "#8B89A0", lineHeight: 1.45, flexBasis: "100%" }}>
+            Your browser never touches the file — the server fetches it directly. Share the clip from Dropbox or
+            Drive (any link works; we auto-convert to direct download). Best for machines where the upload freezes.
+          </span>
+        </div>
+
         {source === "reference" && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
             <span style={{ fontSize: 11.5, fontWeight: 700, color: "#C9A8FF" }}>🎬 Style match</span>
