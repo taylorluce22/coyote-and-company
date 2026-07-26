@@ -244,31 +244,38 @@ export async function POST(req: NextRequest) {
 
     // The t2v catalog ships weekly — candidates are a LADDER, not gospel, and
     // HIGGSFIELD_VIDEO_MODELS ("path,path,…") re-orders/replaces it from env
-    // without a deploy. All routes take the same minimal raw-JSON body.
-    const envModels = String(process.env.HIGGSFIELD_VIDEO_MODELS || "")
+    // without a deploy. First live test (2026-07-26, Cowork): hailuo-02 is
+    // the account's live t2v route (seedance/kling/wan paths → 404
+    // model_not_found), so it anchors the ladder; the alternates behind it
+    // only run if it dies. Duration is a NUMBER (hailuo 400s on a string
+    // "6") and each model snaps it to ITS allowed set — hailuo accepts
+    // exactly [6, 10], so ~3-4s beats round up to 6 and get trimmed in the
+    // edit.
+    type VideoModel = { path: string; snapDuration?: (n: number) => number };
+    const envModels: VideoModel[] = String(process.env.HIGGSFIELD_VIDEO_MODELS || "")
       .split(",")
       .map((s) => s.trim())
-      .filter((s) => /^\/[a-z0-9/._-]+$/i.test(s));
-    const defaultModels = [
-      "/bytedance/seedance/v1/pro/text-to-video",
-      "/bytedance/seedance/v1/lite/text-to-video",
-      "/kling-video/v2.1/standard/text-to-video",
-      "/minimax/hailuo-02/standard/text-to-video",
-      "/wan/v2.2-a14b/text-to-video",
+      .filter((s) => /^\/[a-z0-9/._-]+$/i.test(s))
+      .map((path) => ({ path, ...(path.includes("hailuo") ? { snapDuration: (n: number) => (n <= 8 ? 6 : 10) } : {}) }));
+    const defaultModels: VideoModel[] = [
+      { path: "/minimax/hailuo-02/standard/text-to-video", snapDuration: (n) => (n <= 8 ? 6 : 10) },
+      { path: "/bytedance/seedance/v1/pro/text-to-video" },
+      { path: "/kling-video/v2.1/standard/text-to-video" },
     ];
     const models = envModels.length ? envModels : defaultModels;
-    const makeBody = (b: { prompt: string; duration: number }) => ({
+    const makeBody = (m: VideoModel, b: { prompt: string; duration: number }) => ({
       prompt: b.prompt,
       aspect_ratio: vAspect,
-      duration: String(b.duration),
+      duration: m.snapDuration ? m.snapDuration(b.duration) : b.duration,
       ...(vSeed ? { seed: vSeed } : {}),
     });
 
-    const startVideo = async (path: string, b: { prompt: string; duration: number }): Promise<{ ok: true; job: Job } | { ok: false; fail: string }> => {
+    const startVideo = async (m: VideoModel, b: { prompt: string; duration: number }): Promise<{ ok: true; job: Job } | { ok: false; fail: string }> => {
+      const path = m.path;
       const r = await fetch(`${BASE}${path}`, {
         method: "POST",
         headers,
-        body: JSON.stringify(makeBody(b)),
+        body: JSON.stringify(makeBody(m, b)),
         signal: AbortSignal.timeout(30000),
       });
       const text = await r.text();
@@ -283,19 +290,19 @@ export async function POST(req: NextRequest) {
 
     try {
       // walk the ladder with the first beat to find the live route…
-      let livePath: string | null = null;
+      let liveModel: VideoModel | null = null;
       let firstJob: Job | null = null;
       const failures: string[] = [];
-      for (const path of models) {
-        const r = await startVideo(path, beats[0]);
+      for (const m of models) {
+        const r = await startVideo(m, beats[0]);
         if (r.ok) {
-          livePath = path;
+          liveModel = m;
           firstJob = r.job;
           break;
         }
         failures.push(r.fail);
       }
-      if (!livePath || !firstJob) {
+      if (!liveModel || !firstJob) {
         return NextResponse.json({
           configured: true,
           jobs: [],
@@ -306,7 +313,7 @@ export async function POST(req: NextRequest) {
       const rest = await Promise.all(
         beats.slice(1).map(async (b) => {
           try {
-            const r = await startVideo(livePath!, b);
+            const r = await startVideo(liveModel!, b);
             return r.ok ? r.job : null;
           } catch {
             return null;
@@ -315,7 +322,7 @@ export async function POST(req: NextRequest) {
       );
       const jobs: (Job | null)[] = [firstJob, ...rest];
       const handles = jobs.map((j) => (j ? j.statusUrl || (j.ids[0] ? `${BASE}/requests/${j.ids[0]}/status` : null) : null));
-      return NextResponse.json({ configured: true, jobs: handles, model: livePath });
+      return NextResponse.json({ configured: true, jobs: handles, model: liveModel.path });
     } catch (e) {
       return NextResponse.json({ configured: true, jobs: [], error: e instanceof Error ? e.message.slice(0, 200) : "video batch failed" });
     }
