@@ -594,7 +594,7 @@ export default function ReelCoach() {
         source: rec.source,
         ...(rec.topic ? { topic: rec.topic } : {}),
       },
-      150000,
+      220000,
       `The analysis didn't come back in time — your upload is safe, hit ⟳ Resume analysis to retry without re-uploading. If it keeps failing, ${TRIM_HINT}`
     );
     const reel: VaultReel = {

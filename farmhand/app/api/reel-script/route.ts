@@ -11,7 +11,9 @@ import { claudeJson, claudeVerify } from "@/lib/claudeScript";
  * one analyzed reference can power unlimited scripts in its style.
  */
 
-export const maxDuration = 120;
+// covers the sequential worst case: Claude attempt (100s) then the full
+// Gemini fallback (100s) with margin
+export const maxDuration = 300;
 
 const clamp = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
 const GEMINI_BASE = "https://generativelanguage.googleapis.com";
