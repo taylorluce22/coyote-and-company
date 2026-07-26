@@ -181,159 +181,6 @@ function noteFor(reel: VaultReel): string {
   return lines.join("\n");
 }
 
-/** Script Studio: production-grade reel scripts from scratch — topic +
-    style + duration in, the full v2 beat format out (camera, visual
-    detail, captions, fitted VO, per-shot AI-generation prompts). Can be
-    seeded with the styleDna of any analyzed reel in the vault, so one
-    reference powers unlimited scripts in its style. */
-const SCRIPT_STYLES = [
-  "Director's choice — best for this topic",
-  "Stylized 3D caricature explainer",
-  "Clean flat motion graphics",
-  "Talking head with bold captions",
-  "Cinematic b-roll with voiceover",
-];
-function ScriptWriterCard({
-  ideas,
-  vault,
-  workspace,
-  onSaved,
-}: {
-  ideas: Array<{ id: string; title: string; angle: string; deck?: string[] }>;
-  vault: VaultReel[];
-  workspace: string;
-  onSaved: (id: string) => void;
-}) {
-  const [topicId, setTopicId] = useState("");
-  const [styleSel, setStyleSel] = useState(SCRIPT_STYLES[0]);
-  const [secs, setSecs] = useState(30);
-  const [busyS, setBusyS] = useState(false);
-  const [errS, setErrS] = useState<string | null>(null);
-  const styled = vault.filter((v) => v.analysis?.styleDna);
-  const generate = async () => {
-    const topic = ideas.find((i) => i.id === topicId);
-    if (!topic || busyS) {
-      if (!topic) setErrS("Pick a topic first.");
-      return;
-    }
-    setBusyS(true);
-    setErrS(null);
-    crumb(`script: writing "${topic.title.slice(0, 40)}"`);
-    try {
-      let styleName = styleSel;
-      let styleDna = "";
-      if (styleSel.startsWith("vault:")) {
-        const v = styled.find((x) => x.id === styleSel.slice(6));
-        styleName = `Match the style of the analyzed reel "${v?.label}"`;
-        styleDna = JSON.stringify(v?.analysis?.styleDna || {});
-      }
-      const r = await fetch("/api/reel-script", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          topic: { title: topic.title, angle: topic.angle, facts: topic.deck?.length ? topic.deck : [topic.angle] },
-          styleName,
-          styleDna,
-          seconds: secs,
-        }),
-        signal: AbortSignal.timeout(110000),
-      });
-      const j = (await r.json()) as Record<string, unknown>;
-      if (j.configured === false) throw new Error("Needs GEMINI_API_KEY set in Vercel.");
-      if (typeof j.error === "string" && j.error) throw new Error(j.error);
-      const script = j.script as { summary?: string; styleSpec?: string; remake?: ReelAnalysis["remake"] } | undefined;
-      if (!script?.remake?.beats?.length) throw new Error("The script came back empty — try again.");
-      const reel: VaultReel = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        label: `✍️ Script — ${topic.title}`,
-        source: "own",
-        analysis: { summary: script.summary, contentPattern: script.styleSpec, remake: script.remake },
-        createdAt: Date.now(),
-      };
-      if (!(await reelVaultAdd(reel, workspace))) throw new Error("Couldn't save on this device — free up browser storage.");
-      crumb("script: saved ✓");
-      onSaved(reel.id);
-    } catch (e) {
-      setErrS(e instanceof Error ? e.message : "Script generation failed — try again.");
-    } finally {
-      setBusyS(false);
-    }
-  };
-  const selStyle: React.CSSProperties = {
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: 9,
-    padding: "9px 10px",
-    fontSize: 12,
-    color: "#F4F3F8",
-    outline: "none",
-    maxWidth: "100%",
-  };
-  return (
-    <div className="fh-glass" style={{ borderRadius: 14, padding: "15px 17px", marginBottom: 20 }}>
-      <div className="fh-kicker" style={{ fontSize: 9, marginBottom: 6, color: "#26E0C8" }}>✍️ Script Studio · no reference needed</div>
-      <div style={{ fontSize: 11.5, color: "#8B89A0", lineHeight: 1.5, marginBottom: 10, maxWidth: 620 }}>
-        A full production script from scratch: hook, every shot with camera + visual detail, captions with animation
-        notes, voiceover timed to the beat — and a paste-ready AI-generation prompt for every shot. Pick “Match:” to
-        reuse the style of a reel you&apos;ve analyzed.
-      </div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-        <select value={topicId} onChange={(e) => setTopicId(e.target.value)} disabled={busyS} style={{ ...selStyle, flex: "1 1 240px" }}>
-          <option value="">Topic…</option>
-          {ideas.slice(0, 30).map((i) => (
-            <option key={i.id} value={i.id}>{i.title}</option>
-          ))}
-        </select>
-        <select value={styleSel} onChange={(e) => setStyleSel(e.target.value)} disabled={busyS} style={{ ...selStyle, flex: "1 1 200px" }}>
-          {SCRIPT_STYLES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-          {styled.map((v) => (
-            <option key={v.id} value={`vault:${v.id}`}>Match: {v.label}</option>
-          ))}
-        </select>
-        {[15, 30, 45].map((s) => (
-          <button
-            key={s}
-            onClick={() => setSecs(s)}
-            disabled={busyS}
-            style={{
-              background: secs === s ? "rgba(38,224,200,0.15)" : "rgba(255,255,255,0.04)",
-              color: secs === s ? "#26E0C8" : "#8B89A0",
-              border: `1px solid ${secs === s ? "rgba(38,224,200,0.45)" : "rgba(255,255,255,0.1)"}`,
-              borderRadius: 8,
-              padding: "8px 12px",
-              fontSize: 11.5,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            {s}s
-          </button>
-        ))}
-        <button
-          onClick={generate}
-          disabled={busyS || !topicId}
-          style={{
-            background: busyS || !topicId ? "rgba(255,255,255,0.08)" : "linear-gradient(135deg, #26E0C8, #7DD3FC)",
-            color: busyS || !topicId ? "#6E6C82" : "#0B0A12",
-            border: "none",
-            borderRadius: 9,
-            padding: "9px 16px",
-            fontSize: 12.5,
-            fontWeight: 800,
-            cursor: busyS || !topicId ? "default" : "pointer",
-          }}
-        >
-          {busyS ? "Writing…" : "✍️ Write script"}
-        </button>
-      </div>
-      {busyS && <div style={{ fontSize: 11.5, color: "#7DD3FC", marginTop: 9 }}>Directing your reel… (usually 30–60 seconds)</div>}
-      {errS && <div style={{ fontSize: 11.5, color: "#FF6B6B", marginTop: 9 }}>{errS}</div>}
-    </div>
-  );
-}
-
 /** Per-beat AI-generation prompt: collapsed by default, one tap to copy —
     this text IS what goes into the video generator, so it must move as a
     unit, never retyped. */
@@ -747,7 +594,7 @@ export default function ReelCoach() {
         source: rec.source,
         ...(rec.topic ? { topic: rec.topic } : {}),
       },
-      150000,
+      220000,
       `The analysis didn't come back in time — your upload is safe, hit ⟳ Resume analysis to retry without re-uploading. If it keeps failing, ${TRIM_HINT}`
     );
     const reel: VaultReel = {
@@ -1485,16 +1332,6 @@ export default function ReelCoach() {
           </div>
         </div>
       </div>
-
-      <ScriptWriterCard
-        ideas={ideas}
-        vault={list}
-        workspace={workspace}
-        onSaved={async (id) => {
-          setList(await reelVaultAll());
-          setExpanded(id);
-        }}
-      />
 
       {pending && !busy && (
         <div

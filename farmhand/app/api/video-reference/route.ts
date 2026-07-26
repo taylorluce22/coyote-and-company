@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { del, list, put } from "@vercel/blob";
+import { polishRemake } from "@/lib/claudeScript";
 
 /**
  * Reel coach — watches an actual video (visuals + audio together, via
@@ -473,7 +474,17 @@ async function geminiAnalyze(
   let text = String(genData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
   text = text.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   try {
-    return { analysis: JSON.parse(text) as Record<string, unknown> };
+    const parsed = JSON.parse(text) as Record<string, unknown>;
+    // Claude connector: when wired, the stronger writer rewrites the remake
+    // from Gemini's style DNA — Gemini stays the eyes, Claude becomes the pen
+    if (topic && process.env.ANTHROPIC_API_KEY) {
+      const better = await polishRemake(parsed, topic, 75000);
+      if (better) {
+        parsed.remake = better;
+        parsed.polished = true; // observability: which writer produced this script
+      }
+    }
+    return { analysis: parsed };
   } catch {
     return fail("analysis returned malformed JSON — try again");
   }
@@ -625,9 +636,10 @@ async function runJobPipeline(
       await writeJob(jobId, "processing", { fileName, fileUri, mimeType, source: opts.source, label: opts.label, client: opts.client, topic: opts.topic });
     }
 
-    // wait for Gemini processing, reserving 140s of budget for the analyze
+    // wait for Gemini processing, reserving budget for the analyze — sized
+    // for generateContent (120s) + the Claude polish stage (75s) + margin
     let state = "PROCESSING";
-    while (state === "PROCESSING" && timeLeft() > 140000) {
+    while (state === "PROCESSING" && timeLeft() > 205000) {
       const info = await geminiFileStatus(key, fileName);
       if (!isFail(info)) state = String(info.state || "PROCESSING");
       if (state === "PROCESSING") await new Promise((r) => setTimeout(r, 4000));
