@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * Higgsfield AI image generation (Soul model) for the Post Studio.
+ * Higgsfield AI generation (images + video) for the Post Studio & Reel Coach.
  *
  * GET  /api/higgsfield            → { configured }
  * GET  /api/higgsfield?img=<url>  → proxies a generated image (same-origin so
  *                                   the Studio's canvas pipeline can process it)
+ * GET  /api/higgsfield?vid=<url>  → proxies a generated video clip (same-origin
+ *                                   so the client can save it into the clip vault)
  * POST /api/higgsfield { prompt } → starts a Soul text2image job, polls until
  *                                   done, returns { images: [urls] }
  * POST { prompts: string[], seed?, aspect? }
@@ -15,12 +17,26 @@ import { NextRequest, NextResponse } from "next/server";
  *        prompts — the CLIENT polls via check mode. (A single server-side
  *        request babysitting a 5-job batch died mid-poll in production and
  *        stranded paid-for images; short requests can't.)
+ * POST { videoPrompts: [{ prompt, duration? }], seed?, aspect? }
+ *      → VIDEO LANE (reel beats): one text-to-video job per beat genPrompt
+ *        (max 12), same model + shared seed across the batch for style
+ *        consistency, per-beat duration (clamped 3-10s). Same crash-proof
+ *        contract as the image batch: returns { jobs: (statusUrl|null)[] }
+ *        immediately and the CLIENT polls via check mode. The model ladder is
+ *        runtime-discoverable (Higgsfield ships weekly): candidates below are
+ *        tried in order per batch, and HIGGSFIELD_VIDEO_MODELS (comma-
+ *        separated route paths) overrides the ladder from Vercel env without
+ *        a deploy.
  * POST { check: string[] }
  *      → polls the given platform.higgsfield.ai status URLs once, returns
- *        { results: [{ status: "completed"|"failed"|"pending", images? }] }.
+ *        { results: [{ status, images?, videos? }] } — videos populated for
+ *        video-lane jobs.
  *
- * Auth: Authorization: Key KEY_ID:KEY_SECRET (platform.higgsfield.ai).
- * Keys live ONLY in Vercel env: HIGGSFIELD_API_KEY + HIGGSFIELD_API_SECRET.
+ * Auth: Authorization: Key KEY_ID:KEY_SECRET (platform.higgsfield.ai), the
+ * exact scheme of the official SDK (@higgsfield/client v2: raw-JSON model
+ * routes + /requests/{id}/status polling; results arrive as images[].url or
+ * video.url). Keys live ONLY in Vercel env: HIGGSFIELD_API_KEY +
+ * HIGGSFIELD_API_SECRET.
  */
 
 const BASE = "https://platform.higgsfield.ai";
@@ -54,6 +70,33 @@ function imageUrls(payload: unknown): string[] {
   return [...urls];
 }
 
+/**
+ * Pull result VIDEO URLs out of a response payload. The v2 status response
+ * carries `video: { url }` (SDK-documented); job-set shapes carry
+ * results.raw/min with `type` marking the media. Collect: any `url` under a
+ * video-named key, any url whose sibling `type` says video, and any
+ * extension-bearing video link as a fallback.
+ */
+function videoUrls(payload: unknown): string[] {
+  const urls = new Set<string>();
+  const isHttps = (v: unknown): v is string => typeof v === "string" && v.startsWith("https://");
+  const walk = (o: unknown, underVideoKey: boolean) => {
+    if (Array.isArray(o)) return o.forEach((x) => walk(x, underVideoKey));
+    if (o && typeof o === "object") {
+      const rec = o as Record<string, unknown>;
+      const typeSaysVideo = typeof rec.type === "string" && /video/i.test(rec.type);
+      for (const [k, v] of Object.entries(rec)) {
+        if (k === "url" && isHttps(v) && (underVideoKey || typeSaysVideo || /\.(mp4|webm|mov)(\?|$)/i.test(v))) urls.add(v);
+        else walk(v, underVideoKey || /video/i.test(k));
+      }
+    }
+  };
+  walk(payload, false);
+  const re = /https?:\/\/[^\s"']+\.(?:mp4|webm|mov)(?:\?[^\s"']*)?/gi;
+  for (const m of JSON.stringify(payload ?? "").matchAll(re)) urls.add(m[0]);
+  return [...urls];
+}
+
 /** Collect job/request ids from the job-set response, shape-tolerantly. */
 function jobIds(payload: unknown): string[] {
   const ids = new Set<string>();
@@ -73,6 +116,33 @@ function jobIds(payload: unknown): string[] {
 
 export async function GET(req: NextRequest) {
   const img = req.nextUrl.searchParams.get("img");
+  const vid = req.nextUrl.searchParams.get("vid");
+
+  // video proxy — only https, only video content (octet-stream tolerated:
+  // signed result URLs often lose their content-type), bounded size
+  if (vid) {
+    let u: URL;
+    try {
+      u = new URL(vid);
+    } catch {
+      return NextResponse.json({ error: "bad url" }, { status: 400 });
+    }
+    if (u.protocol !== "https:") return NextResponse.json({ error: "https only" }, { status: 400 });
+    try {
+      const r = await fetch(u, { signal: AbortSignal.timeout(60000) });
+      const type = r.headers.get("content-type") || "";
+      const ok = type.startsWith("video/") || type === "application/octet-stream" || type === "binary/octet-stream" || !type;
+      if (!r.ok || !ok) return NextResponse.json({ error: "not a video" }, { status: 400 });
+      const buf = await r.arrayBuffer();
+      if (buf.byteLength > 80_000_000) return NextResponse.json({ error: "too large" }, { status: 400 });
+      return new NextResponse(buf, {
+        headers: { "Content-Type": type.startsWith("video/") ? type : "video/mp4", "Cache-Control": "public, max-age=86400" },
+      });
+    } catch {
+      return NextResponse.json({ error: "fetch failed" }, { status: 502 });
+    }
+  }
+
   if (!img) return NextResponse.json({ configured: !!creds() });
 
   // image proxy — only https, only image content, bounded size
@@ -104,7 +174,7 @@ export async function POST(req: NextRequest) {
   const auth = creds();
   if (!auth) return NextResponse.json({ configured: false, needsCreds: true, images: [] });
 
-  let body: { prompt?: unknown; prompts?: unknown; seed?: unknown; aspect?: unknown; check?: unknown; soulId?: unknown } = {};
+  let body: { prompt?: unknown; prompts?: unknown; videoPrompts?: unknown; seed?: unknown; aspect?: unknown; check?: unknown; soulId?: unknown } = {};
   try {
     body = await req.json();
   } catch {}
@@ -136,8 +206,13 @@ export async function POST(req: NextRequest) {
           if (!r.ok) return { status: "pending" };
           const sj = await r.json();
           const status = String((sj as { status?: unknown })?.status || "");
-          if (/failed|nsfw|error/i.test(status)) return { status: "failed" };
-          const images = imageUrls(sj);
+          if (/failed|nsfw|error|canceled/i.test(status)) return { status: "failed" };
+          const videos = videoUrls(sj);
+          // videoUrls is the stricter matcher — subtract its hits so a video
+          // result never doubles as an "image" (imageUrls excludes obvious
+          // .mp4 links but signed URLs can carry no extension)
+          const images = imageUrls(sj).filter((u) => !videos.includes(u));
+          if (videos.length) return { status: "completed", videos: videos.slice(0, 2) };
           return images.length ? { status: "completed", images: images.slice(0, 4) } : { status: "pending" };
         } catch {
           return { status: "pending" };
@@ -145,6 +220,105 @@ export async function POST(req: NextRequest) {
       })
     );
     return NextResponse.json({ configured: true, results });
+  }
+
+  /* ---- VIDEO LANE: one t2v job per remake beat, shared seed, 9:16 ----
+     Same crash-proof shape as the image batch: start everything, hand the
+     status handles straight back, the client polls via check mode. */
+  if (Array.isArray(body.videoPrompts)) {
+    const beats = (body.videoPrompts as unknown[])
+      .map((raw) => {
+        const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+        const prompt = String(r.prompt || "").trim().slice(0, 2000);
+        const durNum = Math.round(Number(String(r.duration ?? "").replace(/[^\d.]/g, "")));
+        return prompt ? { prompt, duration: Number.isFinite(durNum) ? Math.min(10, Math.max(3, durNum)) : 5 } : null;
+      })
+      .filter((b): b is { prompt: string; duration: number } => !!b)
+      .slice(0, 12);
+    if (!beats.length) return NextResponse.json({ configured: true, jobs: [], error: "no beat prompts" });
+
+    const vAspect = ASPECTS.has(String(body.aspect)) ? String(body.aspect) : "9:16";
+    const vSeedNum = Math.round(Number(body.seed));
+    const vSeed = Number.isFinite(vSeedNum) && vSeedNum >= 1 && vSeedNum <= 1_000_000 ? vSeedNum : null;
+    const headers = { Authorization: auth, "Content-Type": "application/json" };
+
+    // The t2v catalog ships weekly — candidates are a LADDER, not gospel, and
+    // HIGGSFIELD_VIDEO_MODELS ("path,path,…") re-orders/replaces it from env
+    // without a deploy. All routes take the same minimal raw-JSON body.
+    const envModels = String(process.env.HIGGSFIELD_VIDEO_MODELS || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => /^\/[a-z0-9/._-]+$/i.test(s));
+    const defaultModels = [
+      "/bytedance/seedance/v1/pro/text-to-video",
+      "/bytedance/seedance/v1/lite/text-to-video",
+      "/kling-video/v2.1/standard/text-to-video",
+      "/minimax/hailuo-02/standard/text-to-video",
+      "/wan/v2.2-a14b/text-to-video",
+    ];
+    const models = envModels.length ? envModels : defaultModels;
+    const makeBody = (b: { prompt: string; duration: number }) => ({
+      prompt: b.prompt,
+      aspect_ratio: vAspect,
+      duration: String(b.duration),
+      ...(vSeed ? { seed: vSeed } : {}),
+    });
+
+    const startVideo = async (path: string, b: { prompt: string; duration: number }): Promise<{ ok: true; job: Job } | { ok: false; fail: string }> => {
+      const r = await fetch(`${BASE}${path}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(makeBody(b)),
+        signal: AbortSignal.timeout(30000),
+      });
+      const text = await r.text();
+      if (!r.ok) return { ok: false, fail: `${path} → ${r.status}: ${text.slice(0, 120)}` };
+      let j: unknown = {};
+      try {
+        j = JSON.parse(text);
+      } catch {}
+      const statusUrl = typeof (j as { status_url?: unknown })?.status_url === "string" ? (j as { status_url: string }).status_url : null;
+      return { ok: true, job: { startJson: j, statusUrl, ids: jobIds(j) } };
+    };
+
+    try {
+      // walk the ladder with the first beat to find the live route…
+      let livePath: string | null = null;
+      let firstJob: Job | null = null;
+      const failures: string[] = [];
+      for (const path of models) {
+        const r = await startVideo(path, beats[0]);
+        if (r.ok) {
+          livePath = path;
+          firstJob = r.job;
+          break;
+        }
+        failures.push(r.fail);
+      }
+      if (!livePath || !firstJob) {
+        return NextResponse.json({
+          configured: true,
+          jobs: [],
+          error: `no video model responded — set HIGGSFIELD_VIDEO_MODELS in Vercel to the current route. Tried: ${failures.join(" · ")}`,
+        });
+      }
+      // …then start the rest of the beats on that same route in parallel
+      const rest = await Promise.all(
+        beats.slice(1).map(async (b) => {
+          try {
+            const r = await startVideo(livePath!, b);
+            return r.ok ? r.job : null;
+          } catch {
+            return null;
+          }
+        })
+      );
+      const jobs: (Job | null)[] = [firstJob, ...rest];
+      const handles = jobs.map((j) => (j ? j.statusUrl || (j.ids[0] ? `${BASE}/requests/${j.ids[0]}/status` : null) : null));
+      return NextResponse.json({ configured: true, jobs: handles, model: livePath });
+    } catch (e) {
+      return NextResponse.json({ configured: true, jobs: [], error: e instanceof Error ? e.message.slice(0, 200) : "video batch failed" });
+    }
   }
 
   const list = Array.isArray(body.prompts)

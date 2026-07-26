@@ -24,6 +24,7 @@ import { VERTICALS } from "./verticals";
 import { memoryConfigured, pullSnapshot, pushSnapshot, mergeById } from "./memorySync";
 import { setVaultClient } from "./vault";
 import { setReelVaultClient } from "./reelVault";
+import { setClipVaultClient } from "./clipVault";
 import {
   loadClients, saveClients, persistKeyFor, makeClientId,
   exportClientBundle, importClientBundle, purgeClient,
@@ -392,6 +393,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setWorkspace(ws);
       setVaultClient(ws);
       setReelVaultClient(ws);
+      setClipVaultClient(ws);
       const raw = localStorage.getItem(persistKeyFor(ws));
       if (raw) {
         setState((s) => ({ ...s, ...parseSaved(raw) }));
@@ -629,6 +631,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try { localStorage.setItem(WS_ACTIVE_KEY, target); } catch {}
     setVaultClient(target);
     setReelVaultClient(target);
+    setClipVaultClient(target);
     let next: AppState;
     try {
       const raw = localStorage.getItem(persistKeyFor(target));
@@ -660,6 +663,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try { localStorage.setItem(WS_ACTIVE_KEY, id); } catch {}
     setVaultClient(id);
     setReelVaultClient(id);
+    setClipVaultClient(id);
     workspaceRef.current = id;
     setWorkspace(id);
     setState(newClientSeed(vertical));

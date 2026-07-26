@@ -9,6 +9,32 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-26 · STYLE GENOME + HIGGSFIELD VIDEO LANE — extract → adapt → generate, in-app
+Two ships on `claude/app-performance-max-h8tgoc` (production currently runs
+the PROMOTED preview of this branch — merge to main when ready, a main push
+rolls it back):
+- **Style genome pipeline (c8f90bf, Cowork-verified FULL PASS ×2 runs):**
+  reference analysis is now structured extraction (timestamped beatMap, hook
+  mechanics, visual language, editing/persuasion systems, reusableStyleRules,
+  preserveVsReplace, recreationBrief) with a hard style-vs-topic split; one
+  shared Stage-2 adaptation prompt (Claude) + originality/quality gate
+  (verbatim-overlap, weak-hook, no-proof, generic-language flags);
+  deterministic Higgsfield master prompt compiled from genome fields;
+  Re-adapt reruns Stage 2 from the saved genome — no re-upload, no Gemini
+  cost. Prompts to tune: EXTRACTION_PROMPT (video-reference route),
+  buildAdaptationPrompt (claudeScript), buildHiggsfieldPrompt (styleGenome).
+- **Stage 3 — beat clips in-app:** /api/higgsfield grew a VIDEO lane (t2v
+  model ladder, env-overridable via HIGGSFIELD_VIDEO_MODELS, shared seed,
+  9:16, per-beat duration) + video proxy; new clip vault (IndexedDB, per
+  client); Reel Coach "Generate beats" renders every remake genPrompt with
+  Composer-style crash-proofing (pending record before poll, vault-first
+  commit, ⟳ Recover) and per-beat status/playback/download. Phase 2
+  assembly SPEC'd (ffmpeg.wasm worker) in
+  `farmhand/docs/reel-assembly-spec-2026.md`, not built.
+- Needs a human: HIGGSFIELD_API_KEY/SECRET into Vercel env (Cowork);
+  first live video run will reveal the real t2v route — set
+  HIGGSFIELD_VIDEO_MODELS if the default ladder misses.
+
 ## 2026-07-25 · SCRIPT WRITER v2 + SCRIPT STUDIO — details that survive into generated video
 Owner produced his first AI video from a remake script: "pretty cool
 for a first draft but i need the quality enhanced and the script writer

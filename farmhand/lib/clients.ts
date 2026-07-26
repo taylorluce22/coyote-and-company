@@ -13,6 +13,7 @@
 
 import { vaultAllFor, vaultAddManyTo, deleteVaultDb, type VaultImage } from "./vault";
 import { reelVaultAllFor, reelVaultAddManyTo, deleteReelVaultDb, type VaultReel } from "./reelVault";
+import { deleteClipVaultDb } from "./clipVault";
 import { exportMeter, importMeter, purgeMeter, type MeterExport } from "./meter";
 
 export type ClientId = string;
@@ -121,5 +122,5 @@ export async function purgeClient(id: ClientId): Promise<void> {
   if (id === "default" || id === "solar") return;
   try { localStorage.removeItem(persistKeyFor(id)); } catch {}
   purgeMeter(id);
-  await Promise.all([deleteVaultDb(id), deleteReelVaultDb(id)]);
+  await Promise.all([deleteVaultDb(id), deleteReelVaultDb(id), deleteClipVaultDb(id)]);
 }

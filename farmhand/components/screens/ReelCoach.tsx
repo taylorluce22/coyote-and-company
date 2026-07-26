@@ -7,6 +7,8 @@ import { useStore } from "@/lib/store";
 import { ideasFor, type Idea, type StrategyProfile } from "@/lib/strategy";
 import { reelVaultAdd, reelVaultAll, reelVaultDelete, type ReelAnalysis, type VaultReel } from "@/lib/reelVault";
 import { buildHiggsfieldPrompt, recreationBriefText, type QualityFlag, type ReferenceVideoAnalysis } from "@/lib/styleGenome";
+import { clipId, clipVaultAdd, clipVaultDeleteForReel, clipVaultForReel, type VaultClip } from "@/lib/clipVault";
+import { record as meterRecord, UNIT_COST_CENTS, dollars } from "@/lib/meter";
 
 const STEP_LABELS = ["Upload", "Hand-off", "Gemini processing", "Writing breakdown"];
 
@@ -574,6 +576,318 @@ function AnalysisCard({ analysis }: { analysis: ReelAnalysis }) {
               ))}
             </ul>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---- Stage 3: per-beat video generation (Higgsfield) ----
+   One t2v job per remake beat genPrompt, shared seed, 9:16. Crash-proof by
+   the same design as Composer's image batches: jobs are recorded locally
+   BEFORE the first poll, every finished clip is committed to the clip vault
+   the moment it lands, and ⟳ Recover pulls paid-for clips after any crash. */
+type PendingClip = { url: string; beat: number; prompt: string };
+const clipPendingKey = (client: string) => (client === "default" ? "fh-clip-pending" : `fh-clip-pending::${client}`);
+function readClipPending(client: string): { reelId: string; items: PendingClip[] } | null {
+  try {
+    const raw = localStorage.getItem(clipPendingKey(client));
+    if (!raw) return null;
+    const p = JSON.parse(raw) as { reelId?: string; items?: PendingClip[]; at?: number };
+    if (!p.reelId || !Array.isArray(p.items) || !p.items.length) return null;
+    // platform jobs are unpollable after ~24h — stop offering recovery then
+    if (!(Number(p.at) > Date.now() - 24 * 3600000)) {
+      localStorage.removeItem(clipPendingKey(client));
+      return null;
+    }
+    return { reelId: p.reelId, items: p.items };
+  } catch {
+    return null;
+  }
+}
+function writeClipPending(reelId: string, items: PendingClip[], client: string) {
+  try {
+    localStorage.setItem(clipPendingKey(client), JSON.stringify({ reelId, items, at: Date.now() }));
+  } catch {}
+}
+function pruneClipPending(beat: number, client: string) {
+  try {
+    const raw = localStorage.getItem(clipPendingKey(client));
+    if (!raw) return;
+    const p = JSON.parse(raw) as { reelId?: string; items?: PendingClip[]; at?: number };
+    p.items = (Array.isArray(p.items) ? p.items : []).filter((it) => it.beat !== beat);
+    if (!p.items.length) localStorage.removeItem(clipPendingKey(client));
+    else localStorage.setItem(clipPendingKey(client), JSON.stringify(p));
+  } catch {}
+}
+
+type BeatClipState = "none" | "rendering" | "done" | "failed";
+
+/** Generate, track, play and bank the per-beat clips of a remake script. */
+function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string }) {
+  const beats = (reel.analysis.remake?.beats || []).filter((b) => b.genPrompt);
+  const [clips, setClips] = useState<VaultClip[]>([]);
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [armed, setArmed] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [beatState, setBeatState] = useState<Record<number, BeatClipState>>({});
+  const [pending, setPending] = useState<{ reelId: string; items: PendingClip[] } | null>(null);
+
+  const refresh = async () => {
+    const list = await clipVaultForReel(reel.id);
+    setClips(list);
+    setUrls((old) => {
+      Object.values(old).forEach((u) => URL.revokeObjectURL(u));
+      const next: Record<string, string> = {};
+      list.forEach((c) => {
+        try {
+          next[c.id] = URL.createObjectURL(c.blob);
+        } catch {}
+      });
+      return next;
+    });
+  };
+  useEffect(() => {
+    refresh();
+    const rec = readClipPending(workspace);
+    setPending(rec && rec.reelId === reel.id ? rec : null);
+    return () => {
+      setUrls((old) => {
+        Object.values(old).forEach((u) => URL.revokeObjectURL(u));
+        return {};
+      });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reel.id, workspace]);
+
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(false), 10000);
+    return () => clearTimeout(t);
+  }, [armed]);
+
+  /** Poll tracked jobs; commit every finished clip to the vault immediately. */
+  const pollClips = async (items: PendingClip[], budgetMs: number): Promise<{ ok: number; failed: number }> => {
+    const deadline = Date.now() + budgetMs;
+    const settled = new Set<number>();
+    let ok = 0;
+    let failed = 0;
+    while (settled.size < items.length && Date.now() < deadline) {
+      const open = items.filter((it) => !settled.has(it.beat));
+      let results: { status?: string; videos?: string[] }[] = [];
+      try {
+        const r = await fetch("/api/higgsfield", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ check: open.map((o) => o.url) }),
+          signal: AbortSignal.timeout(30000),
+        });
+        const j = await r.json();
+        results = Array.isArray(j.results) ? j.results : [];
+      } catch {}
+      for (let k = 0; k < open.length; k++) {
+        const it = open[k];
+        const res = results[k];
+        if (!res) continue;
+        if (res.status === "failed") {
+          settled.add(it.beat);
+          failed++;
+          setBeatState((s) => ({ ...s, [it.beat]: "failed" }));
+          pruneClipPending(it.beat, workspace);
+          continue;
+        }
+        const u = res.status === "completed" ? res.videos?.[0] : null;
+        if (!u) continue; // completed-without-video = thumbnails only, keep waiting
+        try {
+          const vr = await fetch(`/api/higgsfield?vid=${encodeURIComponent(u)}`, { signal: AbortSignal.timeout(120000) });
+          if (!vr.ok) continue; // transient — retry on the next sweep
+          const blob = await vr.blob();
+          if (blob.size < 10_000) continue;
+          settled.add(it.beat);
+          // vault FIRST — the paid-for clip is safe before anything else
+          const saved = await clipVaultAdd(
+            {
+              id: clipId(reel.id, it.beat),
+              reelId: reel.id,
+              beatIndex: it.beat,
+              prompt: it.prompt,
+              label: `${reel.label.slice(0, 48)} · beat ${it.beat + 1}`,
+              mime: blob.type || "video/mp4",
+              blob,
+              createdAt: Date.now(),
+            },
+            workspace
+          );
+          if (!saved) {
+            settled.delete(it.beat);
+            setMsg("A clip arrived but couldn't be saved (browser storage blocked or full) — free up storage and hit ⟳ Recover clips.");
+            continue;
+          }
+          meterRecord(workspace, "reel", 1);
+          ok++;
+          setBeatState((s) => ({ ...s, [it.beat]: "done" }));
+          pruneClipPending(it.beat, workspace);
+          setMsg(`🎬 ${ok}/${items.length} clips in — the rest are still rendering…`);
+          await refresh();
+        } catch {}
+      }
+      if (settled.size < items.length) await new Promise((r) => setTimeout(r, 6000));
+    }
+    return { ok, failed };
+  };
+
+  const generate = async () => {
+    if (busy || !beats.length) return;
+    setBusy(true);
+    setArmed(false);
+    setMsg("🎬 Starting the beat renders…");
+    try {
+      const seed = 1 + Math.floor(Math.random() * 999_999);
+      const r = await fetch("/api/higgsfield", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          videoPrompts: beats.map((b) => ({ prompt: b.genPrompt, duration: b.duration })),
+          seed,
+          aspect: "9:16",
+        }),
+        signal: AbortSignal.timeout(120000),
+      });
+      const j = await r.json();
+      if (j.needsCreds) {
+        setMsg("Add your Higgsfield API keys in Connectors first — no credits were spent.");
+        return;
+      }
+      const handles: (string | null)[] = Array.isArray(j.jobs) ? j.jobs : [];
+      const items: PendingClip[] = handles
+        .map((u, i) => (u ? { url: u, beat: i, prompt: beats[i]?.genPrompt || "" } : null))
+        .filter((x): x is PendingClip => !!x);
+      if (!items.length) {
+        setMsg(j.error || "Couldn't start the renders — no credits were spent.");
+        return;
+      }
+      // record the paid-for jobs BEFORE polling — a crash can't lose them
+      writeClipPending(reel.id, items, workspace);
+      setPending({ reelId: reel.id, items });
+      setBeatState(Object.fromEntries(items.map((it) => [it.beat, "rendering" as BeatClipState])));
+      setMsg(`🎬 ${items.length} beats rendering — clips land below as they finish (a few minutes each)…`);
+      const { ok, failed } = await pollClips(items, 8 * 60000);
+      setPending(readClipPending(workspace));
+      if (!ok && !failed) setMsg("The clips didn't come back in time — they're already paid for. Hit ⟳ Recover clips in a few minutes.");
+      else if (failed) setMsg(`✓ ${ok} clip${ok === 1 ? "" : "s"} landed — ${failed} failed on Higgsfield's side (credits refunded there). Regenerate anytime.`);
+      else setMsg(`✓ All ${ok} beats rendered and saved — play them below.`);
+    } catch {
+      setPending(readClipPending(workspace));
+      setMsg("Lost the connection mid-batch — your clips are safe. Hit ⟳ Recover clips to pull them in.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Pull finished clips from an interrupted batch — no new credits spent. */
+  const recover = async () => {
+    const rec = readClipPending(workspace);
+    if (!rec || rec.reelId !== reel.id || busy) return;
+    setBusy(true);
+    setMsg("⟳ Checking Higgsfield for your finished clips…");
+    try {
+      setBeatState(Object.fromEntries(rec.items.map((it) => [it.beat, "rendering" as BeatClipState])));
+      const { ok } = await pollClips(rec.items, 90000);
+      setPending(readClipPending(workspace));
+      setMsg(ok ? `✓ Recovered ${ok} clip${ok === 1 ? "" : "s"} — nothing wasted.` : "Nothing ready yet — try again in a few minutes.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!beats.length) return null;
+  const estCents = beats.length * UNIT_COST_CENTS.reel;
+  const stateFor = (i: number): BeatClipState =>
+    clips.some((c) => c.beatIndex === i) ? "done" : beatState[i] || (pending?.items.some((it) => it.beat === i) ? "rendering" : "none");
+  const chip: Record<BeatClipState, { label: string; color: string }> = {
+    none: { label: "not rendered", color: "#5E5C72" },
+    rendering: { label: "rendering…", color: "#7DD3FC" },
+    done: { label: "✓ clip saved", color: "#41D98A" },
+    failed: { label: "failed", color: "#FF6B6B" },
+  };
+
+  return (
+    <div style={{ marginTop: 12, background: "rgba(232,98,44,0.05)", border: "1px solid rgba(232,98,44,0.28)", borderRadius: 10, padding: "10px 12px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 10, fontWeight: 800, color: "#E8622C", textTransform: "uppercase", letterSpacing: 0.5 }}>
+          Beat clips — Higgsfield renders of this script
+        </span>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          {pending && !busy && (
+            <button
+              onClick={recover}
+              style={{ background: "rgba(255,194,61,0.12)", color: "#FFC23D", border: "1px solid rgba(255,194,61,0.4)", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+            >
+              ⟳ Recover clips
+            </button>
+          )}
+          <button
+            onClick={() => (armed ? generate() : setArmed(true))}
+            disabled={busy}
+            style={{
+              background: armed ? "rgba(232,98,44,0.25)" : "rgba(232,98,44,0.12)",
+              color: "#FF9A62",
+              border: "1px solid rgba(232,98,44,0.5)",
+              borderRadius: 8,
+              padding: "6px 13px",
+              fontSize: 11.5,
+              fontWeight: 700,
+              cursor: busy ? "default" : "pointer",
+              opacity: busy ? 0.6 : 1,
+            }}
+          >
+            {busy ? "Rendering…" : armed ? `Confirm — ${beats.length} clips ≈ ${dollars(estCents)}` : clips.length ? "↻ Regenerate beats" : "▶ Generate beats"}
+          </button>
+        </div>
+      </div>
+      {msg && <div style={{ fontSize: 11, color: "#7DD3FC", marginTop: 6, lineHeight: 1.45 }}>{msg}</div>}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+        {beats.map((b, i) => {
+          const st = stateFor(i);
+          const clip = clips.find((c) => c.beatIndex === i);
+          const src = clip ? urls[clip.id] : undefined;
+          return (
+            <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", borderLeft: "2px solid rgba(232,98,44,0.4)", paddingLeft: 10 }}>
+              <div style={{ flex: 1, minWidth: 160 }}>
+                <div style={{ fontSize: 10.5, fontWeight: 800, color: "#FF9A62", fontFamily: "var(--mono)" }}>
+                  SHOT {i + 1}
+                  {b.duration ? ` · ${b.duration}` : ""}{" "}
+                  <span style={{ color: chip[st].color, fontWeight: 700 }}>· {chip[st].label}</span>
+                </div>
+                <div style={{ fontSize: 11.5, color: "#A6A4B8", lineHeight: 1.45 }}>{b.shot}</div>
+                {clip && src && (
+                  <a
+                    href={src}
+                    download={`${reel.label.replace(/[^a-z0-9-]/gi, "_").slice(0, 40)}-beat${i + 1}.mp4`}
+                    style={{ fontSize: 10.5, color: "#7DD3FC", fontWeight: 700, textDecoration: "none" }}
+                  >
+                    ↓ download clip
+                  </a>
+                )}
+              </div>
+              {clip && src && (
+                <video
+                  src={src}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  style={{ width: 108, aspectRatio: "9/16", borderRadius: 8, background: "#000", border: "1px solid rgba(255,255,255,0.1)" }}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {!!clips.length && (
+        <div style={{ fontSize: 10.5, color: "#8B89A0", marginTop: 8, lineHeight: 1.45 }}>
+          Clips live in this device&apos;s vault (they cost credits — nothing is deleted unless you regenerate a beat).
+          Assemble: drop the clips into CapCut in shot order, read the &quot;say&quot; lines as VO, add the on-screen text per beat.
         </div>
       )}
     </div>
@@ -1341,6 +1655,7 @@ export default function ReelCoach() {
 
   const remove = async (id: string) => {
     await reelVaultDelete(id);
+    await clipVaultDeleteForReel(id); // clips belong to the reel — no orphans
     setList(await reelVaultAll());
     if (expanded === id) setExpanded(null);
   };
@@ -1760,6 +2075,7 @@ export default function ReelCoach() {
             {expanded === reel.id && (
               <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
                 <AnalysisCard analysis={reel.analysis} />
+                {!!reel.analysis.remake?.beats?.some((b) => b.genPrompt) && <ClipStudio reel={reel} workspace={workspace} />}
                 {reel.source === "reference" && reel.analysis.genome && (
                   <ReAdapt reel={reel} ideas={ideas} onSaved={async () => setList(await reelVaultAll())} />
                 )}
