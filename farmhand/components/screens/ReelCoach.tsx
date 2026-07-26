@@ -686,7 +686,16 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
   const [voMsg, setVoMsg] = useState<string | null>(null);
   const [asmBusy, setAsmBusy] = useState(false);
   const [asmMsg, setAsmMsg] = useState<string | null>(null);
+  const [asmLog, setAsmLog] = useState<string | null>(null);
   const [music, setMusic] = useState<File | null>(null);
+  const [prodBusy, setProdBusy] = useState(false);
+  const [prodArm, setProdArm] = useState(false);
+  useEffect(() => {
+    if (!prodArm) return;
+    const t = setTimeout(() => setProdArm(false), 10000);
+    return () => clearTimeout(t);
+  }, [prodArm]);
+  const anyBusy = busy || voBusy || asmBusy || prodBusy;
 
   const videoClips = clips.filter(isClip);
   const vos = clips.filter((c) => c.kind === "vo");
@@ -795,18 +804,29 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
     return { ok, failed };
   };
 
-  const generate = async () => {
-    if (busy || !beats.length) return;
+  /** Render beat clips. `onlyMissing` skips beats already banked (the
+      Produce-reel path — never re-spends on a rendered beat). Returns true
+      when every targeted beat has a clip in the vault. */
+  const generate = async (onlyMissing = false): Promise<boolean> => {
+    if (busy || !beats.length) return false;
     setBusy(true);
     setArmed(false);
     setMsg("🎬 Starting the beat renders…");
     try {
+      const have = new Set((await clipVaultForReel(reel.id)).filter(isClip).map((c) => c.beatIndex));
+      const targets = beats
+        .map((b, i) => ({ i, prompt: b.genPrompt || "", duration: b.duration }))
+        .filter((t) => t.prompt && (!onlyMissing || !have.has(t.i)));
+      if (!targets.length) {
+        setMsg(onlyMissing ? "✓ Every beat already has a clip — nothing to render." : "No beats with generation prompts.");
+        return onlyMissing;
+      }
       const seed = 1 + Math.floor(Math.random() * 999_999);
       const r = await fetch("/api/higgsfield", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          videoPrompts: beats.map((b) => ({ prompt: b.genPrompt, duration: b.duration })),
+          videoPrompts: targets.map((t) => ({ prompt: t.prompt, duration: t.duration })),
           seed,
           aspect: "9:16",
         }),
@@ -815,29 +835,31 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
       const j = await r.json();
       if (j.needsCreds) {
         setMsg("Add your Higgsfield API keys in Connectors first — no credits were spent.");
-        return;
+        return false;
       }
       const handles: (string | null)[] = Array.isArray(j.jobs) ? j.jobs : [];
       const items: PendingClip[] = handles
-        .map((u, i) => (u ? { url: u, beat: i, prompt: beats[i]?.genPrompt || "" } : null))
+        .map((u, k) => (u && targets[k] ? { url: u, beat: targets[k].i, prompt: targets[k].prompt } : null))
         .filter((x): x is PendingClip => !!x);
       if (!items.length) {
         setMsg(j.error || "Couldn't start the renders — no credits were spent.");
-        return;
+        return false;
       }
       // record the paid-for jobs BEFORE polling — a crash can't lose them
       writeClipPending(reel.id, items, workspace);
       setPending({ reelId: reel.id, items });
       setBeatState(Object.fromEntries(items.map((it) => [it.beat, "rendering" as BeatClipState])));
-      setMsg(`🎬 ${items.length} beats rendering — clips land below as they finish (a few minutes each)…`);
+      setMsg(`🎬 ${items.length} beat${items.length === 1 ? "" : "s"} rendering — clips land below as they finish (a few minutes each)…`);
       const { ok, failed } = await pollClips(items, 8 * 60000);
       setPending(readClipPending(workspace));
       if (!ok && !failed) setMsg("The clips didn't come back in time — they're already paid for. Hit ⟳ Recover clips in a few minutes.");
       else if (failed) setMsg(`✓ ${ok} clip${ok === 1 ? "" : "s"} landed — ${failed} failed on Higgsfield's side (credits refunded there). Regenerate anytime.`);
-      else setMsg(`✓ All ${ok} beats rendered and saved — play them below.`);
+      else setMsg(`✓ All ${ok} beat${ok === 1 ? "" : "s"} rendered and saved — play them below.`);
+      return ok === items.length && !failed;
     } catch {
       setPending(readClipPending(workspace));
       setMsg("Lost the connection mid-batch — your clips are safe. Hit ⟳ Recover clips to pull them in.");
+      return false;
     } finally {
       setBusy(false);
     }
@@ -862,20 +884,22 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
   /** Per-beat narration via /api/tts. Vault-first per segment; re-running
       SKIPS beats that already have a segment (that's the resume path —
       TTS is synchronous, so there's no remote job to recover), and
-      `force` regenerates everything (voice change). */
-  const generateVo = async (force = false) => {
-    if (voBusy) return;
+      `force` regenerates everything (voice change). Returns true when
+      every spoken beat has a segment banked. */
+  const generateVo = async (force = false): Promise<boolean> => {
+    if (voBusy) return false;
+    const haveVo = (await clipVaultForReel(reel.id)).filter((c) => c.kind === "vo");
     const targets = beats
       .map((b, i) => ({ i, say: (b.say || "").trim() }))
-      .filter((t) => t.say && (force || !vos.some((v) => v.beatIndex === t.i)));
+      .filter((t) => t.say && (force || !haveVo.some((v) => v.beatIndex === t.i)));
     if (!targets.length) {
-      setVoMsg("Every spoken beat already has narration — use ↻ Re-voice to redo them.");
-      return;
+      setVoMsg("✓ Every spoken beat already has narration — use ↻ Re-voice to redo them.");
+      return true;
     }
     const voiceId = voMode === "me" ? lsGet(spokenVoiceKey(workspace)) : lsGet(narratorVoiceKey(workspace));
     if (voMode === "me" && !voiceId) {
       setVoMsg("No personal voice yet — record one in Settings › Spoken voice first (≈60 seconds).");
-      return;
+      return false;
     }
     setVoBusy(true);
     let done = 0;
@@ -916,29 +940,36 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
         await refresh();
       }
       setVoMsg(`✓ ${done} narration segment${done === 1 ? "" : "s"} in — play them below, then Assemble.`);
+      return true;
     } catch (e) {
       setVoMsg(`${e instanceof Error ? e.message : "narration failed"}${done ? ` (${done} segment${done === 1 ? "" : "s"} already banked — re-running skips them)` : ""}`);
+      return false;
     } finally {
       setVoBusy(false);
     }
   };
 
   /** Phase 2: clips + VO + captions → one draft MP4, saved as the reel's
-      draft (regenerating overwrites). */
-  const assemble = async () => {
-    if (asmBusy) return;
-    const missing = beats.map((_, i) => i).filter((i) => !videoClips.some((c) => c.beatIndex === i));
-    if (missing.length) {
-      setAsmMsg(`Beat${missing.length === 1 ? "" : "s"} ${missing.map((i) => i + 1).join(", ")} ${missing.length === 1 ? "has" : "have"} no clip yet — generate beats first.`);
-      return;
-    }
+      draft (regenerating overwrites). Reads the vault fresh so it can run
+      right after generate/VO inside Produce-reel. Returns true on success. */
+  const assemble = async (): Promise<boolean> => {
+    if (asmBusy) return false;
     setAsmBusy(true);
-    setAsmMsg("Preparing the timeline…");
+    setAsmMsg("Reading the banked clips…");
+    setAsmLog(null);
     try {
+      const banked = await clipVaultForReel(reel.id);
+      const vClips = banked.filter(isClip);
+      const vVos = banked.filter((c) => c.kind === "vo");
+      const missing = beats.map((_, i) => i).filter((i) => !vClips.some((c) => c.beatIndex === i));
+      if (missing.length) {
+        setAsmMsg(`Beat${missing.length === 1 ? "" : "s"} ${missing.map((i) => i + 1).join(", ")} ${missing.length === 1 ? "has" : "have"} no clip yet — generate beats first.`);
+        return false;
+      }
       const parts = [];
       for (let i = 0; i < beats.length; i++) {
-        const clip = videoClips.find((c) => c.beatIndex === i)!;
-        const vo = vos.find((v) => v.beatIndex === i) || null;
+        const clip = vClips.find((c) => c.beatIndex === i)!;
+        const vo = vVos.find((v) => v.beatIndex === i) || null;
         const scriptD = secsOf(beats[i].duration);
         // beat runs as long as the voice needs (plus a breath), inside the clip
         const voD = vo ? await audioSecs(vo.blob) : 0;
@@ -948,6 +979,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
       const out = await assembleReel(parts, {
         music: music || undefined,
         onProgress: (stage, pct) => setAsmMsg(`⚙ ${stage} · ${pct}%`),
+        onLog: (line) => setAsmLog(line),
       });
       const saved = await clipVaultAdd(
         {
@@ -966,11 +998,32 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
       if (!saved) throw new Error("the draft rendered but couldn't be saved — free up browser storage and assemble again");
       await refresh();
       const total = parts.reduce((s, p) => s + p.duration, 0);
+      setAsmLog(null);
       setAsmMsg(`✓ Draft reel assembled (${Math.round(total)}s, narration + captions${music ? " + music" : ""}) — play or download below.`);
+      return true;
     } catch (e) {
       setAsmMsg(e instanceof Error ? e.message : "assembly failed — try again");
+      return false;
     } finally {
       setAsmBusy(false);
+    }
+  };
+
+  /** ONE TAP: beats → voiceover → assembled draft, skipping anything
+      already banked — the acceptance path "imported genome job → finished
+      narrated + captioned reel". Individual buttons stay for re-runs. */
+  const produceReel = async () => {
+    if (busy || voBusy || asmBusy || prodBusy) return;
+    setProdBusy(true);
+    setProdArm(false);
+    try {
+      const clipsOk = await generate(true);
+      if (!clipsOk) return; // generate() already surfaced why
+      const voOk = await generateVo(false);
+      if (!voOk) return;
+      await assemble();
+    } finally {
+      setProdBusy(false);
     }
   };
 
@@ -991,8 +1044,8 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
         <span style={{ fontSize: 10, fontWeight: 800, color: "#E8622C", textTransform: "uppercase", letterSpacing: 0.5 }}>
           Beat clips — Higgsfield renders of this script
         </span>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          {pending && !busy && (
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {pending && !anyBusy && (
             <button
               onClick={recover}
               style={{ background: "rgba(255,194,61,0.12)", color: "#FFC23D", border: "1px solid rgba(255,194,61,0.4)", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
@@ -1001,8 +1054,8 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
             </button>
           )}
           <button
-            onClick={() => (armed ? generate() : setArmed(true))}
-            disabled={busy}
+            onClick={() => (armed ? generate(false) : setArmed(true))}
+            disabled={anyBusy}
             style={{
               background: armed ? "rgba(232,98,44,0.25)" : "rgba(232,98,44,0.12)",
               color: "#FF9A62",
@@ -1011,12 +1064,44 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
               padding: "6px 13px",
               fontSize: 11.5,
               fontWeight: 700,
-              cursor: busy ? "default" : "pointer",
-              opacity: busy ? 0.6 : 1,
+              cursor: anyBusy ? "default" : "pointer",
+              opacity: anyBusy ? 0.6 : 1,
             }}
           >
             {busy ? "Rendering…" : armed ? `Confirm — ${beats.length} clips ≈ ${dollars(estCents)}` : clips.length ? "↻ Regenerate beats" : "▶ Generate beats"}
           </button>
+          {(() => {
+            const missingCount = beats.filter((_, i) => !videoClips.some((c) => c.beatIndex === i)).length;
+            const prodLabel = prodBusy
+              ? "Producing…"
+              : prodArm
+                ? `Confirm — renders ${missingCount} clip${missingCount === 1 ? "" : "s"} ≈ ${dollars(missingCount * UNIT_COST_CENTS.reel)}`
+                : "⚡ Produce reel";
+            return (
+              <button
+                onClick={() => {
+                  if (prodBusy || anyBusy) return;
+                  if (missingCount && !prodArm) setProdArm(true);
+                  else produceReel();
+                }}
+                disabled={anyBusy}
+                title="Beats → voiceover → assembled draft, skipping anything already rendered"
+                style={{
+                  background: prodArm ? "rgba(65,217,138,0.3)" : "rgba(65,217,138,0.16)",
+                  color: "#41D98A",
+                  border: "1px solid rgba(65,217,138,0.55)",
+                  borderRadius: 8,
+                  padding: "6px 13px",
+                  fontSize: 11.5,
+                  fontWeight: 800,
+                  cursor: anyBusy ? "default" : "pointer",
+                  opacity: anyBusy && !prodBusy ? 0.6 : 1,
+                }}
+              >
+                {prodLabel}
+              </button>
+            );
+          })()}
         </div>
       </div>
       {msg && <div style={{ fontSize: 11, color: "#7DD3FC", marginTop: 6, lineHeight: 1.45 }}>{msg}</div>}
@@ -1082,14 +1167,14 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
                     setVoMode(m.id);
                     lsSet(voModeKey(workspace), m.id);
                   }}
-                  disabled={voBusy}
+                  disabled={anyBusy}
                   style={{
                     border: "none",
                     borderRadius: 6,
                     padding: "5px 11px",
                     fontSize: 10.5,
                     fontWeight: 700,
-                    cursor: voBusy ? "default" : "pointer",
+                    cursor: anyBusy ? "default" : "pointer",
                     background: voMode === m.id ? "rgba(201,168,255,0.2)" : "transparent",
                     color: voMode === m.id ? "#C9A8FF" : "#8B89A0",
                   }}
@@ -1102,16 +1187,16 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
               {!!vos.length && (
                 <button
                   onClick={() => generateVo(true)}
-                  disabled={voBusy}
-                  style={{ background: "transparent", color: "#8B89A0", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "6px 11px", fontSize: 10.5, fontWeight: 700, cursor: voBusy ? "default" : "pointer" }}
+                  disabled={anyBusy}
+                  style={{ background: "transparent", color: "#8B89A0", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "6px 11px", fontSize: 10.5, fontWeight: 700, cursor: anyBusy ? "default" : "pointer" }}
                 >
                   ↻ Re-voice all
                 </button>
               )}
               <button
                 onClick={() => generateVo(false)}
-                disabled={voBusy}
-                style={{ background: "rgba(201,168,255,0.14)", color: "#C9A8FF", border: "1px solid rgba(201,168,255,0.45)", borderRadius: 8, padding: "6px 13px", fontSize: 11.5, fontWeight: 700, cursor: voBusy ? "default" : "pointer", opacity: voBusy ? 0.6 : 1 }}
+                disabled={anyBusy}
+                style={{ background: "rgba(201,168,255,0.14)", color: "#C9A8FF", border: "1px solid rgba(201,168,255,0.45)", borderRadius: 8, padding: "6px 13px", fontSize: 11.5, fontWeight: 700, cursor: anyBusy ? "default" : "pointer", opacity: anyBusy ? 0.6 : 1 }}
               >
                 {voBusy ? "Narrating…" : "🎙 Generate voiceover"}
               </button>
@@ -1138,7 +1223,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
               type="file"
               accept="audio/*"
               onChange={(e) => setMusic(e.target.files?.[0] || null)}
-              disabled={asmBusy}
+              disabled={anyBusy}
               style={{ display: "none" }}
             />
             <span style={{ border: "1px dashed rgba(255,255,255,0.18)", borderRadius: 7, padding: "4px 9px" }}>
@@ -1157,8 +1242,8 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
             )}
           </label>
           <button
-            onClick={assemble}
-            disabled={asmBusy || videoClips.length < beats.length}
+            onClick={() => assemble()}
+            disabled={anyBusy || videoClips.length < beats.length}
             style={{
               marginLeft: "auto",
               background: "rgba(65,217,138,0.14)",
@@ -1168,8 +1253,8 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
               padding: "6px 14px",
               fontSize: 11.5,
               fontWeight: 700,
-              cursor: asmBusy || videoClips.length < beats.length ? "default" : "pointer",
-              opacity: asmBusy || videoClips.length < beats.length ? 0.6 : 1,
+              cursor: anyBusy || videoClips.length < beats.length ? "default" : "pointer",
+              opacity: anyBusy || videoClips.length < beats.length ? 0.6 : 1,
             }}
           >
             {asmBusy ? "Assembling…" : draft ? "↻ Re-assemble draft" : "🎞 Assemble draft"}
@@ -1180,6 +1265,11 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
           one 9:16 MP4, on this device (first run downloads the ~30MB engine).
         </div>
         {asmMsg && <div style={{ fontSize: 11, color: "#41D98A", marginTop: 5, lineHeight: 1.45 }}>{asmMsg}</div>}
+        {asmBusy && asmLog && (
+          <div style={{ fontSize: 9.5, color: "#5E5C72", fontFamily: "var(--mono)", marginTop: 3, lineHeight: 1.4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            engine: {asmLog}
+          </div>
+        )}
         {draft && urls[draft.id] && !asmBusy && (
           <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginTop: 10 }}>
             <video

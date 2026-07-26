@@ -5,25 +5,30 @@
  * beat's on-screen text, optionally mix a low music bed → one 9:16 draft
  * MP4 (720×1280, 30fps).
  *
- * ARCHITECTURE (v2 — the first cut froze the tab): everything ffmpeg runs
- * inside OUR OWN dedicated Web Worker, created from an inline blob so the
- * bundler can never mangle it. The worker importScripts the ffmpeg.wasm
- * UMD wrapper (fetched on the main thread → blob URLs, so no cross-origin
- * importScripts games), which runs the single-thread core in ITS nested
- * worker — the main thread only renders caption PNGs and marshals bytes,
- * and the tab stays responsive for the whole encode. No SharedArrayBuffer
- * / COOP-COEP requirements.
+ * ARCHITECTURE (v3): NO wrapper library. v1 froze the tab because the
+ * bundler broke @ffmpeg/ffmpeg's internal worker; v2 still froze because
+ * the wrapper's nested-worker spawn is unverifiable black-box machinery.
+ * Now OUR worker drives ffmpeg-core DIRECTLY — importScripts(core js) and
+ * synchronous core.exec() in the same dedicated worker thread, exactly
+ * what @ffmpeg/ffmpeg's own worker.js does internally. There is no code
+ * path by which the encode can land on the main thread: the core only
+ * exists inside the worker. Single-thread core → no SharedArrayBuffer /
+ * COOP-COEP requirements.
  *
- * Progress is real (ffmpeg progress/log events forwarded from the worker),
- * and a hard 4-minute timeout kills the worker and surfaces the last
- * ffmpeg log line — a hang is visible, never infinite.
+ * Liveness guarantees (from the live-test feedback):
+ * - engine log lines stream out via postMessage (postMessage works from
+ *   inside the wasm's synchronous callbacks) — the UI can show the last
+ *   engine line at all times
+ * - real per-exec progress via the core's progress hook
+ * - PRIMARY timeout is per-exec INSIDE the worker (core.setTimeout abort)
+ *   — it fires even though the worker thread is busy in wasm; the
+ *   main-thread 5-minute terminate is only a backstop
  *
- * Encode budget: each beat is decoded ONCE (normalize to 720×1280 +
- * caption overlay + VO mux in a single filter_complex pass, x264
- * ultrafast CRF 23), the concat is stream-copy, and the optional music
- * mux copies video. Captions are canvas-rendered transparent PNGs —
- * ffmpeg.wasm ships no fonts, canvas gets the app's real fonts + exact
- * DESERT GRID styling.
+ * Encode: each beat is decoded once (normalize to 720×1280 + caption
+ * overlay + VO mux in one filter_complex pass, x264 ultrafast CRF 23),
+ * concat is stream-copy, music mux copies video. Captions are canvas
+ * PNGs rendered on the main thread (the app's real fonts + DESERT GRID
+ * styling) and passed in as bytes.
  */
 
 export interface AssemblyBeat {
@@ -40,22 +45,19 @@ export interface AssemblyOptions {
   /** optional music bed, mixed low under the narration */
   music?: Blob;
   onProgress?: (stage: string, pct: number) => void;
+  /** raw engine output, throttled — surface the latest line in the UI */
+  onLog?: (line: string) => void;
 }
 
-/* pinned engine versions — wrapper minor must match its worker chunk */
-const FFMPEG_VER = "0.12.15";
+/* pinned single-thread core */
 const CORE_VER = "0.12.10";
-const ASSETS = {
-  ffmpegJs: `https://unpkg.com/@ffmpeg/ffmpeg@${FFMPEG_VER}/dist/umd/ffmpeg.js`,
-  classWorkerJs: `https://unpkg.com/@ffmpeg/ffmpeg@${FFMPEG_VER}/dist/umd/814.ffmpeg.js`,
-  coreJs: `https://unpkg.com/@ffmpeg/core@${CORE_VER}/dist/umd/ffmpeg-core.js`,
-  wasm: `https://unpkg.com/@ffmpeg/core@${CORE_VER}/dist/umd/ffmpeg-core.wasm`,
-};
+const CORE_JS_URL = `https://unpkg.com/@ffmpeg/core@${CORE_VER}/dist/umd/ffmpeg-core.js`;
+const CORE_WASM_URL = `https://unpkg.com/@ffmpeg/core@${CORE_VER}/dist/umd/ffmpeg-core.wasm`;
 
-const HARD_TIMEOUT_MS = 4 * 60000;
+/** main-thread backstop only — the worker's per-exec timeouts are primary */
+const MAIN_BACKSTOP_MS = 5 * 60000;
 
-/* engine assets → same-origin blob URLs, fetched once per session */
-let assetUrls: { ffmpegJs: string; classWorkerJs: string; coreJs: string; wasm: string } | null = null;
+let assetUrls: { coreJs: string; wasm: string } | null = null;
 async function loadAssets(onProgress?: (stage: string, pct: number) => void) {
   if (assetUrls) return assetUrls;
   onProgress?.("downloading the video engine (~31MB, first time only)", 2);
@@ -64,41 +66,45 @@ async function loadAssets(onProgress?: (stage: string, pct: number) => void) {
     if (!r.ok) throw new Error(`couldn't download the video engine (${r.status}) — check the connection and retry`);
     return URL.createObjectURL(new Blob([await r.arrayBuffer()], { type }));
   };
-  const [ffmpegJs, classWorkerJs, coreJs, wasm] = await Promise.all([
-    grab(ASSETS.ffmpegJs, "text/javascript"),
-    grab(ASSETS.classWorkerJs, "text/javascript"),
-    grab(ASSETS.coreJs, "text/javascript"),
-    grab(ASSETS.wasm, "application/wasm"),
-  ]);
-  assetUrls = { ffmpegJs, classWorkerJs, coreJs, wasm };
+  const [coreJs, wasm] = await Promise.all([grab(CORE_JS_URL, "text/javascript"), grab(CORE_WASM_URL, "application/wasm")]);
+  assetUrls = { coreJs, wasm };
   return assetUrls;
 }
 
-/* The whole ffmpeg pipeline, as a classic worker. NO template literals or
-   ${} inside — this string must survive being a string. */
+/* The whole pipeline against ffmpeg-core, as a classic worker. NO template
+   literals or ${} inside — this string must survive being a string. */
 const WORKER_SRC = `
 self.onmessage = async function (e) {
   var msg = e.data;
   var lastLog = "";
   var post = function (type, payload) { self.postMessage(Object.assign({ type: type }, payload)); };
   try {
-    importScripts(msg.urls.ffmpegJs);
-    var ff = new self.FFmpegWASM.FFmpeg();
-    var stage = { label: "starting", base: 0, span: 0 };
-    var logTick = 0;
-    ff.on("log", function (ev) {
-      lastLog = String(ev.message || "");
-      var now = Date.now();
-      if (now - logTick > 700) { logTick = now; post("log", { line: lastLog }); }
-    });
-    ff.on("progress", function (ev) {
-      var p = Number(ev.progress);
-      if (!(p >= 0)) p = 0;
-      if (p > 1) p = 1;
-      post("progress", { stage: stage.label, pct: Math.min(99, Math.round(stage.base + p * stage.span)) });
-    });
     post("progress", { stage: "starting the encoder", pct: 4 });
-    await ff.load({ coreURL: msg.urls.coreJs, wasmURL: msg.urls.wasm, classWorkerURL: msg.urls.classWorkerJs });
+    importScripts(msg.urls.coreJs);
+    if (typeof self.createFFmpegCore !== "function") throw new Error("engine script loaded but createFFmpegCore is missing");
+    var core = await self.createFFmpegCore({
+      mainScriptUrlOrBlob: msg.urls.coreJs + "#" + btoa(JSON.stringify({ wasmURL: msg.urls.wasm }))
+    });
+    var logTick = 0;
+    if (core.setLogger) core.setLogger(function (l) {
+      lastLog = String((l && l.message) || "");
+      var now = Date.now();
+      if (now - logTick > 600) { logTick = now; post("log", { line: lastLog }); }
+    });
+    var stage = { label: "starting", base: 4, span: 0 };
+    if (core.setProgress) core.setProgress(function (p) {
+      var r = p && typeof p.progress === "number" ? p.progress : 0;
+      if (!(r >= 0)) r = 0;
+      if (r > 1) r = 1;
+      post("progress", { stage: stage.label, pct: Math.min(99, Math.round(stage.base + r * stage.span)) });
+    });
+    var run = function (args, timeoutMs, what) {
+      if (core.setTimeout) core.setTimeout(timeoutMs);
+      core.exec.apply(core, args);
+      var ret = core.ret;
+      if (core.reset) core.reset();
+      if (ret !== 0) throw new Error(what + " failed (ffmpeg exit " + ret + ")");
+    };
 
     var beats = msg.beats;
     var n = beats.length;
@@ -106,20 +112,20 @@ self.onmessage = async function (e) {
     for (var i = 0; i < n; i++) {
       var b = beats[i];
       var D = Math.max(1.5, Math.min(12, Number(b.duration) || 5)).toFixed(2);
-      stage = { label: "encoding beat " + (i + 1) + " of " + n, base: 6 + (i / n) * 64, span: 64 / n };
+      stage = { label: "encoding beat " + (i + 1) + " of " + n, base: 6 + (i / n) * 66, span: 66 / n };
       post("progress", { stage: stage.label, pct: Math.round(stage.base) });
       var clipName = "c" + i + ".mp4";
-      await ff.writeFile(clipName, new Uint8Array(b.clip));
+      core.FS.writeFile(clipName, new Uint8Array(b.clip));
       var args = ["-i", clipName];
       var capIdx = -1;
       if (b.cap) {
-        await ff.writeFile("t" + i + ".png", new Uint8Array(b.cap));
+        core.FS.writeFile("t" + i + ".png", new Uint8Array(b.cap));
         args.push("-i", "t" + i + ".png");
         capIdx = 1;
       }
       var voIdx;
       if (b.vo) {
-        await ff.writeFile("a" + i + ".mp3", new Uint8Array(b.vo));
+        core.FS.writeFile("a" + i + ".mp3", new Uint8Array(b.vo));
         args.push("-i", "a" + i + ".mp3");
         voIdx = capIdx === 1 ? 2 : 1;
       } else {
@@ -130,7 +136,7 @@ self.onmessage = async function (e) {
       var fc = capIdx === 1 ? base + "[bv];[bv][" + capIdx + ":v]overlay=0:0[v]" : base + "[v]";
       if (b.vo) fc += ";[" + voIdx + ":a]apad[a]";
       var seg = "seg" + i + ".mp4";
-      await ff.exec(
+      run(
         args.concat([
           "-filter_complex", fc,
           "-map", "[v]",
@@ -144,25 +150,27 @@ self.onmessage = async function (e) {
           "-b:a", "128k",
           "-ar", "44100",
           seg,
-        ])
+        ]),
+        120000,
+        "beat " + (i + 1)
       );
       segs.push("file '" + seg + "'");
-      await ff.deleteFile(clipName);
-      if (b.cap) await ff.deleteFile("t" + i + ".png");
-      if (b.vo) await ff.deleteFile("a" + i + ".mp3");
+      try { core.FS.unlink(clipName); } catch (x) {}
+      if (b.cap) try { core.FS.unlink("t" + i + ".png"); } catch (x) {}
+      if (b.vo) try { core.FS.unlink("a" + i + ".mp3"); } catch (x) {}
     }
 
-    stage = { label: "stitching the beats", base: 74, span: 8 };
-    post("progress", { stage: stage.label, pct: 74 });
-    await ff.writeFile("list.txt", new TextEncoder().encode(segs.join("\\n")));
-    await ff.exec(["-f", "concat", "-safe", "0", "-i", "list.txt", "-c", "copy", "draft.mp4"]);
+    stage = { label: "stitching the beats", base: 76, span: 8 };
+    post("progress", { stage: stage.label, pct: 76 });
+    core.FS.writeFile("list.txt", new TextEncoder().encode(segs.join("\\n")));
+    run(["-f", "concat", "-safe", "0", "-i", "list.txt", "-c", "copy", "draft.mp4"], 60000, "stitch");
 
     var outName = "draft.mp4";
     if (msg.music) {
-      stage = { label: "mixing the music bed", base: 84, span: 10 };
-      post("progress", { stage: stage.label, pct: 84 });
-      await ff.writeFile("music.bin", new Uint8Array(msg.music));
-      await ff.exec([
+      stage = { label: "mixing the music bed", base: 86, span: 8 };
+      post("progress", { stage: stage.label, pct: 86 });
+      core.FS.writeFile("music.bin", new Uint8Array(msg.music));
+      run([
         "-i", "draft.mp4",
         "-stream_loop", "-1",
         "-i", "music.bin",
@@ -174,13 +182,13 @@ self.onmessage = async function (e) {
         "-b:a", "128k",
         "-shortest",
         "final.mp4",
-      ]);
+      ], 90000, "music mix");
       outName = "final.mp4";
     }
 
     post("progress", { stage: "finishing", pct: 97 });
-    var out = await ff.readFile(outName);
-    if (!out || !out.byteLength || out.byteLength < 50000) throw new Error("the draft came out empty");
+    var out = core.FS.readFile(outName, { encoding: "binary" });
+    if (!out || out.length < 50000) throw new Error("the draft came out empty");
     var buf = out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength);
     self.postMessage({ type: "done", data: buf }, [buf]);
   } catch (err) {
@@ -247,13 +255,13 @@ async function captionPng(text: string): Promise<Blob | null> {
   }
 }
 
-/** Stitch beats → draft MP4 blob. Non-blocking (dedicated worker), real
-    progress, hard 4-minute timeout that reports the last ffmpeg log line. */
+/** Stitch beats → draft MP4 blob. Non-blocking (dedicated worker driving
+    ffmpeg-core directly), streamed progress + engine log, worker-side
+    per-exec timeouts, main-thread terminate as backstop. */
 export async function assembleReel(beats: AssemblyBeat[], opts: AssemblyOptions = {}): Promise<Blob> {
   if (!beats.length) throw new Error("nothing to assemble");
   const prog = opts.onProgress;
 
-  // main-thread prep: caption PNGs (needs the DOM's fonts) + input bytes
   prog?.("preparing captions", 1);
   const payloadBeats = await Promise.all(
     beats.map(async (b) => {
@@ -270,21 +278,25 @@ export async function assembleReel(beats: AssemblyBeat[], opts: AssemblyOptions 
   const music = opts.music ? await opts.music.arrayBuffer() : null;
   const urls = await loadAssets(prog);
 
-  const worker = new Worker(URL.createObjectURL(new Blob([WORKER_SRC], { type: "text/javascript" })));
+  const workerUrl = URL.createObjectURL(new Blob([WORKER_SRC], { type: "text/javascript" }));
+  const worker = new Worker(workerUrl);
   let lastLog = "";
   try {
     const result = await new Promise<ArrayBuffer>((resolve, reject) => {
+      // backstop only — the worker's own per-exec timeouts fire first
       const killer = setTimeout(() => {
-        reject(new Error(`assembly hit the 4-minute limit — last engine line: "${lastLog.slice(0, 160) || "(none)"}". Close other tabs and try again.`));
-      }, HARD_TIMEOUT_MS);
+        reject(new Error(`assembly hit the 5-minute backstop — last engine line: "${lastLog.slice(0, 160) || "(none)"}". Close other tabs and try again.`));
+      }, MAIN_BACKSTOP_MS);
       worker.onerror = (e) => {
         clearTimeout(killer);
         reject(new Error(`the video engine crashed: ${e.message || "worker error"}`));
       };
       worker.onmessage = (e) => {
         const m = e.data as { type: string; stage?: string; pct?: number; line?: string; message?: string; lastLog?: string; data?: ArrayBuffer };
-        if (m.type === "log") lastLog = m.line || lastLog;
-        else if (m.type === "progress") prog?.(m.stage || "working", m.pct || 0);
+        if (m.type === "log") {
+          lastLog = m.line || lastLog;
+          if (lastLog) opts.onLog?.(lastLog);
+        } else if (m.type === "progress") prog?.(m.stage || "working", m.pct || 0);
         else if (m.type === "done" && m.data) {
           clearTimeout(killer);
           resolve(m.data);
@@ -303,5 +315,6 @@ export async function assembleReel(beats: AssemblyBeat[], opts: AssemblyOptions 
     return new Blob([result], { type: "video/mp4" });
   } finally {
     worker.terminate();
+    URL.revokeObjectURL(workerUrl);
   }
 }
