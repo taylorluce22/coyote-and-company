@@ -9,6 +9,28 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-25 · SCRIPT WRITER v2 + SCRIPT STUDIO — details that survive into generated video
+Owner produced his first AI video from a remake script: "pretty cool
+for a first draft but i need the quality enhanced and the script writer
+to be better so the details turn out in the video better." Root cause:
+v1 beats ("shot: show a graphic") lose all craft on the way into a
+video generator — the generated clip is only as detailed as the text
+it's given. Two builds:
+
+- **Script writer v2** (style-match remake): every beat now carries
+  camera language, a complete visualDetail (every visible element,
+  materials, lighting, what moves), textStyle (how captions animate),
+  VO fitted to duration at ~2.5 words/sec — and a paste-ready per-beat
+  genPrompt (9:16, self-contained, no vague adjectives, protagonist
+  described identically across beats since generators have no memory).
+  Rendered in AnalysisCard with collapsible one-tap-copy prompt rows.
+- **✍️ Script Studio** (/api/reel-script + card in Reel Coach): scripts
+  from SCRATCH — topic × style × 15/30/45s, same v2 format. Style can
+  be a preset (3D caricature, motion graphics, talking head, b-roll)
+  or "Match: <analyzed reel>" which seeds the writer with that reel's
+  styleDna — one analyzed reference now powers unlimited scripts.
+  Scripts save into the reel vault as ✍️ cards.
+
 ## 2026-07-25 · FIRST COMPLETE REEL RUN ✓ — and the real saboteur was the blob store
 The Cowork agent on the owner's Mac ran the whole pipeline end to end:
 exported the clip from the Photos library, compressed 81.5MB → small

@@ -109,7 +109,13 @@ Be specific and concrete — this feeds a content-strategy knowledge base, not a
 
 /** Style-match mode: decode the reference's style DNA beat by beat AND write
     the shot-for-shot remake script using the owner's topic — same Gemini
-    pass, since the model is already watching the video. */
+    pass, since the model is already watching the video.
+
+    v2 script writer: the owner produces the remake with AI video generation,
+    and v1's loose beats ("shot: show a graphic") lost all the detail on the
+    way into the generator. Every beat now carries full production language —
+    camera, every visible element, text animation — plus a paste-ready
+    per-beat generation prompt, so the details survive into the output. */
 const styleMatchPrompt = (topic: { title: string; angle: string; facts: string[] }) =>
   SCHEMA_PROMPT.replace(
     `  "coachingNotes": ["specific actionable takeaway", "another one", "..."]
@@ -123,22 +129,38 @@ const styleMatchPrompt = (topic: { title: string; angle: string; facts: string[]
   },
   "remake": {
     "hookLine": "the opening line (spoken or on-screen) that applies THIS reel's hook technique to the topic below",
-    "beats": [{ "shot": "exactly what to film or show", "say": "the spoken line, word for word", "onScreenText": "the on-screen text for this beat", "duration": "~Ns" }],
+    "beats": [{
+      "shot": "one-line summary of this beat",
+      "camera": "exact camera language: framing, angle, movement (e.g. 'tight low-angle push-in, subject centered, slight handheld drift')",
+      "visualDetail": "EVERY visible element, specifically: subject and what it's doing, props with colors/materials, background, lighting direction and mood, any motion — written so an artist who never saw the reference could reproduce the frame",
+      "onScreenText": "the exact on-screen text for this beat, or 'none'",
+      "textStyle": "font vibe, size, color, placement, and HOW it animates on/off, matching the reference's text system",
+      "say": "the spoken line, word for word, sized to fit the duration at ~2.5 words per second",
+      "duration": "~Ns",
+      "genPrompt": "a complete, self-contained text-to-video generation prompt for THIS beat: 9:16 vertical, the full visualDetail + camera + lighting + color grade + motion in one paragraph of concrete visual language — no vague words like 'engaging' or 'dynamic', no references to 'the reference video', and DO NOT include the on-screen text in the prompt (captions are added in the edit)"
+    }],
     "cta": "the closing call-to-action in this reel's style",
-    "productionNotes": ["location/gear/edit note needed to nail this style", "..."]
+    "productionNotes": ["edit/assembly note needed to nail this style: caption timing, transition types, sound design, pacing", "..."]
   }
 }`
   ) +
   `
 
-STYLE-MATCH BRIEF: after analyzing the clip, use "styleDna" to decode its style beat by beat (5-10 beats covering the full runtime), then write "remake" — a complete shot-for-shot script that reproduces THIS clip's format, pacing, text treatment and energy, but about the topic below. The remake must be filmable by one person with a phone in a day.
+STYLE-MATCH BRIEF: after analyzing the clip, use "styleDna" to decode its style beat by beat (5-10 beats covering the full runtime), then write "remake" — a complete shot-for-shot script that reproduces THIS clip's format, pacing, visual treatment and energy, but about the topic below.
+
+REMAKE QUALITY BARS (each one is checked):
+- Beat durations must sum to roughly the reference's runtime, and each "say" line must actually fit its duration at ~2.5 words/second — count the words.
+- "visualDetail" and "genPrompt" carry the craft: name the exact subject, style (e.g. "stylized 3D caricature render", "clean flat motion graphics", "phone-shot talking head"), materials, colors from the reference's grade, light direction, and what MOVES during the beat. A generated clip is only as detailed as this text.
+- Visual continuity: keep the same protagonist/style across beats — describe the recurring subject identically in every genPrompt (generators have no memory between prompts).
+- The metaphors must translate, not copy: find this topic's equivalent of the reference's visual ideas (its prop-with-a-price-tag becomes a prop that embodies THIS topic's numbers).
+- On-screen text: exact words, no more than 7 per beat, and never inside genPrompt.
 
 THE TOPIC: ${topic.title}
 Angle: ${topic.angle}
 VERIFIED FACTS (the only numbers/claims the remake may use — keep them exact):
 ${topic.facts.map((f, i) => `${i + 1}. ${f}`).join("\n")}
 
-Remake rules: an Arizona residential solar consultant is the on-camera voice; APS territory only (never SRP); the script must end connected to the solar/ownership decision; call-to-action stays Valley-general ("Valley homeowners", never one city); no emojis in on-screen text; every number must come from the verified facts verbatim.`;
+Remake rules: the voice is an Arizona residential solar consultant; APS territory only (never SRP); the script must end connected to the solar/ownership decision; call-to-action stays Valley-general ("Valley homeowners", never one city); no emojis in on-screen text; every number must come from the verified facts verbatim.`;
 
 /* ------------------------------------------------------------------ */
 /* shared step helpers — used by BOTH the phased flow and the          */
