@@ -9,6 +9,23 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-26 · VOICEOVER + ASSEMBLY — a finished draft reel comes OUT of Farmhand
+The "silent b-roll" gap is closed on `claude/app-performance-max-h8tgoc`:
+- **ElevenLabs lane (/api/tts):** per-beat narration from the remake's
+  "say" lines (sync TTS, vault-first per segment, re-run skips finished
+  beats); TWO voices per workspace for the 70/30 mix — brand narrator
+  (workspace pick or ELEVENLABS_VOICE_ID default; never a legacy Default
+  voice, those retire Dec 31 2026) and **Instant Voice Clone** recorded in
+  Settings › Spoken voice. Needs ELEVENLABS_API_KEY in Vercel (+
+  ELEVENLABS_VOICE_ID after Taylor auditions; ELEVENLABS_MODEL optional).
+- **Phase 2 assembly (ffmpeg.wasm, client-side):** 🎞 Assemble draft
+  stitches clips in shot order, times each beat to its narration, burns
+  DESERT GRID captions (canvas-PNG overlays), optional low music bed →
+  one 720×1280 draft MP4 saved in the clip vault, playable/downloadable
+  on the card. CapCut is now polish, not required.
+- Hailuo duration fix shipped earlier today (numeric duration, [6,10]
+  snap, hailuo-anchored ladder) — 67fadb4.
+
 ## 2026-07-26 · STYLE GENOME + HIGGSFIELD VIDEO LANE — extract → adapt → generate, in-app
 Two ships on `claude/app-performance-max-h8tgoc` (production currently runs
 the PROMOTED preview of this branch — merge to main when ready, a main push

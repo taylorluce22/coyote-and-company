@@ -1,4 +1,11 @@
-# Reel Assembly — Phase 2 spec (not yet built)
+# Reel Assembly — Phase 2 spec
+
+> **STATUS: BUILT 2026-07-26** — `lib/assembleReel.ts` + the Draft-reel row
+> in Reel Coach's ClipStudio. Two deltas from the spec below: captions are
+> canvas-rendered transparent PNGs overlaid per beat (ffmpeg.wasm ships no
+> fonts; canvas gets the app's real fonts + exact DESERT GRID styling), and
+> VO shipped in the same pass (ElevenLabs per-beat segments, beats timed to
+> narration length). "Later" items below remain open.
 
 Phase 1 (shipped) ends with per-beat clips in the clip vault: one 9:16
 Higgsfield render per remake beat, plus the script's `say` lines,

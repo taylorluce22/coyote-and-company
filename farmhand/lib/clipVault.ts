@@ -10,10 +10,14 @@
  */
 
 export interface VaultClip {
-  /** `${reelId}::${beatIndex}` — regeneration overwrites in place */
+  /** clip: `${reelId}::${beat}` · vo: `${reelId}::vo::${beat}` ·
+      draft: `${reelId}::draft` — regeneration overwrites in place */
   id: string;
   reelId: string;
   beatIndex: number;
+  /** undefined = video clip (pre-audio-lane records); "vo" = narration
+      segment for a beat; "draft" = the assembled reel (beatIndex -1) */
+  kind?: "clip" | "vo" | "draft";
   prompt: string;
   label: string;
   mime: string;
@@ -22,6 +26,9 @@ export interface VaultClip {
 }
 
 export const clipId = (reelId: string, beatIndex: number) => `${reelId}::${beatIndex}`;
+export const voId = (reelId: string, beatIndex: number) => `${reelId}::vo::${beatIndex}`;
+export const draftId = (reelId: string) => `${reelId}::draft`;
+export const isClip = (c: VaultClip) => !c.kind || c.kind === "clip";
 
 const DB_NAME = "farmhand-clip-vault";
 const STORE = "clips";

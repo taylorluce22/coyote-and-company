@@ -39,6 +39,7 @@ export const CONNECTOR_GROUPS: ConnGroup[] = [
       { id: "unsplash", name: "Unsplash", agent: "CMO", powers: "Backup stock provider", env: "UNSPLASH_ACCESS_KEY", getUrl: "https://unsplash.com/developers", check: { endpoint: "/api/stock", key: "unsplash" }, status: "needs-key" },
       { id: "gemini", name: "Gemini (video)", agent: "CMO", powers: "Reel Coach — watches reels for coaching", env: "GEMINI_API_KEY", getUrl: "https://aistudio.google.com/apikey", check: { endpoint: "/api/video-reference" }, status: "needs-key" },
       { id: "claude", name: "Claude (scriptwriter)", agent: "CMO", powers: "Advanced reel scripts — rewrites every remake with production-grade detail", env: "ANTHROPIC_API_KEY", getUrl: "https://console.anthropic.com/settings/keys", check: { endpoint: "/api/reel-script" }, status: "needs-key" },
+      { id: "elevenlabs", name: "ElevenLabs (voiceover)", agent: "CMO", powers: "Reel narration — brand narrator + your cloned voice", env: "ELEVENLABS_API_KEY", getUrl: "https://elevenlabs.io/app/settings/api-keys", check: { endpoint: "/api/tts" }, status: "needs-key" },
       { id: "instagram", name: "Instagram", agent: "CMO", powers: "Publish + pull post metrics", env: "(Meta Graph API / Metricool)", status: "planned", note: "Publishing not wired yet — export from Post Studio for now." },
       { id: "x", name: "X (Twitter)", agent: "CMO", powers: "Cross-post", env: "(X API)", status: "planned", note: "Not wired yet." },
     ],

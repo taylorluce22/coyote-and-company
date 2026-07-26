@@ -437,6 +437,212 @@ function SolarTerritoryPicker() {
   );
 }
 
+/* ---- Spoken voice (ElevenLabs) — the narration side of the voice profile.
+   Two voices per workspace, matching the 70/30 content mix:
+   - BRAND NARRATOR (educational lane): picked from the account's voice
+     roster; blank = the ELEVENLABS_VOICE_ID default set in Vercel. Never a
+     legacy Default voice (Adam/Rachel/…) — those retire Dec 31 2026.
+   - MY VOICE (personal lane): Instant Voice Clone from a ~60s sample
+     recorded right here. The returned voice_id is stored per workspace. */
+const svKey = (ws: string) => `fh-spoken-voice::${ws}`;
+const nvKey = (ws: string) => `fh-narrator-voice::${ws}`;
+
+const CLONE_SCRIPT =
+  "Read naturally for about a minute — like you're explaining to a neighbor. Try: your usual intro, a bill explanation from a recent post, and a couple of everyday sentences. Quiet room, phone-distance from the mic.";
+
+function SpokenVoiceCard({ workspace }: { workspace: string }) {
+  const [recording, setRecording] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [sample, setSample] = useState<{ blob: Blob; url: string } | null>(null);
+  const [name, setName] = useState("My voice");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [clonedId, setClonedId] = useState(() => {
+    try {
+      return localStorage.getItem(svKey(workspace)) || "";
+    } catch {
+      return "";
+    }
+  });
+  const [voices, setVoices] = useState<Array<{ id: string; name: string; category: string }> | null>(null);
+  const [narrator, setNarrator] = useState(() => {
+    try {
+      return localStorage.getItem(nvKey(workspace)) || "";
+    } catch {
+      return "";
+    }
+  });
+  const recRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = null;
+  };
+
+  const startRec = async () => {
+    setMsg(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      chunksRef.current = [];
+      rec.ondataavailable = (e) => {
+        if (e.data.size) chunksRef.current.push(e.data);
+      };
+      rec.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: rec.mimeType || "audio/webm" });
+        if (sample) URL.revokeObjectURL(sample.url);
+        setSample(blob.size > 1000 ? { blob, url: URL.createObjectURL(blob) } : null);
+        setRecording(false);
+        stopTimer();
+      };
+      rec.start();
+      recRef.current = rec;
+      setElapsed(0);
+      setRecording(true);
+      timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+    } catch {
+      setMsg("Couldn't reach the microphone — allow mic access for this site and try again.");
+    }
+  };
+
+  const clone = async () => {
+    if (!sample || busy) return;
+    if (elapsed > 0 && elapsed < 25) {
+      setMsg("That sample is under ~30 seconds — a longer read clones much better. Record again.");
+      return;
+    }
+    setBusy(true);
+    setMsg("Creating your voice…");
+    try {
+      const dataURL = await new Promise<string>((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => res(String(fr.result));
+        fr.onerror = () => rej(new Error("read failed"));
+        fr.readAsDataURL(sample.blob);
+      });
+      const r = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phase: "clone", name: name.trim() || "My voice", audio: dataURL }),
+        signal: AbortSignal.timeout(90000),
+      });
+      const j = (await r.json()) as { voiceId?: string; error?: string; configured?: boolean };
+      if (j.configured === false) throw new Error("Needs ELEVENLABS_API_KEY in Vercel — add it in Connectors first.");
+      if (!j.voiceId) throw new Error(j.error || "the clone didn't finish — try again");
+      try {
+        localStorage.setItem(svKey(workspace), j.voiceId);
+      } catch {}
+      setClonedId(j.voiceId);
+      setMsg("✓ Your voice is ready — Reel Coach's \"My voice\" mode now uses it.");
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "the clone didn't finish — try again");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const loadVoices = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phase: "voices" }),
+        signal: AbortSignal.timeout(30000),
+      });
+      const j = (await r.json()) as { voices?: Array<{ id: string; name: string; category: string }>; error?: string; configured?: boolean };
+      if (j.configured === false) throw new Error("Needs ELEVENLABS_API_KEY in Vercel — add it in Connectors first.");
+      if (!j.voices) throw new Error(j.error || "couldn't load the voice roster");
+      setVoices(j.voices);
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "couldn't load the voice roster");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const btn = (bg: string, color: string, border: string) =>
+    ({ background: bg, color, border: `1px solid ${border}`, borderRadius: 8, padding: "7px 13px", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }) as const;
+
+  return (
+    <Card title="Spoken voice — reel narration">
+      <div style={{ fontSize: 11.5, color: "#8B89A0", lineHeight: 1.5, marginBottom: 10 }}>
+        Reel Coach narrates scripts with two voices: the <b style={{ color: "#C9A8FF" }}>brand narrator</b> for educational
+        reels and <b style={{ color: "#41D98A" }}>your own cloned voice</b> for personal ones.
+      </div>
+
+      {/* my voice */}
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10, marginBottom: 12 }}>
+        <div style={{ fontSize: 10, fontWeight: 800, color: "#41D98A", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5 }}>
+          My voice {clonedId ? "· ✓ ready" : "· not recorded yet"}
+        </div>
+        <div style={{ fontSize: 10.5, color: "#77758C", lineHeight: 1.5, marginBottom: 8 }}>{CLONE_SCRIPT}</div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <button onClick={recording ? () => recRef.current?.stop() : startRec} disabled={busy} style={btn(recording ? "rgba(255,107,107,0.15)" : "rgba(65,217,138,0.12)", recording ? "#FF6B6B" : "#41D98A", recording ? "rgba(255,107,107,0.45)" : "rgba(65,217,138,0.4)")}>
+            {recording ? `■ Stop (${elapsed}s)` : sample ? "🎙 Re-record" : "🎙 Record sample"}
+          </button>
+          {sample && !recording && <audio src={sample.url} controls preload="metadata" style={{ height: 30, maxWidth: 220 }} />}
+          {sample && !recording && (
+            <>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={busy}
+                style={{ background: "rgba(0,0,0,0.24)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 8, padding: "6px 10px", fontSize: 11.5, color: "#F4F3F8", width: 130 }}
+              />
+              <button onClick={clone} disabled={busy} style={btn("rgba(65,217,138,0.14)", "#41D98A", "rgba(65,217,138,0.45)")}>
+                {busy ? "Working…" : clonedId ? "↻ Replace my voice" : "✓ Create my voice"}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* brand narrator */}
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10 }}>
+        <div style={{ fontSize: 10, fontWeight: 800, color: "#C9A8FF", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5 }}>
+          Brand narrator {narrator ? "· workspace override set" : "· using the Vercel default"}
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {!voices ? (
+            <button onClick={loadVoices} disabled={busy} style={btn("rgba(201,168,255,0.14)", "#C9A8FF", "rgba(201,168,255,0.45)")}>
+              {busy ? "Loading…" : "Audition voices"}
+            </button>
+          ) : (
+            <select
+              value={narrator}
+              onChange={(e) => {
+                setNarrator(e.target.value);
+                try {
+                  e.target.value ? localStorage.setItem(nvKey(workspace), e.target.value) : localStorage.removeItem(nvKey(workspace));
+                } catch {}
+              }}
+              style={{ background: "rgba(0,0,0,0.28)", color: "#F4F3F8", border: "1px solid rgba(201,168,255,0.35)", borderRadius: 8, padding: "7px 10px", fontSize: 11.5, maxWidth: 320, fontFamily: "var(--body)" }}
+            >
+              <option value="">Vercel default (ELEVENLABS_VOICE_ID)</option>
+              {voices.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                  {v.category ? ` · ${v.category}` : ""}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+        <div style={{ fontSize: 10.5, color: "#5E5C72", lineHeight: 1.5, marginTop: 6 }}>
+          Pick from the Voice Library or a designed/cloned voice — ElevenLabs&apos; legacy Default voices retire Dec 31
+          2026 and won&apos;t work on new accounts.
+        </div>
+      </div>
+      {msg && <div style={{ fontSize: 11, color: msg.startsWith("✓") ? "#41D98A" : "#FF9A62", marginTop: 8, lineHeight: 1.45 }}>{msg}</div>}
+    </Card>
+  );
+}
+
 export default function Settings() {
   const { state, set, workspace, switchWorkspace, clients, addClient, renameClient, removeClient, exportClient, importClient } = useStore();
   const get = (k: string, def: boolean) => (state[k] != null ? (state[k] as boolean) : def);
@@ -524,6 +730,8 @@ export default function Settings() {
           return <Row key={v.key} label={v.label} on={on} color="#FF9A62" onToggle={() => set({ [key]: !on })} />;
         })}
       </Card>
+
+      <SpokenVoiceCard workspace={workspace} />
 
       <Card title="Brokerage & legal">
         {[

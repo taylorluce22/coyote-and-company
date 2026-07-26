@@ -7,7 +7,8 @@ import { useStore } from "@/lib/store";
 import { ideasFor, type Idea, type StrategyProfile } from "@/lib/strategy";
 import { reelVaultAdd, reelVaultAll, reelVaultDelete, type ReelAnalysis, type VaultReel } from "@/lib/reelVault";
 import { buildHiggsfieldPrompt, recreationBriefText, type QualityFlag, type ReferenceVideoAnalysis } from "@/lib/styleGenome";
-import { clipId, clipVaultAdd, clipVaultDeleteForReel, clipVaultForReel, type VaultClip } from "@/lib/clipVault";
+import { clipId, clipVaultAdd, clipVaultDeleteForReel, clipVaultForReel, draftId, isClip, voId, type VaultClip } from "@/lib/clipVault";
+import { assembleReel } from "@/lib/assembleReel";
 import { record as meterRecord, UNIT_COST_CENTS, dollars } from "@/lib/meter";
 
 const STEP_LABELS = ["Upload", "Hand-off", "Gemini processing", "Writing breakdown"];
@@ -623,7 +624,53 @@ function pruneClipPending(beat: number, client: string) {
 
 type BeatClipState = "none" | "rendering" | "done" | "failed";
 
-/** Generate, track, play and bank the per-beat clips of a remake script. */
+/* ---- spoken-voice settings (per workspace, client-side) ----
+   me  = the owner's cloned ElevenLabs voice (Settings › Spoken voice)
+   edu = the brand narrator (workspace override, else ELEVENLABS_VOICE_ID) */
+const spokenVoiceKey = (ws: string) => `fh-spoken-voice::${ws}`;
+const narratorVoiceKey = (ws: string) => `fh-narrator-voice::${ws}`;
+const voModeKey = (ws: string) => `fh-vo-mode::${ws}`;
+const lsGet = (k: string) => {
+  try {
+    return localStorage.getItem(k) || "";
+  } catch {
+    return "";
+  }
+};
+const lsSet = (k: string, v: string) => {
+  try {
+    v ? localStorage.setItem(k, v) : localStorage.removeItem(k);
+  } catch {}
+};
+
+/** Duration of an audio blob via metadata — used to time beats to the VO. */
+const audioSecs = (blob: Blob): Promise<number> =>
+  new Promise((res) => {
+    try {
+      const a = document.createElement("audio");
+      a.preload = "metadata";
+      const done = (n: number) => {
+        try {
+          URL.revokeObjectURL(a.src);
+        } catch {}
+        res(n);
+      };
+      a.onloadedmetadata = () => done(Number.isFinite(a.duration) ? a.duration : 0);
+      a.onerror = () => done(0);
+      a.src = URL.createObjectURL(blob);
+    } catch {
+      res(0);
+    }
+  });
+
+/** Scripted beat seconds ("~4s" → 4), clamped to the ~6s clip ceiling. */
+const secsOf = (d?: string) => {
+  const n = parseInt(String(d || "").replace(/[^\d]/g, ""), 10);
+  return Number.isFinite(n) && n > 0 ? Math.min(6, n) : 5;
+};
+
+/** Generate, track, play and bank the per-beat clips + narration of a
+    remake script, then assemble the draft reel. */
 function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string }) {
   const beats = (reel.analysis.remake?.beats || []).filter((b) => b.genPrompt);
   const [clips, setClips] = useState<VaultClip[]>([]);
@@ -633,6 +680,17 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
   const [msg, setMsg] = useState<string | null>(null);
   const [beatState, setBeatState] = useState<Record<number, BeatClipState>>({});
   const [pending, setPending] = useState<{ reelId: string; items: PendingClip[] } | null>(null);
+  // voiceover + assembly
+  const [voMode, setVoMode] = useState<"edu" | "me">(() => (lsGet(voModeKey(workspace)) === "me" ? "me" : "edu"));
+  const [voBusy, setVoBusy] = useState(false);
+  const [voMsg, setVoMsg] = useState<string | null>(null);
+  const [asmBusy, setAsmBusy] = useState(false);
+  const [asmMsg, setAsmMsg] = useState<string | null>(null);
+  const [music, setMusic] = useState<File | null>(null);
+
+  const videoClips = clips.filter(isClip);
+  const vos = clips.filter((c) => c.kind === "vo");
+  const draft = clips.find((c) => c.kind === "draft") || null;
 
   const refresh = async () => {
     const list = await clipVaultForReel(reel.id);
@@ -801,10 +859,125 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
     }
   };
 
+  /** Per-beat narration via /api/tts. Vault-first per segment; re-running
+      SKIPS beats that already have a segment (that's the resume path —
+      TTS is synchronous, so there's no remote job to recover), and
+      `force` regenerates everything (voice change). */
+  const generateVo = async (force = false) => {
+    if (voBusy) return;
+    const targets = beats
+      .map((b, i) => ({ i, say: (b.say || "").trim() }))
+      .filter((t) => t.say && (force || !vos.some((v) => v.beatIndex === t.i)));
+    if (!targets.length) {
+      setVoMsg("Every spoken beat already has narration — use ↻ Re-voice to redo them.");
+      return;
+    }
+    const voiceId = voMode === "me" ? lsGet(spokenVoiceKey(workspace)) : lsGet(narratorVoiceKey(workspace));
+    if (voMode === "me" && !voiceId) {
+      setVoMsg("No personal voice yet — record one in Settings › Spoken voice first (≈60 seconds).");
+      return;
+    }
+    setVoBusy(true);
+    let done = 0;
+    try {
+      for (const t of targets) {
+        setVoMsg(`🎙 Narrating beat ${t.i + 1} of ${beats.length}…`);
+        const r = await fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: t.say, ...(voiceId ? { voiceId } : {}) }),
+          signal: AbortSignal.timeout(60000),
+        });
+        const type = r.headers.get("content-type") || "";
+        if (!type.startsWith("audio/")) {
+          const j = (await r.json().catch(() => ({}))) as { error?: string; configured?: boolean };
+          if (j.configured === false) throw new Error("Needs ELEVENLABS_API_KEY in Vercel — add it in Connectors, then retry.");
+          throw new Error(j.error || `narration failed on beat ${t.i + 1}`);
+        }
+        const blob = await r.blob();
+        if (blob.size < 1000) throw new Error(`narration came back empty on beat ${t.i + 1} — try again`);
+        // vault FIRST — same invariant as clips
+        const saved = await clipVaultAdd(
+          {
+            id: voId(reel.id, t.i),
+            reelId: reel.id,
+            beatIndex: t.i,
+            kind: "vo",
+            prompt: t.say,
+            label: `${reel.label.slice(0, 48)} · VO beat ${t.i + 1}`,
+            mime: blob.type || "audio/mpeg",
+            blob,
+            createdAt: Date.now(),
+          },
+          workspace
+        );
+        if (!saved) throw new Error("a segment couldn't be saved (browser storage blocked or full) — free up storage and re-run; finished beats are skipped");
+        done++;
+        await refresh();
+      }
+      setVoMsg(`✓ ${done} narration segment${done === 1 ? "" : "s"} in — play them below, then Assemble.`);
+    } catch (e) {
+      setVoMsg(`${e instanceof Error ? e.message : "narration failed"}${done ? ` (${done} segment${done === 1 ? "" : "s"} already banked — re-running skips them)` : ""}`);
+    } finally {
+      setVoBusy(false);
+    }
+  };
+
+  /** Phase 2: clips + VO + captions → one draft MP4, saved as the reel's
+      draft (regenerating overwrites). */
+  const assemble = async () => {
+    if (asmBusy) return;
+    const missing = beats.map((_, i) => i).filter((i) => !videoClips.some((c) => c.beatIndex === i));
+    if (missing.length) {
+      setAsmMsg(`Beat${missing.length === 1 ? "" : "s"} ${missing.map((i) => i + 1).join(", ")} ${missing.length === 1 ? "has" : "have"} no clip yet — generate beats first.`);
+      return;
+    }
+    setAsmBusy(true);
+    setAsmMsg("Preparing the timeline…");
+    try {
+      const parts = [];
+      for (let i = 0; i < beats.length; i++) {
+        const clip = videoClips.find((c) => c.beatIndex === i)!;
+        const vo = vos.find((v) => v.beatIndex === i) || null;
+        const scriptD = secsOf(beats[i].duration);
+        // beat runs as long as the voice needs (plus a breath), inside the clip
+        const voD = vo ? await audioSecs(vo.blob) : 0;
+        const D = Math.min(6, Math.max(scriptD, voD > 0 ? voD + 0.3 : 0) || scriptD);
+        parts.push({ clip: clip.blob, vo: vo?.blob, caption: beats[i].onScreenText, duration: D });
+      }
+      const out = await assembleReel(parts, {
+        music: music || undefined,
+        onProgress: (stage, pct) => setAsmMsg(`⚙ ${stage} · ${pct}%`),
+      });
+      const saved = await clipVaultAdd(
+        {
+          id: draftId(reel.id),
+          reelId: reel.id,
+          beatIndex: -1,
+          kind: "draft",
+          prompt: "",
+          label: `${reel.label.slice(0, 48)} · draft reel`,
+          mime: "video/mp4",
+          blob: out,
+          createdAt: Date.now(),
+        },
+        workspace
+      );
+      if (!saved) throw new Error("the draft rendered but couldn't be saved — free up browser storage and assemble again");
+      await refresh();
+      const total = parts.reduce((s, p) => s + p.duration, 0);
+      setAsmMsg(`✓ Draft reel assembled (${Math.round(total)}s, narration + captions${music ? " + music" : ""}) — play or download below.`);
+    } catch (e) {
+      setAsmMsg(e instanceof Error ? e.message : "assembly failed — try again");
+    } finally {
+      setAsmBusy(false);
+    }
+  };
+
   if (!beats.length) return null;
   const estCents = beats.length * UNIT_COST_CENTS.reel;
   const stateFor = (i: number): BeatClipState =>
-    clips.some((c) => c.beatIndex === i) ? "done" : beatState[i] || (pending?.items.some((it) => it.beat === i) ? "rendering" : "none");
+    videoClips.some((c) => c.beatIndex === i) ? "done" : beatState[i] || (pending?.items.some((it) => it.beat === i) ? "rendering" : "none");
   const chip: Record<BeatClipState, { label: string; color: string }> = {
     none: { label: "not rendered", color: "#5E5C72" },
     rendering: { label: "rendering…", color: "#7DD3FC" },
@@ -850,8 +1023,10 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
         {beats.map((b, i) => {
           const st = stateFor(i);
-          const clip = clips.find((c) => c.beatIndex === i);
+          const clip = videoClips.find((c) => c.beatIndex === i);
           const src = clip ? urls[clip.id] : undefined;
+          const vo = vos.find((v) => v.beatIndex === i);
+          const voSrc = vo ? urls[vo.id] : undefined;
           return (
             <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", borderLeft: "2px solid rgba(232,98,44,0.4)", paddingLeft: 10 }}>
               <div style={{ flex: 1, minWidth: 160 }}>
@@ -859,8 +1034,12 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
                   SHOT {i + 1}
                   {b.duration ? ` · ${b.duration}` : ""}{" "}
                   <span style={{ color: chip[st].color, fontWeight: 700 }}>· {chip[st].label}</span>
+                  {(b.say || "").trim() && (
+                    <span style={{ color: vo ? "#41D98A" : "#5E5C72", fontWeight: 700 }}> · {vo ? "✓ voiced" : "no VO yet"}</span>
+                  )}
                 </div>
                 <div style={{ fontSize: 11.5, color: "#A6A4B8", lineHeight: 1.45 }}>{b.shot}</div>
+                {vo && voSrc && <audio src={voSrc} controls preload="metadata" style={{ width: "100%", maxWidth: 300, height: 30, marginTop: 4 }} />}
                 {clip && src && (
                   <a
                     href={src}
@@ -884,12 +1063,146 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
           );
         })}
       </div>
-      {!!clips.length && (
-        <div style={{ fontSize: 10.5, color: "#8B89A0", marginTop: 8, lineHeight: 1.45 }}>
-          Clips live in this device&apos;s vault (they cost credits — nothing is deleted unless you regenerate a beat).
-          Assemble: drop the clips into CapCut in shot order, read the &quot;say&quot; lines as VO, add the on-screen text per beat.
+
+      {/* ---- voiceover row: narration for every spoken beat ---- */}
+      {beats.some((b) => (b.say || "").trim()) && (
+        <div style={{ marginTop: 10, borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 10, fontWeight: 800, color: "#C9A8FF", textTransform: "uppercase", letterSpacing: 0.5 }}>🎙 Voiceover</span>
+            <div style={{ display: "inline-flex", gap: 2, background: "rgba(8,8,18,0.6)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 8, padding: 3 }}>
+              {(
+                [
+                  { id: "edu" as const, label: "Brand narrator" },
+                  { id: "me" as const, label: "My voice" },
+                ]
+              ).map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => {
+                    setVoMode(m.id);
+                    lsSet(voModeKey(workspace), m.id);
+                  }}
+                  disabled={voBusy}
+                  style={{
+                    border: "none",
+                    borderRadius: 6,
+                    padding: "5px 11px",
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    cursor: voBusy ? "default" : "pointer",
+                    background: voMode === m.id ? "rgba(201,168,255,0.2)" : "transparent",
+                    color: voMode === m.id ? "#C9A8FF" : "#8B89A0",
+                  }}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+              {!!vos.length && (
+                <button
+                  onClick={() => generateVo(true)}
+                  disabled={voBusy}
+                  style={{ background: "transparent", color: "#8B89A0", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "6px 11px", fontSize: 10.5, fontWeight: 700, cursor: voBusy ? "default" : "pointer" }}
+                >
+                  ↻ Re-voice all
+                </button>
+              )}
+              <button
+                onClick={() => generateVo(false)}
+                disabled={voBusy}
+                style={{ background: "rgba(201,168,255,0.14)", color: "#C9A8FF", border: "1px solid rgba(201,168,255,0.45)", borderRadius: 8, padding: "6px 13px", fontSize: 11.5, fontWeight: 700, cursor: voBusy ? "default" : "pointer", opacity: voBusy ? 0.6 : 1 }}
+              >
+                {voBusy ? "Narrating…" : "🎙 Generate voiceover"}
+              </button>
+            </div>
+          </div>
+          <div style={{ fontSize: 10.5, color: "#8B89A0", marginTop: 4, lineHeight: 1.45 }}>
+            {voMode === "me"
+              ? lsGet(spokenVoiceKey(workspace))
+                ? "Uses your cloned voice (Settings › Spoken voice)."
+                : "No personal voice yet — record one in Settings › Spoken voice."
+              : "Uses the brand narrator voice — pick/override it in Settings › Spoken voice."}{" "}
+            Finished segments are kept; re-running only voices missing beats.
+          </div>
+          {voMsg && <div style={{ fontSize: 11, color: "#C9A8FF", marginTop: 5, lineHeight: 1.45 }}>{voMsg}</div>}
         </div>
       )}
+
+      {/* ---- assembly row: the payoff — one action, one draft reel ---- */}
+      <div style={{ marginTop: 10, borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 10, fontWeight: 800, color: "#41D98A", textTransform: "uppercase", letterSpacing: 0.5 }}>🎞 Draft reel</span>
+          <label style={{ fontSize: 10.5, color: "#8B89A0", display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+            <input
+              type="file"
+              accept="audio/*"
+              onChange={(e) => setMusic(e.target.files?.[0] || null)}
+              disabled={asmBusy}
+              style={{ display: "none" }}
+            />
+            <span style={{ border: "1px dashed rgba(255,255,255,0.18)", borderRadius: 7, padding: "4px 9px" }}>
+              {music ? `♪ ${music.name.slice(0, 24)}` : "♪ add music bed (optional)"}
+            </span>
+            {music && (
+              <span
+                onClick={(e) => {
+                  e.preventDefault();
+                  setMusic(null);
+                }}
+                style={{ color: "#FF6B6B", fontWeight: 700 }}
+              >
+                ✕
+              </span>
+            )}
+          </label>
+          <button
+            onClick={assemble}
+            disabled={asmBusy || videoClips.length < beats.length}
+            style={{
+              marginLeft: "auto",
+              background: "rgba(65,217,138,0.14)",
+              color: "#41D98A",
+              border: "1px solid rgba(65,217,138,0.45)",
+              borderRadius: 8,
+              padding: "6px 14px",
+              fontSize: 11.5,
+              fontWeight: 700,
+              cursor: asmBusy || videoClips.length < beats.length ? "default" : "pointer",
+              opacity: asmBusy || videoClips.length < beats.length ? 0.6 : 1,
+            }}
+          >
+            {asmBusy ? "Assembling…" : draft ? "↻ Re-assemble draft" : "🎞 Assemble draft"}
+          </button>
+        </div>
+        <div style={{ fontSize: 10.5, color: "#8B89A0", marginTop: 4, lineHeight: 1.45 }}>
+          Stitches the clips in shot order, times each beat to its narration, burns the captions, mixes the music low —
+          one 9:16 MP4, on this device (first run downloads the ~30MB engine).
+        </div>
+        {asmMsg && <div style={{ fontSize: 11, color: "#41D98A", marginTop: 5, lineHeight: 1.45 }}>{asmMsg}</div>}
+        {draft && urls[draft.id] && !asmBusy && (
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginTop: 10 }}>
+            <video
+              src={urls[draft.id]}
+              controls
+              playsInline
+              preload="metadata"
+              style={{ width: 148, aspectRatio: "9/16", borderRadius: 10, background: "#000", border: "1px solid rgba(65,217,138,0.4)" }}
+            />
+            <div style={{ fontSize: 11, color: "#A6A4B8", lineHeight: 1.5 }}>
+              <div style={{ fontWeight: 800, color: "#41D98A", marginBottom: 4 }}>Draft reel — narration + captions</div>
+              <a
+                href={urls[draft.id]}
+                download={`${reel.label.replace(/[^a-z0-9-]/gi, "_").slice(0, 40)}-draft.mp4`}
+                style={{ color: "#7DD3FC", fontWeight: 700, textDecoration: "none", fontSize: 11.5 }}
+              >
+                ↓ download draft.mp4
+              </a>
+              <div style={{ marginTop: 4 }}>Good enough → post it. Want polish → drop it in CapCut; the cut, VO and captions are already done.</div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
