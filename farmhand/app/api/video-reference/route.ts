@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { del, list, put } from "@vercel/blob";
-import { polishRemake } from "@/lib/claudeScript";
+import { adaptRemake } from "@/lib/claudeScript";
+import { qualityCheck, sanitizeGenome } from "@/lib/styleGenome";
 
 /**
  * Reel coach — watches an actual video (visuals + audio together, via
@@ -73,7 +74,87 @@ const clamp = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com";
 
-const SCHEMA_PROMPT = `You are coaching a solar consultant's Instagram content strategy. Watch this clip closely — the visuals AND the audio together — and return ONLY valid JSON (no markdown fences, no commentary) in exactly this shape:
+/* STAGE 1 — REFERENCE VIDEO EXTRACTION. Structured extraction-first, not
+   summary-first: the model fills an explicit field contract (the "style
+   genome") with timestamped beats, and the prompt itself enforces the
+   STYLE-vs-TOPIC split — topic content is quarantined into beatMap dialogue
+   and scriptStructure (the replace side), everything else describes reusable
+   style mechanics. The compact legacy fields (summary/hook/structure/…)
+   stay at the top level: existing vault cards, `noteFor` exports and the
+   brain-vault agents all read them. */
+
+/** The genome contract, verbatim in the prompt so the output shape is
+    deterministic. Mirrors ReferenceVideoAnalysis in lib/styleGenome.ts. */
+const GENOME_SHAPE = `{
+    "overview": {
+      "formulaSummary": "the reel's repeatable recipe in one sentence",
+      "primaryStyleCategory": "e.g. talking-head authority, b-roll voiceover essay, document teardown, instrument reveal, street interview",
+      "confidenceNotes": ["anything you could NOT read confidently from the clip — audio unclear, cuts too fast, etc."]
+    },
+    "beatMap": [{
+      "startTime": "0:00", "endTime": "0:02",
+      "visuals": "what is on screen during this beat",
+      "dialogueOrText": "what is said or shown as text, verbatim",
+      "purpose": "hook | setup | problem | reframe | value | proof | cta | transition",
+      "energyLevel": <1-5>,
+      "framing": "the shot framing",
+      "editPattern": "the cut/zoom/text-pop/b-roll swap happening here"
+    }],
+    "hookAnalysis": {
+      "hookType": "the named hook mechanic",
+      "firstThreeSecondMechanics": "exactly what happens visually AND verbally in the first 3 seconds, and why it stops a scroll",
+      "retentionDrivers": ["each device that keeps a viewer watching"],
+      "emotionalPromise": "what the opening promises the viewer they'll get",
+      "openingVisualChange": "the first visual change and when it lands",
+      "openingTextPattern": "the first on-screen text pattern, or 'none'"
+    },
+    "scriptStructure": {
+      "hook": "...", "setup": "...", "problem": "...", "reframe": "...",
+      "valueDelivery": "...", "proof": "...", "cta": "...",
+      "transitionLogic": "how each section hands off to the next"
+    },
+    "styleAnalysis": {
+      "vibe": ["2-4 word descriptors"], "pacing": "...", "tone": "...",
+      "confidenceStyle": "how confidence/authority is performed",
+      "emotionalEffect": ["what the viewer feels, in order"],
+      "formatIdentity": "the format as one label"
+    },
+    "visualLanguage": {
+      "shotTypes": [], "cameraMovement": [], "subjectDistance": [],
+      "composition": [], "lighting": [], "colorPalette": [],
+      "wardrobeOrProps": [], "backgroundStyle": [],
+      "textOverlayStyle": "the on-screen text system: font vibe, size, color, placement, animation",
+      "bRollStyle": "how b-roll is used, or 'none'", "transitions": []
+    },
+    "editingSystem": {
+      "averageShotDuration": "e.g. ~1.8s", "cutFrequency": "...",
+      "cutMotivation": ["what each cut is timed to"],
+      "captionStyle": "...", "textDensity": "words on screen at once",
+      "soundDesignRole": "...", "musicRole": "...",
+      "patternInterrupts": ["each deliberate rhythm break"],
+      "loopMechanics": "does the end loop back to the start, and how"
+    },
+    "persuasionSystem": {
+      "believabilityDrivers": [], "premiumSignals": [], "shareabilityDrivers": [],
+      "saveWorthyDrivers": [], "authoritySignals": [], "psychologicalMechanics": []
+    },
+    "reusableStyleRules": ["imperative rules someone could follow to make ANY reel in this style — style only, zero topic content"],
+    "preserveVsReplace": {
+      "preserve": ["style elements a remake MUST keep to feel like this reel"],
+      "replace": ["topic-bound elements a remake MUST swap: wording, claims, examples, topic-specific visuals"]
+    },
+    "recreationBrief": {
+      "desiredAesthetic": "...", "shotRhythm": "...", "scriptRhythm": "...",
+      "editingRhythm": "...", "deliveryStyle": "...",
+      "viewerFeeling": "what the finished remake should make a viewer feel",
+      "nonNegotiables": ["what must be true of any recreation"],
+      "avoid": ["what would break this style"]
+    }
+  }`;
+
+const EXTRACTION_PROMPT = `You are the reference-video EXTRACTION stage of a 3-stage content pipeline for a solar consultant's Instagram account (extract → adapt → generate). Watch this clip closely — visuals AND audio together — and extract its mechanics into the exact field contract below. This is structured extraction, not a review: every field is a concrete observation, timestamped where the contract asks for it.
+
+Return ONLY valid JSON (no markdown fences, no commentary) in exactly this shape:
 
 {
   "summary": "one or two plain sentences describing what happens in the clip",
@@ -98,38 +179,35 @@ const SCHEMA_PROMPT = `You are coaching a solar consultant's Instagram content s
     "brandingVisible": "describe any visible logos or branding, or 'none'"
   },
   "audio": {
-    "spokenContent": "as close to a transcript as you can manage of what is said, or 'no speech'",
+    "spokenContent": "as close to a word-for-word transcript as you can manage, or 'no speech'",
     "tone": "delivery tone",
     "music": "describe any background music or sound design, or 'none'"
   },
-  "contentPattern": "the reusable structural pattern/format this reel follows, described so someone could replicate the FORMAT with different content",
-  "coachingNotes": ["specific actionable takeaway", "another one", "..."]
+  "contentPattern": "the reusable structural pattern this reel follows, described so someone could replicate the FORMAT with different content",
+  "coachingNotes": ["specific actionable takeaway", "another one", "..."],
+  "genome": ${GENOME_SHAPE}
 }
 
-Be specific and concrete — this feeds a content-strategy knowledge base, not a general video description. If something can't be determined, say so plainly rather than guessing.`;
+<extraction_rules>
+- STYLE vs TOPIC: the genome describes transferable style MECHANICS. The reference's actual words, claims and examples belong ONLY in audio.spokenContent, beatMap.dialogueOrText and scriptStructure — they are the record of what gets REPLACED in a remake. reusableStyleRules and recreationBrief must contain zero topic content.
+- beatMap covers the FULL runtime in 5-15 beats with real timestamps; a beat boundary is a change in shot, purpose, or energy.
+- Concrete over general: name colors, framing, durations, exact text. "fast cuts" is weak; "cuts every ~1.5s, each timed to a spoken number" is right.
+- If a field truly can't be determined from the clip, use "" or [] — never guess. Note anything uncertain in overview.confidenceNotes.
+</extraction_rules>`;
 
-/** Style-match mode: decode the reference's style DNA beat by beat AND write
-    the shot-for-shot remake script using the owner's topic — same Gemini
-    pass, since the model is already watching the video.
-
-    v2 script writer: the owner produces the remake with AI video generation,
-    and v1's loose beats ("shot: show a graphic") lost all the detail on the
-    way into the generator. Every beat now carries full production language —
-    camera, every visible element, text animation — plus a paste-ready
-    per-beat generation prompt, so the details survive into the output. */
+/* STAGE 1+2 in one pass — style-match mode. Extraction is identical; while
+   the model is still watching the video it also drafts the remake (Stage 2).
+   When the Claude connector is wired, adaptRemake rewrites that draft from
+   the genome with a stronger pen — this draft is the fallback that
+   guarantees a script even with no Anthropic key. */
 const styleMatchPrompt = (topic: { title: string; angle: string; facts: string[] }) =>
-  SCHEMA_PROMPT.replace(
-    `  "coachingNotes": ["specific actionable takeaway", "another one", "..."]
+  EXTRACTION_PROMPT.replace(
+    `  "genome": ${GENOME_SHAPE}
 }`,
-    `  "coachingNotes": ["specific actionable takeaway", "another one", "..."],
-  "styleDna": {
-    "beats": [{ "t": "0-2s", "visual": "what's on screen", "onScreenText": "text shown or 'none'", "textStyle": "how the text looks/appears/animates", "transition": "cut/zoom/swipe/etc" }],
-    "textTreatment": "the overall on-screen text system: font vibe, size, color, placement, animation style",
-    "colorAndGrade": "color palette and grade of the footage",
-    "energy": "the pacing/energy signature in one sentence"
-  },
+    `  "genome": ${GENOME_SHAPE},
   "remake": {
-    "hookLine": "the opening line (spoken or on-screen) that applies THIS reel's hook technique to the topic below",
+    "concept": "one sentence: the original adapted reel concept",
+    "hookLine": "the opening line (spoken or on-screen) that applies THIS reel's hook mechanic to the topic below",
     "beats": [{
       "shot": "one-line summary of this beat",
       "camera": "exact camera language: framing, angle, movement (e.g. 'tight low-angle push-in, subject centered, slight handheld drift')",
@@ -147,21 +225,23 @@ const styleMatchPrompt = (topic: { title: string; angle: string; facts: string[]
   ) +
   `
 
-STYLE-MATCH BRIEF: after analyzing the clip, use "styleDna" to decode its style beat by beat (5-10 beats covering the full runtime), then write "remake" — a complete shot-for-shot script that reproduces THIS clip's format, pacing, visual treatment and energy, but about the topic below.
+<adaptation_brief>
+After the extraction, write "remake" — an ORIGINAL shot-for-shot script that keeps everything in genome.preserveVsReplace.preserve and swaps everything in .replace for the topic below.
 
-REMAKE QUALITY BARS (each one is checked):
-- Beat durations must sum to roughly the reference's runtime, and each "say" line must actually fit its duration at ~2.5 words/second — count the words.
-- "visualDetail" and "genPrompt" carry the craft: name the exact subject, style (e.g. "stylized 3D caricature render", "clean flat motion graphics", "phone-shot talking head"), materials, colors from the reference's grade, light direction, and what MOVES during the beat. A generated clip is only as detailed as this text.
-- Visual continuity: keep the same protagonist/style across beats — describe the recurring subject identically in every genPrompt (generators have no memory between prompts).
-- The metaphors must translate, not copy: find this topic's equivalent of the reference's visual ideas (its prop-with-a-price-tag becomes a prop that embodies THIS topic's numbers).
-- On-screen text: exact words, no more than 7 per beat, and never inside genPrompt.
+QUALITY BARS (each one is checked):
+- Beat durations sum to roughly the reference's runtime; each "say" fits its duration at ~2.5 words/second — count the words.
+- "visualDetail" and "genPrompt" carry the craft: exact subject, rendering style, materials, colors from the reference's grade, light direction, what MOVES. A generated clip is only as detailed as this text.
+- ONE recurring protagonist described IDENTICALLY in every genPrompt (generators have no memory between prompts).
+- ORIGINALITY: no phrase of 4+ consecutive words from the reference's dialogue may appear; translate its visual metaphors into this topic's equivalents — never copy them literally.
+- On-screen text: exact words, max 7 per beat, never inside genPrompt.
 
 THE TOPIC: ${topic.title}
 Angle: ${topic.angle}
 VERIFIED FACTS (the only numbers/claims the remake may use — keep them exact):
 ${topic.facts.map((f, i) => `${i + 1}. ${f}`).join("\n")}
 
-Remake rules: the voice is an Arizona residential solar consultant; APS territory only (never SRP); the script must end connected to the solar/ownership decision; call-to-action stays Valley-general ("Valley homeowners", never one city); no emojis in on-screen text; every number must come from the verified facts verbatim.`;
+Remake rules: the voice is an Arizona residential solar consultant; APS territory only (never SRP); the script must end connected to the solar/ownership decision; call-to-action stays Valley-general ("Valley homeowners", never one city); no emojis in on-screen text; every number must come from the verified facts verbatim.
+</adaptation_brief>`;
 
 /* ------------------------------------------------------------------ */
 /* shared step helpers — used by BOTH the phased flow and the          */
@@ -460,7 +540,7 @@ async function geminiAnalyze(
       contents: [
         {
           role: "user",
-          parts: [{ fileData: { fileUri, mimeType } }, { text: topic ? styleMatchPrompt(topic) : SCHEMA_PROMPT }],
+          parts: [{ fileData: { fileUri, mimeType } }, { text: topic ? styleMatchPrompt(topic) : EXTRACTION_PROMPT }],
         },
       ],
       generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
@@ -475,14 +555,34 @@ async function geminiAnalyze(
   text = text.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   try {
     const parsed = JSON.parse(text) as Record<string, unknown>;
+    // the genome goes straight into the vault and the renderer — coerce hard
+    const genome = sanitizeGenome(parsed.genome);
+    if (genome) parsed.genome = genome;
+    else delete parsed.genome;
     // Claude connector: when wired, the stronger writer rewrites the remake
-    // from Gemini's style DNA — Gemini stays the eyes, Claude becomes the pen
+    // from the structured genome — Gemini stays the eyes, Claude becomes the pen
     if (topic && process.env.ANTHROPIC_API_KEY) {
-      const better = await polishRemake(parsed, topic, 75000);
+      const better = await adaptRemake(parsed, topic, 75000);
       if (better) {
         parsed.remake = better;
         parsed.polished = true; // observability: which writer produced this script
       }
+    }
+    // quality gate on whichever writer produced the script: originality vs
+    // the reference's actual words, hook strength, specificity, genericness
+    if (parsed.remake && typeof parsed.remake === "object") {
+      const audio = parsed.audio as { spokenContent?: string } | undefined;
+      const referenceText = [
+        String(audio?.spokenContent || ""),
+        ...(genome?.beatMap || []).map((bt) => bt.dialogueOrText || ""),
+      ]
+        .filter((x) => x && x !== "no speech")
+        .join(" ");
+      const flags = qualityCheck(parsed.remake as Parameters<typeof qualityCheck>[0], {
+        referenceText,
+        facts: topic?.facts || [],
+      });
+      if (flags.length) parsed.remakeQuality = flags;
     }
     return { analysis: parsed };
   } catch {

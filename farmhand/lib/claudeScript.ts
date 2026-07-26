@@ -1,10 +1,14 @@
 /**
- * Claude connector — the advanced scriptwriter. Gemini stays the eyes
- * (native video understanding); when ANTHROPIC_API_KEY is set, Claude
- * becomes the pen: every style-match remake is rewritten with
- * production-grade craft before it lands in the vault. No new UI — the
- * connector upgrades the existing flows invisibly.
+ * Claude connector — the Stage-2 ADAPTATION layer. Gemini stays the eyes
+ * (native video understanding, Stage-1 extraction); when ANTHROPIC_API_KEY
+ * is set, Claude is the pen: it takes the structured style genome plus the
+ * owner's inputs and writes the original adapted script. One prompt builder
+ * (`buildAdaptationPrompt`) serves both lanes — the in-flight video analysis
+ * and /api/reel-script's re-adapt-without-re-analysis lane — so the
+ * adaptation contract exists exactly once.
  */
+
+import { genomeJson, type ReferenceVideoAnalysis } from "./styleGenome";
 
 const API = "https://api.anthropic.com/v1";
 const VERSION = "2023-06-01";
@@ -70,11 +74,96 @@ const BEAT_SHAPE = `[{
   "genPrompt": "complete self-contained text-to-video prompt for THIS beat: 9:16 vertical, full visualDetail + camera + lighting + palette + motion as one paragraph of concrete visual language — no vague adjectives, no on-screen text (captions are added in the edit)"
 }]`;
 
+/** The owner's Stage-2 inputs beyond the topic itself. All optional — empty
+    fields simply don't appear in the prompt. */
+export interface AdaptationInputs {
+  topic: { title: string; angle: string; facts: string[] };
+  audience?: string;
+  offer?: string;
+  cta?: string;
+  tone?: string;
+  aesthetic?: string;
+}
+
+/** THE adaptation prompt — Stage 2 of the pipeline. Style comes from the
+    genome (preserve side); every word, example, claim and topic-visual is
+    replaced (replace side). Used by adaptRemake (video flow) and
+    /api/reel-script (re-adapt lane). */
+export function buildAdaptationPrompt(opts: {
+  genome: ReferenceVideoAnalysis | null;
+  summary?: string;
+  /** legacy styleDna blob or a named style — used only when no genome exists */
+  styleFallback?: string;
+  inputs: AdaptationInputs;
+  /** target runtime in seconds; omitted = match the reference's beat map */
+  seconds?: number;
+}): string {
+  const { genome, summary, styleFallback, inputs, seconds } = opts;
+  const t = inputs.topic;
+  const preserve = genome?.preserveVsReplace?.preserve || [];
+  const replace = genome?.preserveVsReplace?.replace || [];
+  const extras = [
+    inputs.audience && `AUDIENCE: ${inputs.audience}`,
+    inputs.offer && `OFFER: ${inputs.offer}`,
+    inputs.cta && `CTA DIRECTION: ${inputs.cta}`,
+    inputs.tone && `TONE: ${inputs.tone}`,
+    inputs.aesthetic && `AESTHETIC INTENT: ${inputs.aesthetic}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return `You are an elite short-form video director. This is STAGE 2 (ADAPTATION) of a 3-stage pipeline: a reference reel was already decoded into a structured style genome. Your job is a fully ORIGINAL reel that preserves the genome's style logic and replaces its topic entirely.
+
+${
+  genome
+    ? `<reference_style_genome>
+${genomeJson(genome)}
+</reference_style_genome>`
+    : `<reference_style>
+${summary ? `Summary: ${summary}\n` : ""}${styleFallback || "Director's choice — whatever best serves the topic."}
+</reference_style>`
+}
+
+<preserve>
+${preserve.length ? preserve.map((p) => `- ${p}`).join("\n") : "- the genome's structural formula, pacing, hook mechanics, visual language, editing rhythm, and persuasion moves"}
+</preserve>
+
+<replace>
+${replace.length ? replace.map((r) => `- ${r}`).join("\n") : ""}
+- ALL wording, examples, claims, numbers, metaphors, and topic-specific visuals — nothing the reference said or showed may reappear
+</replace>
+
+<adaptation_inputs>
+TOPIC: ${t.title}
+ANGLE: ${t.angle}
+VERIFIED FACTS (the only numbers/claims allowed — keep them exact):
+${t.facts.map((f, i) => `${i + 1}. ${f}`).join("\n")}${extras ? `\n${extras}` : ""}
+</adaptation_inputs>
+
+<output_contract>
+Return ONLY valid JSON, no markdown fences, exactly:
+{ "concept": "one sentence: the original reel concept — what it is and why it stops a scroll", "hookLine": "...", "beats": ${BEAT_SHAPE}, "cta": "...", "productionNotes": ["edit/assembly note: caption timing, transitions, sound design, pacing", "..."] }
+</output_contract>
+
+<quality_bars>
+- Beat durations sum to ${seconds ? `~${seconds}s` : "the reference beat map's runtime"}; every "say" fits its duration at ~2.5 words/second — count the words.
+- The hook lands inside the first 2 seconds, visual AND verbal — never a greeting, never a self-introduction.
+- ONE recurring protagonist described IDENTICALLY in every genPrompt (generators have no memory between prompts).
+- ORIGINALITY IS CHECKED MECHANICALLY: no phrase of 4+ consecutive words from the reference's dialogue may appear in your script; translate its visual metaphors into this topic's equivalents (its prop-with-a-price-tag becomes a prop embodying THIS topic's numbers) — never copy them literally.
+- At least one verified fact's number appears verbatim in a "say" line — that is the proof beat.
+- On-screen text: exact words, max 7 per beat, never inside genPrompt. No vague adjectives ("engaging", "dynamic") anywhere in visualDetail or genPrompt — name concrete subjects, materials, colors, light.
+</quality_bars>
+
+<editorial_rules>
+The voice is an Arizona residential solar consultant; APS territory only (never SRP); end connected to the solar/ownership decision; CTA stays Valley-general ("Valley homeowners", never one city)${inputs.cta ? " while following the CTA direction above" : ""}; no emojis in on-screen text; every number from the verified facts verbatim.
+</editorial_rules>`;
+}
+
 const asStr = (v: unknown, n: number): string => (typeof v === "string" ? v.slice(0, n) : "");
 
 /** Claude's JSON goes straight into the vault and the renderer — a
     non-string field must never crash a saved reel card. Coerce hard. */
-function sanitizeRemake(raw: Record<string, unknown>): Record<string, unknown> | null {
+export function sanitizeRemake(raw: Record<string, unknown>): Record<string, unknown> | null {
   const beats = (Array.isArray(raw.beats) ? raw.beats : [])
     .filter((b): b is Record<string, unknown> => !!b && typeof b === "object" && !Array.isArray(b))
     .map((b) => {
@@ -89,6 +178,7 @@ function sanitizeRemake(raw: Record<string, unknown>): Record<string, unknown> |
     .slice(0, 14);
   if (!beats.length) return null;
   return {
+    concept: asStr(raw.concept, 400) || undefined,
     hookLine: asStr(raw.hookLine, 300) || undefined,
     beats,
     cta: asStr(raw.cta, 300) || undefined,
@@ -99,32 +189,24 @@ function sanitizeRemake(raw: Record<string, unknown>): Record<string, unknown> |
   };
 }
 
-/** Rewrite a Gemini-produced remake with Claude's craft. The analysis
-    (styleDna, summary, structure) is the ground truth about the reference;
-    Claude's job is a superior SCRIPT, not a different analysis. */
-export async function polishRemake(
+/** Rewrite a Gemini-produced remake with Claude's craft, driven by the
+    structured genome when Stage 1 produced one (legacy styleDna otherwise).
+    The analysis is the ground truth about the reference; Claude's job is a
+    superior ORIGINAL script, not a different analysis. */
+export async function adaptRemake(
   analysis: Record<string, unknown>,
   topic: { title: string; angle: string; facts: string[] },
   timeoutMs = 75000
 ): Promise<Record<string, unknown> | null> {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return null;
-  const dna = JSON.stringify(analysis.styleDna || {});
-  const summary = String(analysis.summary || "");
-  const prompt = `You are an elite short-form video director. A reference reel was analyzed; your job is the definitive shot-for-shot REMAKE SCRIPT of that reel's style applied to a new topic. Return ONLY valid JSON: { "hookLine": "...", "beats": ${BEAT_SHAPE}, "cta": "...", "productionNotes": ["..."] }
-
-REFERENCE (ground truth — reproduce this style faithfully):
-Summary: ${summary}
-Style DNA: ${dna}
-
-QUALITY BARS (each is checked): beat durations sum to the reference's runtime; every "say" fits its duration at ~2.5 words/second — count the words; the hook lands in the first 2 seconds, visual AND verbal; ONE recurring protagonist described IDENTICALLY in every genPrompt (generators have no memory between prompts); translate the reference's visual metaphors into this topic's equivalents (its prop-with-a-price-tag becomes a prop embodying THIS topic's numbers) — never copy them literally; on-screen text max 7 words, never inside genPrompt.
-
-THE TOPIC: ${topic.title}
-Angle: ${topic.angle}
-VERIFIED FACTS (the only numbers/claims allowed — keep them exact):
-${topic.facts.map((f, i) => `${i + 1}. ${f}`).join("\n")}
-
-Editorial rules: the voice is an Arizona residential solar consultant; APS territory only (never SRP); end connected to the solar/ownership decision; CTA stays Valley-general ("Valley homeowners", never one city); no emojis in on-screen text; every number from the verified facts verbatim.`;
+  const genome = (analysis.genome as ReferenceVideoAnalysis | undefined) || null;
+  const prompt = buildAdaptationPrompt({
+    genome,
+    summary: String(analysis.summary || ""),
+    styleFallback: genome ? undefined : JSON.stringify(analysis.styleDna || {}),
+    inputs: { topic },
+  });
   const out = await claudeJson(key, prompt, timeoutMs);
   return out ? sanitizeRemake(out) : null;
 }

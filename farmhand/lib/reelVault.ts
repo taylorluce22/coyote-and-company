@@ -7,6 +7,8 @@
  * clips get reviewed.
  */
 
+import type { QualityFlag, ReferenceVideoAnalysis } from "./styleGenome";
+
 export interface ReelAnalysis {
   summary?: string;
   hook?: { firstTwoSeconds?: string; technique?: string; strength?: string; why?: string };
@@ -15,7 +17,15 @@ export interface ReelAnalysis {
   audio?: { spokenContent?: string; tone?: string; music?: string };
   contentPattern?: string;
   coachingNotes?: string[];
-  /* style-match mode (reference clips analyzed against one of the owner's topics) */
+  /** the structured style genome (Stage-1 extraction contract) — the
+      reusable style DNA, stored independently of any topic and re-usable by
+      the adaptation stage without re-analyzing the video */
+  genome?: ReferenceVideoAnalysis;
+  /** originality/specificity flags on the adapted script (Stage-2 gate) */
+  remakeQuality?: QualityFlag[];
+  /** the topic the current remake was adapted for (set by Re-adapt) */
+  adaptedTopic?: string;
+  /* legacy style-match DNA (pre-genome builds) — still rendered for old cards */
   styleDna?: {
     beats?: { t?: string; visual?: string; onScreenText?: string; textStyle?: string; transition?: string }[];
     textTreatment?: string;
@@ -23,6 +33,7 @@ export interface ReelAnalysis {
     energy?: string;
   };
   remake?: {
+    concept?: string;
     hookLine?: string;
     beats?: {
       shot?: string;

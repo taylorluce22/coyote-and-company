@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { claudeJson, claudeVerify } from "@/lib/claudeScript";
+import { buildAdaptationPrompt, claudeJson, claudeVerify, sanitizeRemake } from "@/lib/claudeScript";
+import { qualityCheck, sanitizeGenome } from "@/lib/styleGenome";
 
 /**
- * Reel Script Studio — the standalone script writer. No reference video
- * needed: topic + style + duration in, a full production-grade reel script
- * out, in the same v2 beat format the style-match remake uses (camera
- * language, complete visual detail, exact captions with animation notes,
- * word-count-fitted VO, and a paste-ready AI-generation prompt per shot).
- * Optionally seeded with the styleDna of a previously analyzed reel, so
- * one analyzed reference can power unlimited scripts in its style.
+ * Reel Script Studio — the standalone Stage-2 ADAPTATION lane.
+ *
+ * Two modes, one route:
+ *  - GENOME MODE (the re-adapt lane): pass `genome` — the structured
+ *    reference-video analysis saved in the reel vault — plus a topic and
+ *    optional adaptation inputs (audience/offer/cta/tone/aesthetic), and the
+ *    adaptation stage re-runs WITHOUT re-analyzing the video: new topic, same
+ *    style DNA. This is what the Reel Coach "Re-adapt" button calls.
+ *  - FREESTYLE MODE (original behavior): no genome — topic + style name (+
+ *    optional legacy styleDna string) in, a full production-grade script out.
+ *
+ * Output is the same v2 beat format either way (camera language, complete
+ * visual detail, exact captions with animation notes, word-count-fitted VO,
+ * and a paste-ready AI-generation prompt per shot), plus `quality` — the
+ * originality/specificity flags from lib/styleGenome's validator.
  */
 
 // covers the sequential worst case: Claude attempt (100s) then the full
@@ -18,7 +27,7 @@ export const maxDuration = 300;
 const clamp = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
 const GEMINI_BASE = "https://generativelanguage.googleapis.com";
 
-const scriptPrompt = (
+const freestylePrompt = (
   topic: { title: string; angle: string; facts: string[] },
   styleName: string,
   styleDna: string,
@@ -90,12 +99,46 @@ export async function POST(req: NextRequest) {
   const styleName = clamp(b.styleName, 200) || "Director's choice — whatever best serves this topic";
   const styleDna = clamp(b.styleDna, 2000);
   const seconds = Math.min(60, Math.max(10, Number(b.seconds) || 30));
+  // genome mode: the saved structured analysis rides in whole — the vault
+  // already holds sanitized data, but this route is public, so coerce again
+  const genome = sanitizeGenome(b.genome);
+  const inputs = {
+    topic,
+    audience: clamp(b.audience, 200) || undefined,
+    offer: clamp(b.offer, 200) || undefined,
+    cta: clamp(b.cta, 200) || undefined,
+    tone: clamp(b.tone, 200) || undefined,
+    aesthetic: clamp(b.aesthetic, 300) || undefined,
+  };
+
+  const prompt = genome
+    ? buildAdaptationPrompt({ genome, inputs, seconds: Number(b.seconds) ? seconds : undefined })
+    : freestylePrompt(topic, styleName, styleDna, seconds);
+
+  /** Genome-mode raw output is the flat adaptation contract — normalize both
+      modes to { summary?, styleSpec?, remake } so every consumer sees one
+      shape, then attach the quality flags. */
+  const finish = (raw: Record<string, unknown>, writer: string) => {
+    let script: Record<string, unknown> | null;
+    if (genome) {
+      const remake = sanitizeRemake(raw);
+      script = remake ? { summary: remake.concept, remake } : null;
+    } else {
+      script = raw && typeof raw.remake === "object" ? raw : null;
+    }
+    if (!script) return null;
+    const remake = script.remake as Parameters<typeof qualityCheck>[0];
+    const referenceText = (genome?.beatMap || []).map((bt) => bt.dialogueOrText || "").join(" ");
+    const quality = qualityCheck(remake, { referenceText, facts: topic.facts });
+    return NextResponse.json({ configured: true, script, writer, ...(quality.length ? { quality } : {}) });
+  };
 
   // Claude connector first — the advanced scriptwriter; Gemini is the fallback
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   if (anthropicKey) {
-    const script = await claudeJson(anthropicKey, scriptPrompt(topic, styleName, styleDna, seconds), 100000);
-    if (script) return NextResponse.json({ configured: true, script, writer: "claude" });
+    const raw = await claudeJson(anthropicKey, prompt, 100000);
+    const res = raw && finish(raw, "claude");
+    if (res) return res;
     // fall through to Gemini on any Claude failure
   }
   if (!key) return NextResponse.json({ configured: true, error: "script generation failed — check the Claude key in Connectors" });
@@ -106,7 +149,7 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: scriptPrompt(topic, styleName, styleDna, seconds) }] }],
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.7, responseMimeType: "application/json" },
       }),
       signal: AbortSignal.timeout(100000),
@@ -116,7 +159,9 @@ export async function POST(req: NextRequest) {
     let text = String(data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
     text = text.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
     try {
-      return NextResponse.json({ configured: true, script: JSON.parse(text) as Record<string, unknown> });
+      const out = finish(JSON.parse(text) as Record<string, unknown>, "gemini");
+      if (out) return out;
+      return NextResponse.json({ configured: true, error: "the script came back malformed — try again" });
     } catch {
       return NextResponse.json({ configured: true, error: "the script came back malformed — try again" });
     }

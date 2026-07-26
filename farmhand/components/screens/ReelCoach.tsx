@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { upload } from "@vercel/blob/client";
 import { uploadInWorker, measureUpspeed, FILE_UNREADABLE, UPLOAD_STALLED, WORKER_UNAVAILABLE, type UploadProgress } from "@/lib/reelUploadClient";
 import { useStore } from "@/lib/store";
-import { ideasFor, type StrategyProfile } from "@/lib/strategy";
+import { ideasFor, type Idea, type StrategyProfile } from "@/lib/strategy";
 import { reelVaultAdd, reelVaultAll, reelVaultDelete, type ReelAnalysis, type VaultReel } from "@/lib/reelVault";
+import { buildHiggsfieldPrompt, recreationBriefText, type QualityFlag, type ReferenceVideoAnalysis } from "@/lib/styleGenome";
 
 const STEP_LABELS = ["Upload", "Hand-off", "Gemini processing", "Writing breakdown"];
 
@@ -168,6 +169,8 @@ function noteFor(reel: VaultReel): string {
     a.visualStyle ? `- Visual style: ${a.visualStyle.setting || "?"}, ${a.visualStyle.lighting || "?"}, ${a.visualStyle.framing || "?"}` : "",
     a.audio?.spokenContent && a.audio.spokenContent !== "no speech" ? `- Audio: "${a.audio.spokenContent}"` : "",
     a.contentPattern ? `- Pattern: ${a.contentPattern}` : "",
+    a.genome?.overview?.formulaSummary ? `- Formula: ${a.genome.overview.formulaSummary}` : "",
+    a.genome?.reusableStyleRules?.length ? `- Style rules:\n${a.genome.reusableStyleRules.map((r) => `  - ${r}`).join("\n")}` : "",
     a.coachingNotes?.length ? `- Coaching notes:\n${a.coachingNotes.map((n) => `  - ${n}`).join("\n")}` : "",
     a.remake?.beats?.length
       ? `\n**Remake script**${a.remake.hookLine ? `\nHOOK: "${a.remake.hookLine}"` : ""}\n${a.remake.beats
@@ -213,6 +216,235 @@ function GenPromptRow({ prompt, shot }: { prompt: string; shot: number }) {
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Copy-as-a-unit text block (master generation prompt, recreation brief) —
+    this text feeds a generator, so it moves whole, never retyped. */
+function CopyBlock({ title, text, color }: { title: string; text: string; color: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+  return (
+    <div style={{ background: `${color}0D`, border: `1px solid ${color}40`, borderRadius: 8, padding: "8px 10px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+        <span style={{ fontSize: 10, fontWeight: 800, color, textTransform: "uppercase", letterSpacing: 0.4 }}>{title}</span>
+        <button
+          onClick={copy}
+          style={{ marginLeft: "auto", background: copied ? "#26E0C8" : `${color}2E`, color: copied ? "#0B0A12" : color, border: "none", borderRadius: 6, padding: "3px 10px", fontSize: 10, fontWeight: 800, cursor: "pointer" }}
+        >
+          {copied ? "✓ copied" : "copy"}
+        </button>
+      </div>
+      <div style={{ fontSize: 10.5, color: "#CFCBE0", fontFamily: "var(--mono)", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{text}</div>
+    </div>
+  );
+}
+
+/** Chip row for the genome's list fields — scannable, not a paragraph. */
+function Chips({ label, items }: { label: string; items?: string[] }) {
+  if (!items?.length) return null;
+  return (
+    <div style={{ display: "flex", gap: 6, alignItems: "baseline", flexWrap: "wrap" }}>
+      <span style={{ fontSize: 10.5, color: "#6E6C82", flexShrink: 0, minWidth: 92 }}>{label}</span>
+      {items.map((it, i) => (
+        <span key={i} style={{ fontSize: 10.5, color: "#D9D7E4", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 999, padding: "2px 9px", lineHeight: 1.5 }}>
+          {it}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Collapsible structured panel — compact by default, one tap to open. */
+function Panel({ title, color, defaultOpen, children }: { title: string; color: string; defaultOpen?: boolean; children: ReactNode }) {
+  return (
+    <details open={defaultOpen} style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "8px 12px" }}>
+      <summary style={{ fontSize: 10, fontWeight: 800, color, textTransform: "uppercase", letterSpacing: 0.5, cursor: "pointer" }}>{title}</summary>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>{children}</div>
+    </details>
+  );
+}
+
+const kvRow = (label: string, value?: string | number) =>
+  value === undefined || value === "" ? null : (
+    <div key={label} style={{ display: "flex", gap: 8, fontSize: 11.5, lineHeight: 1.5 }}>
+      <span style={{ color: "#6E6C82", flexShrink: 0, minWidth: 92 }}>{label}</span>
+      <span style={{ color: "#D9D7E4" }}>{String(value)}</span>
+    </div>
+  );
+
+/** Quality-gate chips on an adapted script — flags, never silent. */
+function QualityChips({ flags }: { flags?: QualityFlag[] }) {
+  if (!flags?.length) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }}>
+      {flags.map((f, i) => (
+        <div key={i} style={{ display: "flex", gap: 7, alignItems: "baseline", fontSize: 11, lineHeight: 1.45 }}>
+          <span
+            style={{
+              flexShrink: 0,
+              fontSize: 9,
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: 0.4,
+              color: f.level === "block" ? "#FF6B6B" : "#FFC23D",
+              background: f.level === "block" ? "rgba(255,107,107,0.12)" : "rgba(255,194,61,0.1)",
+              border: `1px solid ${f.level === "block" ? "rgba(255,107,107,0.4)" : "rgba(255,194,61,0.35)"}`,
+              borderRadius: 999,
+              padding: "1px 8px",
+            }}
+          >
+            {f.code}
+          </span>
+          <span style={{ color: "#A6A4B8" }}>{f.note}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The reference video's decoded style genome — the Stage-1 extraction,
+    rendered as compact collapsible panels instead of a text dump. */
+function GenomeCard({ genome }: { genome: ReferenceVideoAnalysis }) {
+  const ov = genome.overview;
+  const hk = genome.hookAnalysis;
+  const sc = genome.scriptStructure;
+  const st = genome.styleAnalysis;
+  const vl = genome.visualLanguage;
+  const ed = genome.editingSystem;
+  const pe = genome.persuasionSystem;
+  const pr = genome.preserveVsReplace;
+  const energy = (n?: number) => (n ? "▮".repeat(n) + "▯".repeat(5 - n) : "");
+  return (
+    <div>
+      <div className="fh-kicker" style={{ fontSize: 9, marginBottom: 6, color: "#7DD3FC" }}>Reference DNA · style genome</div>
+      {ov?.formulaSummary && (
+        <div style={{ fontSize: 12.5, color: "#F4F3F8", lineHeight: 1.5, marginBottom: 4 }}>
+          {ov.formulaSummary}
+          {ov.primaryStyleCategory && <span style={{ color: "#7DD3FC", fontSize: 11 }}> · {ov.primaryStyleCategory}</span>}
+        </div>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {!!genome.beatMap?.length && (
+          <Panel title={`Beat map · ${genome.beatMap.length} beats`} color="#7DD3FC">
+            {genome.beatMap.map((b, i) => (
+              <div key={i} style={{ display: "flex", gap: 8, fontSize: 11, lineHeight: 1.45, background: "rgba(125,211,252,0.04)", border: "1px solid rgba(125,211,252,0.12)", borderRadius: 8, padding: "5px 9px" }}>
+                <span style={{ color: "#7DD3FC", fontWeight: 800, fontFamily: "var(--mono)", flexShrink: 0, minWidth: 74 }}>
+                  {b.startTime}–{b.endTime}
+                </span>
+                <span style={{ color: "#D9D7E4" }}>
+                  {b.purpose && <b style={{ color: "#EDEBF6", textTransform: "uppercase", fontSize: 9.5, letterSpacing: 0.4 }}>{b.purpose} </b>}
+                  {b.visuals}
+                  {b.dialogueOrText && <span style={{ color: "#A6A4B8" }}> · “{b.dialogueOrText}”</span>}
+                  {b.editPattern && <span style={{ color: "#77758C" }}> → {b.editPattern}</span>}
+                  {b.energyLevel !== undefined && (
+                    <span style={{ color: "#FF9A62", fontFamily: "var(--mono)", fontSize: 9.5 }}> {energy(b.energyLevel)}</span>
+                  )}
+                </span>
+              </div>
+            ))}
+          </Panel>
+        )}
+        {hk && (
+          <Panel title="Hook mechanics" color="#FF9A62">
+            {kvRow("Type", hk.hookType)}
+            {kvRow("First 3s", hk.firstThreeSecondMechanics)}
+            {kvRow("Promise", hk.emotionalPromise)}
+            {kvRow("First change", hk.openingVisualChange)}
+            {kvRow("Text pattern", hk.openingTextPattern)}
+            <Chips label="Retention" items={hk.retentionDrivers} />
+          </Panel>
+        )}
+        {sc && (
+          <Panel title="Script skeleton" color="#FFC23D">
+            {kvRow("Hook", sc.hook)}
+            {kvRow("Setup", sc.setup)}
+            {kvRow("Problem", sc.problem)}
+            {kvRow("Reframe", sc.reframe)}
+            {kvRow("Value", sc.valueDelivery)}
+            {kvRow("Proof", sc.proof)}
+            {kvRow("CTA", sc.cta)}
+            {kvRow("Transitions", sc.transitionLogic)}
+          </Panel>
+        )}
+        {(st || vl) && (
+          <Panel title="Visual language" color="#C9A8FF">
+            {kvRow("Format", st?.formatIdentity)}
+            {kvRow("Pacing", st?.pacing)}
+            {kvRow("Tone", st?.tone)}
+            <Chips label="Vibe" items={st?.vibe} />
+            <Chips label="Shots" items={vl?.shotTypes} />
+            <Chips label="Camera" items={vl?.cameraMovement} />
+            <Chips label="Composition" items={vl?.composition} />
+            <Chips label="Lighting" items={vl?.lighting} />
+            <Chips label="Palette" items={vl?.colorPalette} />
+            <Chips label="Props" items={vl?.wardrobeOrProps} />
+            <Chips label="Background" items={vl?.backgroundStyle} />
+            {kvRow("Text overlays", vl?.textOverlayStyle)}
+            {kvRow("B-roll", vl?.bRollStyle)}
+            <Chips label="Transitions" items={vl?.transitions} />
+          </Panel>
+        )}
+        {ed && (
+          <Panel title="Editing system" color="#26E0C8">
+            {kvRow("Avg shot", ed.averageShotDuration)}
+            {kvRow("Cut frequency", ed.cutFrequency)}
+            <Chips label="Cuts timed to" items={ed.cutMotivation} />
+            {kvRow("Captions", ed.captionStyle)}
+            {kvRow("Text density", ed.textDensity)}
+            {kvRow("Sound design", ed.soundDesignRole)}
+            {kvRow("Music", ed.musicRole)}
+            <Chips label="Interrupts" items={ed.patternInterrupts} />
+            {kvRow("Loop", ed.loopMechanics)}
+          </Panel>
+        )}
+        {pe && (
+          <Panel title="Persuasion system" color="#FF5D8F">
+            <Chips label="Believability" items={pe.believabilityDrivers} />
+            <Chips label="Premium" items={pe.premiumSignals} />
+            <Chips label="Shareability" items={pe.shareabilityDrivers} />
+            <Chips label="Save-worthy" items={pe.saveWorthyDrivers} />
+            <Chips label="Authority" items={pe.authoritySignals} />
+            <Chips label="Psychology" items={pe.psychologicalMechanics} />
+          </Panel>
+        )}
+        {!!genome.reusableStyleRules?.length && (
+          <Panel title="Reusable style rules" color="#41D98A" defaultOpen>
+            <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 3 }}>
+              {genome.reusableStyleRules.map((r, i) => (
+                <li key={i} style={{ fontSize: 11.5, color: "#D9D7E4", lineHeight: 1.5 }}>{r}</li>
+              ))}
+            </ul>
+          </Panel>
+        )}
+        {!!(pr?.preserve?.length || pr?.replace?.length) && (
+          <Panel title="Preserve vs replace" color="#FFC23D" defaultOpen>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              {(["preserve", "replace"] as const).map((side) => (
+                <div key={side} style={{ flex: 1, minWidth: 200 }}>
+                  <div style={{ fontSize: 9.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, color: side === "preserve" ? "#41D98A" : "#FF9A62", marginBottom: 4 }}>
+                    {side === "preserve" ? "✓ keep — style DNA" : "↻ swap — topic content"}
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 3 }}>
+                    {(pr?.[side] || []).map((it, i) => (
+                      <li key={i} style={{ fontSize: 11.5, color: "#D9D7E4", lineHeight: 1.45 }}>{it}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        )}
+        {genome.recreationBrief && <CopyBlock title="Recreation brief" text={recreationBriefText(genome)} color="#7DD3FC" />}
+        <CopyBlock title="Higgsfield master prompt" text={buildHiggsfieldPrompt(genome)} color="#C9A8FF" />
+      </div>
     </div>
   );
 }
@@ -280,7 +512,9 @@ function AnalysisCard({ analysis }: { analysis: ReelAnalysis }) {
         </div>
       )}
 
-      {!!analysis.styleDna?.beats?.length && (
+      {analysis.genome && <GenomeCard genome={analysis.genome} />}
+
+      {!analysis.genome && !!analysis.styleDna?.beats?.length && (
         <div>
           <div className="fh-kicker" style={{ fontSize: 9, marginBottom: 6, color: "#C9A8FF" }}>Style DNA · beat by beat</div>
           {analysis.styleDna.energy && <div style={{ fontSize: 12, color: "#D9D7E4", lineHeight: 1.5, marginBottom: 6 }}>{analysis.styleDna.energy}</div>}
@@ -304,7 +538,13 @@ function AnalysisCard({ analysis }: { analysis: ReelAnalysis }) {
 
       {!!analysis.remake?.beats?.length && (
         <div style={{ background: "rgba(232,98,44,0.06)", border: "1px solid rgba(232,98,44,0.3)", borderRadius: 12, padding: "12px 14px" }}>
-          <div className="fh-kicker" style={{ fontSize: 9, marginBottom: 8, color: "#E8622C" }}>🎬 Your remake · shot for shot</div>
+          <div className="fh-kicker" style={{ fontSize: 9, marginBottom: 8, color: "#E8622C" }}>
+            🎬 Your remake · shot for shot{analysis.adaptedTopic ? ` · ${analysis.adaptedTopic}` : ""}
+          </div>
+          <QualityChips flags={analysis.remakeQuality} />
+          {analysis.remake.concept && (
+            <div style={{ fontSize: 12, color: "#D9D7E4", lineHeight: 1.5, marginBottom: 8 }}>{analysis.remake.concept}</div>
+          )}
           {analysis.remake.hookLine && (
             <div style={{ fontSize: 13.5, fontWeight: 800, color: "#F4F3F8", lineHeight: 1.35, marginBottom: 10 }}>HOOK: “{analysis.remake.hookLine}”</div>
           )}
@@ -336,6 +576,107 @@ function AnalysisCard({ analysis }: { analysis: ReelAnalysis }) {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Stage 2 alone: re-run the ADAPTATION from the saved genome — new topic,
+    new inputs, zero re-analysis, zero video upload. The style DNA was paid
+    for once; this is where it gets reused. */
+function ReAdapt({ reel, ideas, onSaved }: { reel: VaultReel; ideas: Idea[]; onSaved: () => Promise<void> }) {
+  const [topicId, setTopicId] = useState("");
+  const [audience, setAudience] = useState("");
+  const [cta, setCta] = useState("");
+  const [tone, setTone] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const idea = ideas.find((i) => i.id === topicId) || null;
+  const inputStyle = {
+    background: "rgba(0,0,0,0.24)",
+    border: "1px solid rgba(255,255,255,0.09)",
+    borderRadius: 8,
+    padding: "6px 10px",
+    fontSize: 11.5,
+    color: "#F4F3F8",
+    flex: 1,
+    minWidth: 130,
+  } as const;
+  const run = async () => {
+    if (!idea || busy) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await fetch("/api/reel-script", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          genome: reel.analysis.genome,
+          topic: { title: idea.title, angle: idea.angle, facts: idea.deck?.length ? idea.deck : [idea.angle] },
+          ...(audience.trim() ? { audience: audience.trim() } : {}),
+          ...(cta.trim() ? { cta: cta.trim() } : {}),
+          ...(tone.trim() ? { tone: tone.trim() } : {}),
+        }),
+        signal: AbortSignal.timeout(220000),
+      });
+      const j = (await r.json()) as { script?: { remake?: ReelAnalysis["remake"] }; quality?: QualityFlag[]; error?: string; configured?: boolean };
+      if (j.configured === false) throw new Error("Needs a Gemini or Claude key in Connectors first.");
+      if (j.error) throw new Error(j.error);
+      const remake = j.script?.remake;
+      if (!remake?.beats?.length) throw new Error("The adaptation came back empty — try again.");
+      const updated: VaultReel = {
+        ...reel,
+        analysis: { ...reel.analysis, remake, remakeQuality: j.quality || [], adaptedTopic: idea.title },
+      };
+      if (!(await reelVaultAdd(updated))) throw new Error("The new script couldn't be saved on this device — free up browser storage and retry.");
+      await onSaved();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Adaptation failed — try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div style={{ marginTop: 12, background: "rgba(201,168,255,0.05)", border: "1px solid rgba(201,168,255,0.25)", borderRadius: 10, padding: "10px 12px" }}>
+      <div style={{ fontSize: 10, fontWeight: 800, color: "#C9A8FF", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+        Re-adapt this style — new topic, no re-analysis
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <select
+          value={topicId}
+          onChange={(e) => setTopicId(e.target.value)}
+          disabled={busy}
+          style={{ background: "rgba(0,0,0,0.28)", color: "#F4F3F8", border: "1px solid rgba(201,168,255,0.35)", borderRadius: 8, padding: "6px 10px", fontSize: 11.5, maxWidth: 300, fontFamily: "var(--body)" }}
+        >
+          <option value="">Pick the new topic…</option>
+          {ideas.map((i) => (
+            <option key={i.id} value={i.id}>{i.title}</option>
+          ))}
+        </select>
+        <input placeholder="audience (optional)" value={audience} onChange={(e) => setAudience(e.target.value)} disabled={busy} style={inputStyle} />
+        <input placeholder="CTA direction (optional)" value={cta} onChange={(e) => setCta(e.target.value)} disabled={busy} style={inputStyle} />
+        <input placeholder="tone (optional)" value={tone} onChange={(e) => setTone(e.target.value)} disabled={busy} style={inputStyle} />
+        <button
+          onClick={run}
+          disabled={!idea || busy}
+          style={{
+            background: "rgba(201,168,255,0.14)",
+            color: "#C9A8FF",
+            border: "1px solid rgba(201,168,255,0.45)",
+            borderRadius: 8,
+            padding: "7px 14px",
+            fontSize: 11.5,
+            fontWeight: 700,
+            cursor: !idea || busy ? "default" : "pointer",
+            opacity: !idea || busy ? 0.6 : 1,
+          }}
+        >
+          {busy ? "Adapting… (1–2 min)" : "↻ Write new script"}
+        </button>
+      </div>
+      <div style={{ fontSize: 10.5, color: "#8B89A0", lineHeight: 1.45, marginTop: 6 }}>
+        Reuses this reel&apos;s saved style genome and replaces the current remake script in place.
+      </div>
+      {err && <div style={{ fontSize: 11, color: "#FF6B6B", marginTop: 6 }}>{err}</div>}
     </div>
   );
 }
@@ -1419,6 +1760,9 @@ export default function ReelCoach() {
             {expanded === reel.id && (
               <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
                 <AnalysisCard analysis={reel.analysis} />
+                {reel.source === "reference" && reel.analysis.genome && (
+                  <ReAdapt reel={reel} ideas={ideas} onSaved={async () => setList(await reelVaultAll())} />
+                )}
               </div>
             )}
           </div>
