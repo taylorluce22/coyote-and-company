@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { claudeJson, claudeVerify } from "@/lib/claudeScript";
 
 /**
  * Reel Script Studio — the standalone script writer. No reference video
@@ -58,9 +59,21 @@ ${topic.facts.map((f, i) => `${i + 1}. ${f}`).join("\n")}
 
 Editorial rules: the voice is an Arizona residential solar consultant; APS territory only (never SRP); the script must end connected to the solar/ownership decision; call-to-action stays Valley-general ("Valley homeowners", never one city); no emojis in on-screen text; every number must come from the verified facts verbatim.`;
 
+/** Connector probe: configured = the Claude scriptwriter key is present.
+    ?verify=1 actually calls Anthropic (models list is free) to catch a
+    placeholder key — same pattern as the Gemini probe. */
+export async function GET(req: NextRequest) {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (req.nextUrl.searchParams.get("verify")) {
+    if (!key) return NextResponse.json({ claude: "missing" });
+    return NextResponse.json({ claude: await claudeVerify(key) });
+  }
+  return NextResponse.json({ configured: !!key });
+}
+
 export async function POST(req: NextRequest) {
   const key = process.env.GEMINI_API_KEY;
-  if (!key) return NextResponse.json({ configured: false });
+  if (!key && !process.env.ANTHROPIC_API_KEY) return NextResponse.json({ configured: false });
   let b: Record<string, unknown> = {};
   try {
     b = await req.json();
@@ -75,6 +88,15 @@ export async function POST(req: NextRequest) {
   const styleName = clamp(b.styleName, 200) || "Director's choice — whatever best serves this topic";
   const styleDna = clamp(b.styleDna, 2000);
   const seconds = Math.min(60, Math.max(10, Number(b.seconds) || 30));
+
+  // Claude connector first — the advanced scriptwriter; Gemini is the fallback
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (anthropicKey) {
+    const script = await claudeJson(anthropicKey, scriptPrompt(topic, styleName, styleDna, seconds), 100000);
+    if (script) return NextResponse.json({ configured: true, script, writer: "claude" });
+    // fall through to Gemini on any Claude failure
+  }
+  if (!key) return NextResponse.json({ configured: true, error: "script generation failed — check the Claude key in Connectors" });
 
   const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
   try {

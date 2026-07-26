@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { del, list, put } from "@vercel/blob";
+import { polishRemake } from "@/lib/claudeScript";
 
 /**
  * Reel coach — watches an actual video (visuals + audio together, via
@@ -473,7 +474,14 @@ async function geminiAnalyze(
   let text = String(genData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
   text = text.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   try {
-    return { analysis: JSON.parse(text) as Record<string, unknown> };
+    const parsed = JSON.parse(text) as Record<string, unknown>;
+    // Claude connector: when wired, the stronger writer rewrites the remake
+    // from Gemini's style DNA — Gemini stays the eyes, Claude becomes the pen
+    if (topic && process.env.ANTHROPIC_API_KEY) {
+      const better = await polishRemake(parsed, topic);
+      if (better) parsed.remake = better;
+    }
+    return { analysis: parsed };
   } catch {
     return fail("analysis returned malformed JSON — try again");
   }

@@ -38,15 +38,17 @@ export default function Connectors() {
   async function runVerify() {
     setVerifying(true);
     try {
-      const [stock, video] = await Promise.all([
+      const [stock, video, script] = await Promise.all([
         fetch("/api/stock?verify=1", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
         fetch("/api/video-reference?verify=1", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
+        fetch("/api/reel-script?verify=1", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
       ]);
       const next: Record<string, Verdict> = {};
       (["pexels", "pixabay", "unsplash"] as const).forEach((k) => {
         if (stock?.[k]) next[k] = stock[k] as Verdict;
       });
       if (video?.gemini) next.gemini = video.gemini as Verdict;
+      if (script?.claude) next.claude = script.claude as Verdict;
       setVerdicts(next);
     } finally {
       setVerifying(false);
@@ -54,7 +56,7 @@ export default function Connectors() {
   }
 
   // connectors we can validate for free (no paid call, per credit policy)
-  const VERIFIABLE = new Set(["pexels", "pixabay", "unsplash", "gemini"]);
+  const VERIFIABLE = new Set(["pexels", "pixabay", "unsplash", "gemini", "claude"]);
 
   useEffect(() => {
     let alive = true;
