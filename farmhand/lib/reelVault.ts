@@ -24,7 +24,19 @@ export interface ReelAnalysis {
   };
   remake?: {
     hookLine?: string;
-    beats?: { shot?: string; say?: string; onScreenText?: string; duration?: string }[];
+    beats?: {
+      shot?: string;
+      say?: string;
+      onScreenText?: string;
+      duration?: string;
+      /* production-grade detail (v2 script writer) — every visible element,
+         camera language, text animation, and a paste-ready per-beat prompt
+         for AI video generation so details survive into the output */
+      camera?: string;
+      visualDetail?: string;
+      textStyle?: string;
+      genPrompt?: string;
+    }[];
     cta?: string;
     productionNotes?: string[];
   };
