@@ -1,5 +1,7 @@
 # Supplier Target List — 503B Outsourcing Facilities (Non-GLP-1, Office-Use)
 
+> **⚠ Superseded in part — 2026-07-27 contact-research corrections (`supplier-contacts.md` is the current Tier 1 authority):** Edge Pharma is **defunct** (enjoined 2022, liquidated — removed). Carie Boyd → **Watch** (fresh WL 12/2024 + 483 7/2025). KRS → Tier 2, qualify-first (ownership/scale unverified). **Current Tier 1: Pine (483 11/2025 caution), Belmar, Olympia (promoted — new president 5/2026), AnazaoHealth (promoted), Nubratori (promoted).** The analysis below is otherwise current.
+
 Compiled 2026-07-27 from web research. Coverage note: FDA's canonical "Registered Outsourcing Facilities" page lists **93 facilities (as of 2025-07-16)**; this reconstruction covers ~37 via secondary sources because fda.gov blocked automated access. **First manual task: pull the FDA page in a browser and (a) confirm current registration for every Tier 1/2 name, (b) sweep the ~56 facilities not yet reviewed.** Fit logic: small/regional + clinic-channel product mix + not GLP-1-dependent + no in-house sales army + no *recent* warning letter. (Historic 483s alone don't disqualify — 96% of inspected 503Bs have one.)
 
 ## Tier 1 — pitch first (this week)
