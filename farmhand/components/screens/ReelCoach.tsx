@@ -690,6 +690,120 @@ const secsOf = (d?: string) => {
     holds media bytes again (the no-media-on-the-main-thread rule). */
 type Manifest = { clips: Record<number, string>; vos: Record<number, string>; draft?: string };
 
+/* ---- quality tiers (P2) ----
+   standard = text-to-video, fast/cheap (hailuo-02 standard, 720p draft).
+   premium  = style-locked KEYFRAME image per beat first (shared seed), then
+   image-to-video at top fidelity + 1080×1920 assembly — the i2v step is the
+   single biggest quality lever vs professionally-animated references.
+   Cost-aware: blended UI estimates shown BEFORE spending. */
+type Tier = "standard" | "premium";
+const qualityKey = (ws: string, reelId: string) => `fh-reel-quality::${ws}::${reelId}`;
+const KEYFRAME_CENTS = UNIT_COST_CENTS.image;
+const PREMIUM_CLIP_CENTS = 240; // blended estimate for a hi-fi 1080p i2v render
+const perClipCents = (t: Tier) => (t === "premium" ? PREMIUM_CLIP_CENTS + KEYFRAME_CENTS : UNIT_COST_CENTS.reel);
+
+/* ---- Reference vs Draft compare (P3) ----
+   Both stream from the server vault; play/pause/scrub drive BOTH players
+   (the reference is the sync master) so the quality gap is visible shot by
+   shot on every iteration. */
+function CompareView({ referenceUrl, draftUrl }: { referenceUrl: string; draftUrl: string }) {
+  const refV = useRef<HTMLVideoElement>(null);
+  const drV = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [t, setT] = useState(0);
+  const [dur, setDur] = useState(0);
+
+  const both = (fn: (v: HTMLVideoElement) => void) => {
+    if (refV.current) fn(refV.current);
+    if (drV.current) fn(drV.current);
+  };
+  const toggle = () => {
+    if (playing) {
+      both((v) => v.pause());
+      setPlaying(false);
+    } else {
+      both((v) => {
+        v.play().catch(() => {});
+      });
+      setPlaying(true);
+    }
+  };
+  const seek = (sec: number) => {
+    setT(sec);
+    both((v) => {
+      try {
+        v.currentTime = Math.min(sec, Number.isFinite(v.duration) ? v.duration : sec);
+      } catch {}
+    });
+  };
+  const onRefTime = () => {
+    const rv = refV.current;
+    const dv = drV.current;
+    if (!rv) return;
+    setT(rv.currentTime);
+    // keep the draft within a third of a second of the reference
+    if (dv && Number.isFinite(dv.duration) && Math.abs(dv.currentTime - rv.currentTime) > 0.35) {
+      try {
+        dv.currentTime = Math.min(rv.currentTime, dv.duration);
+      } catch {}
+    }
+  };
+  const onMeta = () => {
+    const d = Math.max(refV.current?.duration || 0, drV.current?.duration || 0);
+    if (Number.isFinite(d) && d > 0) setDur(d);
+  };
+  const vid = (ref: React.RefObject<HTMLVideoElement | null>, url: string, label: string, accent: string, master: boolean) => (
+    <div style={{ flex: 1, minWidth: 130, maxWidth: 200 }}>
+      <div style={{ fontSize: 9.5, fontWeight: 800, color: accent, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>{label}</div>
+      <video
+        ref={ref}
+        src={url}
+        playsInline
+        preload="metadata"
+        muted={!master} /* one soundtrack at a time — the reference leads */
+        onLoadedMetadata={onMeta}
+        onTimeUpdate={master ? onRefTime : undefined}
+        onEnded={master ? () => setPlaying(false) : undefined}
+        style={{ width: "100%", aspectRatio: "9/16", borderRadius: 10, background: "#000", border: `1px solid ${accent}55` }}
+      />
+    </div>
+  );
+  return (
+    <div style={{ marginTop: 12, borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 10 }}>
+      <div style={{ fontSize: 10, fontWeight: 800, color: "#7DD3FC", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
+        ⚖ Reference vs your draft — synced
+      </div>
+      <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+        {vid(refV, referenceUrl, "Reference", "#C9A8FF", true)}
+        {vid(drV, draftUrl, "Your draft", "#41D98A", false)}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+        <button
+          onClick={toggle}
+          style={{ background: "rgba(125,211,252,0.14)", color: "#7DD3FC", border: "1px solid rgba(125,211,252,0.4)", borderRadius: 8, padding: "5px 14px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+        >
+          {playing ? "❚❚" : "▶"}
+        </button>
+        <input
+          type="range"
+          min={0}
+          max={dur || 1}
+          step={0.05}
+          value={Math.min(t, dur || 1)}
+          onChange={(e) => seek(Number(e.target.value))}
+          style={{ flex: 1, accentColor: "#7DD3FC" }}
+        />
+        <span style={{ fontSize: 10, color: "#8B89A0", fontFamily: "var(--mono)", minWidth: 66, textAlign: "right" }}>
+          {t.toFixed(1)}s / {dur ? dur.toFixed(1) : "–"}s
+        </span>
+      </div>
+      <div style={{ fontSize: 10.5, color: "#5E5C72", marginTop: 4, lineHeight: 1.45 }}>
+        Reference audio plays; the draft is muted and follows the scrub. Spot the gap, tweak, re-produce.
+      </div>
+    </div>
+  );
+}
+
 /** Generate, track, play and produce a remake's media — every asset lives
     in the SERVER vault (Vercel Blob) and streams straight off the CDN into
     <video>/<audio> tags. The browser only triggers work and renders URLs:
@@ -709,6 +823,8 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
   const [msg, setMsg] = useState<string | null>(null);
   const [beatState, setBeatState] = useState<Record<number, BeatClipState>>({});
   const [pending, setPending] = useState<{ reelId: string; items: PendingClip[] } | null>(null);
+  // quality tier — persisted per reel; premium = keyframe i2v + 1080p
+  const [tier, setTier] = useState<Tier>(() => (lsGet(qualityKey(workspace, reel.id)) === "premium" ? "premium" : "standard"));
   // voiceover + assembly
   const [voMode, setVoMode] = useState<"edu" | "me">(() => (lsGet(voModeKey(workspace)) === "me" ? "me" : "edu"));
   const [voBusy, setVoBusy] = useState(false);
@@ -902,13 +1018,75 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
         return onlyMissing;
       }
       const seed = 1 + Math.floor(Math.random() * 999_999);
+
+      /* PREMIUM stage 1/2 — style-locked keyframe per beat (shared seed for
+         cross-beat consistency). Keyframes are cheap; every one must land
+         BEFORE any video credits are spent. */
+      const keyframes: Record<number, string> = {};
+      if (tier === "premium") {
+        setMsg("🎨 Premium 1/2 — rendering style-locked keyframes…");
+        const kr = await fetch("/api/higgsfield", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompts: targets.map((t) => t.prompt.slice(0, 1500)), seed, aspect: "9:16" }),
+          signal: AbortSignal.timeout(90000),
+        });
+        const kj = await kr.json();
+        if (kj.needsCreds) {
+          setMsg("Add your Higgsfield API keys in Connectors first — no credits were spent.");
+          return false;
+        }
+        const kHandles: (string | null)[] = Array.isArray(kj.jobs) ? kj.jobs : [];
+        const kfPending = kHandles
+          .map((u, k) => (u && targets[k] ? { url: u, beat: targets[k].i } : null))
+          .filter((x): x is { url: string; beat: number } => !!x);
+        if (kfPending.length < targets.length) {
+          setMsg(kj.error || "Couldn't start the keyframes — no video credits were spent.");
+          return false;
+        }
+        const kfDeadline = Date.now() + 4 * 60000;
+        const kfOpen = () => kfPending.filter((it) => !keyframes[it.beat]);
+        while (kfOpen().length && Date.now() < kfDeadline) {
+          const open = kfOpen();
+          try {
+            const cr = await fetch("/api/higgsfield", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ check: open.map((o) => o.url) }),
+              signal: AbortSignal.timeout(30000),
+            });
+            const cj = await cr.json();
+            const results: { status?: string; images?: string[] }[] = Array.isArray(cj.results) ? cj.results : [];
+            open.forEach((it, k) => {
+              const img = results[k]?.status === "completed" ? results[k]?.images?.[0] : null;
+              if (img) {
+                keyframes[it.beat] = img;
+                meterRecord(workspace, "image", 1);
+              }
+            });
+          } catch {}
+          if (kfOpen().length) await new Promise((r2) => setTimeout(r2, 3500));
+          setMsg(`🎨 Premium 1/2 — keyframes ${targets.length - kfOpen().length}/${targets.length} ready…`);
+        }
+        if (kfOpen().length) {
+          setMsg("Some keyframes didn't finish — no video credits were spent. Try again in a minute.");
+          return false;
+        }
+        setMsg("🎨 Premium 2/2 — animating keyframes at top fidelity (1080p)…");
+      }
+
       const r = await fetch("/api/higgsfield", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          videoPrompts: targets.map((t) => ({ prompt: t.prompt, duration: t.duration })),
+          videoPrompts: targets.map((t) => ({
+            prompt: t.prompt,
+            duration: t.duration,
+            ...(tier === "premium" ? { imageUrl: keyframes[t.i] } : {}),
+          })),
           seed,
           aspect: "9:16",
+          ...(tier === "premium" ? { tier: "premium" } : {}),
         }),
         signal: AbortSignal.timeout(120000),
       });
@@ -1075,7 +1253,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
       const r = await fetch("/api/assemble", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ beats: timeline, client: workspace, reelId: reel.id, ...(musicUrl ? { music: musicUrl } : {}) }),
+        body: JSON.stringify({ beats: timeline, client: workspace, reelId: reel.id, quality: tier, ...(musicUrl ? { music: musicUrl } : {}) }),
         signal: AbortSignal.timeout(290000),
       });
       const j = (await r.json().catch(() => ({}))) as { url?: string; seconds?: number; error?: string };
@@ -1112,7 +1290,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
   };
 
   if (!beats.length) return null;
-  const estCents = beats.length * UNIT_COST_CENTS.reel;
+  const estCents = beats.length * perClipCents(tier);
   const stateFor = (i: number): BeatClipState =>
     man.clips[i] ? "done" : beatState[i] || (pending?.items.some((it) => it.beat === i) ? "rendering" : "none");
   const chip: Record<BeatClipState, { label: string; color: string }> = {
@@ -1129,6 +1307,36 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
         <span style={{ fontSize: 10, fontWeight: 800, color: "#E8622C", textTransform: "uppercase", letterSpacing: 0.5 }}>
           Beat clips — server vault, streamed
         </span>
+        <div style={{ display: "inline-flex", gap: 2, background: "rgba(8,8,18,0.6)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 8, padding: 3 }}>
+          {(
+            [
+              { id: "standard" as Tier, label: "Standard", tip: `Fast + cheap — text-to-video, ≈${dollars(perClipCents("standard"))}/clip` },
+              { id: "premium" as Tier, label: "✨ Premium", tip: `Keyframe → image-to-video at 1080p, style-locked — ≈${dollars(perClipCents("premium"))}/clip` },
+            ]
+          ).map((q) => (
+            <button
+              key={q.id}
+              onClick={() => {
+                setTier(q.id);
+                lsSet(qualityKey(workspace, reel.id), q.id === "premium" ? "premium" : "");
+              }}
+              disabled={anyBusy}
+              title={q.tip}
+              style={{
+                border: "none",
+                borderRadius: 6,
+                padding: "5px 10px",
+                fontSize: 10.5,
+                fontWeight: 700,
+                cursor: anyBusy ? "default" : "pointer",
+                background: tier === q.id ? (q.id === "premium" ? "rgba(255,194,61,0.22)" : "rgba(125,211,252,0.18)") : "transparent",
+                color: tier === q.id ? (q.id === "premium" ? "#FFC23D" : "#7DD3FC") : "#8B89A0",
+              }}
+            >
+              {q.label}
+            </button>
+          ))}
+        </div>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, flexWrap: "wrap" }}>
           {pending && !anyBusy && (
             <button
@@ -1153,14 +1361,14 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
               opacity: anyBusy ? 0.6 : 1,
             }}
           >
-            {busy ? "Rendering…" : armed ? `Confirm — ${beats.length} clips ≈ ${dollars(estCents)}` : clipCount ? "↻ Regenerate beats" : "▶ Generate beats"}
+            {busy ? "Rendering…" : armed ? `Confirm — ${beats.length} ${tier === "premium" ? "premium " : ""}clips ≈ ${dollars(estCents)}` : clipCount ? "↻ Regenerate beats" : "▶ Generate beats"}
           </button>
           {(() => {
             const missingCount = beats.filter((_, i) => !man.clips[i]).length;
             const prodLabel = prodBusy
               ? "Producing…"
               : prodArm
-                ? `Confirm — renders ${missingCount} clip${missingCount === 1 ? "" : "s"} ≈ ${dollars(missingCount * UNIT_COST_CENTS.reel)}`
+                ? `Confirm — renders ${missingCount} ${tier === "premium" ? "premium " : ""}clip${missingCount === 1 ? "" : "s"} ≈ ${dollars(missingCount * perClipCents(tier))}`
                 : "⚡ Produce reel";
             return (
               <button
@@ -1367,6 +1575,9 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
               <div style={{ marginTop: 4 }}>Good enough → post it. Want polish → drop it in CapCut; the cut, VO and captions are already done.</div>
             </div>
           </div>
+        )}
+        {man.draft && typeof reel.analysis.referenceUrl === "string" && reel.analysis.referenceUrl && !asmBusy && (
+          <CompareView referenceUrl={reel.analysis.referenceUrl} draftUrl={src(man.draft) as string} />
         )}
       </div>
     </div>

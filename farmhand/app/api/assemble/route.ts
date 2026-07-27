@@ -226,6 +226,12 @@ export async function POST(req: NextRequest) {
   const SEG = /^[a-z0-9][a-z0-9._-]{0,63}$/i;
   const vaultClient = SEG.test(String(b.client ?? "")) ? String(b.client) : null;
   const vaultReel = SEG.test(String(b.reelId ?? "")) ? String(b.reelId) : null;
+  // premium quality: full 1080x1920 at a finer CRF — pairs with the 1080p
+  // image-to-video clips so no upscaling mush sneaks in
+  const premium = String(b.quality ?? "") === "premium";
+  const W = premium ? 1080 : 720;
+  const H = premium ? 1920 : 1280;
+  const CRF = premium ? "19" : "20";
 
   const dir = await mkdtemp(path.join(tmpdir(), "asm-"));
   const inputUrls: string[] = [];
@@ -292,7 +298,7 @@ export async function POST(req: NextRequest) {
     beats.forEach((bt, i) => {
       const { clip, cap, vo } = idxOf[i];
       const D = bt.duration.toFixed(2);
-      const base = `[${clip}:v]trim=duration=${D},setpts=PTS-STARTPTS,scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=30`;
+      const base = `[${clip}:v]trim=duration=${D},setpts=PTS-STARTPTS,scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=30`;
       fc.push(cap >= 0 ? `${base}[pv${i}];[pv${i}][${cap}:v]overlay=0:0[v${i}]` : `${base}[v${i}]`);
       fc.push(`[${vo}:a]aresample=44100,apad,atrim=duration=${D},asetpts=PTS-STARTPTS[a${i}]`);
       concatIn.push(`[v${i}][a${i}]`);
@@ -309,10 +315,10 @@ export async function POST(req: NextRequest) {
       "-map", `[${aOut}]`,
       "-c:v", "libx264",
       "-preset", "veryfast",
-      "-crf", "20",
+      "-crf", CRF,
       "-pix_fmt", "yuv420p",
       "-c:a", "aac",
-      "-b:a", "128k",
+      "-b:a", premium ? "192k" : "128k",
       "-ar", "44100",
       "-movflags", "+faststart",
       "out.mp4"

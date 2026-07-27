@@ -17,16 +17,20 @@ import { NextRequest, NextResponse } from "next/server";
  *        prompts — the CLIENT polls via check mode. (A single server-side
  *        request babysitting a 5-job batch died mid-poll in production and
  *        stranded paid-for images; short requests can't.)
- * POST { videoPrompts: [{ prompt, duration? }], seed?, aspect? }
- *      → VIDEO LANE (reel beats): one text-to-video job per beat genPrompt
- *        (max 12), same model + shared seed across the batch for style
- *        consistency, per-beat duration (clamped 3-10s). Same crash-proof
- *        contract as the image batch: returns { jobs: (statusUrl|null)[] }
- *        immediately and the CLIENT polls via check mode. The model ladder is
- *        runtime-discoverable (Higgsfield ships weekly): candidates below are
- *        tried in order per batch, and HIGGSFIELD_VIDEO_MODELS (comma-
- *        separated route paths) overrides the ladder from Vercel env without
- *        a deploy.
+ * POST { videoPrompts: [{ prompt, duration?, imageUrl? }], seed?, aspect?, tier? }
+ *      → VIDEO LANE (reel beats): one video job per beat genPrompt (max 12),
+ *        same model + shared seed across the batch for style consistency,
+ *        per-beat duration (clamped 3-10s). Same crash-proof contract as the
+ *        image batch: returns { jobs: (statusUrl|null)[] } immediately and
+ *        the CLIENT polls via check mode.
+ *        TIERS: default = text-to-video (hailuo-02 standard — fast/cheap).
+ *        tier:"premium" = IMAGE-to-video: every beat carries a style-locked
+ *        keyframe imageUrl (generated first via the image lane with a shared
+ *        seed) and the ladder uses the highest-fidelity i2v models at 1080p —
+ *        the single biggest quality lever, per the pro-reel reference gap.
+ *        Ladders are runtime-discoverable (Higgsfield ships weekly):
+ *        HIGGSFIELD_VIDEO_MODELS / HIGGSFIELD_VIDEO_MODELS_PREMIUM (comma-
+ *        separated route paths) override from Vercel env without a deploy.
  * POST { check: string[] }
  *      → polls the given platform.higgsfield.ai status URLs once, returns
  *        { results: [{ status, images?, videos? }] } — videos populated for
@@ -174,7 +178,7 @@ export async function POST(req: NextRequest) {
   const auth = creds();
   if (!auth) return NextResponse.json({ configured: false, needsCreds: true, images: [] });
 
-  let body: { prompt?: unknown; prompts?: unknown; videoPrompts?: unknown; seed?: unknown; aspect?: unknown; check?: unknown; soulId?: unknown } = {};
+  let body: { prompt?: unknown; prompts?: unknown; videoPrompts?: unknown; seed?: unknown; aspect?: unknown; check?: unknown; soulId?: unknown; tier?: unknown } = {};
   try {
     body = await req.json();
   } catch {}
@@ -226,51 +230,80 @@ export async function POST(req: NextRequest) {
      Same crash-proof shape as the image batch: start everything, hand the
      status handles straight back, the client polls via check mode. */
   if (Array.isArray(body.videoPrompts)) {
+    const premium = String(body.tier || "") === "premium";
     const beats = (body.videoPrompts as unknown[])
       .map((raw) => {
         const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
         const prompt = String(r.prompt || "").trim().slice(0, 2000);
+        const imageUrl = String(r.imageUrl || "").trim().slice(0, 1200);
         const durNum = Math.round(Number(String(r.duration ?? "").replace(/[^\d.]/g, "")));
-        return prompt ? { prompt, duration: Number.isFinite(durNum) ? Math.min(10, Math.max(3, durNum)) : 5 } : null;
+        return prompt
+          ? {
+              prompt,
+              imageUrl: /^https:\/\//.test(imageUrl) ? imageUrl : "",
+              duration: Number.isFinite(durNum) ? Math.min(10, Math.max(3, durNum)) : 5,
+            }
+          : null;
       })
-      .filter((b): b is { prompt: string; duration: number } => !!b)
+      .filter((b): b is { prompt: string; imageUrl: string; duration: number } => !!b)
       .slice(0, 12);
     if (!beats.length) return NextResponse.json({ configured: true, jobs: [], error: "no beat prompts" });
+    if (premium && beats.some((b) => !b.imageUrl)) {
+      return NextResponse.json({ configured: true, jobs: [], error: "premium tier needs a keyframe image per beat — generate keyframes first" });
+    }
 
     const vAspect = ASPECTS.has(String(body.aspect)) ? String(body.aspect) : "9:16";
     const vSeedNum = Math.round(Number(body.seed));
     const vSeed = Number.isFinite(vSeedNum) && vSeedNum >= 1 && vSeedNum <= 1_000_000 ? vSeedNum : null;
     const headers = { Authorization: auth, "Content-Type": "application/json" };
 
-    // The t2v catalog ships weekly — candidates are a LADDER, not gospel, and
-    // HIGGSFIELD_VIDEO_MODELS ("path,path,…") re-orders/replaces it from env
-    // without a deploy. First live test (2026-07-26, Cowork): hailuo-02 is
-    // the account's live t2v route (seedance/kling/wan paths → 404
-    // model_not_found), so it anchors the ladder; the alternates behind it
-    // only run if it dies. Duration is a NUMBER (hailuo 400s on a string
-    // "6") and each model snaps it to ITS allowed set — hailuo accepts
-    // exactly [6, 10], so ~3-4s beats round up to 6 and get trimmed in the
-    // edit.
-    type VideoModel = { path: string; snapDuration?: (n: number) => number };
-    const envModels: VideoModel[] = String(process.env.HIGGSFIELD_VIDEO_MODELS || "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter((s) => /^\/[a-z0-9/._-]+$/i.test(s))
-      .map((path) => ({ path, ...(path.includes("hailuo") ? { snapDuration: (n: number) => (n <= 8 ? 6 : 10) } : {}) }));
-    const defaultModels: VideoModel[] = [
-      { path: "/minimax/hailuo-02/standard/text-to-video", snapDuration: (n) => (n <= 8 ? 6 : 10) },
-      { path: "/bytedance/seedance/v1/pro/text-to-video" },
-      { path: "/kling-video/v2.1/standard/text-to-video" },
-    ];
-    const models = envModels.length ? envModels : defaultModels;
-    const makeBody = (m: VideoModel, b: { prompt: string; duration: number }) => ({
+    // The video catalog ships weekly — candidates are a LADDER, not gospel,
+    // and HIGGSFIELD_VIDEO_MODELS / _PREMIUM ("path,path,…") re-order/replace
+    // them from env without a deploy. First live test (2026-07-26, Cowork):
+    // hailuo-02 is the account's live route family (seedance/kling/wan paths
+    // → 404 model_not_found), so it anchors both ladders. Duration is a
+    // NUMBER (hailuo 400s on a string "6") and each model snaps it to ITS
+    // allowed set — hailuo accepts exactly [6, 10], so ~3-4s beats round up
+    // to 6 and get trimmed in the edit.
+    type VideoBeat = { prompt: string; imageUrl: string; duration: number };
+    type VideoModel = { path: string; make: (b: VideoBeat) => Record<string, unknown> };
+    const hailuoSnap = (n: number) => (n <= 8 ? 6 : 10);
+    const base = (b: VideoBeat, snap?: (n: number) => number) => ({
       prompt: b.prompt,
       aspect_ratio: vAspect,
-      duration: m.snapDuration ? m.snapDuration(b.duration) : b.duration,
+      duration: snap ? snap(b.duration) : b.duration,
       ...(vSeed ? { seed: vSeed } : {}),
     });
+    const fromEnv = (name: string, toModel: (path: string) => VideoModel): VideoModel[] =>
+      String(process.env[name] || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => /^\/[a-z0-9/._-]+$/i.test(s))
+        .map(toModel);
 
-    const startVideo = async (m: VideoModel, b: { prompt: string; duration: number }): Promise<{ ok: true; job: Job } | { ok: false; fail: string }> => {
+    const t2vDefaults: VideoModel[] = [
+      { path: "/minimax/hailuo-02/standard/text-to-video", make: (b) => base(b, hailuoSnap) },
+      { path: "/bytedance/seedance/v1/pro/text-to-video", make: (b) => base(b) },
+      { path: "/kling-video/v2.1/standard/text-to-video", make: (b) => base(b) },
+    ];
+    // PREMIUM = image-to-video from a style-locked keyframe at top fidelity.
+    // hailuo-02 PRO i2v at 1080p anchors (the account's proven family);
+    // standard i2v and the SDK-documented DoP endpoint back it up.
+    const i2vDefaults: VideoModel[] = [
+      { path: "/minimax/hailuo-02/pro/image-to-video", make: (b) => ({ ...base(b, hailuoSnap), image_url: b.imageUrl, resolution: "1080P" }) },
+      { path: "/minimax/hailuo-02/standard/image-to-video", make: (b) => ({ ...base(b, hailuoSnap), image_url: b.imageUrl }) },
+      { path: "/kling-video/v2.1/pro/image-to-video", make: (b) => ({ ...base(b), image_url: b.imageUrl }) },
+      { path: "/v1/image2video/dop", make: (b) => ({ model: "dop", prompt: b.prompt, input_images: [{ type: "image_url", image_url: b.imageUrl }] }) },
+    ];
+    const genericModel = (path: string): VideoModel =>
+      premium
+        ? { path, make: (b) => ({ ...base(b, path.includes("hailuo") ? hailuoSnap : undefined), image_url: b.imageUrl, ...(path.includes("/pro/") ? { resolution: "1080P" } : {}) }) }
+        : { path, make: (b) => base(b, path.includes("hailuo") ? hailuoSnap : undefined) };
+    const envModels = fromEnv(premium ? "HIGGSFIELD_VIDEO_MODELS_PREMIUM" : "HIGGSFIELD_VIDEO_MODELS", genericModel);
+    const models = envModels.length ? envModels : premium ? i2vDefaults : t2vDefaults;
+    const makeBody = (m: VideoModel, b: VideoBeat) => m.make(b);
+
+    const startVideo = async (m: VideoModel, b: VideoBeat): Promise<{ ok: true; job: Job } | { ok: false; fail: string }> => {
       const path = m.path;
       const r = await fetch(`${BASE}${path}`, {
         method: "POST",
@@ -329,9 +362,9 @@ export async function POST(req: NextRequest) {
   }
 
   const list = Array.isArray(body.prompts)
-    ? (body.prompts as unknown[]).map((p) => String(p || "").trim().slice(0, 800)).filter(Boolean).slice(0, 6)
+    ? (body.prompts as unknown[]).map((p) => String(p || "").trim().slice(0, 1600)).filter(Boolean).slice(0, 12)
     : [];
-  const single = String(body.prompt || "").trim().slice(0, 800);
+  const single = String(body.prompt || "").trim().slice(0, 1600);
   const multi = list.length > 0;
   const prompts = multi ? list : single ? [single] : [];
   if (!prompts.length) return NextResponse.json({ configured: true, images: [], error: "empty prompt" });
