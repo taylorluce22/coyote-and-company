@@ -9,6 +9,21 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-27 · MEDIA ACTUALLY PLAYS — same-origin range streamer
+Posters fixed the stall but exposed a separate bug (Cowork, prod c31142b):
+every vault video parked at readyState 0 and never rendered a frame. Root
+cause: vault Blob URLs are CROSS-ORIGIN; the store honors Range (206 with
+correct bytes) but does not expose `Content-Range` / `Accept-Ranges` to the
+page, so the media engine can't build a seekable stream. A full GET works —
+which is why the download links always worked and this hid for two ships.
+Fix: **/api/media?u=<vault blob url>** streams the blob SAME-ORIGIN with
+real range semantics (206 + Content-Range + Accept-Ranges + Content-Length
++ correct Content-Type; 200 + Accept-Ranges on a full request), body piped
+through so memory stays flat. Every playable element (beat clips, draft,
+compare pair, VO audio, the duration probe) now points at it; posters and
+download links stay on the direct CDN URL. One-video-at-a-time rule intact.
+
+
 ## 2026-07-27 · ZERO-CRASH MEDIA — posters + one-video-at-a-time
 Owner priority above all polish: "basic functions with ZERO crashes, zero
 manual intervention." Cowork isolated the remaining stall (prod b749ea9):

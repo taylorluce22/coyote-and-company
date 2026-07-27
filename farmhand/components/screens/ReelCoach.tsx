@@ -965,6 +965,12 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
   }, [prodArm]);
   const anyBusy = busy || voBusy || asmBusy || prodBusy;
   const src = (u?: string) => (u ? `${u}${u.includes("?") ? "&" : "?"}v=${bump}` : undefined);
+  /** PLAYABLE media must be served same-origin with real range headers —
+      cross-origin blob responses hide Content-Range/Accept-Ranges from the
+      page and the media engine parks at readyState 0 forever. Posters and
+      download links stay on the direct CDN URL (a full GET is all they
+      need). */
+  const mediaSrc = (u?: string) => (u ? `/api/media?u=${encodeURIComponent(u)}&v=${bump}` : undefined);
 
   // manRef mirrors man so async flows read fresh state without stale closures
   const manRef = useRef<Manifest>({ clips: {}, vos: {}, posters: {} });
@@ -1390,7 +1396,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
         const scriptD = secsOf(beats[i].duration);
         // beat runs as long as the voice needs (plus a breath), inside the
         // clip; audioSecs streams metadata only and can't hang (8s fallback)
-        const voD = vo ? await audioSecs(src(vo) as string) : 0;
+        const voD = vo ? await audioSecs(mediaSrc(vo) as string) : 0;
         const D = Math.min(6, Math.max(scriptD, voD > 0 ? voD + 0.3 : 0) || scriptD);
         const entry: { clip: string; vo?: string; cap?: string; duration: number } = { clip: m.clips[i], duration: D };
         if (vo) entry.vo = vo;
@@ -1599,7 +1605,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
                   )}
                 </div>
                 <div style={{ fontSize: 11.5, color: "#A6A4B8", lineHeight: 1.45 }}>{b.shot}</div>
-                {voUrl && <audio src={src(voUrl)} controls preload="none" style={{ width: "100%", maxWidth: 300, height: 30, marginTop: 4 }} />}
+                {voUrl && <audio src={mediaSrc(voUrl)} controls preload="none" style={{ width: "100%", maxWidth: 300, height: 30, marginTop: 4 }} />}
                 {clipUrl && (
                   <a href={src(clipUrl)} target="_blank" rel="noreferrer" style={{ fontSize: 10.5, color: "#7DD3FC", fontWeight: 700, textDecoration: "none" }}>
                     ↗ open clip
@@ -1610,7 +1616,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
                 <PosterPlayer
                   active={active?.kind === "beat" && active.i === i}
                   onActivate={() => setActive({ kind: "beat", i })}
-                  videoUrl={src(clipUrl) as string}
+                  videoUrl={mediaSrc(clipUrl) as string}
                   posterUrl={src(man.posters[i])}
                   width={108}
                   accent="#FF9A62"
@@ -1743,7 +1749,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
             <PosterPlayer
               active={active?.kind === "draft"}
               onActivate={() => setActive({ kind: "draft" })}
-              videoUrl={src(man.draft) as string}
+              videoUrl={mediaSrc(man.draft) as string}
               posterUrl={src(man.draftPoster)}
               width={148}
               accent="#41D98A"
@@ -1760,8 +1766,8 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
         )}
         {man.draft && typeof reel.analysis.referenceUrl === "string" && reel.analysis.referenceUrl && !asmBusy && (
           <CompareView
-            referenceUrl={reel.analysis.referenceUrl}
-            draftUrl={src(man.draft) as string}
+            referenceUrl={mediaSrc(reel.analysis.referenceUrl) as string}
+            draftUrl={mediaSrc(man.draft) as string}
             refPoster={src(refPoster)}
             draftPoster={src(man.draftPoster)}
             live={active?.kind === "compare"}
