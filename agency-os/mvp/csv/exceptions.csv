@@ -1,0 +1,15 @@
+Code,Subject,Blocking Record,Description,Remedy,Clearable By,Severity,Status,Assigned
+RC1,State licensing,Research basis,Answered by research: introduction model requires no licenses; discipline = never negotiate/offer/contract sales (10-regulatory-research.md s1),Record founder decision citing research doc,Founder,Low,Open,Founder
+RC2,Product legal status,Research basis,Answered per lane; GLP-1 compounds + RUO peptides prohibited (s3),Record founder decision citing research doc,Founder,Low,Open,Founder
+RC3,Buyer eligibility matrix,Research basis,Answered for launch lanes; verify office-use rules per new state before enabling,Record founder decision citing research doc,Founder,Low,Open,Founder
+RC4,Commission legality,Research basis,Lawful cash-pay B2B with s5 contract terms; FL carved out,Record founder decision citing research doc,Founder,Low,Open,Founder
+RC5,Supplier agreement template,Term sheet,Term sheet done (gtm/); final signable agreement to draft,Draft final agreement from term sheet,Founder,Medium,Open,Founder
+RC6,Outreach copy rules,Research basis,Answered; encoded in template rules and linter word list,Record founder decision citing research doc,Founder,Low,Open,Founder
+RC7,Privacy thresholds,Research basis,CCPA only above thresholds; track CA record counts monthly,Add CA-record count to monthly close,Founder,Low,Open,Founder
+RC8,Adverse event duties,Research basis,Agency duty = prompt forwarding; supplier owns regulatory reporting,Record founder decision citing research doc,Founder,Low,Open,Founder
+RC9,Recall duties,Research basis,Supplier owns notification; agency assists/tracks,Record founder decision citing research doc,Founder,Low,Open,Founder
+RC10,Agency insurance,Research basis,E&O + GL written for this activity; disclose line of business to insurer,Bind policy; file COI,Founder,Medium,Open,Founder
+RC11,DSCSA status,Research basis,Outside trading-partner rules with no ownership/possession/direction; preserved by seller-of-record clause,Record founder decision citing research doc,Founder,Low,Open,Founder
+RC12,Tax nexus,Accountant,Remote solicitation nexus review at first out-of-state revenue concentration,Accountant review,Founder,Medium,Open,Founder
+G2-CAT-1,Prohibited category: compounded GLP-1s,Product category,"Shortage exception ended 2025; FDA moving to permanent bar; enforcement reaches marketers (s3)",Standing block; override only on new documented research,Founder w/ New Research,Critical,Open,Founder
+G2-CAT-2,Prohibited category: RUO peptides to clinical channels,Product category,RUO disclaimer void where human use foreseeable; 21 CFR 201.128 (s3),Standing block; override only on new documented research,Founder w/ New Research,Critical,Open,Founder

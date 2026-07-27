@@ -1,0 +1,9 @@
+Title,Type,Due,Priority,Status,Related,Notes
+Verify Tier 1 registration on FDA registered-outsourcing-facilities page + sweep missed facilities,Other,,Critical,Open,gtm/supplier-targets.md,10 min in browser; agent research covered ~37 of 93
+Register AZ trade name (DBA) for agency brand,Other,,High,Open,10-regulatory-research.md s8,AZ SOS $10
+Get E&O + GL quote naming this line of business,Other,,High,Open,RC10,Disclose pharma-marketing activity to insurer
+Buy brand domain + 2 sending variants; SPF/DKIM/DMARC; start warm-up,Other,,Critical,Open,automations.md,Longest lead time - start first
+Find owner/BD contact for each Tier 1 supplier; verify emails,Follow Up,,High,Open,suppliers,LinkedIn + site; MillionVerifier before send
+Stand up Instantly workspace; wire webhooks to Make,Other,,High,Open,automations.md,
+Approve supplier recruitment templates A1-A4 (founder + compliance pass),Review Due,,High,Open,gtm/outreach-templates.md,Two-checkbox approval in Approve interface
+Calendar 60-day re-check on Watch-list suppliers,Review Due,,Normal,Open,suppliers,2026-09-27
