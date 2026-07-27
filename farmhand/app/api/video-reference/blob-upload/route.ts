@@ -24,6 +24,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // the reels/ prefix is what authorizes /api/video-reference to
         // fetch AND delete these urls — nothing else may live under it
         if (!pathname.startsWith("reels/")) throw new Error("uploads must live under reels/");
+        // reels/asm/ = assembly timeline assets (clips + narration + caption
+        // cards + music) headed for /api/assemble — small files, more types
+        if (pathname.startsWith("reels/asm/")) {
+          return {
+            allowedContentTypes: ["video/mp4", "video/quicktime", "video/webm", "audio/mpeg", "audio/mp3", "audio/mp4", "audio/aac", "audio/wav", "audio/webm", "image/png"],
+            addRandomSuffix: true,
+            maximumSizeInBytes: 120 * 1024 * 1024,
+          };
+        }
         return {
           allowedContentTypes: ["video/mp4", "video/quicktime", "video/webm", "video/x-m4v", "video/3gpp", "video/x-msvideo"],
           addRandomSuffix: true,

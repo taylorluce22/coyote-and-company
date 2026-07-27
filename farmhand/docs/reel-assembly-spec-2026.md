@@ -1,11 +1,20 @@
 # Reel Assembly — Phase 2 spec
 
-> **STATUS: BUILT 2026-07-26** — `lib/assembleReel.ts` + the Draft-reel row
-> in Reel Coach's ClipStudio. Two deltas from the spec below: captions are
-> canvas-rendered transparent PNGs overlaid per beat (ffmpeg.wasm ships no
-> fonts; canvas gets the app's real fonts + exact DESERT GRID styling), and
-> VO shipped in the same pass (ElevenLabs per-beat segments, beats timed to
-> narration length). "Later" items below remain open.
+> **STATUS: BUILT 2026-07-26, REARCHITECTED SERVER-SIDE 2026-07-27.**
+> The client-side ffmpeg.wasm approach specced below is **permanently
+> retired**: wasm's grow-only linear-memory heap (all inputs + decoded
+> frames + outputs resident at once) exhausted physical RAM on a
+> unified-memory Mac and froze the entire browser via system-wide memory
+> pressure — regardless of which thread ran it (verified across three
+> client architectures). **Never ship a browser encode again.**
+> The live implementation is **`/api/assemble`** (native ffmpeg via
+> ffmpeg-static, Node runtime, one filter_complex pass, x264 veryfast
+> CRF 20): ClipStudio uploads the vault-banked clips/VO/caption-PNGs to
+> Blob under `reels/asm/`, the server encodes in ~15-60s and returns a
+> Blob URL, the client banks the MP4 into the clip vault and burns the
+> remote copies. Kept from the spec: canvas-PNG captions (app's real
+> fonts, exact DESERT GRID styling — server has no fonts anyway), beats
+> timed to narration, optional low music bed, draft into the vault.
 
 Phase 1 (shipped) ends with per-beat clips in the clip vault: one 9:16
 Higgsfield render per remake beat, plus the script's `say` lines,

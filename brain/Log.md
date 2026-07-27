@@ -9,6 +9,19 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-27 · ASSEMBLY GOES SERVER-SIDE — the browser-freeze class is deleted
+Three client-side assembly architectures all froze Chrome (v3 froze the
+whole browser + Mac): root cause was ffmpeg.wasm's grow-only heap
+exhausting unified memory — the workload, not the thread. **Rule: no
+browser encode, ever.** Now: ClipStudio uploads the banked clips/VO/
+caption-PNGs to Blob (`reels/asm/`), **/api/assemble** runs NATIVE ffmpeg
+(ffmpeg-static, traced into the function; one filter_complex pass, x264
+veryfast CRF 20, ~15-60s) and returns a Blob URL; the client banks the
+MP4 and burns the remote copies. Filter graph validated against the real
+binary before ship. Also in: **⚡ Produce reel** one-tap (beats → VO →
+assemble; every stage reads the vault fresh and skips banked assets — never
+re-spends; credit confirm only when clips are missing).
+
 ## 2026-07-26 · VOICEOVER + ASSEMBLY — a finished draft reel comes OUT of Farmhand
 The "silent b-roll" gap is closed on `claude/app-performance-max-h8tgoc`:
 - **ElevenLabs lane (/api/tts):** per-beat narration from the remake's

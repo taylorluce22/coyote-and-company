@@ -4,6 +4,12 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // /api/assemble shells out to the ffmpeg-static binary — file tracing
+  // can't see through child_process.spawn, so include it explicitly
+  // (~80MB, inside the 250MB unzipped function limit).
+  outputFileTracingIncludes: {
+    "/api/assemble": ["./node_modules/ffmpeg-static/ffmpeg"],
+  },
   env: {
     // Vercel injects these at build time — surfaced in the UI as a build
     // stamp so "is the fix actually deployed AND running in this tab?" is

@@ -8,7 +8,7 @@ import { ideasFor, type Idea, type StrategyProfile } from "@/lib/strategy";
 import { reelVaultAdd, reelVaultAll, reelVaultDelete, type ReelAnalysis, type VaultReel } from "@/lib/reelVault";
 import { buildHiggsfieldPrompt, recreationBriefText, type QualityFlag, type ReferenceVideoAnalysis } from "@/lib/styleGenome";
 import { clipId, clipVaultAdd, clipVaultDeleteForReel, clipVaultForReel, draftId, isClip, voId, type VaultClip } from "@/lib/clipVault";
-import { assembleReel } from "@/lib/assembleReel";
+import { captionPng } from "@/lib/captionPng";
 import { record as meterRecord, UNIT_COST_CENTS, dollars } from "@/lib/meter";
 
 const STEP_LABELS = ["Upload", "Hand-off", "Gemini processing", "Writing breakdown"];
@@ -686,7 +686,6 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
   const [voMsg, setVoMsg] = useState<string | null>(null);
   const [asmBusy, setAsmBusy] = useState(false);
   const [asmMsg, setAsmMsg] = useState<string | null>(null);
-  const [asmLog, setAsmLog] = useState<string | null>(null);
   const [music, setMusic] = useState<File | null>(null);
   const [prodBusy, setProdBusy] = useState(false);
   const [prodArm, setProdArm] = useState(false);
@@ -951,12 +950,17 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
 
   /** Phase 2: clips + VO + captions → one draft MP4, saved as the reel's
       draft (regenerating overwrites). Reads the vault fresh so it can run
-      right after generate/VO inside Produce-reel. Returns true on success. */
+      right after generate/VO inside Produce-reel. Returns true on success.
+
+      The encode is SERVER-SIDE (/api/assemble, native ffmpeg): the banked
+      assets are uploaded to Blob (a few MB), one function call encodes,
+      and the draft comes back as a URL. Browser encode is permanently
+      dead — ffmpeg.wasm's grow-only heap froze the whole browser on a
+      unified-memory Mac no matter which thread ran it. */
   const assemble = async (): Promise<boolean> => {
     if (asmBusy) return false;
     setAsmBusy(true);
     setAsmMsg("Reading the banked clips…");
-    setAsmLog(null);
     try {
       const banked = await clipVaultForReel(reel.id);
       const vClips = banked.filter(isClip);
@@ -966,7 +970,10 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
         setAsmMsg(`Beat${missing.length === 1 ? "" : "s"} ${missing.map((i) => i + 1).join(", ")} ${missing.length === 1 ? "has" : "have"} no clip yet — generate beats first.`);
         return false;
       }
-      const parts = [];
+      // build the timeline: caption PNGs + per-beat durations timed to VO
+      const tag = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      const assets: Array<{ path: string; blob: Blob; type: string; slot: { beat: number; kind: "clip" | "vo" | "cap" } }> = [];
+      const timeline: Array<{ clip?: string; vo?: string; cap?: string; duration: number }> = [];
       for (let i = 0; i < beats.length; i++) {
         const clip = vClips.find((c) => c.beatIndex === i)!;
         const vo = vVos.find((v) => v.beatIndex === i) || null;
@@ -974,13 +981,54 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
         // beat runs as long as the voice needs (plus a breath), inside the clip
         const voD = vo ? await audioSecs(vo.blob) : 0;
         const D = Math.min(6, Math.max(scriptD, voD > 0 ? voD + 0.3 : 0) || scriptD);
-        parts.push({ clip: clip.blob, vo: vo?.blob, caption: beats[i].onScreenText, duration: D });
+        timeline.push({ duration: D });
+        assets.push({ path: `reels/asm/${tag}/b${i}-clip.mp4`, blob: clip.blob, type: clip.mime || "video/mp4", slot: { beat: i, kind: "clip" } });
+        if (vo) assets.push({ path: `reels/asm/${tag}/b${i}-vo.mp3`, blob: vo.blob, type: vo.mime || "audio/mpeg", slot: { beat: i, kind: "vo" } });
+        const capText = (beats[i].onScreenText || "").trim();
+        if (capText && capText.toLowerCase() !== "none") {
+          const cap = await captionPng(capText);
+          if (cap) assets.push({ path: `reels/asm/${tag}/b${i}-cap.png`, blob: cap, type: "image/png", slot: { beat: i, kind: "cap" } });
+        }
       }
-      const out = await assembleReel(parts, {
-        music: music || undefined,
-        onProgress: (stage, pct) => setAsmMsg(`⚙ ${stage} · ${pct}%`),
-        onLog: (line) => setAsmLog(line),
+      // upload the timeline (small files; sequential keeps memory flat)
+      for (let k = 0; k < assets.length; k++) {
+        const a = assets[k];
+        setAsmMsg(`⤴ Uploading timeline assets… ${k + 1}/${assets.length + (music ? 1 : 0)}`);
+        const up = await upload(a.path, a.blob, { access: "public", handleUploadUrl: "/api/video-reference/blob-upload", contentType: a.type });
+        timeline[a.slot.beat][a.slot.kind] = up.url;
+      }
+      let musicUrl: string | undefined;
+      if (music) {
+        setAsmMsg(`⤴ Uploading timeline assets… ${assets.length + 1}/${assets.length + 1}`);
+        const up = await upload(`reels/asm/${tag}/music-${music.name.replace(/[^a-z0-9.\-_]/gi, "_").slice(0, 40)}`, music, {
+          access: "public",
+          handleUploadUrl: "/api/video-reference/blob-upload",
+          contentType: music.type || "audio/mpeg",
+        });
+        musicUrl = up.url;
+      }
+
+      setAsmMsg("⚙ Server is encoding the reel… (usually 15–60s, native ffmpeg — your browser stays free)");
+      const r = await fetch("/api/assemble", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ beats: timeline, ...(musicUrl ? { music: musicUrl } : {}) }),
+        signal: AbortSignal.timeout(290000),
       });
+      const j = (await r.json().catch(() => ({}))) as { url?: string; seconds?: number; error?: string };
+      if (!r.ok || !j.url) throw new Error(j.error || `the encode failed (${r.status}) — try again`);
+
+      setAsmMsg("⤵ Downloading the draft…");
+      const dl = await fetch(j.url, { signal: AbortSignal.timeout(120000) });
+      if (!dl.ok) throw new Error("the draft rendered but couldn't be downloaded — try Assemble again");
+      const out = await dl.blob();
+      if (out.size < 50_000) throw new Error("the draft came out empty — try again");
+      // banked → burn the remote copy (asm blobs are a transfer hop, not storage)
+      fetch("/api/assemble", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phase: "cleanup", urls: [j.url] }),
+      }).catch(() => {});
       const saved = await clipVaultAdd(
         {
           id: draftId(reel.id),
@@ -997,8 +1045,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
       );
       if (!saved) throw new Error("the draft rendered but couldn't be saved — free up browser storage and assemble again");
       await refresh();
-      const total = parts.reduce((s, p) => s + p.duration, 0);
-      setAsmLog(null);
+      const total = timeline.reduce((s, p) => s + p.duration, 0);
       setAsmMsg(`✓ Draft reel assembled (${Math.round(total)}s, narration + captions${music ? " + music" : ""}) — play or download below.`);
       return true;
     } catch (e) {
@@ -1261,15 +1308,10 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
           </button>
         </div>
         <div style={{ fontSize: 10.5, color: "#8B89A0", marginTop: 4, lineHeight: 1.45 }}>
-          Stitches the clips in shot order, times each beat to its narration, burns the captions, mixes the music low —
-          one 9:16 MP4, on this device (first run downloads the ~30MB engine).
+          Uploads the banked clips + narration once (a few MB), the server encodes natively (usually 15–60s, your
+          browser stays free the whole time), and the finished 9:16 MP4 lands back on this card.
         </div>
         {asmMsg && <div style={{ fontSize: 11, color: "#41D98A", marginTop: 5, lineHeight: 1.45 }}>{asmMsg}</div>}
-        {asmBusy && asmLog && (
-          <div style={{ fontSize: 9.5, color: "#5E5C72", fontFamily: "var(--mono)", marginTop: 3, lineHeight: 1.4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            engine: {asmLog}
-          </div>
-        )}
         {draft && urls[draft.id] && !asmBusy && (
           <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginTop: 10 }}>
             <video
