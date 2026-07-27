@@ -447,8 +447,17 @@ function SolarTerritoryPicker() {
 const svKey = (ws: string) => `fh-spoken-voice::${ws}`;
 const nvKey = (ws: string) => `fh-narrator-voice::${ws}`;
 
-const CLONE_SCRIPT =
-  "Read naturally for about a minute — like you're explaining to a neighbor. Try: your usual intro, a bill explanation from a recent post, and a couple of everyday sentences. Quiet room, phone-distance from the mic.";
+/** The teleprompter script for voice cloning — read word for word while
+    recording. Written for what a clone needs: natural conversational tone
+    in the OWNER'S actual content voice (so the clone matches how the reels
+    sound), questions for rising intonation, numbers (his content is full
+    of them), and varied vowel/consonant coverage. ~160 words ≈ 60s at a
+    relaxed pace. */
+const READ_SCRIPT = [
+  "Hey, it's Taylor. If you live here in the Valley, your power bill has probably been creeping up — and this summer it did it again. I spend my days helping homeowners figure out what's actually going on with their electricity, and the honest answer is: it's complicated, but it's not a mystery.",
+  "Here's the part most people never hear. The utility pays you about six cents for the solar power your roof sends back — but on a hot July afternoon, buying that same power can cost you more than thirty cents. That gap, right there, is the whole game. So does solar make sense for your house? Sometimes yes. Sometimes, honestly, no.",
+  "Before you sign anything, ask three questions. What rate plan am I on? What does my quote assume? And what happens after the sun goes down? If you can answer those, you're ahead of ninety percent of the Valley. Thanks for listening — talk soon.",
+];
 
 function SpokenVoiceCard({ workspace }: { workspace: string }) {
   const [recording, setRecording] = useState(false);
@@ -580,7 +589,34 @@ function SpokenVoiceCard({ workspace }: { workspace: string }) {
         <div style={{ fontSize: 10, fontWeight: 800, color: "#41D98A", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5 }}>
           My voice {clonedId ? "· ✓ ready" : "· not recorded yet"}
         </div>
-        <div style={{ fontSize: 10.5, color: "#77758C", lineHeight: 1.5, marginBottom: 8 }}>{CLONE_SCRIPT}</div>
+        <div style={{ fontSize: 10.5, color: "#77758C", lineHeight: 1.5, marginBottom: 8 }}>
+          Hit <b style={{ color: "#41D98A" }}>Record</b>, then read the script below out loud, word for word, at your
+          normal talking pace — like you&apos;re explaining to a neighbor, not announcing. Quiet room, phone-distance
+          from the mic. It takes about a minute; that&apos;s exactly what the clone needs.
+        </div>
+        {/* teleprompter — the actual read-this script, front and center */}
+        <div
+          style={{
+            background: recording ? "rgba(65,217,138,0.07)" : "rgba(0,0,0,0.22)",
+            border: `1.5px solid ${recording ? "rgba(65,217,138,0.55)" : "rgba(255,255,255,0.1)"}`,
+            borderLeft: `3px solid ${recording ? "#41D98A" : "rgba(65,217,138,0.5)"}`,
+            borderRadius: 10,
+            padding: "14px 16px",
+            marginBottom: 10,
+            transition: "border-color .2s ease, background .2s ease",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 9.5, fontWeight: 800, color: recording ? "#41D98A" : "#8B89A0", textTransform: "uppercase", letterSpacing: 0.5 }}>
+              {recording ? `● Recording — keep reading (${elapsed}s / aim for ~60s)` : "Read this script"}
+            </span>
+          </div>
+          {READ_SCRIPT.map((p, i) => (
+            <p key={i} style={{ fontSize: 14, color: "#EDEBF6", lineHeight: 1.75, margin: i ? "10px 0 0" : 0 }}>
+              {p}
+            </p>
+          ))}
+        </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <button onClick={recording ? () => recRef.current?.stop() : startRec} disabled={busy} style={btn(recording ? "rgba(255,107,107,0.15)" : "rgba(65,217,138,0.12)", recording ? "#FF6B6B" : "#41D98A", recording ? "rgba(255,107,107,0.45)" : "rgba(65,217,138,0.4)")}>
             {recording ? `■ Stop (${elapsed}s)` : sample ? "🎙 Re-record" : "🎙 Record sample"}
