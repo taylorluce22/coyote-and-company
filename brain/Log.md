@@ -9,6 +9,32 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-27 · P1+P2+P3 — everything server-side, premium tier, compare view
+Taylor's directive ("the app keeps freezing — ALL of it hosted on a
+server") executed as three ships on the branch:
+- **P1 (b588a05): server-side media vault.** All clips/VO/drafts/reference
+  videos live in Vercel Blob (vault/<client>/<reelId>/…); the browser
+  stores URLs and streams off the CDN — zero media bytes on the main
+  thread, IndexedDB media retired via a confirm-before-delete one-time
+  migration. Higgsfield clips ingest server→server; TTS stores
+  server-side; assemble reads/writes the vault directly. 3-lens
+  adversarial review; all confirmed blockers/warns fixed (DNS-resolved
+  SSRF guard, streamed ingest cap, cache-bust + 60s TTLs, manifest merge,
+  migration pinning).
+- **P2 (78079e8): premium quality tier**, selectable per reel with cost
+  shown before spending (~$0.60/clip standard vs ~$2.52/clip premium):
+  premium renders a style-locked KEYFRAME image per beat (shared seed)
+  then animates it with top-fidelity image-to-video (hailuo-02 pro 1080p
+  anchor; HIGGSFIELD_VIDEO_MODELS_PREMIUM env override) and assembles at
+  1080×1920 CRF 19. All keyframes must land before any video credit is
+  spent.
+- **P3 (78079e8): Reference-vs-Draft compare** on the card — synced
+  side-by-side players (reference leads with audio, draft follows the
+  scrub) streaming from the vault. References are preserved at analysis
+  time from now on; cards analyzed BEFORE this ship (incl. the APS card)
+  have no stored reference — re-run the analysis to unlock the compare.
+
+
 ## 2026-07-27 · ✅ FIRST FULL PIPELINE RUN CONFIRMED — reference → posted-ready reel
 Cowork verified end to end on production (75d5c41): ⚡ Produce reel on the
 banked APS rate-case card skipped banked beats + VO (zero re-spend),
