@@ -90,7 +90,7 @@ The Phase-1 system built earlier stays almost entirely intact — buyers still g
 
 ## 8. Launch checklist — fastest compliant path to revenue
 
-1. Form the LLC (AZ), EIN, bank account, general liability + E&O quote. (Week 1)
+1. Entity: **founder decision 2026-07 — use existing LLC.** Register an AZ trade name/DBA for the agency brand ($10, AZ SOS), separate bank account before first supplier payment arrives, and get the E&O/GL policy written for this specific activity (disclose the pharma-marketing line of business to the insurer). (Week 1)
 2. Buy brand domain + 2 sending-domain variants; set up SPF/DKIM/DMARC, warm-up. (Week 1, parallel)
 3. Stand up the Airtable MVP per `07-stack.md` / `08-build-plan.md`. (Week 1–2)
 4. Sign 1–2 suppliers on the §5 contract terms: retainer + per-meeting fee + commission schedule, seller-of-record clause, federal-program exclusion. Target non-GLP-1 503Bs (find via FDA's registered outsourcing-facility list; APC/OFA member lists). (Week 2–3)
