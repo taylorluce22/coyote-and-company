@@ -171,12 +171,20 @@ insert into compliance_exceptions (id, gate_code, subject_type, subject_id, bloc
 insert into compliance_exceptions (id, gate_code, subject_type, subject_id, blocking_record_type, blocking_record_id, description, required_remedy, clearable_by_role, severity, status, raised_by_type, raised_by_user, assigned_to, resolved_by, resolved_at, resolution_note, waiver_memo_document_id) values
  ('00000000-0000-4000-8000-000000000e01','ADHOC','outreach_campaigns','00000000-0000-4000-8000-000000000601','outreach_campaigns','00000000-0000-4000-8000-000000000601','Domain cooldown guideline (14-day warm-up) shortened to 10 days.','Founder waiver memo.','founder','low','waived','user','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000101',now() - interval '14 days','Waived per memo; volume held at 50% of cap for first week.','00000000-0000-4000-8000-000000000315');
 
+-- Regulatory navigation register (research-answered; see docs/10-regulatory-research.md).
+-- RC5 and RC12 remain open (non-blocking); the rest are founder-clearable against the research basis.
 insert into compliance_exceptions (gate_code, subject_type, blocking_record_type, description, required_remedy, clearable_by_role, severity, status, raised_by_type, assigned_to)
-select 'RC' || n, 'process', 'counsel_signoff',
- 'Requires-counsel item RC' || n || ' (see docs/00-decision-table.md §4) is unresolved; dependent workflow is blocked.',
- 'Counsel written sign-off recorded as a compliance_review with linked document.',
- 'founder_with_counsel','high','open','system','00000000-0000-4000-8000-000000000101'
+select 'RC' || n, 'process', 'research_basis',
+ 'Navigation register item RC' || n || ' (docs/00-decision-table.md §4): close by recording founder decision citing docs/10-regulatory-research.md.',
+ 'Founder decision recorded as a compliance_review linking the research document (or successor research).',
+ 'founder', case when n in (5,12) then 'medium' else 'low' end::exception_severity,
+ 'open','system','00000000-0000-4000-8000-000000000101'
 from generate_series(1,12) n;
+
+-- Standing category prohibitions (research §3): no allow-path short of founder override with documented basis.
+insert into compliance_exceptions (gate_code, subject_type, blocking_record_type, description, required_remedy, clearable_by_role, severity, status, raised_by_type, assigned_to) values
+ ('G2','process','product_category','Prohibited category: compounded GLP-1s (semaglutide/tirzepatide/liraglutide). Shortage exception ended 2025; FDA moving to permanent bar; enforcement reaches marketing intermediaries (10-regulatory-research.md §3).','Standing block. Founder override requires new documented research showing changed regulatory status.','founder','critical','open','system','00000000-0000-4000-8000-000000000101'),
+ ('G2','process','product_category','Prohibited category: RUO peptides marketed toward clinical/med-spa channels. RUO disclaimer void where human use foreseeable, 21 CFR 201.128 (10-regulatory-research.md §3).','Standing block. Founder override requires new documented research showing changed regulatory status.','founder','critical','open','system','00000000-0000-4000-8000-000000000101');
 
 -- Tasks & regulatory updates
 insert into tasks (title, task_type, due_date, assigned_to, related_type, related_id, priority) values

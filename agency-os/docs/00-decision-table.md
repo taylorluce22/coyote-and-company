@@ -44,21 +44,23 @@
 | Auto-sending of any new outreach template | Templates require human (founder + compliance) approval before first send |
 | Automated regulatory-impact conclusions | Feed items are queued for human classification only |
 
-## 4. Requires counsel (attorney sign-off before the dependent feature is used in production)
+## 4. Regulatory navigation register (research-answered; founder-cleared)
 
-| # | Question | Blocks |
-|---|---|---|
-| RC1 | Does the agency itself need state licenses (wholesale distributor, broker, or manufacturer's-representative registrations)? Several states' WDL definitions capture entities that *facilitate* drug sales without possession. State-by-state survey needed. | Any live outreach or introduction in a given state |
-| RC2 | Legal status of each product category the brief contemplates (Rx, 503A/503B compounded, API, device, supplement, RUO chemical). Peptides marketed "research use only" into channels where human use is foreseeable are an active FDA/FTC enforcement area. | Product approval; every `product_regulatory_classifications` row must cite a counsel memo or supplier attestation counsel has accepted |
-| RC3 | Eligible buyer-type matrix per product class (e.g., can a med-spa with a medical director buy a 503B product in state X?). | `product_approved_buyer_types` and `product_geographic_restrictions` content |
-| RC4 | Percentage-commission compensation: federal Anti-Kickback Statute exposure if any product is reimbursable by a federal healthcare program; state all-payer kickback and fee-splitting laws; whether commissioned reps need any registration. | Compensation agreement templates; product mix decisions |
-| RC5 | Supplier agreement and introduction/consent terms: indemnification, agency's non-responsibility for product legality, buyer-data confidentiality. | Supplier onboarding completion |
-| RC6 | Outreach copy compliance beyond CAN-SPAM: state commercial-email and telemarketing laws; permissible product descriptions without implying FDA approval or legality. Counsel reviews the master template rules and the first template set. | Campaign approval |
-| RC7 | Privacy notice and B2B personal-data handling (CCPA/CPRA et al.); data-processing terms with enrichment/verification vendors. | Prospect import at scale |
-| RC8 | Adverse-event and complaint handling: confirm the agency's only duty is prompt forwarding to the supplier and that MedWatch/regulatory reporting stays with the supplier/manufacturer; define the forwarding SLA contractually. | Complaint workflow go-live |
-| RC9 | Recall duties: confirm the agency has no independent recall obligation and define its notification-assist role in the supplier contract. | Recall workflow go-live |
-| RC10 | Insurance for the agency itself (E&O/professional liability) and whether the agency should be an additional insured on supplier product-liability policies. | Supplier approval checklist content |
-| RC11 | DSCSA: confirm the no-title/no-possession model keeps the agency outside "wholesale distributor"/"trading partner," and what contract language preserves that. | Business model as a whole |
-| RC12 | Tax: state income/franchise nexus from in-state solicitation activity; commission revenue sourcing. (Accountant + counsel.) | Monthly close configuration |
+Superseded framing: these items were originally gated on attorney sign-off. Per the founder's direction they are now navigated on documented research — full findings with citations in `10-regulatory-research.md`. Each item is cleared by the founder recording the decision with that document (or a later supplement) as basis. Status reflects the 2026-07-27 research.
 
-**Operating rule encoded in the system:** every RC item is seeded as an open `compliance_exceptions` record blocking its dependent workflow. Counsel sign-off is recorded as a `documents` row linked from a `compliance_reviews` record; only then does the gate clear.
+| # | Question | Research answer (see §refs in 10-regulatory-research.md) | Status |
+|---|---|---|---|
+| RC1 | Does the agency need state wholesale/broker licenses? | **No — for the introduction model** (no title/possession, no negotiating/offering/contracting sales, supplier is seller-of-record). CA/TX/AZ/IL/FL definitions reach *negotiating* brokers, so the activity discipline in §1/§7 is the license shield; FL carved out of launch. (§1, §6) | Answered — cleared by adopting introduction model |
+| RC2 | Product legal status by category | Answered per lane: non-GLP-1 503B office-use = primary; approved drugs/devices/supplements = green; **compounded GLP-1s and RUO peptides = prohibited** (active enforcement incl. against marketers). Classification rows now cite this research + supplier attestations. (§3) | Answered — prohibited lanes seeded |
+| RC3 | Buyer-type eligibility matrix | 503B office-use → licensed providers for own-patient administration ("not for resale"); 503A → patient-specific only; office-use-restricted states CA/AL/NJ excluded (full state list UNVERIFIED — verify per target state before enabling it). (§3, §6) | Answered for launch lanes; per-state rows added as states open |
+| RC4 | Percentage commission legality | **Lawful in cash-pay B2B** (AKS unmet without federal billing; EKRA inapplicable; AO 98-10; Sorensen/Marchetti). Requires the §5 contract terms, esp. federal-program exclusion. FL Patient Brokering Act = the one flagged state (carved out). (§2, §5) | Answered — terms adopted in agreement template |
+| RC5 | Supplier agreement terms | Term sheet defined from safe-harbor factors + seller-of-record clause (§5). Template drafting remains open; attorney review of the template is the one flagged optional spend (~$2–4k). | Open — founder drafting from §5 |
+| RC6 | Outreach copy rules | Answered: CAN-SPAM mechanics + no FDA-approval/equivalence/efficacy claims for compounded products; claims-linter word lists updated accordingly. (§4) | Answered — encoded in G10 linter |
+| RC7 | Privacy / B2B data | CCPA applies only above thresholds ($25M or 100k CA records/yr); track CA record counts; vendor DPAs at list-buying scale. (§4.5) | Answered — threshold tracking added to monthly close |
+| RC8 | Adverse-event duties | Agency duty = prompt forwarding; MedWatch reporting sits with supplier/manufacturer. Contract SLA stays. No contrary authority found. | Answered — unchanged workflow |
+| RC9 | Recall duties | Supplier owns notification; agency assists/tracks. No independent agency obligation found. | Answered — unchanged workflow |
+| RC10 | Agency insurance | E&O + general liability at launch; additional-insured on supplier product-liability policies remains the ask in onboarding. | Answered — in launch checklist |
+| RC11 | DSCSA status | Outside "trading partner"/"wholesale distribution" with no ownership/possession and no direction of sale (FD&C §581(23)-(24), FDA trading-partner guidance). Preserved by the seller-of-record clause. (§1) | Answered — cleared by model + contract clause |
+| RC12 | Tax nexus | Remote solicitation still creates income-tax nexus questions per state — accountant task at first out-of-state revenue concentration. | Open — accountant, not blocking |
+
+**Operating rule encoded in the system:** each register item lives as a `compliance_exceptions` record clearable by the **founder**, closed by linking a `compliance_reviews` row citing `10-regulatory-research.md` (or successor research) as the basis document. Two items stay open (RC5 template drafting, RC12 accountant) — neither blocks launch. The two genuinely untested legal points on record: FL Patient Brokering Act's reach into B2B purchasing (mitigated by the FL carve-out) and state boards' reading of "introduction ≠ wholesale distribution" in CA/TX/AZ/IL (mitigated by activity discipline; a written board determination is the cheap upgrade when volume justifies it).

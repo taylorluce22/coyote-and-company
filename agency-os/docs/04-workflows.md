@@ -71,6 +71,10 @@ Step tags: **[A]** automated · **[H]** human approved · **[S]** supplier contr
 ### WF23 — Monthly financial close
 1. [A] Close packet drafted: orders, collections, calcs, payments, exceptions, MRR movements. 2. [S] Supplier statements requested/received for the period. 3. [H] Founder/AC reconcile supplier statements vs. reported collections vs. commission payments; discrepancies → disputed calcs + exceptions. 4. [H] Founder approves the close; period locks (further edits require F unlock, audit-logged). 5. [A] Dashboard metrics snapshot to a monthly history record.
 
+## Launch-mode addendum (introduction model — see 10-regulatory-research.md)
+
+In launch mode the agency does not compose, transmit, or negotiate quotes — that activity is what triggers broker/wholesaler licensing definitions in several states. **WF13 is modified:** 1. [H] Rep signals buyer interest to supplier with the introduced opportunity reference. 2. [S] **Supplier prepares and sends its own quote directly to the buyer** (supplier branding, supplier pricing, supplier paper). 3. [S] Supplier reports quote status; [A] system tracks it against the opportunity (same reported-data pattern as orders). 4. [A] Follow-up tasks for the rep. Gate G6 becomes a data-integrity check (reported quote must tie to a consented introduction) rather than a send-gate. The original agency-transmitted quote flow is reserved for a future licensed or board-cleared mode.
+
 ## Automation boundary summary
 
 **Automation may:** create records from intake, schedule tasks/reminders, compute derived values, freeze/downgrade/suppress (restrict), send within an approved campaign to fully-gated recipients, and log.

@@ -1,8 +1,8 @@
 # Agency OS — Compliance-First B2B Pharmaceutical Sales Agency
 
-Operating system specification and database for a one-founder sales & sourcing agency. The agency vets suppliers, verifies B2B buyers, runs compliant outreach, brokers supplier-approved quotes, and tracks supplier-reported orders and contract-governed commissions. It is **not** a storefront: no patient-facing features, no product possession or title, no buyer invoicing, no automated legal conclusions. Suppliers remain responsible for product legality, quality, pricing, invoicing, shipping, complaints, recalls, and regulatory compliance.
+Operating system specification and database for a one-founder **marketing & introduction agency** (launch mode): the agency vets suppliers, verifies B2B buyers, runs compliant outreach, and makes warm introductions — the supplier quotes, negotiates, invoices, ships, and is seller-of-record for every sale. This activity discipline is what keeps the agency outside wholesale-distributor/broker licensing and DSCSA trading-partner status (researched in `docs/10-regulatory-research.md`); the fuller quote-brokering mode is documented but deferred. It is **not** a storefront: no patient-facing features, no product possession or title, no buyer invoicing, no automated legal conclusions.
 
-**Read first:** [`docs/00-decision-table.md`](docs/00-decision-table.md) — build / do-not-build / requires-counsel decisions, including the note that no research brief was supplied and the 12 items (RC1–RC12) that require attorney sign-off before their dependent workflows go live. Those items ship as seeded, workflow-blocking exceptions.
+**Read first:** [`docs/10-regulatory-research.md`](docs/10-regulatory-research.md) — the 2026-07 regulatory research and lowest-barrier model selection (business-model ranking, product lanes incl. the two prohibited categories, compensation contract terms, state posture, launch checklist). Then [`docs/00-decision-table.md`](docs/00-decision-table.md) — build / do-not-build decisions and the research-answered navigation register (RC1–RC12), which ships as founder-clearable seeded exceptions.
 
 | File | Contents |
 |---|---|
@@ -16,6 +16,7 @@ Operating system specification and database for a one-founder sales & sourcing a
 | `docs/07-stack.md` | Phase 7 — stack comparison, MVP + scale choice, migration path, costs |
 | `docs/08-build-plan.md` | Phase 8 — PRD, user stories, acceptance criteria, screens, navigation, automations, error states, test plan, deployment |
 | `docs/09-operating-manual.md` | Daily/weekly/monthly operating loops + incident playbooks |
+| `docs/10-regulatory-research.md` | Regulatory research (2026-07), model selection, product lanes, state posture, launch checklist |
 | `db/schema.sql` | PostgreSQL 15+/Supabase DDL — validated against Postgres 16 (applies clean) |
 | `db/seed.sql` | Seed data exercising every queue and gate — validated (applies clean; audit triggers verified) |
 | `db/erd.md` | Mermaid database diagram |

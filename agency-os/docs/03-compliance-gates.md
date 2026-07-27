@@ -23,6 +23,8 @@ Block-message template (rendered in UI, stored in the exception):
 | **G9** | Continuing outreach / new quotes / introductions for a buyer with an expired credential | all buyer_licenses required for its buyer_type have status = active (not expired/revoked); attestations unexpired | buyer_licenses row (the expired one) | Renewed license verified via license_verifications with evidence | Compliance | No |
 | **G10** | Publishing/sending any copy (templates, product descriptions, quote cover text) | claims-linter pass: no efficacy/medical-outcome claims, no "FDA-approved" unless a sourced approval record exists, no unqualified "legal"; template is an approved version (WF8) | the template/description document + linter report | Rewrite; CR + F re-approval of template | Founder + Compliance (both) | No |
 
+**Launch-mode note (introduction model):** G6 applies in tracking form — the agency never sends quotes to buyers (see `04-workflows.md` launch-mode addendum and `10-regulatory-research.md` §1). A supplier-reported quote lacking a consented introduction record opens a G6 exception. Two category prohibitions are seeded as standing G2 blocks with no allow-path short of founder override with documented basis: compounded GLP-1 products and "research use only" peptides marketed toward clinical channels (`10-regulatory-research.md` §3).
+
 Additional engine rules:
 
 - **RC-gates:** the twelve requires-counsel items from `00-decision-table.md` are seeded exceptions (RC1–RC12) that block their dependent workflows until a counsel document is linked via a `compliance_reviews` record. Clearable by Founder-with-counsel only.
