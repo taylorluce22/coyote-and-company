@@ -9,6 +9,31 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-27 · ZERO-CRASH MEDIA — posters + one-video-at-a-time
+Owner priority above all polish: "basic functions with ZERO crashes, zero
+manual intervention." Cowork isolated the remaining stall (prod b749ea9):
+the card rendered every beat clip AND the draft as live <video>, so
+scrolling the beat grid into view made Chrome decode ~5 streams at once →
+~30s tab stall (self-recovering, unlike the old wasm whole-browser
+freeze). Fixed at the root:
+- **Server posters**: `/api/assemble phase:"posters"` extracts one small
+  JPEG per vault video (clip-N.jpg, draft.jpg, refs/<job>.jpg) with the
+  native ffmpeg. Idempotent → also the BACKFILL for reels made before
+  posters existed (the APS card's 4 clips + draft). Vault manifest now
+  carries posters/draftPoster.
+- **One decoding <video> in the DOM, ever**: the grid and draft render
+  `<img>` poster tiles with a ▶ overlay; pressing play mounts a single
+  <video> and evicts whichever item held the slot. Compare view is
+  poster-gated too (its two players mount only after an explicit play,
+  which first evicts everything else). preload="none" everywhere, no
+  autoplay-on-render; VO players downgraded to preload="none";
+  collapsing a card or switching workspace releases the slot.
+- **Client audit**: only two <video> JSX sites remain in the whole app,
+  both gated; no whole-media in JS/IndexedDB/data-URLs (remaining
+  canvas/dataURL paths are images only: Studio exports, consultant
+  library, the small voice-clone sample).
+
+
 ## 2026-07-27 · P1+P2+P3 — everything server-side, premium tier, compare view
 Taylor's directive ("the app keeps freezing — ALL of it hosted on a
 server") executed as three ships on the branch:

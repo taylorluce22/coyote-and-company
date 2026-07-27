@@ -688,7 +688,88 @@ const secsOf = (d?: string) => {
 
 /** The reel's server-side media manifest: URLs only — the browser never
     holds media bytes again (the no-media-on-the-main-thread rule). */
-type Manifest = { clips: Record<number, string>; vos: Record<number, string>; draft?: string };
+type Manifest = {
+  clips: Record<number, string>;
+  vos: Record<number, string>;
+  /** server-extracted JPEG thumbnails — what the grid renders instead of
+      live <video> elements (concurrent decode = ~30s tab stall) */
+  posters: Record<number, string>;
+  draft?: string;
+  draftPoster?: string;
+};
+
+/** Which single item owns the one allowed <video>. THE ANTI-STALL
+    INVARIANT: at most ONE decoding video element exists in the DOM at a
+    time (compare may hold two, but only after an explicit play, and it
+    evicts everything else first). */
+type ActivePlayer = { kind: "beat"; i: number } | { kind: "draft" } | { kind: "compare" } | null;
+
+/** Poster-first player. Renders a plain <img> (zero decode cost) until the
+    user presses play; only then does a real <video> mount — and mounting
+    it evicts whichever item held the slot before. */
+function PosterPlayer({
+  active,
+  onActivate,
+  videoUrl,
+  posterUrl,
+  width,
+  accent,
+  label,
+}: {
+  active: boolean;
+  onActivate: () => void;
+  videoUrl: string;
+  posterUrl?: string;
+  width: number;
+  accent: string;
+  label: string;
+}) {
+  const box = { width, aspectRatio: "9/16", borderRadius: 8, background: "#000", border: `1px solid ${accent}44` } as const;
+  if (active) {
+    return (
+      <video
+        src={videoUrl}
+        poster={posterUrl}
+        controls
+        autoPlay
+        playsInline
+        preload="none"
+        style={{ ...box, display: "block" }}
+      />
+    );
+  }
+  return (
+    <button
+      onClick={onActivate}
+      title={`Play ${label}`}
+      style={{ ...box, position: "relative", padding: 0, cursor: "pointer", overflow: "hidden", display: "block" }}
+    >
+      {posterUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={posterUrl} alt={label} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+      ) : (
+        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9.5, color: "#5E5C72", padding: 6, textAlign: "center" }}>
+          poster rendering…
+        </div>
+      )}
+      <span
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: Math.max(18, width / 6),
+          color: "#fff",
+          textShadow: "0 2px 12px rgba(0,0,0,0.75)",
+          background: "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.35))",
+        }}
+      >
+        ▶
+      </span>
+    </button>
+  );
+}
 
 /* ---- quality tiers (P2) ----
    standard = text-to-video, fast/cheap (hailuo-02 standard, 720p draft).
@@ -706,12 +787,39 @@ const perClipCents = (t: Tier) => (t === "premium" ? PREMIUM_CLIP_CENTS + KEYFRA
    Both stream from the server vault; play/pause/scrub drive BOTH players
    (the reference is the sync master) so the quality gap is visible shot by
    shot on every iteration. */
-function CompareView({ referenceUrl, draftUrl }: { referenceUrl: string; draftUrl: string }) {
+function CompareView({
+  referenceUrl,
+  draftUrl,
+  refPoster,
+  draftPoster,
+  live,
+  onActivate,
+}: {
+  referenceUrl: string;
+  draftUrl: string;
+  refPoster?: string;
+  draftPoster?: string;
+  /** true once the user pressed play — only then do the two videos mount */
+  live: boolean;
+  onActivate: () => void;
+}) {
   const refV = useRef<HTMLVideoElement>(null);
   const drV = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
   const [t, setT] = useState(0);
   const [dur, setDur] = useState(0);
+  // mounting while live means the user just pressed play — start rolling
+  useEffect(() => {
+    if (!live) {
+      setPlaying(false);
+      return;
+    }
+    const id = setTimeout(() => {
+      [refV.current, drV.current].forEach((v) => v?.play().catch(() => {}));
+      setPlaying(true);
+    }, 60);
+    return () => clearTimeout(id);
+  }, [live]);
 
   const both = (fn: (v: HTMLVideoElement) => void) => {
     if (refV.current) fn(refV.current);
@@ -752,20 +860,30 @@ function CompareView({ referenceUrl, draftUrl }: { referenceUrl: string; draftUr
     const d = Math.max(refV.current?.duration || 0, drV.current?.duration || 0);
     if (Number.isFinite(d) && d > 0) setDur(d);
   };
-  const vid = (ref: React.RefObject<HTMLVideoElement | null>, url: string, label: string, accent: string, master: boolean) => (
+  const vid = (ref: React.RefObject<HTMLVideoElement | null>, url: string, poster: string | undefined, label: string, accent: string, master: boolean) => (
     <div style={{ flex: 1, minWidth: 130, maxWidth: 200 }}>
       <div style={{ fontSize: 9.5, fontWeight: 800, color: accent, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>{label}</div>
-      <video
-        ref={ref}
-        src={url}
-        playsInline
-        preload="metadata"
-        muted={!master} /* one soundtrack at a time — the reference leads */
-        onLoadedMetadata={onMeta}
-        onTimeUpdate={master ? onRefTime : undefined}
-        onEnded={master ? () => setPlaying(false) : undefined}
-        style={{ width: "100%", aspectRatio: "9/16", borderRadius: 10, background: "#000", border: `1px solid ${accent}55` }}
-      />
+      {live ? (
+        <video
+          ref={ref}
+          src={url}
+          poster={poster}
+          playsInline
+          preload="none"
+          muted={!master} /* one soundtrack at a time — the reference leads */
+          onLoadedMetadata={onMeta}
+          onTimeUpdate={master ? onRefTime : undefined}
+          onEnded={master ? () => setPlaying(false) : undefined}
+          style={{ width: "100%", aspectRatio: "9/16", borderRadius: 10, background: "#000", border: `1px solid ${accent}55` }}
+        />
+      ) : (
+        <div style={{ width: "100%", aspectRatio: "9/16", borderRadius: 10, background: "#000", border: `1px solid ${accent}55`, overflow: "hidden" }}>
+          {poster ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={poster} alt={label} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          ) : null}
+        </div>
+      )}
     </div>
   );
   return (
@@ -774,15 +892,15 @@ function CompareView({ referenceUrl, draftUrl }: { referenceUrl: string; draftUr
         ⚖ Reference vs your draft — synced
       </div>
       <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-        {vid(refV, referenceUrl, "Reference", "#C9A8FF", true)}
-        {vid(drV, draftUrl, "Your draft", "#41D98A", false)}
+        {vid(refV, referenceUrl, refPoster, "Reference", "#C9A8FF", true)}
+        {vid(drV, draftUrl, draftPoster, "Your draft", "#41D98A", false)}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
         <button
-          onClick={toggle}
+          onClick={live ? toggle : onActivate}
           style={{ background: "rgba(125,211,252,0.14)", color: "#7DD3FC", border: "1px solid rgba(125,211,252,0.4)", borderRadius: 8, padding: "5px 14px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}
         >
-          {playing ? "❚❚" : "▶"}
+          {live && playing ? "❚❚" : "▶"}
         </button>
         <input
           type="range"
@@ -791,14 +909,17 @@ function CompareView({ referenceUrl, draftUrl }: { referenceUrl: string; draftUr
           step={0.05}
           value={Math.min(t, dur || 1)}
           onChange={(e) => seek(Number(e.target.value))}
-          style={{ flex: 1, accentColor: "#7DD3FC" }}
+          disabled={!live}
+          style={{ flex: 1, accentColor: "#7DD3FC", opacity: live ? 1 : 0.45 }}
         />
         <span style={{ fontSize: 10, color: "#8B89A0", fontFamily: "var(--mono)", minWidth: 66, textAlign: "right" }}>
           {t.toFixed(1)}s / {dur ? dur.toFixed(1) : "–"}s
         </span>
       </div>
       <div style={{ fontSize: 10.5, color: "#5E5C72", marginTop: 4, lineHeight: 1.45 }}>
-        Reference audio plays; the draft is muted and follows the scrub. Spot the gap, tweak, re-produce.
+        {live
+          ? "Reference audio plays; the draft is muted and follows the scrub. Spot the gap, tweak, re-produce."
+          : "Press ▶ to load both clips side by side (nothing decodes until you do)."}
       </div>
     </div>
   );
@@ -812,7 +933,10 @@ function CompareView({ referenceUrl, draftUrl }: { referenceUrl: string; draftUr
     directly. IndexedDB media is migrated up once, then retired. */
 function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string }) {
   const beats = (reel.analysis.remake?.beats || []).filter((b) => b.genPrompt);
-  const [man, setMan] = useState<Manifest>({ clips: {}, vos: {} });
+  const [man, setMan] = useState<Manifest>({ clips: {}, vos: {}, posters: {} });
+  // the ONE item allowed to hold a decoding <video>; switching evicts the previous
+  const [active, setActive] = useState<ActivePlayer>(null);
+  const [refPoster, setRefPoster] = useState<string | undefined>(undefined);
   const [manErr, setManErr] = useState<string | null>(null);
   const [migMsg, setMigMsg] = useState<string | null>(null);
   // bump busts the CDN cache after an overwrite (regen/re-assemble reuse
@@ -843,7 +967,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
   const src = (u?: string) => (u ? `${u}${u.includes("?") ? "&" : "?"}v=${bump}` : undefined);
 
   // manRef mirrors man so async flows read fresh state without stale closures
-  const manRef = useRef<Manifest>({ clips: {}, vos: {} });
+  const manRef = useRef<Manifest>({ clips: {}, vos: {}, posters: {} });
   const applyMan = (next: Manifest) => {
     manRef.current = next;
     setMan(next);
@@ -854,21 +978,67 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
       25000,
       "reading the server vault"
     );
-    const j = (await r.json()) as { clips?: Array<{ beat: number; url: string }>; vos?: Array<{ beat: number; url: string }>; draft?: string; error?: string };
+    const j = (await r.json()) as {
+      clips?: Array<{ beat: number; url: string }>;
+      vos?: Array<{ beat: number; url: string }>;
+      posters?: Array<{ beat: number; url: string }>;
+      draft?: string;
+      draftPoster?: string;
+      error?: string;
+    };
     if (!r.ok || j.error) throw new Error(j.error || `vault read failed (${r.status})`);
-    const listed: Manifest = { clips: {}, vos: {}, draft: j.draft };
+    const listed: Manifest = { clips: {}, vos: {}, posters: {}, draft: j.draft, draftPoster: j.draftPoster };
     (j.clips || []).forEach((c) => (listed.clips[c.beat] = c.url));
     (j.vos || []).forEach((v) => (listed.vos[v.beat] = v.url));
+    (j.posters || []).forEach((p2) => (listed.posters[p2.beat] = p2.url));
     // MERGE, never replace: Blob list() can lag a just-finished put, and a
     // stale listing must not un-render banked media (that's how credits get
     // re-spent). Keys the client wrote this session are authoritative.
     const merged: Manifest = {
       clips: { ...listed.clips, ...manRef.current.clips },
       vos: { ...listed.vos, ...manRef.current.vos },
+      // posters are server-authoritative (the client never makes them)
+      posters: { ...manRef.current.posters, ...listed.posters },
       draft: manRef.current.draft || listed.draft,
+      draftPoster: listed.draftPoster || manRef.current.draftPoster,
     };
     applyMan(merged);
     return merged;
+  };
+
+  /** Ask the server for any missing poster frames (idempotent — it only
+      renders what's absent, so this doubles as the backfill for reels
+      produced before posters existed). Never blocks the UI. */
+  const postersRef = useRef(false);
+  const ensurePosters = async (m: Manifest) => {
+    const refUrl = typeof reel.analysis.referenceUrl === "string" ? reel.analysis.referenceUrl : "";
+    const missing =
+      Object.keys(m.clips).some((k) => !m.posters[Number(k)]) || (!!m.draft && !m.draftPoster) || (!!refUrl && !refPoster);
+    if (!missing || postersRef.current) return;
+    postersRef.current = true;
+    try {
+      const r = await fetch("/api/assemble", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phase: "posters", client: workspace, reelId: reel.id, ...(refUrl ? { refUrl } : {}) }),
+        signal: AbortSignal.timeout(180000),
+      });
+      const j = (await r.json().catch(() => ({}))) as { posters?: Record<string, string>; draftPoster?: string; refPoster?: string };
+      if (j.refPoster) setRefPoster(j.refPoster);
+      const got: Record<number, string> = {};
+      Object.entries(j.posters || {}).forEach(([k, v]) => (got[Number(k)] = v));
+      if (Object.keys(got).length || j.draftPoster) {
+        applyMan({
+          ...manRef.current,
+          posters: { ...manRef.current.posters, ...got },
+          draftPoster: j.draftPoster || manRef.current.draftPoster,
+        });
+      }
+    } catch {
+      // posters are a nicety — a failed pass just means play-to-load tiles
+    } finally {
+      postersRef.current = false;
+    }
   };
 
   /* mount: manifest, then a ONE-TIME migration of any media this device
@@ -879,9 +1049,10 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
   useEffect(() => {
     (async () => {
       setManErr(null);
-      let m: Manifest = { clips: {}, vos: {} };
+      let m: Manifest = { clips: {}, vos: {}, posters: {} };
       try {
         m = await loadManifest();
+        ensurePosters(m); // fire-and-forget: backfills anything missing
       } catch (e) {
         setManErr(e instanceof Error ? e.message : "couldn't read the server vault");
         return; // no migration against an unreadable manifest
@@ -941,6 +1112,11 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
     const t = setTimeout(() => setArmed(false), 10000);
     return () => clearTimeout(t);
   }, [armed]);
+
+  // switching reels/workspaces must never leave a video decoding behind
+  useEffect(() => {
+    setActive(null);
+  }, [reel.id, workspace]);
 
   /** Poll tracked Higgsfield jobs; finished clips are ingested SERVER-SIDE
       (Higgsfield CDN → function → Blob vault) — the bytes never touch the
@@ -1109,6 +1285,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
       setBeatState(Object.fromEntries(items.map((it) => [it.beat, "rendering" as BeatClipState])));
       setMsg(`🎬 ${items.length} beat${items.length === 1 ? "" : "s"} rendering — clips land below as they finish (a few minutes each)…`);
       const { ok, failed } = await pollClips(items, 8 * 60000);
+      if (ok) ensurePosters(manRef.current); // new clips → new thumbnails
       setPending(readClipPending(workspace));
       if (!ok && !failed) setMsg("The clips didn't come back in time — they're already paid for. Hit ⟳ Recover clips in a few minutes.");
       else if (failed) setMsg(`✓ ${ok} clip${ok === 1 ? "" : "s"} landed — ${failed} failed on Higgsfield's side (credits refunded there). Regenerate anytime.`);
@@ -1260,6 +1437,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
       if (!r.ok || !j.url) throw new Error(j.error || `the encode failed (${r.status}) — try again`);
       applyMan({ ...manRef.current, draft: j.url });
       setBump((x) => x + 1);
+      ensurePosters({ ...manRef.current, draftPoster: undefined }); // fresh draft thumbnail
       const total = timeline.reduce((s, p) => s + p.duration, 0);
       setAsmMsg(`✓ Draft reel assembled (${Math.round(total)}s, narration + captions${music ? " + music" : ""}) — streaming below.`);
       return true;
@@ -1421,7 +1599,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
                   )}
                 </div>
                 <div style={{ fontSize: 11.5, color: "#A6A4B8", lineHeight: 1.45 }}>{b.shot}</div>
-                {voUrl && <audio src={src(voUrl)} controls preload="metadata" style={{ width: "100%", maxWidth: 300, height: 30, marginTop: 4 }} />}
+                {voUrl && <audio src={src(voUrl)} controls preload="none" style={{ width: "100%", maxWidth: 300, height: 30, marginTop: 4 }} />}
                 {clipUrl && (
                   <a href={src(clipUrl)} target="_blank" rel="noreferrer" style={{ fontSize: 10.5, color: "#7DD3FC", fontWeight: 700, textDecoration: "none" }}>
                     ↗ open clip
@@ -1429,12 +1607,14 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
                 )}
               </div>
               {clipUrl && (
-                <video
-                  src={src(clipUrl)}
-                  controls
-                  playsInline
-                  preload="metadata"
-                  style={{ width: 108, aspectRatio: "9/16", borderRadius: 8, background: "#000", border: "1px solid rgba(255,255,255,0.1)" }}
+                <PosterPlayer
+                  active={active?.kind === "beat" && active.i === i}
+                  onActivate={() => setActive({ kind: "beat", i })}
+                  videoUrl={src(clipUrl) as string}
+                  posterUrl={src(man.posters[i])}
+                  width={108}
+                  accent="#FF9A62"
+                  label={`shot ${i + 1}`}
                 />
               )}
             </div>
@@ -1560,12 +1740,14 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
         {asmMsg && <div style={{ fontSize: 11, color: "#41D98A", marginTop: 5, lineHeight: 1.45 }}>{asmMsg}</div>}
         {man.draft && !asmBusy && (
           <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginTop: 10 }}>
-            <video
-              src={src(man.draft)}
-              controls
-              playsInline
-              preload="metadata"
-              style={{ width: 148, aspectRatio: "9/16", borderRadius: 10, background: "#000", border: "1px solid rgba(65,217,138,0.4)" }}
+            <PosterPlayer
+              active={active?.kind === "draft"}
+              onActivate={() => setActive({ kind: "draft" })}
+              videoUrl={src(man.draft) as string}
+              posterUrl={src(man.draftPoster)}
+              width={148}
+              accent="#41D98A"
+              label="the draft reel"
             />
             <div style={{ fontSize: 11, color: "#A6A4B8", lineHeight: 1.5 }}>
               <div style={{ fontWeight: 800, color: "#41D98A", marginBottom: 4 }}>Draft reel — narration + captions</div>
@@ -1577,7 +1759,14 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
           </div>
         )}
         {man.draft && typeof reel.analysis.referenceUrl === "string" && reel.analysis.referenceUrl && !asmBusy && (
-          <CompareView referenceUrl={reel.analysis.referenceUrl} draftUrl={src(man.draft) as string} />
+          <CompareView
+            referenceUrl={reel.analysis.referenceUrl}
+            draftUrl={src(man.draft) as string}
+            refPoster={src(refPoster)}
+            draftPoster={src(man.draftPoster)}
+            live={active?.kind === "compare"}
+            onActivate={() => setActive({ kind: "compare" })}
+          />
         )}
       </div>
     </div>

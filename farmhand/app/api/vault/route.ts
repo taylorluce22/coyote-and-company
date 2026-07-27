@@ -146,18 +146,26 @@ export async function GET(req: NextRequest) {
     const { blobs } = await list({ prefix: `vault/${client}/${reelId}/`, limit: 200 });
     const clips: Array<{ beat: number; url: string }> = [];
     const vos: Array<{ beat: number; url: string }> = [];
+    // posters are what let the card render <img> thumbnails instead of a
+    // grid of decoding <video> elements (the ~30s tab-stall class)
+    const posters: Array<{ beat: number; url: string }> = [];
     let draft: string | undefined;
+    let draftPoster: string | undefined;
     for (const b of blobs) {
       const name = b.pathname.split("/").pop() || "";
       const mClip = name.match(/^clip-(\d+)\.mp4$/);
       const mVo = name.match(/^vo-(\d+)\.mp3$/);
+      const mPoster = name.match(/^clip-(\d+)\.jpg$/);
       if (mClip) clips.push({ beat: Number(mClip[1]), url: b.url });
       else if (mVo) vos.push({ beat: Number(mVo[1]), url: b.url });
+      else if (mPoster) posters.push({ beat: Number(mPoster[1]), url: b.url });
       else if (name === "draft.mp4") draft = b.url;
+      else if (name === "draft.jpg") draftPoster = b.url;
     }
     clips.sort((a, b) => a.beat - b.beat);
     vos.sort((a, b) => a.beat - b.beat);
-    return NextResponse.json({ clips, vos, ...(draft ? { draft } : {}) });
+    posters.sort((a, b) => a.beat - b.beat);
+    return NextResponse.json({ clips, vos, posters, ...(draft ? { draft } : {}), ...(draftPoster ? { draftPoster } : {}) });
   } catch {
     return NextResponse.json({ error: "vault listing failed — try again" }, { status: 502 });
   }

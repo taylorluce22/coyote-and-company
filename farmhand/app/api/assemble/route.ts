@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { del, put } from "@vercel/blob";
+import { del, list, put } from "@vercel/blob";
 import { spawn } from "child_process";
 import { access, chmod, copyFile, mkdtemp, readFile, rename, rm, writeFile } from "fs/promises";
 import { constants as fsConstants } from "fs";
@@ -28,6 +28,13 @@ import ffmpegPath from "ffmpeg-static";
  *     veryfast CRF 20 + aac + faststart), uploads the MP4 to Blob and
  *     returns { url, seconds } — never the MP4 bytes themselves (4.5MB
  *     response cap). Input blobs are deleted as soon as they're on /tmp.
+ * POST { phase: "posters", client, reelId, refUrl? }
+ *   → extracts one small JPEG per video in the reel's vault (clip-N.jpg,
+ *     draft.jpg, and the preserved reference's sibling .jpg). Idempotent:
+ *     only missing posters are rendered, so it doubles as the backfill for
+ *     reels produced before posters existed. Posters are what let the card
+ *     render <img> thumbnails instead of a grid of decoding <video>
+ *     elements — concurrent decode stalled the tab for ~30s.
  * POST { phase: "cleanup", urls: [] }
  *   → deletes reels/asm/ blobs the client has finished banking.
  *
@@ -190,6 +197,95 @@ export async function POST(req: NextRequest) {
   try {
     b = await req.json();
   } catch {}
+
+  /* ---- posters: one small JPEG per video in a reel's vault ----
+     THE ANTI-STALL LEVER: a card that renders N <video> elements makes
+     Chrome decode N streams at once and the tab stalls for ~30s. Posters
+     let the grid render plain <img> thumbnails and instantiate a real
+     <video> only on an explicit play. Idempotent — only missing posters
+     are generated, so this doubles as the backfill for reels produced
+     before posters existed. */
+  if (b.phase === "posters") {
+    const SEGP = /^[a-z0-9][a-z0-9._-]{0,63}$/i;
+    const client = SEGP.test(String(b.client ?? "")) ? String(b.client) : null;
+    const reelId = SEGP.test(String(b.reelId ?? "")) ? String(b.reelId) : null;
+    if (!client || !reelId) return NextResponse.json({ error: "bad client/reel id" }, { status: 400 });
+    const refUrl = clamp(b.refUrl, 600);
+    const dir = await mkdtemp(path.join(tmpdir(), "post-"));
+    try {
+      const { blobs } = await list({ prefix: `vault/${client}/${reelId}/`, limit: 200 });
+      const have = new Set(blobs.map((x) => x.pathname.split("/").pop() || ""));
+      type Target = { key: string; src: string; out: string; beat: number | null; kind: "clip" | "draft" | "ref" };
+      const targets: Target[] = [];
+      for (const x of blobs) {
+        const name = x.pathname.split("/").pop() || "";
+        const mClip = name.match(/^clip-(\d+)\.mp4$/);
+        if (mClip && !have.has(`clip-${mClip[1]}.jpg`)) {
+          targets.push({ key: `vault/${client}/${reelId}/clip-${mClip[1]}.jpg`, src: x.url, out: `clip-${mClip[1]}.jpg`, beat: Number(mClip[1]), kind: "clip" });
+        } else if (name === "draft.mp4" && !have.has("draft.jpg")) {
+          targets.push({ key: `vault/${client}/${reelId}/draft.jpg`, src: x.url, out: "draft.jpg", beat: null, kind: "draft" });
+        }
+      }
+      // the preserved reference lives under refs/ — same treatment
+      let refPoster: string | undefined;
+      if (refUrl && isReadableBlobUrl(refUrl) && /\.mp4$/i.test(refUrl)) {
+        const refPath = (blobPath(refUrl) || "").replace(/\.mp4$/i, ".jpg");
+        if (refPath.startsWith(`vault/${client}/`)) {
+          const { blobs: refBlobs } = await list({ prefix: refPath, limit: 1 });
+          const existing = refBlobs.find((x) => x.pathname === refPath);
+          if (existing) refPoster = existing.url;
+          else targets.push({ key: refPath, src: refUrl, out: "ref.jpg", beat: null, kind: "ref" });
+        }
+      }
+
+      const posters: Record<number, string> = {};
+      let draftPoster: string | undefined;
+      // reuse posters already in the store
+      for (const x of blobs) {
+        const name = x.pathname.split("/").pop() || "";
+        const m = name.match(/^clip-(\d+)\.jpg$/);
+        if (m) posters[Number(m[1])] = x.url;
+        else if (name === "draft.jpg") draftPoster = x.url;
+      }
+
+      if (targets.length) {
+        const bin = await ffmpegBin();
+        for (const t of targets.slice(0, 16)) {
+          try {
+            const local = path.join(dir, `in-${t.out}.mp4`);
+            await download(t.src, local);
+            // fast seek before -i, one frame, small: a poster is a thumbnail
+            const { code } = await runFfmpeg(
+              bin,
+              ["-hide_banner", "-y", "-ss", "0.5", "-i", local, "-frames:v", "1", "-vf", "scale=360:-2", "-q:v", "5", t.out],
+              dir
+            );
+            if (code !== 0) continue;
+            const bytes = await readFile(path.join(dir, t.out));
+            if (bytes.byteLength < 500) continue;
+            const up = await put(t.key, bytes, {
+              access: "public",
+              contentType: "image/jpeg",
+              addRandomSuffix: false,
+              allowOverwrite: true,
+              cacheControlMaxAge: 60,
+            });
+            if (t.kind === "clip" && t.beat !== null) posters[t.beat] = up.url;
+            else if (t.kind === "draft") draftPoster = up.url;
+            else if (t.kind === "ref") refPoster = up.url;
+            await rm(local, { force: true });
+          } catch {
+            // one bad clip must never fail the whole poster pass
+          }
+        }
+      }
+      return NextResponse.json({ posters, ...(draftPoster ? { draftPoster } : {}), ...(refPoster ? { refPoster } : {}), generated: targets.length });
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message.slice(0, 300) : "poster pass failed" }, { status: 500 });
+    } finally {
+      rm(dir, { recursive: true, force: true }).catch(() => {});
+    }
+  }
 
   /* ---- cleanup: the client banked the draft — burn the asm blobs ---- */
   if (b.phase === "cleanup") {
