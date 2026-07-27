@@ -9,6 +9,21 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-27 · ✅ FIRST FULL PIPELINE RUN CONFIRMED — reference → posted-ready reel
+Cowork verified end to end on production (75d5c41): ⚡ Produce reel on the
+banked APS rate-case card skipped banked beats + VO (zero re-spend),
+uploaded the timeline, /api/assemble encoded natively, and a finished 14s
+9:16 draft.mp4 — Eric narration + burned DESERT GRID captions — landed on
+the card. Tab responsive throughout; freeze class confirmed dead; the
+prep-stage read-hang fixed by the bounded self-naming awaits (75d5c41).
+The full chain is live: reference video → style genome → adapted APS
+script → Higgsfield clips → ElevenLabs VO → one tap → draft reel, no
+CapCut required. Owner next steps: record the teleprompter sample
+(Settings › Spoken voice, shipped in 124fb54) to arm the personal-voice
+lane; review/post the APS draft; MERGE the branch to main — production
+still runs a manually promoted preview and a stray push to main would
+roll it back.
+
 ## 2026-07-27 · ASSEMBLY GOES SERVER-SIDE — the browser-freeze class is deleted
 Three client-side assembly architectures all froze Chrome (v3 froze the
 whole browser + Mac): root cause was ffmpeg.wasm's grow-only heap
