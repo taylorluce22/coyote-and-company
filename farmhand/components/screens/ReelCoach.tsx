@@ -643,23 +643,46 @@ const lsSet = (k: string, v: string) => {
   } catch {}
 };
 
-/** Duration of an audio blob via metadata — used to time beats to the VO. */
+/** Bound any prep-stage promise — a stuck step must FAIL with its name,
+    never spin on a static label (live-tested lesson: an unbounded await
+    before the first network call reads as a silent hang). */
+const withTimeout = <T,>(p: Promise<T>, ms: number, what: string): Promise<T> =>
+  Promise.race([
+    p,
+    new Promise<T>((_, rej) => setTimeout(() => rej(new Error(`${what} stalled after ${Math.round(ms / 1000)}s — reload the tab and try again`)), ms)),
+  ]);
+
+/** Duration of an audio blob via metadata — used to time beats to the VO.
+    CANNOT hang: if the browser never fires a metadata event (observed live
+    on Chrome after heavy prior runs), the 8s fallback resolves 0 and the
+    beat falls back to its scripted duration. */
 const audioSecs = (blob: Blob): Promise<number> =>
   new Promise((res) => {
+    let settled = false;
     try {
       const a = document.createElement("audio");
       a.preload = "metadata";
       const done = (n: number) => {
+        if (settled) return;
+        settled = true;
         try {
           URL.revokeObjectURL(a.src);
         } catch {}
         res(n);
       };
       a.onloadedmetadata = () => done(Number.isFinite(a.duration) ? a.duration : 0);
+      a.ondurationchange = () => {
+        if (Number.isFinite(a.duration) && a.duration > 0) done(a.duration);
+      };
       a.onerror = () => done(0);
       a.src = URL.createObjectURL(blob);
+      a.load();
+      setTimeout(() => done(0), 8000);
     } catch {
-      res(0);
+      if (!settled) {
+        settled = true;
+        res(0);
+      }
     }
   });
 
@@ -960,9 +983,11 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
   const assemble = async (): Promise<boolean> => {
     if (asmBusy) return false;
     setAsmBusy(true);
-    setAsmMsg("Reading the banked clips…");
+    setAsmMsg("① Reading the banked clips from the vault…");
     try {
-      const banked = await clipVaultForReel(reel.id);
+      // every prep await is BOUNDED and labels itself — the stuck step
+      // names itself in the error instead of spinning on a static message
+      const banked = await withTimeout(clipVaultForReel(reel.id), 15000, "reading the clip vault");
       const vClips = banked.filter(isClip);
       const vVos = banked.filter((c) => c.kind === "vo");
       const missing = beats.map((_, i) => i).filter((i) => !vClips.some((c) => c.beatIndex === i));
@@ -975,10 +1000,12 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
       const assets: Array<{ path: string; blob: Blob; type: string; slot: { beat: number; kind: "clip" | "vo" | "cap" } }> = [];
       const timeline: Array<{ clip?: string; vo?: string; cap?: string; duration: number }> = [];
       for (let i = 0; i < beats.length; i++) {
+        setAsmMsg(`② Timing beat ${i + 1}/${beats.length} + rendering its caption…`);
         const clip = vClips.find((c) => c.beatIndex === i)!;
         const vo = vVos.find((v) => v.beatIndex === i) || null;
         const scriptD = secsOf(beats[i].duration);
-        // beat runs as long as the voice needs (plus a breath), inside the clip
+        // beat runs as long as the voice needs (plus a breath), inside the
+        // clip; audioSecs can't hang (8s internal fallback → script timing)
         const voD = vo ? await audioSecs(vo.blob) : 0;
         const D = Math.min(6, Math.max(scriptD, voD > 0 ? voD + 0.3 : 0) || scriptD);
         timeline.push({ duration: D });
@@ -986,20 +1013,25 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
         if (vo) assets.push({ path: `reels/asm/${tag}/b${i}-vo.mp3`, blob: vo.blob, type: vo.mime || "audio/mpeg", slot: { beat: i, kind: "vo" } });
         const capText = (beats[i].onScreenText || "").trim();
         if (capText && capText.toLowerCase() !== "none") {
-          const cap = await captionPng(capText);
+          // a wedged canvas.toBlob skips the caption rather than hanging the run
+          const cap = await withTimeout(captionPng(capText), 8000, `rendering beat ${i + 1}'s caption`).catch(() => null);
           if (cap) assets.push({ path: `reels/asm/${tag}/b${i}-cap.png`, blob: cap, type: "image/png", slot: { beat: i, kind: "cap" } });
         }
       }
       // upload the timeline (small files; sequential keeps memory flat)
       for (let k = 0; k < assets.length; k++) {
         const a = assets[k];
-        setAsmMsg(`⤴ Uploading timeline assets… ${k + 1}/${assets.length + (music ? 1 : 0)}`);
-        const up = await upload(a.path, a.blob, { access: "public", handleUploadUrl: "/api/video-reference/blob-upload", contentType: a.type });
+        setAsmMsg(`③ Uploading timeline assets… ${k + 1}/${assets.length + (music ? 1 : 0)}`);
+        const up = await withTimeout(
+          upload(a.path, a.blob, { access: "public", handleUploadUrl: "/api/video-reference/blob-upload", contentType: a.type }),
+          120000,
+          `uploading asset ${k + 1}/${assets.length}`
+        );
         timeline[a.slot.beat][a.slot.kind] = up.url;
       }
       let musicUrl: string | undefined;
       if (music) {
-        setAsmMsg(`⤴ Uploading timeline assets… ${assets.length + 1}/${assets.length + 1}`);
+        setAsmMsg(`③ Uploading timeline assets… ${assets.length + 1}/${assets.length + 1}`);
         const up = await upload(`reels/asm/${tag}/music-${music.name.replace(/[^a-z0-9.\-_]/gi, "_").slice(0, 40)}`, music, {
           access: "public",
           handleUploadUrl: "/api/video-reference/blob-upload",
@@ -1008,7 +1040,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
         musicUrl = up.url;
       }
 
-      setAsmMsg("⚙ Server is encoding the reel… (usually 15–60s, native ffmpeg — your browser stays free)");
+      setAsmMsg("④ Server is encoding the reel… (usually 15–60s, native ffmpeg — your browser stays free)");
       const r = await fetch("/api/assemble", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1018,7 +1050,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
       const j = (await r.json().catch(() => ({}))) as { url?: string; seconds?: number; error?: string };
       if (!r.ok || !j.url) throw new Error(j.error || `the encode failed (${r.status}) — try again`);
 
-      setAsmMsg("⤵ Downloading the draft…");
+      setAsmMsg("⑤ Downloading the draft…");
       const dl = await fetch(j.url, { signal: AbortSignal.timeout(120000) });
       if (!dl.ok) throw new Error("the draft rendered but couldn't be downloaded — try Assemble again");
       const out = await dl.blob();
