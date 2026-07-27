@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse, after } from "next/server";
-import { del, list, put } from "@vercel/blob";
+import { copy, del, list, put } from "@vercel/blob";
 import { adaptRemake } from "@/lib/claudeScript";
 import { qualityCheck, sanitizeGenome } from "@/lib/styleGenome";
 
@@ -696,6 +696,7 @@ async function runJobPipeline(
     fileName?: string;
     fileUri?: string;
     mimeType?: string;
+    referenceUrl?: string;
     t0: number;
   }
 ): Promise<void> {
@@ -726,14 +727,27 @@ async function runJobPipeline(
         await writeJob(jobId, "error", { error: up.error, retryable: !opts.remoteUrl });
         return;
       }
-      // the clip is safely at Gemini — the Blob copy is done; never leak
-      // blobs (they cost storage)
-      if (opts.blobUrl) del(opts.blobUrl).catch(() => {});
+      // the clip is safely at Gemini. PRESERVE the reference in the media
+      // vault before dropping the transfer copy — the Reference-vs-Draft
+      // compare needs the original streamable later. Best-effort: a failed
+      // copy must never block the analysis.
+      if (opts.blobUrl) {
+        try {
+          const kept = await copy(opts.blobUrl, `vault/${(opts.client || "default").replace(/[^a-z0-9._-]/gi, "-").slice(0, 64)}/refs/${jobId}.mp4`, {
+            access: "public",
+            addRandomSuffix: false,
+            allowOverwrite: true, // a platform-killed first attempt may re-run this copy
+            contentType: opts.contentType || "video/mp4",
+          });
+          opts.referenceUrl = kept.url;
+        } catch {}
+        del(opts.blobUrl).catch(() => {});
+      }
       fileName = up.name || "";
       fileUri = up.uri || "";
       mimeType = up.mimeType || mimeType;
       // journal everything a continue-invocation needs to finish the job
-      await writeJob(jobId, "processing", { fileName, fileUri, mimeType, source: opts.source, label: opts.label, client: opts.client, topic: opts.topic });
+      await writeJob(jobId, "processing", { fileName, fileUri, mimeType, source: opts.source, label: opts.label, client: opts.client, topic: opts.topic, referenceUrl: opts.referenceUrl });
     }
 
     // wait for Gemini processing, reserving budget for the analyze — sized
@@ -763,7 +777,12 @@ async function runJobPipeline(
       await writeJob(jobId, "error", { error: out.error, retryable: true });
       return;
     }
-    await writeJob(jobId, "done", { analysis: out.analysis, source: opts.source, label: opts.label, client: opts.client });
+    await writeJob(jobId, "done", {
+      analysis: { ...out.analysis, ...(opts.referenceUrl ? { referenceUrl: opts.referenceUrl } : {}) },
+      source: opts.source,
+      label: opts.label,
+      client: opts.client,
+    });
   } catch (e) {
     await writeJob(jobId, "error", {
       error: e instanceof Error ? e.message.slice(0, 200) : "analysis pipeline failed",
@@ -930,6 +949,7 @@ export async function POST(req: NextRequest) {
           fileName: String(proc.fileName || ""),
           fileUri,
           mimeType: String(proc.mimeType || "video/mp4"),
+          referenceUrl: String(proc.referenceUrl || "") || undefined,
           t0,
         })
       );

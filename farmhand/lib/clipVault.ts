@@ -82,8 +82,8 @@ export async function clipVaultAdd(clip: VaultClip, client?: string): Promise<bo
   });
 }
 
-export async function clipVaultAll(): Promise<VaultClip[]> {
-  const db = await openDb();
+export async function clipVaultAll(client?: string): Promise<VaultClip[]> {
+  const db = await openDb(client);
   if (!db) return [];
   return new Promise((resolve) => {
     try {
@@ -105,13 +105,14 @@ export async function clipVaultAll(): Promise<VaultClip[]> {
   });
 }
 
-/** All clips for one reel, in beat order. */
-export async function clipVaultForReel(reelId: string): Promise<VaultClip[]> {
-  return (await clipVaultAll()).filter((c) => c.reelId === reelId);
+/** All clips for one reel, in beat order. Pass `client` to pin the read —
+    a mid-run workspace switch must never read another client's vault. */
+export async function clipVaultForReel(reelId: string, client?: string): Promise<VaultClip[]> {
+  return (await clipVaultAll(client)).filter((c) => c.reelId === reelId);
 }
 
-export async function clipVaultDelete(id: string): Promise<void> {
-  const db = await openDb();
+export async function clipVaultDelete(id: string, client?: string): Promise<void> {
+  const db = await openDb(client);
   if (!db) return;
   return new Promise((resolve) => {
     try {
@@ -128,10 +129,10 @@ export async function clipVaultDelete(id: string): Promise<void> {
   });
 }
 
-/** Drop every clip belonging to a deleted reel. */
-export async function clipVaultDeleteForReel(reelId: string): Promise<void> {
-  const clips = await clipVaultForReel(reelId);
-  for (const c of clips) await clipVaultDelete(c.id);
+/** Drop every clip belonging to a deleted reel (client-pinnable). */
+export async function clipVaultDeleteForReel(reelId: string, client?: string): Promise<void> {
+  const clips = await clipVaultForReel(reelId, client);
+  for (const c of clips) await clipVaultDelete(c.id, client);
 }
 
 /** Drop a client's entire clip-vault DB (when the client is removed). */

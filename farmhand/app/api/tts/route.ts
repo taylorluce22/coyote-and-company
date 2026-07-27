@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { put } from "@vercel/blob";
 
 /**
  * ElevenLabs voiceover lane — turns a remake script's per-beat "say" lines
@@ -11,8 +12,12 @@ import { NextRequest, NextResponse } from "next/server";
  *      voiceId resolution: request voiceId (workspace narrator override or
  *      the user's cloned voice) → ELEVENLABS_VOICE_ID env (the brand
  *      narrator default) → error asking for one. TTS is synchronous — no
- *      job polling; the CLIENT owns per-beat sequencing and banks each
- *      segment into the clip vault as it returns.
+ *      job polling; the CLIENT owns per-beat sequencing.
+ * POST { text, voiceId?, store: { client, reelId, beat } }
+ *      → same synthesis, but the mp3 goes STRAIGHT into the server-side
+ *        media vault (vault/<client>/<reelId>/vo-<beat>.mp3) and the
+ *        response is JSON { url } — the audio bytes never touch the
+ *        browser (the no-media-on-the-main-thread rule).
  * POST { phase: "voices" }  → { voices: [{ id, name, category }] } — the
  *      account's voice roster, for auditioning/picking the narrator.
  * POST { phase: "clone", name, audio: dataURL } → { voiceId } — Instant
@@ -141,6 +146,26 @@ export async function POST(req: NextRequest) {
     }
     const buf = await r.arrayBuffer();
     if (buf.byteLength < 1000) return NextResponse.json({ configured: true, error: "ElevenLabs returned empty audio — try again" });
+    // vault mode: segment goes server→Blob, response is just the URL
+    const store = (b.store || null) as { client?: unknown; reelId?: unknown; beat?: unknown } | null;
+    if (store) {
+      const SEG = /^[a-z0-9][a-z0-9._-]{0,63}$/i;
+      const client = SEG.test(String(store.client ?? "")) ? String(store.client) : null;
+      const reelId = SEG.test(String(store.reelId ?? "")) ? String(store.reelId) : null;
+      const beat = Math.round(Number(store.beat));
+      if (!client || !reelId || !Number.isFinite(beat) || beat < 0 || beat > 30) {
+        return NextResponse.json({ configured: true, error: "bad vault target" });
+      }
+      const blob = await put(`vault/${client}/${reelId}/vo-${beat}.mp3`, buf, {
+        access: "public",
+        contentType: "audio/mpeg",
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        // overwritable key — a long CDN TTL would serve stale audio after a re-voice
+        cacheControlMaxAge: 60,
+      });
+      return NextResponse.json({ configured: true, url: blob.url });
+    }
     return new NextResponse(buf, { headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-store" } });
   } catch {
     return NextResponse.json({ configured: true, error: "narration timed out — try again" });

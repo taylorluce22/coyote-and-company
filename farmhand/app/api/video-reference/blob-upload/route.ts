@@ -21,9 +21,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       body,
       request,
       onBeforeGenerateToken: async (pathname) => {
+        // vault/ = the permanent server-side media vault. Exact keys, no
+        // random suffix (the manifest is a prefix listing), overwrite
+        // allowed (regeneration + the one-time IndexedDB migration).
+        if (pathname.startsWith("vault/")) {
+          return {
+            allowedContentTypes: ["video/*", "audio/*"],
+            addRandomSuffix: false,
+            allowOverwrite: true,
+            maximumSizeInBytes: 300 * 1024 * 1024,
+          };
+        }
         // the reels/ prefix is what authorizes /api/video-reference to
         // fetch AND delete these urls — nothing else may live under it
-        if (!pathname.startsWith("reels/")) throw new Error("uploads must live under reels/");
+        if (!pathname.startsWith("reels/")) throw new Error("uploads must live under reels/ or vault/");
         // reels/asm/ = assembly timeline assets (clips + narration + caption
         // cards + music) headed for /api/assemble — small files, more types
         if (pathname.startsWith("reels/asm/")) {

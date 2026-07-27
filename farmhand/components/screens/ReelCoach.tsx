@@ -7,7 +7,7 @@ import { useStore } from "@/lib/store";
 import { ideasFor, type Idea, type StrategyProfile } from "@/lib/strategy";
 import { reelVaultAdd, reelVaultAll, reelVaultDelete, type ReelAnalysis, type VaultReel } from "@/lib/reelVault";
 import { buildHiggsfieldPrompt, recreationBriefText, type QualityFlag, type ReferenceVideoAnalysis } from "@/lib/styleGenome";
-import { clipId, clipVaultAdd, clipVaultDeleteForReel, clipVaultForReel, draftId, isClip, voId, type VaultClip } from "@/lib/clipVault";
+import { clipVaultDeleteForReel, clipVaultForReel } from "@/lib/clipVault";
 import { captionPng } from "@/lib/captionPng";
 import { record as meterRecord, UNIT_COST_CENTS, dollars } from "@/lib/meter";
 
@@ -652,37 +652,31 @@ const withTimeout = <T,>(p: Promise<T>, ms: number, what: string): Promise<T> =>
     new Promise<T>((_, rej) => setTimeout(() => rej(new Error(`${what} stalled after ${Math.round(ms / 1000)}s — reload the tab and try again`)), ms)),
   ]);
 
-/** Duration of an audio blob via metadata — used to time beats to the VO.
-    CANNOT hang: if the browser never fires a metadata event (observed live
-    on Chrome after heavy prior runs), the 8s fallback resolves 0 and the
-    beat falls back to its scripted duration. */
-const audioSecs = (blob: Blob): Promise<number> =>
+/** Duration of an audio URL via metadata — used to time beats to the VO.
+    Streams only the header off the CDN (range request), never the file.
+    CANNOT hang: if the browser never fires a metadata event, the 8s
+    fallback resolves 0 and the beat falls back to its scripted duration. */
+const audioSecs = (src: string): Promise<number> =>
   new Promise((res) => {
     let settled = false;
+    const done = (n: number) => {
+      if (settled) return;
+      settled = true;
+      res(n);
+    };
     try {
       const a = document.createElement("audio");
       a.preload = "metadata";
-      const done = (n: number) => {
-        if (settled) return;
-        settled = true;
-        try {
-          URL.revokeObjectURL(a.src);
-        } catch {}
-        res(n);
-      };
       a.onloadedmetadata = () => done(Number.isFinite(a.duration) ? a.duration : 0);
       a.ondurationchange = () => {
         if (Number.isFinite(a.duration) && a.duration > 0) done(a.duration);
       };
       a.onerror = () => done(0);
-      a.src = URL.createObjectURL(blob);
+      a.src = src;
       a.load();
       setTimeout(() => done(0), 8000);
     } catch {
-      if (!settled) {
-        settled = true;
-        res(0);
-      }
+      done(0);
     }
   });
 
@@ -692,12 +686,24 @@ const secsOf = (d?: string) => {
   return Number.isFinite(n) && n > 0 ? Math.min(6, n) : 5;
 };
 
-/** Generate, track, play and bank the per-beat clips + narration of a
-    remake script, then assemble the draft reel. */
+/** The reel's server-side media manifest: URLs only — the browser never
+    holds media bytes again (the no-media-on-the-main-thread rule). */
+type Manifest = { clips: Record<number, string>; vos: Record<number, string>; draft?: string };
+
+/** Generate, track, play and produce a remake's media — every asset lives
+    in the SERVER vault (Vercel Blob) and streams straight off the CDN into
+    <video>/<audio> tags. The browser only triggers work and renders URLs:
+    clips are ingested Higgsfield→server→Blob, narration is stored
+    server-side by /api/tts, and /api/assemble reads and writes the vault
+    directly. IndexedDB media is migrated up once, then retired. */
 function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string }) {
   const beats = (reel.analysis.remake?.beats || []).filter((b) => b.genPrompt);
-  const [clips, setClips] = useState<VaultClip[]>([]);
-  const [urls, setUrls] = useState<Record<string, string>>({});
+  const [man, setMan] = useState<Manifest>({ clips: {}, vos: {} });
+  const [manErr, setManErr] = useState<string | null>(null);
+  const [migMsg, setMigMsg] = useState<string | null>(null);
+  // bump busts the CDN cache after an overwrite (regen/re-assemble reuse
+  // the same vault key, so the URL alone would keep serving the old bytes)
+  const [bump, setBump] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [armed, setArmed] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -718,35 +724,99 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
     return () => clearTimeout(t);
   }, [prodArm]);
   const anyBusy = busy || voBusy || asmBusy || prodBusy;
+  const src = (u?: string) => (u ? `${u}${u.includes("?") ? "&" : "?"}v=${bump}` : undefined);
 
-  const videoClips = clips.filter(isClip);
-  const vos = clips.filter((c) => c.kind === "vo");
-  const draft = clips.find((c) => c.kind === "draft") || null;
-
-  const refresh = async () => {
-    const list = await clipVaultForReel(reel.id);
-    setClips(list);
-    setUrls((old) => {
-      Object.values(old).forEach((u) => URL.revokeObjectURL(u));
-      const next: Record<string, string> = {};
-      list.forEach((c) => {
-        try {
-          next[c.id] = URL.createObjectURL(c.blob);
-        } catch {}
-      });
-      return next;
-    });
+  // manRef mirrors man so async flows read fresh state without stale closures
+  const manRef = useRef<Manifest>({ clips: {}, vos: {} });
+  const applyMan = (next: Manifest) => {
+    manRef.current = next;
+    setMan(next);
   };
+  const loadManifest = async (): Promise<Manifest> => {
+    const r = await withTimeout(
+      fetch(`/api/vault?client=${encodeURIComponent(workspace)}&reelId=${encodeURIComponent(reel.id)}`, { cache: "no-store", signal: AbortSignal.timeout(20000) }),
+      25000,
+      "reading the server vault"
+    );
+    const j = (await r.json()) as { clips?: Array<{ beat: number; url: string }>; vos?: Array<{ beat: number; url: string }>; draft?: string; error?: string };
+    if (!r.ok || j.error) throw new Error(j.error || `vault read failed (${r.status})`);
+    const listed: Manifest = { clips: {}, vos: {}, draft: j.draft };
+    (j.clips || []).forEach((c) => (listed.clips[c.beat] = c.url));
+    (j.vos || []).forEach((v) => (listed.vos[v.beat] = v.url));
+    // MERGE, never replace: Blob list() can lag a just-finished put, and a
+    // stale listing must not un-render banked media (that's how credits get
+    // re-spent). Keys the client wrote this session are authoritative.
+    const merged: Manifest = {
+      clips: { ...listed.clips, ...manRef.current.clips },
+      vos: { ...listed.vos, ...manRef.current.vos },
+      draft: manRef.current.draft || listed.draft,
+    };
+    applyMan(merged);
+    return merged;
+  };
+
+  /* mount: manifest, then a ONE-TIME migration of any media this device
+     still holds in IndexedDB (the pre-server-vault era). Local copies are
+     deleted only after the server manifest confirms every asset landed —
+     paid-for media is never dropped on faith. */
+  const migRef = useRef(false);
   useEffect(() => {
-    refresh();
+    (async () => {
+      setManErr(null);
+      let m: Manifest = { clips: {}, vos: {} };
+      try {
+        m = await loadManifest();
+      } catch (e) {
+        setManErr(e instanceof Error ? e.message : "couldn't read the server vault");
+        return; // no migration against an unreadable manifest
+      }
+      if (migRef.current) return;
+      migRef.current = true;
+      try {
+        // reads/deletes are PINNED to the captured workspace — a mid-flight
+        // client switch must never touch another client's local vault
+        const local = await clipVaultForReel(reel.id, workspace);
+        if (!local.length) return;
+        const slotFilled = (c: (typeof local)[number], mm: Manifest) =>
+          c.kind === "vo" ? !!mm.vos[c.beatIndex] : c.kind === "draft" ? !!mm.draft : !!mm.clips[c.beatIndex];
+        const todo = local.filter((c) => !slotFilled(c, m));
+        let failed = 0;
+        if (todo.length) {
+          for (let k = 0; k < todo.length; k++) {
+            const c = todo[k];
+            setMigMsg(`⤴ One-time move to the server vault… ${k + 1}/${todo.length} (this ends the freezing era)`);
+            const name = c.kind === "vo" ? `vo-${c.beatIndex}.mp3` : c.kind === "draft" ? "draft.mp4" : `clip-${c.beatIndex}.mp4`;
+            // legacy mimes can be off-allowlist oddities — fall back to the
+            // kind default; one bad asset must not strand the rest
+            const type = c.kind === "vo" ? (c.mime?.startsWith("audio/") ? c.mime : "audio/mpeg") : c.mime?.startsWith("video/") ? c.mime : "video/mp4";
+            try {
+              await withTimeout(
+                upload(`vault/${workspace}/${reel.id}/${name}`, c.blob, {
+                  access: "public",
+                  handleUploadUrl: "/api/video-reference/blob-upload",
+                  contentType: type,
+                }),
+                180000,
+                `migrating ${name}`
+              );
+            } catch {
+              failed++;
+            }
+          }
+        }
+        const fresh = await loadManifest();
+        if (!failed && local.every((c) => slotFilled(c, fresh))) {
+          await clipVaultDeleteForReel(reel.id, workspace);
+          setMigMsg(todo.length ? `✓ ${todo.length} asset${todo.length === 1 ? "" : "s"} moved to the server vault — media now streams, never loads.` : null);
+        } else {
+          setMigMsg(`Migration incomplete${failed ? ` (${failed} upload${failed === 1 ? "" : "s"} failed)` : ""} — banked media stays safe on this device; it retries next visit.`);
+        }
+      } catch (e) {
+        setMigMsg(`Migration paused (${e instanceof Error ? e.message : "upload failed"}) — banked media stays safe on this device; it retries next visit.`);
+      }
+    })();
     const rec = readClipPending(workspace);
     setPending(rec && rec.reelId === reel.id ? rec : null);
-    return () => {
-      setUrls((old) => {
-        Object.values(old).forEach((u) => URL.revokeObjectURL(u));
-        return {};
-      });
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reel.id, workspace]);
 
@@ -756,7 +826,9 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
     return () => clearTimeout(t);
   }, [armed]);
 
-  /** Poll tracked jobs; commit every finished clip to the vault immediately. */
+  /** Poll tracked Higgsfield jobs; finished clips are ingested SERVER-SIDE
+      (Higgsfield CDN → function → Blob vault) — the bytes never touch the
+      browser. */
   const pollClips = async (items: PendingClip[], budgetMs: number): Promise<{ ok: number; failed: number }> => {
     const deadline = Date.now() + budgetMs;
     const settled = new Set<number>();
@@ -789,36 +861,22 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
         const u = res.status === "completed" ? res.videos?.[0] : null;
         if (!u) continue; // completed-without-video = thumbnails only, keep waiting
         try {
-          const vr = await fetch(`/api/higgsfield?vid=${encodeURIComponent(u)}`, { signal: AbortSignal.timeout(120000) });
-          if (!vr.ok) continue; // transient — retry on the next sweep
-          const blob = await vr.blob();
-          if (blob.size < 10_000) continue;
+          const vr = await fetch("/api/vault", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phase: "ingest", client: workspace, reelId: reel.id, beat: it.beat, sourceUrl: u }),
+            signal: AbortSignal.timeout(120000),
+          });
+          const vj = (await vr.json().catch(() => ({}))) as { url?: string; error?: string };
+          if (!vr.ok || !vj.url) continue; // transient — retry on the next sweep
           settled.add(it.beat);
-          // vault FIRST — the paid-for clip is safe before anything else
-          const saved = await clipVaultAdd(
-            {
-              id: clipId(reel.id, it.beat),
-              reelId: reel.id,
-              beatIndex: it.beat,
-              prompt: it.prompt,
-              label: `${reel.label.slice(0, 48)} · beat ${it.beat + 1}`,
-              mime: blob.type || "video/mp4",
-              blob,
-              createdAt: Date.now(),
-            },
-            workspace
-          );
-          if (!saved) {
-            settled.delete(it.beat);
-            setMsg("A clip arrived but couldn't be saved (browser storage blocked or full) — free up storage and hit ⟳ Recover clips.");
-            continue;
-          }
           meterRecord(workspace, "reel", 1);
           ok++;
+          applyMan({ ...manRef.current, clips: { ...manRef.current.clips, [it.beat]: vj.url! } });
+          setBump((x) => x + 1);
           setBeatState((s) => ({ ...s, [it.beat]: "done" }));
           pruneClipPending(it.beat, workspace);
           setMsg(`🎬 ${ok}/${items.length} clips in — the rest are still rendering…`);
-          await refresh();
         } catch {}
       }
       if (settled.size < items.length) await new Promise((r) => setTimeout(r, 6000));
@@ -826,19 +884,19 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
     return { ok, failed };
   };
 
-  /** Render beat clips. `onlyMissing` skips beats already banked (the
+  /** Render beat clips. `onlyMissing` skips beats already in the vault (the
       Produce-reel path — never re-spends on a rendered beat). Returns true
-      when every targeted beat has a clip in the vault. */
+      when every targeted beat has a clip server-side. */
   const generate = async (onlyMissing = false): Promise<boolean> => {
     if (busy || !beats.length) return false;
     setBusy(true);
     setArmed(false);
     setMsg("🎬 Starting the beat renders…");
     try {
-      const have = new Set((await clipVaultForReel(reel.id)).filter(isClip).map((c) => c.beatIndex));
+      const m = await loadManifest();
       const targets = beats
         .map((b, i) => ({ i, prompt: b.genPrompt || "", duration: b.duration }))
-        .filter((t) => t.prompt && (!onlyMissing || !have.has(t.i)));
+        .filter((t) => t.prompt && (!onlyMissing || !m.clips[t.i]));
       if (!targets.length) {
         setMsg(onlyMissing ? "✓ Every beat already has a clip — nothing to render." : "No beats with generation prompts.");
         return onlyMissing;
@@ -876,7 +934,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
       setPending(readClipPending(workspace));
       if (!ok && !failed) setMsg("The clips didn't come back in time — they're already paid for. Hit ⟳ Recover clips in a few minutes.");
       else if (failed) setMsg(`✓ ${ok} clip${ok === 1 ? "" : "s"} landed — ${failed} failed on Higgsfield's side (credits refunded there). Regenerate anytime.`);
-      else setMsg(`✓ All ${ok} beat${ok === 1 ? "" : "s"} rendered and saved — play them below.`);
+      else setMsg(`✓ All ${ok} beat${ok === 1 ? "" : "s"} rendered into the server vault — play them below.`);
       return ok === items.length && !failed;
     } catch {
       setPending(readClipPending(workspace));
@@ -903,17 +961,16 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
     }
   };
 
-  /** Per-beat narration via /api/tts. Vault-first per segment; re-running
-      SKIPS beats that already have a segment (that's the resume path —
-      TTS is synchronous, so there's no remote job to recover), and
-      `force` regenerates everything (voice change). Returns true when
-      every spoken beat has a segment banked. */
+  /** Per-beat narration via /api/tts in vault mode: the mp3 goes straight
+      to the server vault and only the URL comes back. Re-running SKIPS
+      beats that already have a segment; `force` regenerates everything
+      (voice change). Returns true when every spoken beat has a segment. */
   const generateVo = async (force = false): Promise<boolean> => {
     if (voBusy) return false;
-    const haveVo = (await clipVaultForReel(reel.id)).filter((c) => c.kind === "vo");
+    const m = await loadManifest().catch(() => man);
     const targets = beats
       .map((b, i) => ({ i, say: (b.say || "").trim() }))
-      .filter((t) => t.say && (force || !haveVo.some((v) => v.beatIndex === t.i)));
+      .filter((t) => t.say && (force || !m.vos[t.i]));
     if (!targets.length) {
       setVoMsg("✓ Every spoken beat already has narration — use ↻ Re-voice to redo them.");
       return true;
@@ -931,37 +988,21 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
         const r = await fetch("/api/tts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: t.say, ...(voiceId ? { voiceId } : {}) }),
+          body: JSON.stringify({
+            text: t.say,
+            ...(voiceId ? { voiceId } : {}),
+            store: { client: workspace, reelId: reel.id, beat: t.i },
+          }),
           signal: AbortSignal.timeout(60000),
         });
-        const type = r.headers.get("content-type") || "";
-        if (!type.startsWith("audio/")) {
-          const j = (await r.json().catch(() => ({}))) as { error?: string; configured?: boolean };
-          if (j.configured === false) throw new Error("Needs ELEVENLABS_API_KEY in Vercel — add it in Connectors, then retry.");
-          throw new Error(j.error || `narration failed on beat ${t.i + 1}`);
-        }
-        const blob = await r.blob();
-        if (blob.size < 1000) throw new Error(`narration came back empty on beat ${t.i + 1} — try again`);
-        // vault FIRST — same invariant as clips
-        const saved = await clipVaultAdd(
-          {
-            id: voId(reel.id, t.i),
-            reelId: reel.id,
-            beatIndex: t.i,
-            kind: "vo",
-            prompt: t.say,
-            label: `${reel.label.slice(0, 48)} · VO beat ${t.i + 1}`,
-            mime: blob.type || "audio/mpeg",
-            blob,
-            createdAt: Date.now(),
-          },
-          workspace
-        );
-        if (!saved) throw new Error("a segment couldn't be saved (browser storage blocked or full) — free up storage and re-run; finished beats are skipped");
+        const j = (await r.json().catch(() => ({}))) as { url?: string; error?: string; configured?: boolean };
+        if (j.configured === false) throw new Error("Needs ELEVENLABS_API_KEY in Vercel — add it in Connectors, then retry.");
+        if (!j.url) throw new Error(j.error || `narration failed on beat ${t.i + 1}`);
         done++;
-        await refresh();
+        applyMan({ ...manRef.current, vos: { ...manRef.current.vos, [t.i]: j.url! } });
+        setBump((x) => x + 1);
       }
-      setVoMsg(`✓ ${done} narration segment${done === 1 ? "" : "s"} in — play them below, then Assemble.`);
+      setVoMsg(`✓ ${done} narration segment${done === 1 ? "" : "s"} in the server vault — play them below, then Assemble.`);
       return true;
     } catch (e) {
       setVoMsg(`${e instanceof Error ? e.message : "narration failed"}${done ? ` (${done} segment${done === 1 ? "" : "s"} already banked — re-running skips them)` : ""}`);
@@ -971,72 +1012,62 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
     }
   };
 
-  /** Phase 2: clips + VO + captions → one draft MP4, saved as the reel's
-      draft (regenerating overwrites). Reads the vault fresh so it can run
-      right after generate/VO inside Produce-reel. Returns true on success.
-
-      The encode is SERVER-SIDE (/api/assemble, native ffmpeg): the banked
-      assets are uploaded to Blob (a few MB), one function call encodes,
-      and the draft comes back as a URL. Browser encode is permanently
-      dead — ffmpeg.wasm's grow-only heap froze the whole browser on a
-      unified-memory Mac no matter which thread ran it. */
+  /** Phase 2: the server assembles straight FROM the vault (clips + VO by
+      URL) and writes the draft back TO the vault — the browser uploads only
+      the tiny caption PNGs (and music, if attached) and then streams the
+      result. Returns true on success. */
   const assemble = async (): Promise<boolean> => {
     if (asmBusy) return false;
     setAsmBusy(true);
-    setAsmMsg("① Reading the banked clips from the vault…");
+    setAsmMsg("① Reading the server vault…");
     try {
-      // every prep await is BOUNDED and labels itself — the stuck step
-      // names itself in the error instead of spinning on a static message
-      const banked = await withTimeout(clipVaultForReel(reel.id), 15000, "reading the clip vault");
-      const vClips = banked.filter(isClip);
-      const vVos = banked.filter((c) => c.kind === "vo");
-      const missing = beats.map((_, i) => i).filter((i) => !vClips.some((c) => c.beatIndex === i));
+      const m = await loadManifest();
+      const missing = beats.map((_, i) => i).filter((i) => !m.clips[i]);
       if (missing.length) {
         setAsmMsg(`Beat${missing.length === 1 ? "" : "s"} ${missing.map((i) => i + 1).join(", ")} ${missing.length === 1 ? "has" : "have"} no clip yet — generate beats first.`);
         return false;
       }
-      // build the timeline: caption PNGs + per-beat durations timed to VO
       const tag = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-      const assets: Array<{ path: string; blob: Blob; type: string; slot: { beat: number; kind: "clip" | "vo" | "cap" } }> = [];
-      const timeline: Array<{ clip?: string; vo?: string; cap?: string; duration: number }> = [];
+      const timeline: Array<{ clip: string; vo?: string; cap?: string; duration: number }> = [];
       for (let i = 0; i < beats.length; i++) {
         setAsmMsg(`② Timing beat ${i + 1}/${beats.length} + rendering its caption…`);
-        const clip = vClips.find((c) => c.beatIndex === i)!;
-        const vo = vVos.find((v) => v.beatIndex === i) || null;
+        const vo = m.vos[i];
         const scriptD = secsOf(beats[i].duration);
         // beat runs as long as the voice needs (plus a breath), inside the
-        // clip; audioSecs can't hang (8s internal fallback → script timing)
-        const voD = vo ? await audioSecs(vo.blob) : 0;
+        // clip; audioSecs streams metadata only and can't hang (8s fallback)
+        const voD = vo ? await audioSecs(src(vo) as string) : 0;
         const D = Math.min(6, Math.max(scriptD, voD > 0 ? voD + 0.3 : 0) || scriptD);
-        timeline.push({ duration: D });
-        assets.push({ path: `reels/asm/${tag}/b${i}-clip.mp4`, blob: clip.blob, type: clip.mime || "video/mp4", slot: { beat: i, kind: "clip" } });
-        if (vo) assets.push({ path: `reels/asm/${tag}/b${i}-vo.mp3`, blob: vo.blob, type: vo.mime || "audio/mpeg", slot: { beat: i, kind: "vo" } });
+        const entry: { clip: string; vo?: string; cap?: string; duration: number } = { clip: m.clips[i], duration: D };
+        if (vo) entry.vo = vo;
         const capText = (beats[i].onScreenText || "").trim();
         if (capText && capText.toLowerCase() !== "none") {
-          // a wedged canvas.toBlob skips the caption rather than hanging the run
+          // caption cards are tiny canvas PNGs — the one thing the client
+          // still renders (it has the real fonts); a wedged toBlob skips
+          // the caption rather than hanging the run
           const cap = await withTimeout(captionPng(capText), 8000, `rendering beat ${i + 1}'s caption`).catch(() => null);
-          if (cap) assets.push({ path: `reels/asm/${tag}/b${i}-cap.png`, blob: cap, type: "image/png", slot: { beat: i, kind: "cap" } });
+          if (cap) {
+            const up = await withTimeout(
+              upload(`reels/asm/${tag}/b${i}-cap.png`, cap, { access: "public", handleUploadUrl: "/api/video-reference/blob-upload", contentType: "image/png" }),
+              60000,
+              `uploading beat ${i + 1}'s caption`
+            );
+            entry.cap = up.url;
+          }
         }
-      }
-      // upload the timeline (small files; sequential keeps memory flat)
-      for (let k = 0; k < assets.length; k++) {
-        const a = assets[k];
-        setAsmMsg(`③ Uploading timeline assets… ${k + 1}/${assets.length + (music ? 1 : 0)}`);
-        const up = await withTimeout(
-          upload(a.path, a.blob, { access: "public", handleUploadUrl: "/api/video-reference/blob-upload", contentType: a.type }),
-          120000,
-          `uploading asset ${k + 1}/${assets.length}`
-        );
-        timeline[a.slot.beat][a.slot.kind] = up.url;
+        timeline.push(entry);
       }
       let musicUrl: string | undefined;
       if (music) {
-        setAsmMsg(`③ Uploading timeline assets… ${assets.length + 1}/${assets.length + 1}`);
-        const up = await upload(`reels/asm/${tag}/music-${music.name.replace(/[^a-z0-9.\-_]/gi, "_").slice(0, 40)}`, music, {
-          access: "public",
-          handleUploadUrl: "/api/video-reference/blob-upload",
-          contentType: music.type || "audio/mpeg",
-        });
+        setAsmMsg("③ Uploading the music bed…");
+        const up = await withTimeout(
+          upload(`reels/asm/${tag}/music-${music.name.replace(/[^a-z0-9.\-_]/gi, "_").slice(0, 40)}`, music, {
+            access: "public",
+            handleUploadUrl: "/api/video-reference/blob-upload",
+            contentType: music.type || "audio/mpeg",
+          }),
+          120000,
+          "uploading the music bed"
+        );
         musicUrl = up.url;
       }
 
@@ -1044,41 +1075,15 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
       const r = await fetch("/api/assemble", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ beats: timeline, ...(musicUrl ? { music: musicUrl } : {}) }),
+        body: JSON.stringify({ beats: timeline, client: workspace, reelId: reel.id, ...(musicUrl ? { music: musicUrl } : {}) }),
         signal: AbortSignal.timeout(290000),
       });
       const j = (await r.json().catch(() => ({}))) as { url?: string; seconds?: number; error?: string };
       if (!r.ok || !j.url) throw new Error(j.error || `the encode failed (${r.status}) — try again`);
-
-      setAsmMsg("⑤ Downloading the draft…");
-      const dl = await fetch(j.url, { signal: AbortSignal.timeout(120000) });
-      if (!dl.ok) throw new Error("the draft rendered but couldn't be downloaded — try Assemble again");
-      const out = await dl.blob();
-      if (out.size < 50_000) throw new Error("the draft came out empty — try again");
-      // banked → burn the remote copy (asm blobs are a transfer hop, not storage)
-      fetch("/api/assemble", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phase: "cleanup", urls: [j.url] }),
-      }).catch(() => {});
-      const saved = await clipVaultAdd(
-        {
-          id: draftId(reel.id),
-          reelId: reel.id,
-          beatIndex: -1,
-          kind: "draft",
-          prompt: "",
-          label: `${reel.label.slice(0, 48)} · draft reel`,
-          mime: "video/mp4",
-          blob: out,
-          createdAt: Date.now(),
-        },
-        workspace
-      );
-      if (!saved) throw new Error("the draft rendered but couldn't be saved — free up browser storage and assemble again");
-      await refresh();
+      applyMan({ ...manRef.current, draft: j.url });
+      setBump((x) => x + 1);
       const total = timeline.reduce((s, p) => s + p.duration, 0);
-      setAsmMsg(`✓ Draft reel assembled (${Math.round(total)}s, narration + captions${music ? " + music" : ""}) — play or download below.`);
+      setAsmMsg(`✓ Draft reel assembled (${Math.round(total)}s, narration + captions${music ? " + music" : ""}) — streaming below.`);
       return true;
     } catch (e) {
       setAsmMsg(e instanceof Error ? e.message : "assembly failed — try again");
@@ -1109,19 +1114,20 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
   if (!beats.length) return null;
   const estCents = beats.length * UNIT_COST_CENTS.reel;
   const stateFor = (i: number): BeatClipState =>
-    videoClips.some((c) => c.beatIndex === i) ? "done" : beatState[i] || (pending?.items.some((it) => it.beat === i) ? "rendering" : "none");
+    man.clips[i] ? "done" : beatState[i] || (pending?.items.some((it) => it.beat === i) ? "rendering" : "none");
   const chip: Record<BeatClipState, { label: string; color: string }> = {
     none: { label: "not rendered", color: "#5E5C72" },
     rendering: { label: "rendering…", color: "#7DD3FC" },
     done: { label: "✓ clip saved", color: "#41D98A" },
     failed: { label: "failed", color: "#FF6B6B" },
   };
+  const clipCount = Object.keys(man.clips).length;
 
   return (
     <div style={{ marginTop: 12, background: "rgba(232,98,44,0.05)", border: "1px solid rgba(232,98,44,0.28)", borderRadius: 10, padding: "10px 12px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <span style={{ fontSize: 10, fontWeight: 800, color: "#E8622C", textTransform: "uppercase", letterSpacing: 0.5 }}>
-          Beat clips — Higgsfield renders of this script
+          Beat clips — server vault, streamed
         </span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, flexWrap: "wrap" }}>
           {pending && !anyBusy && (
@@ -1147,10 +1153,10 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
               opacity: anyBusy ? 0.6 : 1,
             }}
           >
-            {busy ? "Rendering…" : armed ? `Confirm — ${beats.length} clips ≈ ${dollars(estCents)}` : clips.length ? "↻ Regenerate beats" : "▶ Generate beats"}
+            {busy ? "Rendering…" : armed ? `Confirm — ${beats.length} clips ≈ ${dollars(estCents)}` : clipCount ? "↻ Regenerate beats" : "▶ Generate beats"}
           </button>
           {(() => {
-            const missingCount = beats.filter((_, i) => !videoClips.some((c) => c.beatIndex === i)).length;
+            const missingCount = beats.filter((_, i) => !man.clips[i]).length;
             const prodLabel = prodBusy
               ? "Producing…"
               : prodArm
@@ -1183,14 +1189,18 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
           })()}
         </div>
       </div>
+      {manErr && (
+        <div style={{ fontSize: 11, color: "#FF6B6B", marginTop: 6, lineHeight: 1.45 }}>
+          {manErr} — reload to retry; nothing is lost.
+        </div>
+      )}
+      {migMsg && <div style={{ fontSize: 11, color: "#FFC23D", marginTop: 6, lineHeight: 1.45 }}>{migMsg}</div>}
       {msg && <div style={{ fontSize: 11, color: "#7DD3FC", marginTop: 6, lineHeight: 1.45 }}>{msg}</div>}
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
         {beats.map((b, i) => {
           const st = stateFor(i);
-          const clip = videoClips.find((c) => c.beatIndex === i);
-          const src = clip ? urls[clip.id] : undefined;
-          const vo = vos.find((v) => v.beatIndex === i);
-          const voSrc = vo ? urls[vo.id] : undefined;
+          const clipUrl = man.clips[i];
+          const voUrl = man.vos[i];
           return (
             <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", borderLeft: "2px solid rgba(232,98,44,0.4)", paddingLeft: 10 }}>
               <div style={{ flex: 1, minWidth: 160 }}>
@@ -1199,24 +1209,20 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
                   {b.duration ? ` · ${b.duration}` : ""}{" "}
                   <span style={{ color: chip[st].color, fontWeight: 700 }}>· {chip[st].label}</span>
                   {(b.say || "").trim() && (
-                    <span style={{ color: vo ? "#41D98A" : "#5E5C72", fontWeight: 700 }}> · {vo ? "✓ voiced" : "no VO yet"}</span>
+                    <span style={{ color: voUrl ? "#41D98A" : "#5E5C72", fontWeight: 700 }}> · {voUrl ? "✓ voiced" : "no VO yet"}</span>
                   )}
                 </div>
                 <div style={{ fontSize: 11.5, color: "#A6A4B8", lineHeight: 1.45 }}>{b.shot}</div>
-                {vo && voSrc && <audio src={voSrc} controls preload="metadata" style={{ width: "100%", maxWidth: 300, height: 30, marginTop: 4 }} />}
-                {clip && src && (
-                  <a
-                    href={src}
-                    download={`${reel.label.replace(/[^a-z0-9-]/gi, "_").slice(0, 40)}-beat${i + 1}.mp4`}
-                    style={{ fontSize: 10.5, color: "#7DD3FC", fontWeight: 700, textDecoration: "none" }}
-                  >
-                    ↓ download clip
+                {voUrl && <audio src={src(voUrl)} controls preload="metadata" style={{ width: "100%", maxWidth: 300, height: 30, marginTop: 4 }} />}
+                {clipUrl && (
+                  <a href={src(clipUrl)} target="_blank" rel="noreferrer" style={{ fontSize: 10.5, color: "#7DD3FC", fontWeight: 700, textDecoration: "none" }}>
+                    ↗ open clip
                   </a>
                 )}
               </div>
-              {clip && src && (
+              {clipUrl && (
                 <video
-                  src={src}
+                  src={src(clipUrl)}
                   controls
                   playsInline
                   preload="metadata"
@@ -1239,12 +1245,12 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
                   { id: "edu" as const, label: "Brand narrator" },
                   { id: "me" as const, label: "My voice" },
                 ]
-              ).map((m) => (
+              ).map((mo) => (
                 <button
-                  key={m.id}
+                  key={mo.id}
                   onClick={() => {
-                    setVoMode(m.id);
-                    lsSet(voModeKey(workspace), m.id);
+                    setVoMode(mo.id);
+                    lsSet(voModeKey(workspace), mo.id);
                   }}
                   disabled={anyBusy}
                   style={{
@@ -1254,16 +1260,16 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
                     fontSize: 10.5,
                     fontWeight: 700,
                     cursor: anyBusy ? "default" : "pointer",
-                    background: voMode === m.id ? "rgba(201,168,255,0.2)" : "transparent",
-                    color: voMode === m.id ? "#C9A8FF" : "#8B89A0",
+                    background: voMode === mo.id ? "rgba(201,168,255,0.2)" : "transparent",
+                    color: voMode === mo.id ? "#C9A8FF" : "#8B89A0",
                   }}
                 >
-                  {m.label}
+                  {mo.label}
                 </button>
               ))}
             </div>
             <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-              {!!vos.length && (
+              {!!Object.keys(man.vos).length && (
                 <button
                   onClick={() => generateVo(true)}
                   disabled={anyBusy}
@@ -1287,7 +1293,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
                 ? "Uses your cloned voice (Settings › Spoken voice)."
                 : "No personal voice yet — record one in Settings › Spoken voice."
               : "Uses the brand narrator voice — pick/override it in Settings › Spoken voice."}{" "}
-            Finished segments are kept; re-running only voices missing beats.
+            Segments store server-side; re-running only voices missing beats.
           </div>
           {voMsg && <div style={{ fontSize: 11, color: "#C9A8FF", marginTop: 5, lineHeight: 1.45 }}>{voMsg}</div>}
         </div>
@@ -1322,7 +1328,7 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
           </label>
           <button
             onClick={() => assemble()}
-            disabled={anyBusy || videoClips.length < beats.length}
+            disabled={anyBusy || clipCount < beats.length}
             style={{
               marginLeft: "auto",
               background: "rgba(65,217,138,0.14)",
@@ -1332,22 +1338,22 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
               padding: "6px 14px",
               fontSize: 11.5,
               fontWeight: 700,
-              cursor: anyBusy || videoClips.length < beats.length ? "default" : "pointer",
-              opacity: anyBusy || videoClips.length < beats.length ? 0.6 : 1,
+              cursor: anyBusy || clipCount < beats.length ? "default" : "pointer",
+              opacity: anyBusy || clipCount < beats.length ? 0.6 : 1,
             }}
           >
-            {asmBusy ? "Assembling…" : draft ? "↻ Re-assemble draft" : "🎞 Assemble draft"}
+            {asmBusy ? "Assembling…" : man.draft ? "↻ Re-assemble draft" : "🎞 Assemble draft"}
           </button>
         </div>
         <div style={{ fontSize: 10.5, color: "#8B89A0", marginTop: 4, lineHeight: 1.45 }}>
-          Uploads the banked clips + narration once (a few MB), the server encodes natively (usually 15–60s, your
-          browser stays free the whole time), and the finished 9:16 MP4 lands back on this card.
+          The server assembles straight from the vault (native ffmpeg, 15–60s) — your browser only uploads the tiny
+          caption cards and streams the finished 9:16 MP4 back. Nothing heavy ever runs in this tab.
         </div>
         {asmMsg && <div style={{ fontSize: 11, color: "#41D98A", marginTop: 5, lineHeight: 1.45 }}>{asmMsg}</div>}
-        {draft && urls[draft.id] && !asmBusy && (
+        {man.draft && !asmBusy && (
           <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginTop: 10 }}>
             <video
-              src={urls[draft.id]}
+              src={src(man.draft)}
               controls
               playsInline
               preload="metadata"
@@ -1355,12 +1361,8 @@ function ClipStudio({ reel, workspace }: { reel: VaultReel; workspace: string })
             />
             <div style={{ fontSize: 11, color: "#A6A4B8", lineHeight: 1.5 }}>
               <div style={{ fontWeight: 800, color: "#41D98A", marginBottom: 4 }}>Draft reel — narration + captions</div>
-              <a
-                href={urls[draft.id]}
-                download={`${reel.label.replace(/[^a-z0-9-]/gi, "_").slice(0, 40)}-draft.mp4`}
-                style={{ color: "#7DD3FC", fontWeight: 700, textDecoration: "none", fontSize: 11.5 }}
-              >
-                ↓ download draft.mp4
+              <a href={src(man.draft)} target="_blank" rel="noreferrer" style={{ color: "#7DD3FC", fontWeight: 700, textDecoration: "none", fontSize: 11.5 }}>
+                ↗ open / save draft.mp4
               </a>
               <div style={{ marginTop: 4 }}>Good enough → post it. Want polish → drop it in CapCut; the cut, VO and captions are already done.</div>
             </div>
@@ -2131,8 +2133,16 @@ export default function ReelCoach() {
   };
 
   const remove = async (id: string) => {
+    const doomed = list.find((r) => r.id === id);
     await reelVaultDelete(id);
-    await clipVaultDeleteForReel(id); // clips belong to the reel — no orphans
+    await clipVaultDeleteForReel(id, workspace); // any legacy local media — no orphans
+    // server vault: burn the reel's media (+ its preserved reference)
+    const refUrl = typeof doomed?.analysis.referenceUrl === "string" ? doomed.analysis.referenceUrl : "";
+    fetch("/api/vault", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phase: "delete", client: workspace, reelId: id, ...(refUrl ? { extraUrls: [refUrl] } : {}) }),
+    }).catch(() => {});
     setList(await reelVaultAll());
     if (expanded === id) setExpanded(null);
   };

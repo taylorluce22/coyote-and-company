@@ -25,6 +25,9 @@ export interface ReelAnalysis {
   remakeQuality?: QualityFlag[];
   /** the topic the current remake was adapted for (set by Re-adapt) */
   adaptedTopic?: string;
+  /** the original reference video, preserved in the server media vault at
+      analysis time — streams in the Reference-vs-Draft compare */
+  referenceUrl?: string;
   /* legacy style-match DNA (pre-genome builds) — still rendered for old cards */
   styleDna?: {
     beats?: { t?: string; visual?: string; onScreenText?: string; textStyle?: string; transition?: string }[];
