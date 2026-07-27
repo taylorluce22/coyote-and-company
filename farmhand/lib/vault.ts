@@ -39,11 +39,17 @@ function openDb(client: string = activeClient): Promise<IDBDatabase | null> {
   return new Promise((resolve) => {
     try {
       if (typeof indexedDB === "undefined") return resolve(null);
-      const req = indexedDB.open(dbNameFor(client), 1);
+      const req = indexedDB.open(dbNameFor(client), 2);
       req.onupgradeneeded = () => {
-        if (!req.result.objectStoreNames.contains(STORE)) {
-          req.result.createObjectStore(STORE, { keyPath: "id" });
-        }
+        const db = req.result;
+        const store = db.objectStoreNames.contains(STORE)
+          ? req.transaction!.objectStore(STORE)
+          : db.createObjectStore(STORE, { keyPath: "id" });
+        // v2: index on createdAt so the UI can read the newest N images
+        // instead of materializing EVERY stored dataURL (an unbounded
+        // getAll of full-size base64 is a browser-killer once the vault
+        // has a few hundred images).
+        if (!store.indexNames.contains("createdAt")) store.createIndex("createdAt", "createdAt");
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => resolve(null);
@@ -71,6 +77,41 @@ export async function vaultAdd(img: VaultImage): Promise<boolean> {
     } catch {
       db.close();
       resolve(false);
+    }
+  });
+}
+
+/** The newest `limit` images only — what every UI surface should use.
+    vaultAll() materializes every stored dataURL and is reserved for
+    export/bundle paths. */
+export async function vaultRecent(limit = 24): Promise<VaultImage[]> {
+  const db = await openDb();
+  if (!db) return [];
+  return new Promise((resolve) => {
+    const out: VaultImage[] = [];
+    try {
+      const tx = db.transaction(STORE, "readonly");
+      const store = tx.objectStore(STORE);
+      const src = store.indexNames.contains("createdAt") ? store.index("createdAt") : store;
+      const req = src.openCursor(null, "prev"); // newest first
+      req.onsuccess = () => {
+        const cur = req.result;
+        if (!cur || out.length >= limit) {
+          db.close();
+          resolve(out);
+          return;
+        }
+        const v = cur.value as VaultImage;
+        if (v && v.dataURL) out.push(v);
+        cur.continue();
+      };
+      req.onerror = () => {
+        db.close();
+        resolve(out);
+      };
+    } catch {
+      db.close();
+      resolve(out);
     }
   });
 }

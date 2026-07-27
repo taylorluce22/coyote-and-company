@@ -26,7 +26,7 @@ import { compileDG } from "@/lib/dgCompile";
 import { DGSlideView } from "@/components/DGSlide";
 import { ARCHETYPES } from "@/lib/desertGrid";
 import { buildSlidePrompts, pushPackLog, readPackLog } from "@/lib/postVisuals";
-import { vaultAdd, vaultAll, vaultDelete, type VaultImage } from "@/lib/vault";
+import { vaultAdd, vaultRecent, vaultDelete, type VaultImage } from "@/lib/vault";
 import { record as meterRecord, imageAllowance } from "@/lib/meter";
 
 /* ---- content model (Farmhand): per-channel variants of the post ---- */
@@ -63,6 +63,9 @@ const STATUSES = [
 /* ---- pending Higgsfield batch, persisted the moment jobs start ----
    If a batch is interrupted (tab closed, connection dropped, function
    died), these records let ⟳ Recover pull the already-paid-for images. */
+/** how many thumbnails render at once — each is a full-size dataURL */
+const VAULT_PAGE = 12;
+
 type PendingItem = { url: string; prompt: string; role: string; index: number; title: string };
 // per-client so a batch started under one client can never be recovered into
 // another client's vault (multi-client isolation). "default" keeps the old key.
@@ -459,9 +462,18 @@ export default function Composer() {
 
   /* ---- image vault: every generated image is kept permanently ---- */
   const [vault, setVault] = useState<VaultImage[]>([]);
+  // MEMORY GUARD: the vault used to load every generated image as a
+  // full-size dataURL at mount and render them all at once — hundreds of
+  // MB of decoded bitmaps, which takes the whole browser down on a
+  // unified-memory Mac. Now: opened on demand, newest page only.
+  const [vaultOpen, setVaultOpen] = useState(false);
+  const [vaultPage, setVaultPage] = useState(VAULT_PAGE);
+  const loadVault = (n = vaultPage) => vaultRecent(n).then(setVault);
   useEffect(() => {
-    vaultAll().then(setVault);
-  }, []);
+    if (vaultOpen) loadVault();
+    else setVault([]); // closing frees the bitmaps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vaultOpen, vaultPage]);
 
   /* ---- whole-post AI visuals: one Higgsfield image per slide, shared
      seed + shared style language so the carousel reads as one piece.
@@ -546,7 +558,7 @@ export default function Composer() {
       }
       if (settled.size < items.length) await new Promise((r) => setTimeout(r, 4000));
     }
-    vaultAll().then(setVault);
+    if (vaultOpen) loadVault();
     return { ok, failed };
   }
 
@@ -1220,13 +1232,31 @@ export default function Composer() {
             )}
           </div>
 
-          {/* row 3 — AI vault: every generated image, kept forever */}
+          {/* row 3 — AI vault: every generated image, kept forever.
+              COLLAPSED BY DEFAULT + paged: rendering every stored dataURL
+              at once decoded hundreds of MB of bitmaps and took the whole
+              browser down. */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "12px 0 9px", borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 12 }}>
             <span className="fh-kicker" style={{ fontSize: 9.5, color: "#FF9A62" }}>✨ AI vault</span>
             <span style={{ fontSize: 10, color: "#6E6C82" }}>
-              {vault.length} saved · every generated image lands here permanently — reuse on any post
+              {vaultOpen ? `newest ${vault.length} shown · every generated image lands here permanently` : "every generated image lands here permanently — open to browse"}
             </span>
+            <button
+              onClick={() => setVaultOpen((o) => !o)}
+              style={{ marginLeft: "auto", background: "rgba(255,154,98,0.1)", border: "1px solid rgba(255,154,98,0.35)", color: "#FF9A62", borderRadius: 8, padding: "4px 11px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}
+            >
+              {vaultOpen ? "Close" : "Open vault"}
+            </button>
+            {vaultOpen && vault.length >= vaultPage && (
+              <button
+                onClick={() => setVaultPage((n) => n + VAULT_PAGE)}
+                style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.12)", color: "#8B89A0", borderRadius: 8, padding: "4px 10px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}
+              >
+                Show more
+              </button>
+            )}
           </div>
+          {vaultOpen && (
           <div className="fh-hscroll" style={{ display: "flex", gap: 8, paddingBottom: 4 }}>
             {vault.map((v) => {
               const on = isActive({ type: "image", img: v.dataURL });
@@ -1240,7 +1270,7 @@ export default function Composer() {
                   <button
                     title="Delete from vault"
                     onClick={() => {
-                      vaultDelete(v.id).then(() => vaultAll().then(setVault));
+                      vaultDelete(v.id).then(() => loadVault());
                     }}
                     style={{ position: "absolute", top: -4, right: -4, width: 16, height: 16, borderRadius: "50%", border: "none", background: "rgba(255,93,143,0.9)", color: "#fff", fontSize: 8.5, cursor: "pointer", lineHeight: 1 }}
                   >
@@ -1255,6 +1285,7 @@ export default function Composer() {
               </span>
             )}
           </div>
+          )}
         </div>}
 
         {/* caption & hashtags */}

@@ -785,6 +785,40 @@ export default function Settings() {
         </div>
       </Card>
 
+      <Card title="Performance">
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "6px 0" }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13.5, color: "#D8D6E6" }}>3D particle background</div>
+            <div style={{ fontSize: 10.5, color: "#5E5C72", lineHeight: 1.45, marginTop: 2 }}>
+              Off by default — the WebGL loop ran on every screen and could take the whole browser down on
+              low-memory machines. The aurora glow stays either way. Takes effect on next reload.
+            </div>
+          </div>
+          <Switch
+            on={(() => {
+              try {
+                return localStorage.getItem("fh-fx-3d") === "1";
+              } catch {
+                return false;
+              }
+            })()}
+            color="#C9A8FF"
+            label="3D particle background"
+            onToggle={() => {
+              try {
+                const k = "fh-fx-3d";
+                localStorage.getItem(k) === "1" ? localStorage.removeItem(k) : localStorage.setItem(k, "1");
+              } catch {}
+              window.location.reload();
+            }}
+          />
+        </div>
+        <div style={{ fontSize: 10.5, color: "#5E5C72", lineHeight: 1.45, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 8 }}>
+          Emergency: if the app ever won&apos;t load, open it with <b style={{ color: "#A6A4B8" }}>?safe=1</b> on the URL —
+          that forces every visual extra off until you visit with ?safe=0.
+        </div>
+      </Card>
+
       <Card title="Image preferences">
         {SET_IMG_PREFS.map((p) => {
           const key = "img_" + p.key;

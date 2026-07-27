@@ -9,6 +9,29 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-27 · BOOT-CRASH FIX — WebGL off by default, image vault bounded
+Owner report: loading Farmhand crashed ALL of Chrome again. Two
+boot/near-boot browser-killers found and removed:
+- **BackgroundFx ran a three.js WebGL render loop on EVERY screen from
+  boot.** WebGL lives in Chrome's shared GPU process — starve or wedge it
+  and every tab + the browser UI goes down (exactly the reported
+  signature, and it fires BEFORE any card is opened). The particle field
+  is now OPT-IN (Settings → Performance → "3D particle background",
+  off by default), three.js is dynamically imported so it's not even in
+  the boot bundle, contexts are low-power with a webglcontextlost
+  handler, and the render loop pauses when the tab is hidden. The CSS
+  aurora look stays. **?safe=1** on any URL is the standing panic switch
+  (sticky until ?safe=0).
+- **Composer's AI image vault loaded EVERY generated image as a
+  full-size dataURL at mount and rendered them all** — unbounded decoded
+  bitmaps (hundreds of MB once the vault grows), the memory-pressure
+  twin of the wasm crash. Now: collapsed by default, opens on demand,
+  newest-12 page with Show More (IndexedDB v2 createdAt index cursor —
+  never a full getAll on the UI path), and closing frees the bitmaps.
+Rule reaffirmed for every future screen: no always-on GPU loops, no
+unbounded media materialization — heavy is server-side or on-demand.
+
+
 ## 2026-07-27 · MEDIA ACTUALLY PLAYS — same-origin range streamer
 Posters fixed the stall but exposed a separate bug (Cowork, prod c31142b):
 every vault video parked at readyState 0 and never rendered a frame. Root
