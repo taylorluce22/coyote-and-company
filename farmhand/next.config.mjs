@@ -4,11 +4,18 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // /api/assemble shells out to the ffmpeg-static binary — file tracing
-  // can't see through child_process.spawn, so include it explicitly
-  // (~80MB, inside the 250MB unzipped function limit).
+  // /api/assemble shells out to the ffmpeg-static binary. Two pieces make
+  // that survive deployment:
+  // - serverExternalPackages stops webpack from BUNDLING ffmpeg-static —
+  //   bundling rewrote its internal __dirname so the exported path pointed
+  //   into .next/server/app/api/assemble/ (spawn ENOENT in production);
+  //   external = resolved from real node_modules at runtime
+  // - outputFileTracingIncludes ships the package (binary included, ~80MB,
+  //   inside the 250MB unzipped limit) with the function, since tracing
+  //   can't see through child_process.spawn
+  serverExternalPackages: ["ffmpeg-static"],
   outputFileTracingIncludes: {
-    "/api/assemble": ["./node_modules/ffmpeg-static/ffmpeg"],
+    "/api/assemble": ["./node_modules/ffmpeg-static/**"],
   },
   env: {
     // Vercel injects these at build time — surfaced in the UI as a build

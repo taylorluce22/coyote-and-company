@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { del, put } from "@vercel/blob";
 import { spawn } from "child_process";
-import { mkdtemp, readFile, rm, writeFile } from "fs/promises";
+import { access, chmod, copyFile, mkdtemp, readFile, rename, rm, writeFile } from "fs/promises";
+import { constants as fsConstants } from "fs";
+import { randomUUID } from "crypto";
 import { tmpdir } from "os";
 import path from "path";
 import ffmpegPath from "ffmpeg-static";
@@ -58,10 +60,88 @@ async function download(url: string, dest: string): Promise<void> {
   await writeFile(dest, Buffer.from(await r.arrayBuffer()));
 }
 
-function runFfmpeg(args: string[], cwd: string): Promise<{ code: number; stderrTail: string }> {
+/**
+ * Resolve a runnable ffmpeg. The package export is candidate #1, but a
+ * bundler that inlined the module once rewrote its __dirname to the
+ * compiled route dir (spawn ENOENT in prod) — so try the real filesystem
+ * layouts too, and if a binary exists but lost its +x bit (zip/trace can
+ * strip it), copy it to /tmp and chmod 755. Resolution is cached and the
+ * chosen path is exposed via GET so a mismatch is diagnosable in one curl.
+ */
+let resolvedFfmpeg: string | null = null;
+/** In-flight staging, shared across concurrent requests — under Fluid
+    Compute N cold requests would otherwise each copy the 80MB binary into
+    the ~512MB /tmp at once. One copy, everyone awaits it. */
+let stagingInFlight: Promise<string> | null = null;
+
+/** Stage a readable-but-not-executable binary into /tmp. Unique staging
+    name + atomic rename: overwriting in place could truncate a binary
+    another request is already executing, and a partial copy must never be
+    visible at the published path. Failed stagings clean up after
+    themselves — an orphaned 80MB partial would ratchet /tmp toward
+    exhaustion on every retry. */
+async function stageBinary(src: string): Promise<string> {
+  const tmp = path.join(tmpdir(), "ffmpeg-bin");
+  try {
+    await access(tmp, fsConstants.X_OK); // already staged by an earlier request
+    return tmp;
+  } catch {}
+  const staging = `${tmp}.${randomUUID()}`;
+  try {
+    await copyFile(src, staging);
+    await chmod(staging, 0o755);
+    await rename(staging, tmp);
+  } catch (e) {
+    rm(staging, { force: true }).catch(() => {});
+    throw new Error(`ffmpeg exists at ${src} but couldn't be staged runnable in /tmp — ${e instanceof Error ? e.message : "copy failed"}`);
+  }
+  await access(tmp, fsConstants.X_OK);
+  return tmp;
+}
+
+async function ffmpegBin(): Promise<string> {
+  if (resolvedFfmpeg) return resolvedFfmpeg;
+  const candidates = [
+    ...(typeof ffmpegPath === "string" && ffmpegPath ? [ffmpegPath] : []),
+    path.join(process.cwd(), "node_modules", "ffmpeg-static", "ffmpeg"),
+    "/var/task/farmhand/node_modules/ffmpeg-static/ffmpeg",
+    "/var/task/node_modules/ffmpeg-static/ffmpeg",
+  ];
+  // pass 1: anything directly executable wins — zero copying
+  for (const c of candidates) {
+    try {
+      await access(c, fsConstants.X_OK);
+      resolvedFfmpeg = c;
+      return c;
+    } catch {}
+  }
+  // pass 2: the zip stripped +x — stage ONE shared /tmp copy from the
+  // first readable candidate
+  let stageErr: unknown = null;
+  for (const c of candidates) {
+    try {
+      await access(c, fsConstants.R_OK);
+    } catch {
+      continue;
+    }
+    try {
+      const shared = (stagingInFlight ??= stageBinary(c));
+      const tmp = await shared;
+      if (stagingInFlight === shared) stagingInFlight = null;
+      resolvedFfmpeg = tmp;
+      return tmp;
+    } catch (e) {
+      stagingInFlight = null;
+      stageErr = e;
+    }
+  }
+  throw stageErr instanceof Error
+    ? stageErr
+    : new Error(`ffmpeg binary not found in the deployment — tried: ${candidates.join(" · ")}`);
+}
+
+function runFfmpeg(bin: string, args: string[], cwd: string): Promise<{ code: number; stderrTail: string }> {
   return new Promise((resolve, reject) => {
-    const bin = ffmpegPath as unknown as string | null;
-    if (!bin) return reject(new Error("ffmpeg binary missing from the deployment"));
     const proc = spawn(bin, args, { cwd });
     let tail = "";
     proc.stderr.on("data", (d: Buffer) => {
@@ -75,6 +155,9 @@ function runFfmpeg(args: string[], cwd: string): Promise<{ code: number; stderrT
     }, 240000);
     proc.on("error", (e) => {
       clearTimeout(killer);
+      // a resolvable-but-unrunnable path must not poison the warm instance —
+      // drop the cache so the next request re-resolves past it
+      resolvedFfmpeg = null;
       reject(e);
     });
     proc.on("close", (code) => {
@@ -85,7 +168,14 @@ function runFfmpeg(args: string[], cwd: string): Promise<{ code: number; stderrT
 }
 
 export async function GET() {
-  return NextResponse.json({ configured: !!process.env.BLOB_READ_WRITE_TOKEN && !!ffmpegPath });
+  // the probe RESOLVES the binary for real — "configured: true" here means
+  // a spawn will actually find something executable
+  try {
+    const bin = await ffmpegBin();
+    return NextResponse.json({ configured: !!process.env.BLOB_READ_WRITE_TOKEN, ffmpeg: bin });
+  } catch (e) {
+    return NextResponse.json({ configured: false, error: e instanceof Error ? e.message : "ffmpeg missing" });
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -211,7 +301,8 @@ export async function POST(req: NextRequest) {
       "out.mp4"
     );
 
-    const { code, stderrTail } = await runFfmpeg(args, dir);
+    const bin = await ffmpegBin();
+    const { code, stderrTail } = await runFfmpeg(bin, args, dir);
     if (code !== 0) {
       return NextResponse.json({ error: `encode failed (ffmpeg exit ${code}) — ${stderrTail.slice(-400)}` }, { status: 500 });
     }
