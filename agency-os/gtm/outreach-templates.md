@@ -73,6 +73,24 @@ Subject: `Last note from me`
 
 ---
 
+## C. Introduction email (M6 assembles as Gmail draft; founder sends — this is the product)
+
+Subject: `Intro: {buyer_org} ↔ {facility_name}`
+
+> {supplier_first} — meet {buyer_first}, {buyer_title} at {buyer_org} ({buyer_city}, {buyer_state}). Their {license_type} is verified active (evidence attached for your file), buyer type confirmed for {product_category} office-use purchasing, and they're interested in discussing sourcing.
+>
+> {buyer_first} — meet {supplier_first} at {facility_name}, an FDA-registered 503B outsourcing facility licensed to ship to {buyer_state}. We've verified their state licensure, registration status, and insurance as part of our diligence.
+>
+> I'll let you two take it from here — {supplier_first} will follow up with details and pricing directly. I'm around if either of you needs anything.
+
+*(Attachments assembled by M6: buyer license verification evidence; supplier verification summary. Nothing about products beyond category. Pricing never appears — that's the supplier's first email.)*
+
+## D. Reorder nudge (M5 assembles as Gmail draft; 1:1 to an active relationship)
+
+Subject: `{practice_name} — resupply timing`
+
+> Hi {first_name} — based on your last order timing, you're likely coming up on a resupply window for {product_category}. Want me to have {facility_name} reach out with current availability? One word answer is fine.
+
 ## Claims-linter notes for these templates (why the phrasing is the way it is)
 
 - "FDA-registered 503B outsourcing facility" — TRUE and permitted (registration is a fact); never shorten to "FDA-approved facility" or attach "FDA-approved" to any product.
