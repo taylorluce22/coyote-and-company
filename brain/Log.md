@@ -9,6 +9,34 @@ What was done · what was spent · what needs a human
 
 ---
 
+## 2026-07-27 · NEWS DESK — drop an article in, get sourced content out
+Owner ask: manually drop news articles in so content can reference the
+context, images, highlights and source. The brand system already required
+this (DESERT GRID source line on every numbered slide; Visual Style calls
+a credited news screengrab "credibility gold"; reel recipe R5 reacts to a
+primary source) — there was just nowhere to put the article.
+- **Content › News Desk** (new tab): paste a link → the SERVER reads the
+  page (headline, outlet, author, date, lede, lead image, readable body)
+  and suggests HIGHLIGHTS — every sentence carrying a figure, money/%/kWh
+  ranked first. Mark the lines worth citing, add an angle note, save.
+  403/paywall → "paste text instead" manual path.
+- **Storage is server-side** (`vault/<client>/news/<ms>-<id>.json`) and
+  the lead image is ARCHIVED into the vault so link rot can't break a
+  scheduled post. Browser holds JSON + lazy thumbs only.
+- **Wiring:** "🎬 Write a reel from this" sends the highlights as the
+  ONLY citable facts to /api/reel-script in R5 news-react style and banks
+  the result as a Reel Coach card (→ ⚡ Produce reel); "Copy brief" emits
+  a writer-ready block (summary, cited lines, angle, full context,
+  attribution rule, slide source line); "Copy source line" emits the
+  DESERT GRID furniture. Outlet + link are required fields — the brand
+  vault's attribution rule (credit on-slide, link in caption, never strip
+  photo credits) is stated in the UI and carried into every export.
+- New `lib/publicFetch.ts`: guarded fetch of user-supplied URLs
+  (resolved-IP SSRF check, port pin, per-hop redirect validation,
+  streamed byte cap). /api/vault keeps its verified copy for now —
+  consolidate when that route is next touched.
+
+
 ## 2026-07-27 · BOOT-CRASH FIX — WebGL off by default, image vault bounded
 Owner report: loading Farmhand crashed ALL of Chrome again. Two
 boot/near-boot browser-killers found and removed:

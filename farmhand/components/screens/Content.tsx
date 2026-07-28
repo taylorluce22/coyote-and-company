@@ -7,6 +7,7 @@ import Composer from "./Composer";
 import Planner from "./Planner";
 import ContentEngine from "./ContentEngine";
 import ReelCoach from "./ReelCoach";
+import NewsDesk from "@/components/screens/NewsDesk";
 import { ideasFor } from "@/lib/strategy";
 import Performance from "@/components/Performance";
 import type { Idea, StrategyProfile } from "@/lib/strategy";
@@ -216,12 +217,13 @@ export default function Content() {
           { id: "week" as const, label: "Week" },
           { id: "queue" as const, label: state.demoMode ? "Queue" : "Performance" },
           { id: "reels" as const, label: "Reel Coach" },
+          { id: "news" as const, label: "News Desk" },
         ]}
         active={tab}
         color="#FF5D8F"
         onPick={(id) => set({ contentTab: id })}
       />
-      {tab === "ideas" ? <Ideas /> : tab === "studio" ? <Composer /> : tab === "week" ? <Planner /> : tab === "reels" ? <ReelCoach /> : state.demoMode ? <ContentEngine /> : <Performance />}
+      {tab === "ideas" ? <Ideas /> : tab === "studio" ? <Composer /> : tab === "week" ? <Planner /> : tab === "reels" ? <ReelCoach /> : tab === "news" ? <NewsDesk /> : state.demoMode ? <ContentEngine /> : <Performance />}
     </div>
   );
 }
