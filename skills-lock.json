@@ -1,11 +1,551 @@
 {
   "version": 1,
   "skills": {
+    "academy-course-trailer": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/academy-course-trailer/SKILL.md",
+      "computedHash": "fd598c75e528e6f1fff09a9f8108a2f8110931ed4bfb488a85834a54ceef74c3"
+    },
+    "accessibility-pass": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/accessibility-pass/SKILL.md",
+      "computedHash": "698d840e29daa1eb01cf33dd4dd2a30475d7dfe1b4bcd40fe097fae48a7ebf49"
+    },
+    "add-ai-captions": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/add-ai-captions/SKILL.md",
+      "computedHash": "1ff7155f06a21bbac03af580d52067e59b27e8836175eda1f4b6952974f747b7"
+    },
+    "add-animated-captions": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/add-animated-captions/SKILL.md",
+      "computedHash": "f2ba6a6e4c62ba7832c2eca07e24790b57946bc7d94ed7469ada3bbd8a8f49b4"
+    },
+    "add-callouts-and-arrows": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/add-callouts-and-arrows/SKILL.md",
+      "computedHash": "d2d1e61e303e9db9a09a16f2b2e99a117cee0d16bcb8a806ada69b4b7d3251bf"
+    },
+    "add-cta-end-card": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/add-cta-end-card/SKILL.md",
+      "computedHash": "f301148fbec882f3a91d78af2b3a4be409f02516d2f88e04df8b0dd16e99c6af"
+    },
+    "add-key-point-overlays": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/add-key-point-overlays/SKILL.md",
+      "computedHash": "725418b9e6b6714fab448843f38cd840151b7adc218505f3391a277e1db68f17"
+    },
+    "add-logo-watermark": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/add-logo-watermark/SKILL.md",
+      "computedHash": "77316e26de4c77e3bc0a7fef8ffc989347eded2025368d83f6d26563c1b39a04"
+    },
+    "add-lower-thirds": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/add-lower-thirds/SKILL.md",
+      "computedHash": "a70f019fcef0b4941e78a8373aa5cb4fe80143ef16d6ca9b34a1fddc0929a071"
+    },
+    "add-opening-hook": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/add-opening-hook/SKILL.md",
+      "computedHash": "dfb2bfad26c995d381fb3b47a6a01d4ee86412cff010b535037625b99fa85e99"
+    },
+    "add-zoom-emphasis": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/add-zoom-emphasis/SKILL.md",
+      "computedHash": "235607dad5709fdf433dc43ff74abcd681f81eb94a801a2aae3f5e5fd137d28b"
+    },
+    "animated-explainer-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/animated-explainer-video/SKILL.md",
+      "computedHash": "423f1c17d73a58eb221e27574e4b27c07e2b5ba2afb6d8a1dc3b01d015ef7216"
+    },
+    "annotate-article-screenshots": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/annotate-article-screenshots/SKILL.md",
+      "computedHash": "eba4ef1a1d7cbcc97a519957006d524660c6fd8ca23f44bae39a3e06284f62d9"
+    },
+    "apply-brand-colors": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/apply-brand-colors/SKILL.md",
+      "computedHash": "d6985339d0af9c58d64a853ec0ae285ac29a7f12e0b5befef013e3805c6ac60f"
+    },
+    "article-to-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/article-to-video/SKILL.md",
+      "computedHash": "81f578da592d23ef613e36f3b7d05ab2effa2942f739d462c1032aae92b7c70f"
+    },
+    "batch-multi-language-export": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/batch-multi-language-export/SKILL.md",
+      "computedHash": "3620766912346af68af0c6592e79a8fc9e07f8089d5c2e8f3164cdc9ee87ca80"
+    },
+    "blur-sensitive-info": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/blur-sensitive-info/SKILL.md",
+      "computedHash": "b1c444d66b56fd665f02ad8417a7fb827e3838132a715aff390446e8a6516a66"
+    },
+    "branded-intro-outro": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/branded-intro-outro/SKILL.md",
+      "computedHash": "6dca0e82afa945d986b61db10f8adcaaca5739b378a88bcb273e839fc07c6fe8"
+    },
+    "brief-to-launch-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/brief-to-launch-video/SKILL.md",
+      "computedHash": "7f72447cccdc9c1f0a5dc65420509217b96cee2bd768e4ad98b4c6776d56b74b"
+    },
+    "chaptered-training-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/chaptered-training-video/SKILL.md",
+      "computedHash": "79950e8f95d58e7f1880a494e84f87014ec214f1191ab6f166481ac18ee3a197"
+    },
+    "chapterize-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/chapterize-video/SKILL.md",
+      "computedHash": "f5e4fcdb364be6aaaab98d7d16f12a4158bc2dbe971872aa3e960a5fac8e0378"
+    },
+    "compliance-training-localization": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/compliance-training-localization/SKILL.md",
+      "computedHash": "0edcb4111abd03cb8e67389a1a6f4a202e2ca9776b5c3d978825e802e6a5e019"
+    },
+    "course-module-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/course-module-video/SKILL.md",
+      "computedHash": "3a7ccfec26d8af7beb29b77cad67f4ff79a0d95dcb6aad42e0bed16af1c792ff"
+    },
+    "crm-training-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/crm-training-video/SKILL.md",
+      "computedHash": "ee35064216de5f2d6460a7c7872b7ac3a5647e088415d90da347964d92a67306"
+    },
+    "demo-by-vertical": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/demo-by-vertical/SKILL.md",
+      "computedHash": "da9e5eeba9ff45285d4ee88f0e1b50b9a2aeeba219441bd2d796cf2a79ff2764"
+    },
+    "demo-cutdown": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/demo-cutdown/SKILL.md",
+      "computedHash": "d2036ab1e8c3303c8e4b73cb9c977034fdb3146d9eb706f028f86df5b5cede9d"
+    },
+    "demo-for-every-persona": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/demo-for-every-persona/SKILL.md",
+      "computedHash": "e65996097765dbd154e655326dcc91917e10940c65ac7c4011940fc7adc28e1b"
+    },
+    "demo-trimmed-for-one-buyer": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/demo-trimmed-for-one-buyer/SKILL.md",
+      "computedHash": "3f7855ed94de23963314171b1d8eef62f42409f9e6f3adfff165aa8ca0e7812a"
+    },
+    "explain-it-simply": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/explain-it-simply/SKILL.md",
+      "computedHash": "4eb74d8f1ef1e37470daa3750b24397190610e87784e8412bffbd49456615ecb"
+    },
+    "extract-gif-moment": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/extract-gif-moment/SKILL.md",
+      "computedHash": "186dcdde8a58c916da0b0f8bdd51450201a6ef79e54a361e87c4a9aaa09cc77c"
+    },
+    "feature-release-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/feature-release-video/SKILL.md",
+      "computedHash": "6f57f683fef4682c27f409c5b11b9b753d969c0542fba40d7648b73360a040c9"
+    },
+    "fix-pronunciations": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/fix-pronunciations/SKILL.md",
+      "computedHash": "97716e2f99d633b752eb4c401a293816f58e60aefea06f8389298751b009e561"
+    },
+    "forum-answer-to-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/forum-answer-to-video/SKILL.md",
+      "computedHash": "4e085c6c1e749c7dfb628e77142f43ca5ca838599024fbd59d09c7e310394ebc"
+    },
+    "highlight-cursor-actions": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/highlight-cursor-actions/SKILL.md",
+      "computedHash": "17e00459d507ed62b467eeafffcf44b50f7c40d2a9451217c0b7aeec6f20fa29"
+    },
+    "in-app-guidance-clip": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/in-app-guidance-clip/SKILL.md",
+      "computedHash": "4690ca3b35b0f78f7cc4ab129ddcae33348052cfd971ac2362bcff69838676cf"
+    },
+    "kinetic-text-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/kinetic-text-video/SKILL.md",
+      "computedHash": "1230db4715a7e68afb73d7de674aeca2a457b3eb8194c6a1e9af021d352caa27"
+    },
+    "lecture-to-notes": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/lecture-to-notes/SKILL.md",
+      "computedHash": "fd710ea8b7c8514744e1c28d1e8e7c06abf624421a12f7b40673d358fa71e712"
+    },
+    "live-session-to-on-demand-modules": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/live-session-to-on-demand-modules/SKILL.md",
+      "computedHash": "d163a8a24e1b8f131fa0b025e5ba021e9b2aa9c48d6278cd1c59af909afd9cc4"
+    },
+    "localize-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/localize-video/SKILL.md",
+      "computedHash": "5cd5b14bbe0a11bf3744a1ae28a2389057e3c40a46a8dc55f43631f2daf83c20"
+    },
+    "make-vertical-cut": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/make-vertical-cut/SKILL.md",
+      "computedHash": "a5c97fba4847b38f9df5fdbd7882e72bce77d0eb583ab560d6e6ff06b92e6327"
+    },
+    "multilingual-captions": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/multilingual-captions/SKILL.md",
+      "computedHash": "c300bd69534df4dabbfd090d0416e915043eb64e4611d988c8d4e583408bd689"
+    },
+    "one-recording-full-launch-kit": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/one-recording-full-launch-kit/SKILL.md",
+      "computedHash": "55fb63e124225a63879fd080192cd58f15d6ea8b84d4e87577c9117aaf777114"
+    },
+    "one-rollout-every-department": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/one-rollout-every-department/SKILL.md",
+      "computedHash": "2849145c7232b1db1639a941a352624149db3a17d02d33789da5e762f862af12"
+    },
+    "playbook-to-training-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/playbook-to-training-video/SKILL.md",
+      "computedHash": "8728afcbfdd3637abf60cf3a0e4e3ab5357940a058484f417672a78fb534c31c"
+    },
+    "polish-screen-demo": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/polish-screen-demo/SKILL.md",
+      "computedHash": "8ba03dad1f04185d82bc66782076cb07fe44e63695b5b2ff8015dae7404717a6"
+    },
+    "precision-voiceover-sync": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/precision-voiceover-sync/SKILL.md",
+      "computedHash": "9e81bccaf823fcd1c5ea9826d2a7aa01172b6ea7d14e5f32d6940595e83370a7"
+    },
+    "raw-recording-to-branded-demo": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/raw-recording-to-branded-demo/SKILL.md",
+      "computedHash": "338e56291028705b035a43316afb6a948bf89264222a3576d67e3913b9444d7e"
+    },
+    "rebrand-video-library": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/rebrand-video-library/SKILL.md",
+      "computedHash": "5eef602ef5b5866420790aafcb749b4911b2f1ec6c7d60f5fe7b4108009586cc"
+    },
+    "recording-to-email-drip-series": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/recording-to-email-drip-series/SKILL.md",
+      "computedHash": "c42d3dfcc3de3acc5994a6e775d7982cff471d656c140732c267e21243de3b39"
+    },
+    "recording-to-help-article": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/recording-to-help-article/SKILL.md",
+      "computedHash": "56c8956ca2e4109f86f07830d400d94f069f856323247ca06ab960cbc310b912"
+    },
+    "recording-to-rfp-response": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/recording-to-rfp-response/SKILL.md",
+      "computedHash": "1515c6dffe1ce6bce591d48f8de718e25aa3bc9689922adb2a665cb2ab15dd23"
+    },
+    "recording-to-video-article": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/recording-to-video-article/SKILL.md",
+      "computedHash": "4fa72e0f2f0dda2a0b466216fb356957b9ac6a3913b054a1e53ba9b536343c20"
+    },
+    "recordings-to-training-module": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/recordings-to-training-module/SKILL.md",
+      "computedHash": "980274924b90f419f8d6e762971a78683c3ca50816d8333e1729d2d16b0e0c5d"
+    },
+    "refresh-article-screenshots": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/refresh-article-screenshots/SKILL.md",
+      "computedHash": "9b93b50d386bbabc488e54dee07bdb65b8a7e76f0f86f16394e83cb3f492f619"
+    },
+    "refresh-outdated-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/refresh-outdated-video/SKILL.md",
+      "computedHash": "c7bb94a586ebb0c544e06c83976d7cdb2ebdfaee18f4b6b92e20d130a78812a7"
+    },
+    "remove-filler-words": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/remove-filler-words/SKILL.md",
+      "computedHash": "0020acc42a29631c0412b7a814c974c2715b714064264c7403ef32b27e292b61"
+    },
+    "reorder-scenes": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/reorder-scenes/SKILL.md",
+      "computedHash": "2a6115b46bb075a60c8e8e9df46279e91d942a5ccc4f48596d7591bed9944ee8"
+    },
+    "repurpose-for-channels": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/repurpose-for-channels/SKILL.md",
+      "computedHash": "cf8f5e9e10c4810ceeb67fe6696d5e00f2b427419eab0bf858d5427c892d736b"
+    },
+    "resize-for-social": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/resize-for-social/SKILL.md",
+      "computedHash": "254d75606d09c0d8ba29ea8d6c213cff5841bd3db7eac961b0b597b5cb6fc08e"
+    },
+    "restructure-help-article": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/restructure-help-article/SKILL.md",
+      "computedHash": "89a380ffcb54135c9587eb5a1a22634ff16b25f9cecf4c193bc5ef4f9efbf0cf"
+    },
+    "revoice-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/revoice-video/SKILL.md",
+      "computedHash": "ecb2e1f9d9c40f949aa04e39bb010761a2f79b28d7b5969e932c4560f39f495f"
+    },
+    "sales-pitch-training": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/sales-pitch-training/SKILL.md",
+      "computedHash": "a2a5555b8827cadbeb1d840b02a863797a818a622f3e762fb2c2f0d9467816cc"
+    },
+    "science-style-animation": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/science-style-animation/SKILL.md",
+      "computedHash": "5996cb2bf569ac7f5c909479abbcc965e741ff04d7cb3787f80f7ad45620b4ca"
+    },
+    "screenshots-to-walkthrough": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/screenshots-to-walkthrough/SKILL.md",
+      "computedHash": "9380be917cc9e135cb34c71178c2c83ebbaf7f5a118a6b78876602a873eceb9c"
+    },
+    "script-to-voiceover": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/script-to-voiceover/SKILL.md",
+      "computedHash": "f606c351892bfc98f932b208e11bff3fea62d896e13ace7a40c774502c003577"
+    },
+    "self-navigable-sales-demo": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/self-navigable-sales-demo/SKILL.md",
+      "computedHash": "6fe9c2553ff924102fb541e7dcfc369df44200f2e5fa8fb3f6dcadefd979223d"
+    },
+    "shorten-to-length": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/shorten-to-length/SKILL.md",
+      "computedHash": "a2d6c21c42c57dc575a28bfd2e23763fb30486a875a6080374df3a18e7408edd"
+    },
+    "slides-to-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/slides-to-video/SKILL.md",
+      "computedHash": "33c74418ade1ae0b9e361e2dae36efd993e9ff7e003dd1b840e443aa9ef0e1db"
+    },
+    "smooth-transitions-pass": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/smooth-transitions-pass/SKILL.md",
+      "computedHash": "46a7e32cdf76053b11791bc3a8c4d83bebd4e0dde0f4ac7793a7bbcd79278f29"
+    },
+    "soft-skills-scenario-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/soft-skills-scenario-video/SKILL.md",
+      "computedHash": "8cf5b3987814739eece2bb5627be07879a1b077b29d262463985f2e3d25a12e3"
+    },
+    "software-training-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/software-training-video/SKILL.md",
+      "computedHash": "1b893c0730d4c5e8da6c2baeb91bd80b4adad4b2dcc5745b4aa64306a8ce306e"
+    },
+    "sop-deck-to-training-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/sop-deck-to-training-video/SKILL.md",
+      "computedHash": "d4006b9f6c680a87eebbc6f62bcfdafa8c9ced9dab2689c66f8a547783603290"
+    },
+    "sop-video-and-doc": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/sop-video-and-doc/SKILL.md",
+      "computedHash": "c13519cdcf6b670fe0365633ded843f306cad9966b41f66f1314307587789528"
+    },
+    "speed-up-repetitive-parts": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/speed-up-repetitive-parts/SKILL.md",
+      "computedHash": "1afb5401d871c10162ab2447982cd791b62227b572fb69c0448954e337231792"
+    },
+    "split-into-series": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/split-into-series/SKILL.md",
+      "computedHash": "0e1824f8f7c1ad9f85097461e04795f857cd36ea2b9b2d4da394da8b7650b848"
+    },
+    "spotlight-key-areas": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/spotlight-key-areas/SKILL.md",
+      "computedHash": "c93818a75ccafee15d7887836f3776b4740fe5ecb7b1a85eff6310e24f3f90fd"
+    },
+    "stats-infographic-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/stats-infographic-video/SKILL.md",
+      "computedHash": "7b46a2fa450274623bf85181882d3db987c9e57e60395b33b622984b71eca667"
+    },
+    "stitch-videos": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/stitch-videos/SKILL.md",
+      "computedHash": "0a250b09af81d88e59c83593d82381189a2919113c81222c9f8885a4a69b9714"
+    },
+    "swap-voice": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/swap-voice/SKILL.md",
+      "computedHash": "fd5d4c97b5ab72cb1f4ec7e251d37517ae480a4d5609641bb20e066896beb85b"
+    },
     "systematic-debugging": {
       "source": "obra/superpowers",
       "sourceType": "github",
       "skillPath": "skills/systematic-debugging/SKILL.md",
       "computedHash": "a2750dfbaed1690da73b120254892c4f926b4576cb82eb16fc877783941fe39b"
+    },
+    "ticket-resolution-to-how-to-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/ticket-resolution-to-how-to-video/SKILL.md",
+      "computedHash": "80afbdcce048d68e4d5edd4b3545f26ed69fd2ae203725a8c48b77b0194e1c2e"
+    },
+    "ticket-topics-to-video-batch": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/ticket-topics-to-video-batch/SKILL.md",
+      "computedHash": "d111dac1dfaca5db3c7c2991c715f4460fdd7edc62dbbb51c69ec2488f9590a5"
+    },
+    "tighten-narration": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/tighten-narration/SKILL.md",
+      "computedHash": "3d51b3a5d01506b0f10a21b3918fa77140eae4bbee55f2c32a59bc81dd86aea4"
+    },
+    "topic-to-training-video": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/topic-to-training-video/SKILL.md",
+      "computedHash": "3d117fa28e35b41f8fda2f20c78725c5fc4da1d28a8841dcdabf2b6ade726fb6"
+    },
+    "trim-dead-air": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/trim-dead-air/SKILL.md",
+      "computedHash": "3514eac0e68d63a3be30fa248b74dcd9bb97e090903d963cb415b0aabb40908c"
+    },
+    "ui-concept-animation": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/ui-concept-animation/SKILL.md",
+      "computedHash": "90311a0c34f4d245020348e7d417a77062b52deb02cefc881cbf4d2cf42a2b34"
+    },
+    "video-dubbing-localization": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/video-dubbing-localization/SKILL.md",
+      "computedHash": "3b2d2d848b3d144ea5c5f6a367aadb62e016999085c6038feacf41494c20bb5d"
+    },
+    "video-to-article": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/video-to-article/SKILL.md",
+      "computedHash": "66daebb906fd62f931edfdb4bb09b687809d33fa3df8338bbc1f774371deb68f"
+    },
+    "video-to-help-article": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/video-to-help-article/SKILL.md",
+      "computedHash": "703b136a98b95dec6b98268b50f8629481edfed2ba5b9cd8ea2ddfd766b75659"
+    },
+    "video-to-job-aid": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/video-to-job-aid/SKILL.md",
+      "computedHash": "0ebef819f2b20aff414ede96263889ec4d4c6290e89c1c03cc1d3a19fc73d9b8"
+    },
+    "webinar-to-highlight-clips": {
+      "source": "clueso-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/webinar-to-highlight-clips/SKILL.md",
+      "computedHash": "597069736aefa3678ac2326e3923b5b47c35e3941478c13d189a9b52e37b853d"
     }
   }
 }
