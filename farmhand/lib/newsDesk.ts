@@ -18,10 +18,28 @@
 export interface NewsImage {
   /** the publisher's original image URL (the reference) */
   url: string;
-  /** our archived copy in the vault — survives link rot */
+  /** our archived copy in the vault — survives link rot AND is same-origin
+      through /api/media, which is what lets the Studio canvas use it */
   savedUrl?: string;
-  /** photo credit / agency line if the page exposed one (AP, Getty, …) */
+  /** photo credit / agency line the page exposed (AP, Getty, Reuters…) —
+      REQUIRED on any slide that uses the photo; never stripped */
   credit?: string;
+  /** the figure's caption, when the page had one */
+  caption?: string;
+  /** true for the lead/hero image */
+  lead?: boolean;
+}
+
+/** Photos an agency owns are the ones the outlet CAN'T license to you.
+    Surfaced in the UI so the call is made with eyes open. */
+export function riskyCredit(credit?: string): boolean {
+  return /\b(ap|associated press|getty|reuters|afp|bloomberg|shutterstock|istock|adobe stock)\b/i.test(credit || "");
+}
+
+/** The line that must accompany a used photo, anywhere it lands. */
+export function photoAttribution(a: Pick<NewsArticle, "outlet" | "url">, img: NewsImage): string {
+  const who = img.credit ? `${img.credit} via ${a.outlet}` : a.outlet;
+  return `Photo: ${who} — ${a.url}`;
 }
 
 export interface NewsArticle {

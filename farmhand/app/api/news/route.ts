@@ -119,6 +119,94 @@ function suggestHighlights(text: string): string[] {
   return withNumbers.filter((s) => (seen.has(s) ? false : (seen.add(s), true))).slice(0, 12);
 }
 
+/** Largest candidate in a srcset ("a.jpg 800w, b.jpg 1600w" → b.jpg). */
+function fromSrcset(srcset: string): string {
+  const entries = srcset
+    .split(",")
+    .map((e) => e.trim())
+    .map((e) => {
+      const [u, d] = e.split(/\s+/);
+      const w = Number((d || "").replace(/[^\d.]/g, "")) || 0;
+      return { u, w };
+    })
+    .filter((e) => e.u);
+  if (!entries.length) return "";
+  return entries.sort((a, b) => a.w - b.w)[entries.length - 1].u;
+}
+
+const JUNK_IMG = /logo|icon|avatar|sprite|pixel|tracking|1x1|placeholder|spacer|badge|button|social|newsletter|subscribe|advert/i;
+
+/** Every usable photo in the article, with its caption and credit.
+    Photos are half the value of a news drop — but a photo without its
+    credit is unusable under the brand vault's attribution rule, so the
+    caption/credit travels with the URL from the moment of extraction. */
+function extractImages(html: string, pageUrl: string, leadUrl: string, leadCredit: string): NewsImage[] {
+  const abs = (u: string): string => {
+    try {
+      return new URL(decode(u.trim()), pageUrl).toString();
+    } catch {
+      return "";
+    }
+  };
+  const out: NewsImage[] = [];
+  const seen = new Set<string>();
+  const push = (rawUrl: string, caption?: string, lead = false) => {
+    const url = abs(rawUrl);
+    if (!url || !/^https?:/i.test(url)) return;
+    const bare = url.split("?")[0];
+    if (JUNK_IMG.test(bare)) return;
+    if (seen.has(bare)) return;
+    seen.add(bare);
+    // a caption like "Solar panels near Buckeye. (Photo: Cheryl Evans/AP)"
+    // carries the credit — pull it out, keep the descriptive half as caption
+    const cap = (caption || "").replace(/\s+/g, " ").trim();
+    const creditMatch = cap.match(/(?:photo|image|credit|courtesy)\s*(?:by|:|—|-)\s*([^.()|]{2,80})/i);
+    const parenCredit = cap.match(/\(([^)]{2,80}(?:AP|Getty|Reuters|AFP|Bloomberg|Republic|Star|Photo)[^)]{0,40})\)/i);
+    const credit = (creditMatch?.[1] || parenCredit?.[1] || "").trim();
+    out.push({
+      url,
+      lead: lead || undefined,
+      caption: cap.slice(0, 300) || undefined,
+      credit: credit ? credit.slice(0, 120) : undefined,
+    });
+  };
+
+  if (leadUrl) push(leadUrl, leadCredit, true);
+
+  // <figure> blocks are where news photos live, caption included
+  for (const fig of html.matchAll(/<figure[\s\S]{0,6000}?<\/figure>/gi)) {
+    const block = fig[0];
+    const caption = decode((block.match(/<figcaption[^>]*>([\s\S]*?)<\/figcaption>/i)?.[1] || "").replace(/<[^>]+>/g, " "));
+    const srcset = block.match(/srcset\s*=\s*["']([^"']+)["']/i)?.[1];
+    const src =
+      (srcset ? fromSrcset(srcset) : "") ||
+      block.match(/<img[^>]+(?:data-src|data-original|data-lazy-src)\s*=\s*["']([^"']+)["']/i)?.[1] ||
+      block.match(/<img[^>]+src\s*=\s*["']([^"']+)["']/i)?.[1] ||
+      "";
+    if (src) push(src, caption);
+    if (out.length >= 8) break;
+  }
+
+  // fall back to sizeable inline images when the page uses no <figure>
+  if (out.length < 3) {
+    for (const m of html.matchAll(/<img[^>]+>/gi)) {
+      const tag = m[0];
+      const w = Number(tag.match(/\bwidth\s*=\s*["']?(\d+)/i)?.[1] || 0);
+      if (w && w < 300) continue;
+      const srcset = tag.match(/srcset\s*=\s*["']([^"']+)["']/i)?.[1];
+      const src =
+        (srcset ? fromSrcset(srcset) : "") ||
+        tag.match(/(?:data-src|data-original|data-lazy-src)\s*=\s*["']([^"']+)["']/i)?.[1] ||
+        tag.match(/\bsrc\s*=\s*["']([^"']+)["']/i)?.[1] ||
+        "";
+      const alt = decode(tag.match(/\balt\s*=\s*["']([^"']*)["']/i)?.[1] || "");
+      if (src) push(src, alt);
+      if (out.length >= 8) break;
+    }
+  }
+  return out.slice(0, 8);
+}
+
 function outletFrom(html: string, finalUrl: string): string {
   const site = meta(html, ["og:site_name", "application-name", "twitter:site"]);
   if (site) return site.replace(/^@/, "");
@@ -159,7 +247,7 @@ function extract(html: string, finalUrl: string): NewsArticle {
   const credit = meta(html, ["og:image:alt", "image:credit"]);
   const body = bodyText(html);
 
-  const images: NewsImage[] = leadImage && /^https?:\/\//i.test(leadImage) ? [{ url: leadImage, credit: credit || undefined }] : [];
+  const images = extractImages(html, finalUrl, leadImage, credit);
 
   return {
     id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
@@ -204,7 +292,15 @@ function sanitize(raw: unknown): NewsArticle | null {
       .map((i): NewsImage | null => {
         const im = i && typeof i === "object" ? (i as Record<string, unknown>) : {};
         const u = clamp(im.url, 1000);
-        return u ? { url: u, savedUrl: clamp(im.savedUrl, 1000) || undefined, credit: clamp(im.credit, 200) || undefined } : null;
+        return u
+          ? {
+              url: u,
+              savedUrl: clamp(im.savedUrl, 1000) || undefined,
+              credit: clamp(im.credit, 200) || undefined,
+              caption: clamp(im.caption, 300) || undefined,
+              lead: im.lead === true ? true : undefined,
+            }
+          : null;
       })
       .filter((x): x is NewsImage => !!x)
       .slice(0, 6),
@@ -273,18 +369,25 @@ export async function POST(req: NextRequest) {
     const article = sanitize(b.article);
     if (!client || !article) return NextResponse.json({ error: "bad client or article" }, { status: 400 });
     try {
-      const lead = article.images[0];
-      if (lead && !lead.savedUrl) {
-        const img = await fetchPublic(lead.url, { maxBytes: 12 * 1024 * 1024, timeoutMs: 30000, accept: "image/*" });
-        if (!("error" in img) && img.contentType.startsWith("image/")) {
-          const ext = img.contentType.includes("png") ? "png" : img.contentType.includes("webp") ? "webp" : "jpg";
-          const saved = await put(`vault/${client}/news/${article.addedAt}-${article.id}-lead.${ext}`, img.bytes as unknown as ArrayBuffer, {
+      // ARCHIVE every kept photo: link rot can't break a scheduled post,
+      // and a vault copy is same-origin through /api/media — which is what
+      // lets the Studio canvas actually use the photo without tainting.
+      for (let i = 0; i < article.images.length; i++) {
+        const im = article.images[i];
+        if (!im || im.savedUrl) continue;
+        const img = await fetchPublic(im.url, { maxBytes: 12 * 1024 * 1024, timeoutMs: 30000, accept: "image/*" });
+        if ("error" in img || !img.contentType.startsWith("image/")) continue;
+        const ext = img.contentType.includes("png") ? "png" : img.contentType.includes("webp") ? "webp" : "jpg";
+        try {
+          const saved = await put(`vault/${client}/news/${article.addedAt}-${article.id}-img${i}.${ext}`, img.bytes as unknown as ArrayBuffer, {
             access: "public",
             contentType: img.contentType,
             addRandomSuffix: false,
             allowOverwrite: true,
           });
-          article.images[0] = { ...lead, savedUrl: saved.url };
+          article.images[i] = { ...im, savedUrl: saved.url };
+        } catch {
+          // one un-archivable photo must not fail the save
         }
       }
       await put(keyFor(client, article), JSON.stringify(article), {
@@ -307,7 +410,7 @@ export async function POST(req: NextRequest) {
     if (!client || !id) return NextResponse.json({ error: "bad client or id" }, { status: 400 });
     try {
       const { blobs } = await list({ prefix: `vault/${client}/news/`, limit: 200 });
-      const doomed = blobs.filter((x) => x.pathname.includes(`-${id}.`) || x.pathname.includes(`-${id}-lead.`));
+      const doomed = blobs.filter((x) => x.pathname.includes(`-${id}.`) || x.pathname.includes(`-${id}-img`) || x.pathname.includes(`-${id}-lead.`));
       if (doomed.length) await del(doomed.map((x) => x.url));
       return NextResponse.json({ ok: true, deleted: doomed.length });
     } catch {

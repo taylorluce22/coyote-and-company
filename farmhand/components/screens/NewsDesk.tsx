@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
-import { articleBrief, newsDelete, newsExtract, newsList, newsSave, sourceLine, type NewsArticle } from "@/lib/newsDesk";
+import { articleBrief, newsDelete, newsExtract, newsList, newsSave, photoAttribution, riskyCredit, sourceLine, type NewsArticle, type NewsImage } from "@/lib/newsDesk";
+import { processImageURL } from "@/lib/studio";
 import { reelVaultAdd } from "@/lib/reelVault";
 
 /**
@@ -69,6 +70,7 @@ export default function NewsDesk() {
   const [manual, setManual] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [writing, setWriting] = useState<string | null>(null);
+  const [sending, setSending] = useState<string | null>(null);
 
   const refresh = async () => {
     try {
@@ -202,6 +204,38 @@ export default function NewsDesk() {
     }
   };
 
+  /** Photo → Studio. The vault copy is served SAME-ORIGIN through
+      /api/media, which is what lets the canvas read it without tainting;
+      the credit line lands on the clipboard and in the asset's name so it
+      can't get separated from the image. */
+  const useInStudio = async (a: NewsArticle, img: NewsImage, idx: number) => {
+    if (sending) return;
+    if (!img.savedUrl) {
+      setMsg("That photo wasn't archived — delete and re-save the article to pull it into the vault first.");
+      return;
+    }
+    setSending(`${a.id}-${idx}`);
+    setMsg("Preparing the photo for the Studio…");
+    try {
+      const p = await processImageURL(`/api/media?u=${encodeURIComponent(img.savedUrl)}`, 1400, 0.86);
+      if (!p) throw new Error("couldn't read that photo");
+      const credit = img.credit ? `${img.credit} / ${a.outlet}` : a.outlet;
+      set((s2) => ({
+        stAssets: [
+          ...s2.stAssets,
+          { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: `📰 ${credit}`, dataURL: p.dataURL, lum: p.lum, busy: p.busy, source: "news" },
+        ].slice(-40),
+        contentTab: "studio",
+      }));
+      copy(`${photoAttribution(a, img)}\n${sourceLine(a)}`);
+      setMsg(`✓ Photo added to the Studio as “📰 ${credit}” — the attribution line is on your clipboard for the caption.`);
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "couldn't prepare that photo");
+    } finally {
+      setSending(null);
+    }
+  };
+
   const remove = async (a: NewsArticle) => {
     if (!confirm(`Remove “${a.title.slice(0, 60)}” from the news desk?`)) return;
     await newsDelete(workspace, a.id);
@@ -248,16 +282,6 @@ export default function NewsDesk() {
             Review before saving
           </div>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-            {d.images[0] && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={d.images[0].savedUrl || d.images[0].url}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                style={{ width: 150, height: 100, objectFit: "cover", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)" }}
-              />
-            )}
             <div style={{ flex: 1, minWidth: 260, display: "flex", flexDirection: "column", gap: 7 }}>
               <input value={d.title} onChange={(e) => setDraft({ ...d, title: e.target.value })} placeholder="Headline" style={input} />
               <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
@@ -290,6 +314,60 @@ export default function NewsDesk() {
               )}
             </div>
           </div>
+
+          {/* photos — keep the ones you'd actually use; each is archived on
+              save so it survives link rot and can enter the Studio */}
+          {!!d.images.length && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: "#C9A8FF", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+                Photos · {d.images.length} found — remove any you won&apos;t use (kept ones get archived)
+              </div>
+              <div className="fh-hscroll" style={{ display: "flex", gap: 10, paddingBottom: 6 }}>
+                {d.images.map((im, i) => (
+                  <div key={i} style={{ flexShrink: 0, width: 150 }}>
+                    <div style={{ position: "relative" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={im.savedUrl || im.url}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        style={{ width: 150, height: 100, objectFit: "cover", borderRadius: 10, border: `1px solid ${im.lead ? "rgba(201,168,255,0.6)" : "rgba(255,255,255,0.12)"}`, display: "block", background: "#111" }}
+                      />
+                      <button
+                        title="Remove this photo"
+                        onClick={() => setDraft({ ...d, images: d.images.filter((_, k) => k !== i) })}
+                        style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", border: "none", background: "rgba(255,93,143,0.92)", color: "#fff", fontSize: 9, cursor: "pointer", lineHeight: 1 }}
+                      >
+                        ✕
+                      </button>
+                      {im.lead && (
+                        <span style={{ position: "absolute", bottom: 4, left: 4, fontSize: 8.5, fontWeight: 800, color: "#0B0A12", background: "#C9A8FF", borderRadius: 4, padding: "1px 5px" }}>LEAD</span>
+                      )}
+                    </div>
+                    <input
+                      value={im.credit || ""}
+                      onChange={(e) => {
+                        const next = [...d.images];
+                        next[i] = { ...im, credit: e.target.value };
+                        setDraft({ ...d, images: next });
+                      }}
+                      placeholder="photo credit"
+                      style={{ ...input, marginTop: 4, fontSize: 10.5, padding: "5px 8px" }}
+                    />
+                    {riskyCredit(im.credit) && (
+                      <div style={{ fontSize: 9.5, color: "#FFC23D", marginTop: 3, lineHeight: 1.35 }}>
+                        ⚠ agency photo — the outlet can&apos;t license it. Prefer the headline-screenshot framing.
+                      </div>
+                    )}
+                    {im.caption && (
+                      <div style={{ fontSize: 9.5, color: "#6E6C82", marginTop: 3, lineHeight: 1.35, maxHeight: 44, overflow: "hidden" }}>{im.caption}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* highlights */}
           <div style={{ marginTop: 12 }}>
@@ -354,7 +432,7 @@ export default function NewsDesk() {
                       alt=""
                       loading="lazy"
                       decoding="async"
-                      style={{ width: 84, height: 60, objectFit: "cover", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", flexShrink: 0 }}
+                      style={{ width: 84, height: 60, objectFit: "cover", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", flexShrink: 0, background: "#111" }}
                     />
                   )}
                   <div style={{ flex: 1, minWidth: 200 }}>
@@ -401,6 +479,39 @@ export default function NewsDesk() {
 
                 {open && (
                   <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+                    {!!a.images.length && (
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 9.5, fontWeight: 800, color: "#C9A8FF", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 5 }}>
+                          Photos — send one straight into the Studio with its credit
+                        </div>
+                        <div className="fh-hscroll" style={{ display: "flex", gap: 10, paddingBottom: 4 }}>
+                          {a.images.map((im, i) => (
+                            <div key={i} style={{ flexShrink: 0, width: 132 }}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={im.savedUrl || im.url}
+                                alt=""
+                                loading="lazy"
+                                decoding="async"
+                                style={{ width: 132, height: 88, objectFit: "cover", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", display: "block", background: "#111" }}
+                              />
+                              <button
+                                onClick={() => useInStudio(a, im, i)}
+                                disabled={!!sending || !im.savedUrl}
+                                title={im.savedUrl ? "Add to the Studio as a slide image" : "not archived — re-save the article"}
+                                style={{ ...btn("rgba(255,93,143,0.12)", "#FF5D8F", "rgba(255,93,143,0.4)"), width: "100%", marginTop: 4, opacity: sending || !im.savedUrl ? 0.6 : 1 }}
+                              >
+                                {sending === `${a.id}-${i}` ? "Sending…" : "→ Studio"}
+                              </button>
+                              <div style={{ fontSize: 9.5, color: riskyCredit(im.credit) ? "#FFC23D" : "#6E6C82", marginTop: 3, lineHeight: 1.35 }}>
+                                {riskyCredit(im.credit) ? "⚠ " : ""}
+                                {im.credit || a.outlet}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     {!!a.highlights.length && (
                       <div style={{ marginBottom: 8 }}>
                         <div style={{ fontSize: 9.5, fontWeight: 800, color: "#FFC23D", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>Cited lines</div>
