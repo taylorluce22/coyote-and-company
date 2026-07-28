@@ -20,6 +20,12 @@ export default function KnowledgeVault() {
   const [detail, setDetail] = useState<{ id: string; g: NodeGroup; deg: number; out: string[]; inn: string[] } | null>(null);
   const offRef = useRef(off);
   offRef.current = off;
+  /** lets handlers and filter toggles ask the render loop for ONE repaint —
+      the loop is otherwise idle once the layout settles */
+  const markDirtyRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    markDirtyRef.current?.();
+  }, [off]);
 
   // model built once
   const model = useRef<{
@@ -69,7 +75,11 @@ export default function KnowledgeVault() {
       const r = wrap.getBoundingClientRect(); W = r.width; H = r.height;
       canvas.width = W * DPR; canvas.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     };
-    const ro = new ResizeObserver(resize); ro.observe(wrap); resize();
+    const ro = new ResizeObserver(() => {
+      resize();
+      markDirtyRef.current?.();
+    });
+    ro.observe(wrap); resize();
 
     const step = (al: number) => {
       const N = M.nodes;
@@ -111,7 +121,29 @@ export default function KnowledgeVault() {
       });
       ctx.globalAlpha = 1; ctx.restore();
     };
-    const loop = () => { if (alpha > 0.008) { step(alpha); alpha *= 0.992; } draw(); raf = requestAnimationFrame(loop); };
+    // PERF: the graph is static once the physics settle, but draw() was
+    // running every frame forever — and each frame re-renders every node
+    // with shadowBlur, one of the most expensive canvas 2D operations. Draw
+    // only when the picture can actually have changed, and never while the
+    // tab is hidden.
+    let dirty = true;
+    markDirtyRef.current = () => {
+      dirty = true;
+    };
+    const loop = () => {
+      if (document.visibilityState !== "hidden") {
+        const settling = alpha > 0.008;
+        if (settling) {
+          step(alpha);
+          alpha *= 0.992;
+        }
+        if (settling || dirty) {
+          draw();
+          dirty = false;
+        }
+      }
+      raf = requestAnimationFrame(loop);
+    };
     if (reduce) { alpha = 0.02; }
     loop();
 
@@ -128,9 +160,9 @@ export default function KnowledgeVault() {
       else { pan = true; last.x = p.x; last.y = p.y; } };
     const move = (p: { x: number; y: number }) => {
       if (dragI >= 0) { const w = toW(p.x, p.y); M.nodes[dragI].fx = w.x; M.nodes[dragI].fy = w.y; alpha = Math.max(alpha, 0.1); }
-      else if (pan) { view.x += p.x - last.x; view.y += p.y - last.y; last.x = p.x; last.y = p.y; }
-      else { const i = pick(p.x, p.y); if (i !== hoverI) { hoverI = i; if (i >= 0) showDetail(i); } canvas.style.cursor = i >= 0 ? "pointer" : "grab"; } };
-    const up = () => { if (dragI >= 0) { M.nodes[dragI].fx = null; M.nodes[dragI].fy = null; } dragI = -1; pan = false; };
+      else if (pan) { view.x += p.x - last.x; view.y += p.y - last.y; last.x = p.x; last.y = p.y; markDirtyRef.current?.(); }
+      else { const i = pick(p.x, p.y); if (i !== hoverI) { hoverI = i; if (i >= 0) showDetail(i); markDirtyRef.current?.(); } canvas.style.cursor = i >= 0 ? "pointer" : "grab"; } };
+    const up = () => { if (dragI >= 0) { M.nodes[dragI].fx = null; M.nodes[dragI].fy = null; } dragI = -1; pan = false; markDirtyRef.current?.(); };
 
     const md = (e: MouseEvent) => down(pos(e));
     const mm = (e: MouseEvent) => move(pos(e));
@@ -138,7 +170,7 @@ export default function KnowledgeVault() {
     const tm = (e: TouchEvent) => { move(pos(e.touches[0])); e.preventDefault(); };
     const wheel = (e: WheelEvent) => { e.preventDefault(); const f = e.deltaY < 0 ? 1.12 : 0.89; const p = pos(e);
       const wx = (p.x - W / 2 - view.x) / view.k, wy = (p.y - H / 2 - view.y) / view.k;
-      view.k = Math.max(0.4, Math.min(3, view.k * f)); view.x = p.x - W / 2 - wx * view.k; view.y = p.y - H / 2 - wy * view.k; };
+      view.k = Math.max(0.4, Math.min(3, view.k * f)); view.x = p.x - W / 2 - wx * view.k; view.y = p.y - H / 2 - wy * view.k; markDirtyRef.current?.(); };
 
     canvas.addEventListener("mousedown", md);
     canvas.addEventListener("mousemove", mm);
