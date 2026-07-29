@@ -1,2 +1,8 @@
 # Obsidian per-device state — each device keeps its own
 .obsidian/
+
+# setup script local state (machine-specific)
+agency-os/mvp/.setup-progress.json
+agency-os/mvp/.setup-config.json
+agency-os/mvp/raw/
+agency-os/mvp/out/
