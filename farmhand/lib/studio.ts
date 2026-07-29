@@ -157,9 +157,14 @@ export function copyToSlides(copyText: string, cta: string): Slide[] {
  * postage stamps, retained for as long as the panel is mounted. (WebKit
  * purges decoded image data far more aggressively, which is a large part of
  * why the same build felt fine in Safari and not in Chrome.) At 200px the
- * same forty cost ~6MB, and the button still looks sharp on a 2x display.
+ * same forty cost ~4MB, and the button still looks sharp on a 2x display.
+ *
+ * Thumbs stay inline in the snapshot, so their SIZE is a storage cost too: at
+ * 200px/q0.7 a detailed photo thumb ran ~14KB, and twelve of those added
+ * ~164KB to a snapshot the whole exercise exists to shrink. 160px/q0.62 is
+ * still 2x the 80px button and roughly half the bytes.
  */
-export const THUMB_MAX = 200;
+export const THUMB_MAX = 160;
 
 /** Draw the already-decoded source down to thumbnail size. Called while the
     full-size decode is still in hand, so it costs no extra decode. */
@@ -170,7 +175,7 @@ function thumbFrom(img: CanvasImageSource, w: number, h: number): string | undef
     c.width = Math.max(1, Math.round(w * s));
     c.height = Math.max(1, Math.round(h * s));
     c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
-    return c.toDataURL("image/jpeg", 0.7);
+    return c.toDataURL("image/jpeg", 0.62);
   } catch {
     return undefined; // tainted canvas — caller falls back to the full image
   }

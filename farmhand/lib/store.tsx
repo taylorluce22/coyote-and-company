@@ -272,31 +272,30 @@ const isRefUrl = (v: unknown): v is string => typeof v === "string" && v.startsW
 /** Ref id per LIVE OBJECT, not per string: a WeakMap can't pin a dropped
     image in memory the way a `Map<dataURL, id>` would, and object identity
     is stable across saves so an unchanged image keeps one id. */
+/**
+ * An image is in this map ONLY once its bytes are confirmed in IndexedDB.
+ * That single invariant is what makes the whole thing incremental and
+ * crash-safe: the snapshot may carry a marker for an image if and only if
+ * the bytes are already banked, so a marker can never outrun its data and
+ * an image is never written to both places.
+ *
+ * WeakMap rather than a Map keyed by the dataURL string, which would pin
+ * dropped images in memory.
+ */
 const refIdOf = new WeakMap<object, string>();
 let refSeq = 0;
+const mintRefId = () => `r${Date.now().toString(36)}${(refSeq++).toString(36)}`;
 
 interface DehydrateCtx {
-  /** refs minted this pass — the only ones that need writing */
-  writes: ImageRef[];
-  /** the objects those ids were minted for, so a FAILED write can un-register
-      them and the next save retries instead of stranding the image */
-  owners: object[];
+  /** images still carrying inline base64 — the migrator's work queue. They
+      stay inline in the snapshot until their bytes land in IndexedDB. */
+  pending: { owner: object; data: string }[];
   /** every id the snapshot still points at — the prune keep-set */
   keep: Set<string>;
 }
-const newCtx = (): DehydrateCtx => ({ writes: [], owners: [], keep: new Set() });
+const newCtx = (): DehydrateCtx => ({ pending: [], keep: new Set() });
 
-function refIdFor(owner: object, data: string, ctx: DehydrateCtx): string {
-  let id = refIdOf.get(owner);
-  if (!id) {
-    id = `r${Date.now().toString(36)}${(refSeq++).toString(36)}`;
-    refIdOf.set(owner, id);
-    ctx.writes.push({ id, data }); // unchanged images are never rewritten
-    ctx.owners.push(owner);
-  }
-  return id;
-}
-
+/** Marker if banked, untouched inline base64 if not. NEVER writes. */
 function dehydrateBg(bg: Bg | null | undefined, ctx: DehydrateCtx): Bg | null | undefined {
   if (!bg || bg.type !== "image") return bg;
   if (isRefUrl(bg.img)) {
@@ -304,13 +303,24 @@ function dehydrateBg(bg: Bg | null | undefined, ctx: DehydrateCtx): Bg | null | 
     return bg;
   }
   if (!isDataUrl(bg.img)) return bg; // http/blob url — cheap, leave it inline
-  const id = refIdFor(bg, bg.img, ctx);
+  const id = refIdOf.get(bg);
+  if (!id) {
+    ctx.pending.push({ owner: bg, data: bg.img });
+    return bg; // not banked yet — keep it readable where it is
+  }
   ctx.keep.add(id);
   return { type: "image", img: REF + id };
 }
 
-/** Swap every dataURL in the outgoing snapshot for a marker. Mutates `out`
-    (a shallow copy built for persistence), never live state. */
+/**
+ * Rewrite the outgoing snapshot: banked images become markers, unbanked ones
+ * stay as they are. Mutates `out` (a shallow copy built for persistence),
+ * never live state.
+ *
+ * A snapshot part-markers/part-base64 is a VALID resting state, not a broken
+ * one — every image is readable from exactly one place — which is what lets
+ * the migration proceed one image at a time with no burst anywhere.
+ */
 function dehydrateImages(out: Record<string, unknown>, ctx: DehydrateCtx) {
   const assets = out.stAssets;
   if (Array.isArray(assets)) {
@@ -321,7 +331,11 @@ function dehydrateImages(out: Record<string, unknown>, ctx: DehydrateCtx) {
         return a;
       }
       if (!isDataUrl(a.dataURL)) return a;
-      const id = refIdFor(a, a.dataURL, ctx);
+      const id = refIdOf.get(a);
+      if (!id) {
+        ctx.pending.push({ owner: a, data: a.dataURL });
+        return a;
+      }
       ctx.keep.add(id);
       return { ...a, dataURL: REF + id };
     });
@@ -340,6 +354,13 @@ function dehydrateImages(out: Record<string, unknown>, ctx: DehydrateCtx) {
     }
     out.stStudio = next;
   }
+}
+
+/** Run on idle, with a deadline so a busy tab can't starve it forever. */
+function onIdle(fn: () => void, timeout = 2000) {
+  const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
+  if (ric) ric(fn, { timeout });
+  else setTimeout(fn, 200);
 }
 
 /**
@@ -368,30 +389,6 @@ function collectLiveRefIds(s: Pick<AppState, "stAssets" | "stStudio">): Set<stri
     });
   });
   return ids;
-}
-
-/**
- * One-time migration for a snapshot that still carries inline base64.
- *
- * Without this the shrink only happens on the next studio save — and simply
- * navigating the app never touches a persisted field, so a returning user
- * keeps their multi-megabyte snapshot (and re-pays the parse on every load)
- * until they happen to edit something in the Studio.
- *
- * Banks the bytes FIRST and reports back; the caller rewrites the snapshot
- * only on success, so a failed IndexedDB write can never strand the images.
- * Nothing is written if every image is already a marker.
- */
-async function bankInlineImages(parsed: Partial<AppState>, client: string): Promise<boolean> {
-  const ctx = newCtx();
-  // walks a throwaway copy: it registers a ref id against each live image
-  // object and collects the bytes, while `parsed` — the objects that go into
-  // state — keeps its real dataURLs so rendering is unaffected
-  dehydrateImages({ ...(parsed as Record<string, unknown>) }, ctx);
-  if (!ctx.writes.length) return false; // already marker-based
-  const ok = await refPutMany(ctx.writes, client);
-  if (!ok) ctx.owners.forEach((o) => refIdOf.delete(o));
-  return ok;
 }
 
 /** Every ref id a parsed snapshot points at. */
@@ -619,12 +616,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const parsed = parseSaved(raw);
         setState((s) => ({ ...s, ...parsed }));
         resolveRefs(parsed, ws);
-        // shrink an inherited base64 snapshot NOW rather than waiting for the
-        // user to happen to save. flushSave re-reads live state, so there is
-        // no stale copy to clobber a concurrent edit with.
-        void bankInlineImages(parsed, ws).then((ok) => {
-          if (ok && workspaceRef.current === ws) flushSave();
-        });
+        // NOTE: nothing eager happens here. Hydrating changes persisted state,
+        // which schedules the ordinary debounced save; that save finds the
+        // inline images and hands them to the idle migrator one at a time.
+        // Load stays exactly as cheap as it was before any of this existed.
       } else if (ws === "solar") {
         setState(solarSeed());
       }
@@ -796,20 +791,60 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // bytes go to IndexedDB out-of-band. Not awaited: the 350ms debounce runs
     // long before any unload, so a queued write has ample time to land, and a
     // lost write costs one image rather than blocking the main thread.
-    if (ctx.writes.length) {
-      refPutMany(ctx.writes, client)
-        .then((ok) => {
-          // a failed write would strand the snapshot pointing at a ref that
-          // doesn't exist — forget the ids so the next save mints and retries
-          if (!ok) {
-            console.error("[farmhand] couldn't bank image data — retrying on the next save");
-            ctx.owners.forEach((o) => refIdOf.delete(o));
-          }
-        })
-        .catch(() => ctx.owners.forEach((o) => refIdOf.delete(o)));
-    }
+    // the save itself never touches IndexedDB and never serializes an image
+    // that isn't already banked — anything still inline is left for the
+    // migrator, one image per idle slice
+    if (ctx.pending.length) bankNext.current(client);
     schedulePrune.current(client);
   }, []);
+
+  /**
+   * Move ONE image out of the snapshot per idle slice.
+   *
+   * This replaces an eager "convert everything on load" pass, which pinned
+   * the main thread on a real library and could leave the snapshot in a
+   * half-written state if it didn't finish. Here the unit of work is a
+   * single image and every step is atomic:
+   *
+   *   1. write that image's bytes to IndexedDB and WAIT for it
+   *   2. only then mark it banked, which is what lets the next save emit a
+   *      marker for it — and for it alone
+   *   3. save, which swaps exactly that one slot and shrinks the snapshot
+   *
+   * Nothing is ever written to both places, a crash between steps just means
+   * the image is still inline and gets picked up next time, and because each
+   * step only ever replaces base64 with a short marker the snapshot shrinks
+   * monotonically — so this cannot push storage further over quota.
+   */
+  const banking = useRef(false);
+  const bankNext = useRef((client: string) => {
+    if (banking.current) return; // strictly one at a time
+    banking.current = true;
+    onIdle(() => {
+      if (workspaceRef.current !== client) {
+        banking.current = false;
+        return;
+      }
+      const ctx = newCtx();
+      dehydrateImages({ stAssets: stateRef.current.stAssets, stStudio: stateRef.current.stStudio }, ctx);
+      const next = ctx.pending[0];
+      if (!next) {
+        banking.current = false;
+        return; // fully migrated
+      }
+      const id = mintRefId();
+      refPutMany([{ id, data: next.data }], client)
+        .then((ok) => {
+          banking.current = false;
+          if (!ok) return; // leave it inline; a later save retries
+          refIdOf.set(next.owner, id);
+          flushSave(); // swaps this one slot, then queues the next slice
+        })
+        .catch(() => {
+          banking.current = false;
+        });
+    });
+  });
 
   /** Reclaim refs the live snapshot no longer points at, so deleting an image
       actually frees its bytes. Deferred, and the keep-set is recomputed from
@@ -918,9 +953,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setWorkspace(target);
     setState(next);
     resolveRefs(next, target);
-    void bankInlineImages(next, target).then((ok) => {
-      if (ok && workspaceRef.current === target) flushSave();
-    });
   }, [flushSave, resolveRefs]);
 
   // ——— client roster management (E1) ———

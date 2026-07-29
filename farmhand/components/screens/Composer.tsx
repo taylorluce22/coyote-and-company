@@ -382,25 +382,62 @@ export default function Composer() {
   const [assetPage, setAssetPage] = useState(ASSET_PAGE);
   // newest last, matching insertion order — take the tail
   const shownAssets = assets.length > assetPage ? assets.slice(-assetPage) : assets;
-  // Assets banked before thumbs existed have none, and those are exactly the
-  // ones costing ~5.8MB of raster apiece. Backfill only what's ON SCREEN, one
-  // at a time so the transient full-size decodes never stack up.
+  /**
+   * Assets banked before thumbs existed have none, and those are exactly the
+   * ones costing ~5.8MB of raster apiece. Backfilling means a full-size
+   * decode each, so this is deliberately the slowest possible loop:
+   *
+   * - ONE image per idle slice, never a batch, never on the load path. An
+   *   earlier version ran them back-to-back in an effect and produced a
+   *   2-second main-thread block on a real library.
+   * - a single runner, driven by a ref rather than re-triggered by the state
+   *   change it causes — the effect-dep version restarted on every write and
+   *   threw away a decode each time.
+   * - ids that fail once are not retried, so a broken image can't spin.
+   */
+  const thumbBusy = useRef(false);
+  const thumbTick = useRef<(() => void) | null>(null);
+  const thumbTried = useRef<Set<string>>(new Set());
+  const shownRef = useRef(shownAssets);
+  shownRef.current = shownAssets;
   useEffect(() => {
-    const missing = shownAssets.filter((a) => !a.thumb && a.dataURL.startsWith("data:"));
-    if (!missing.length) return;
     let alive = true;
-    (async () => {
-      for (const a of missing) {
-        const thumb = await makeThumb(a.dataURL);
-        if (!alive) return;
-        if (thumb) set((s) => ({ stAssets: s.stAssets.map((x) => (x.id === a.id ? { ...x, thumb } : x)) }));
-      }
-    })();
+    const idle = (fn: () => void) => {
+      const w = window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+      if (w.requestIdleCallback) w.requestIdleCallback(fn, { timeout: 3000 });
+      else setTimeout(fn, 400);
+    };
+    const tick = () => {
+      if (!alive || thumbBusy.current) return;
+      const a = shownRef.current.find((x) => !x.thumb && !thumbTried.current.has(x.id) && x.dataURL.startsWith("data:"));
+      if (!a) return;
+      thumbBusy.current = true;
+      thumbTried.current.add(a.id);
+      idle(() => {
+        makeThumb(a.dataURL)
+          .then((thumb) => {
+            thumbBusy.current = false;
+            if (!alive) return;
+            if (thumb) set((s) => ({ stAssets: s.stAssets.map((x) => (x.id === a.id ? { ...x, thumb } : x)) }));
+            idle(tick); // next one, no sooner than the next idle slice
+          })
+          .catch(() => {
+            thumbBusy.current = false;
+          });
+      });
+    };
+    thumbTick.current = () => idle(tick);
+    idle(tick);
     return () => {
       alive = false;
+      thumbTick.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shownAssets.map((a) => (a.thumb ? "" : a.id)).join(",")]);
+  }, []);
+  // paging in older assets brings in more thumb-less ones — re-arm the runner
+  useEffect(() => {
+    thumbTick.current?.();
+  }, [assetPage, assets.length]);
   const fileRef = useRef<HTMLInputElement>(null);
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || []);
