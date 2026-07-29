@@ -11,13 +11,9 @@ const AMBER = "224,123,57";
 type Ctx = CanvasRenderingContext2D;
 type Rng = () => number;
 
-export interface Texture {
-  id: string;
-  name: string;
-  group: string;
-  light: boolean;
-  src: string;
-}
+/* NOTE: the old `Texture` shape carried a `src`, which forced every texture
+   to be rasterized just to list them. Listing is now metadata-only
+   (TextureMeta, below) and pixels are pulled per id, on demand. */
 
 function mulberry32(a: number): Rng {
   return function () {
@@ -385,37 +381,145 @@ const DEFS: Def[] = [
   },
 ];
 
-function make(def: Def, seedNum: number): string {
+/**
+ * The swatch buttons are 64x80. Rendering their previews at the full slide
+ * size was costing 1.46M pixels plus a JPEG encode EACH — seventeen of those
+ * back to back, synchronously, the first time the Studio opened, which
+ * measured as a ~1.5s main-thread block on an empty workspace. A fifth of
+ * the linear size is 1/25th the pixels and still 3x the button, and because
+ * every def draws in coordinates relative to w/h it looks the same.
+ */
+const PREVIEW_W = 216;
+const PREVIEW_H = 270;
+
+function render(def: Def, seedNum: number, w: number, h: number, q: number): string {
   const c = document.createElement("canvas");
-  c.width = W;
-  c.height = H;
+  c.width = w;
+  c.height = h;
   const ctx = c.getContext("2d")!;
-  def.fn(ctx, W, H, mulberry32(seedNum));
-  return c.toDataURL("image/jpeg", 0.84);
+  def.fn(ctx, w, h, mulberry32(seedNum));
+  return c.toDataURL("image/jpeg", q);
 }
 
-let CACHE: Texture[] | null = null;
+/** the original seeding, kept exactly so textures look identical */
+const seedOf = (i: number) => i + 3;
+const indexOf = (id: string) => DEFS.findIndex((d) => d.id === id);
+
+/**
+ * What the on-screen slide needs. The slide DOM is laid out at true export
+ * size (1080x1350) and CSS-scaled to roughly 0.3, so it occupies ~324 css px
+ * — ~648 device px on a 2x display. Painting it from the full 1080x1350
+ * raster meant a ~200ms encode for the more elaborate defs, on the first
+ * paint of every texture. This is the smallest size that is still sharp
+ * there, at ~a third of the pixels. Export is untouched and still uses the
+ * full raster.
+ */
+const DISPLAY_W = 648;
+const DISPLAY_H = 810;
+
+let META: TextureMeta[] | null = null;
+const PREVIEWS = new Map<string, string>();
+const DISPLAYS = new Map<string, string>();
+const FULLS = new Map<string, string>();
+
+export interface TextureMeta {
+  id: string;
+  name: string;
+  group: string;
+  light: boolean;
+}
+
+/* --- one preview per idle slice ---------------------------------------- */
+/* Seventeen swatches mount at once. Even at 3ms each, rendering them in a
+   single pass is a burst; queued, the strip fills in over a few idle slices
+   and nothing ever blocks an interaction. */
+type Job = { id: string; resolve: (s: string | null) => void };
+const queue: Job[] = [];
+let running = false;
+
+function idle(fn: () => void) {
+  const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number })
+    .requestIdleCallback;
+  if (ric) ric(fn, { timeout: 1500 });
+  else setTimeout(fn, 60);
+}
+
+function pump() {
+  if (running || !queue.length) return;
+  running = true;
+  idle(() => {
+    const job = queue.shift();
+    if (job) job.resolve(textures.preview(job.id));
+    running = false;
+    pump();
+  });
+}
+
+/**
+ * Swatch preview, off the render path. Resolves immediately if already
+ * cached; otherwise queued so exactly one texture is rasterized per idle
+ * slice. `first` jumps the queue — used for the SELECTED swatch so the
+ * active choice is never the one still waiting to paint.
+ */
+export function texturePreview(id: string, first = false): Promise<string | null> {
+  const hit = PREVIEWS.get(id);
+  if (hit) return Promise.resolve(hit);
+  if (typeof document === "undefined") return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const job: Job = { id, resolve };
+    if (first) queue.unshift(job);
+    else queue.push(job);
+    pump();
+  });
+}
 
 export const textures = {
   DEFAULT: "noir",
-  all(): Texture[] {
-    if (typeof document === "undefined") return [];
-    if (CACHE) return CACHE;
-    CACHE = DEFS.map((d, i) => ({
-      id: d.id,
-      name: d.name,
-      group: d.group,
-      light: !!d.light,
-      src: make(d, i + 3),
-    }));
-    return CACHE;
+  /** Metadata only — no canvas, no encode. Safe to call during render. */
+  list(): TextureMeta[] {
+    if (!META) META = DEFS.map((d) => ({ id: d.id, name: d.name, group: d.group, light: !!d.light }));
+    return META;
   },
+  /** Synchronous swatch-size render. Prefer texturePreview(). */
+  preview(id: string): string | null {
+    if (typeof document === "undefined") return null;
+    const hit = PREVIEWS.get(id);
+    if (hit) return hit;
+    const i = indexOf(id);
+    if (i < 0) return null;
+    const src = render(DEFS[i], seedOf(i), PREVIEW_W, PREVIEW_H, 0.72);
+    PREVIEWS.set(id, src);
+    return src;
+  },
+  /** What the on-screen slide paints with — sharp at stage scale, a third
+      of the pixels of a full raster. On demand and cached. */
+  display(id: string): string | null {
+    if (typeof document === "undefined") return null;
+    const hit = DISPLAYS.get(id);
+    if (hit) return hit;
+    const i = indexOf(id);
+    if (i < 0) return null;
+    const s = render(DEFS[i], seedOf(i), DISPLAY_W, DISPLAY_H, 0.8);
+    DISPLAYS.set(id, s);
+    return s;
+  },
+  /**
+   * Full 1080x1350 — EXPORT ONLY. On demand and cached, so a texture is
+   * rendered at this size only when a post carrying it is actually being
+   * exported, instead of all seventeen the moment the Studio mounts.
+   */
   src(id: string): string | null {
-    const t = this.all().find((x) => x.id === id);
-    return t ? t.src : null;
+    if (typeof document === "undefined") return null;
+    const hit = FULLS.get(id);
+    if (hit) return hit;
+    const i = indexOf(id);
+    if (i < 0) return null;
+    const s = render(DEFS[i], seedOf(i), W, H, 0.84);
+    FULLS.set(id, s);
+    return s;
   },
   isLight(id: string): boolean {
-    const t = this.all().find((x) => x.id === id);
-    return t ? t.light : false;
+    const d = DEFS.find((x) => x.id === id);
+    return d ? !!d.light : false;
   },
 };

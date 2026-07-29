@@ -19,7 +19,7 @@ import {
   type Bg,
   type StudioDesign,
 } from "@/lib/studio";
-import { textures } from "@/lib/textures";
+import { textures, texturePreview, type TextureMeta } from "@/lib/textures";
 import { COMP_COPY, type CompCh } from "@/lib/data";
 import { ideaCopy, ideaFactPair } from "@/lib/ideaCopy";
 import { ideasFor, type Idea, type StrategyProfile } from "@/lib/strategy";
@@ -240,6 +240,46 @@ function useIsPhone() {
     return () => mq.removeEventListener("change", apply);
   }, []);
   return isPhone;
+}
+
+/**
+ * One texture swatch. Pulls its preview through the shared queue, so opening
+ * the Studio schedules seventeen small rasterizations across idle slices
+ * instead of doing seventeen full 1080x1350 renders in one synchronous pass.
+ * The SELECTED swatch jumps the queue — the active choice should never be
+ * the one still waiting to paint.
+ */
+function TexSwatch({ meta, on, onPick }: { meta: TextureMeta; on: boolean; onPick: () => void }) {
+  const [src, setSrc] = useState<string | null>(() => textures.preview(meta.id) ?? null);
+  useEffect(() => {
+    if (src) return;
+    let alive = true;
+    texturePreview(meta.id, on).then((s) => {
+      if (alive && s) setSrc(s);
+    });
+    return () => {
+      alive = false;
+    };
+    // `on` deliberately not a dep: it only sets initial queue priority
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meta.id, src]);
+  return (
+    <button
+      title={meta.name}
+      onClick={onPick}
+      style={{
+        flexShrink: 0, width: 64, height: 80, borderRadius: 8, overflow: "hidden", position: "relative",
+        border: `2px solid ${on ? "#FF5D8F" : "rgba(255,255,255,0.1)"}`, cursor: "pointer",
+        // a tinted placeholder rather than a hole while the preview is queued
+        background: src ? `#111 url(${src}) center/cover` : "linear-gradient(160deg,#20202c,#12121a)",
+        boxShadow: on ? "0 0 12px rgba(255,93,143,0.4)" : "none", padding: 0,
+      }}
+    >
+      <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, fontSize: 7.5, fontWeight: 700, color: "#D8D6E6", background: "rgba(0,0,0,0.55)", padding: "2px 0" }}>
+        {meta.name}
+      </span>
+    </button>
+  );
 }
 
 export default function Composer() {
@@ -828,7 +868,8 @@ export default function Composer() {
   const status = state.compStatus[ch] || "draft";
   const setStatus = (v: string) => set((s) => ({ compStatus: { ...s.compStatus, [ch]: v } }));
 
-  const texList = typeof window !== "undefined" ? textures.all() : [];
+  // metadata only — listing textures no longer rasterizes them
+  const texList = textures.list();
   const tagList = ideaPack ? ideaPack.hashtags : HASHTAGS[ch];
   const tags = tagList.map((h) => "#" + h).join(" ");
 
@@ -1087,6 +1128,7 @@ export default function Composer() {
             ) : slide ? (
               <PostSlide
                 ref={exportRef}
+                exportRes
                 slide={slide}
                 index={cur}
                 total={total}
@@ -1236,19 +1278,14 @@ export default function Composer() {
               );
             })}
             <span style={{ flexShrink: 0, width: 1, background: "rgba(255,255,255,0.1)", margin: "6px 2px" }} />
-            {texList.map((t) => {
-              const on = isActive({ type: "texture", tex: t.id });
-              return (
-                <button
-                  key={t.id}
-                  title={t.name}
-                  onClick={() => applyBg({ type: "texture", tex: t.id })}
-                  style={{ flexShrink: 0, width: 64, height: 80, borderRadius: 8, overflow: "hidden", position: "relative", border: `2px solid ${on ? "#FF5D8F" : "rgba(255,255,255,0.1)"}`, cursor: "pointer", background: `#111 url(${t.src}) center/cover`, boxShadow: on ? "0 0 12px rgba(255,93,143,0.4)" : "none", padding: 0 }}
-                >
-                  <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, fontSize: 7.5, fontWeight: 700, color: "#D8D6E6", background: "rgba(0,0,0,0.55)", padding: "2px 0" }}>{t.name}</span>
-                </button>
-              );
-            })}
+            {texList.map((t) => (
+              <TexSwatch
+                key={t.id}
+                meta={t}
+                on={isActive({ type: "texture", tex: t.id })}
+                onPick={() => applyBg({ type: "texture", tex: t.id })}
+              />
+            ))}
           </div>
 
           {/* row 2 — your images (own row, underneath).

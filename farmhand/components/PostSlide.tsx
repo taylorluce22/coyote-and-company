@@ -36,10 +36,14 @@ interface Props {
   handle: string;
   /** when set, the headline is click-to-edit right on the slide */
   onEdit?: (text: string) => void;
+  /** the hidden html2canvas capture node sets this so a texture background
+      is painted from the full 1080x1350 raster. The on-screen stage is CSS
+      scaled to ~0.3, so it uses the cheaper display raster instead. */
+  exportRes?: boolean;
 }
 
 const PostSlide = forwardRef<HTMLDivElement, Props>(function PostSlide(
-  { slide, index, total, design, bg, accent, pillar, handle, onEdit },
+  { slide, index, total, design, bg, accent, pillar, handle, onEdit, exportRes },
   ref
 ) {
   /* inline editing: click the headline, type in place, commit on blur/Esc.
@@ -90,7 +94,8 @@ const PostSlide = forwardRef<HTMLDivElement, Props>(function PostSlide(
   const isPhoto = bg.type === "image";
   const isTex = bg.type === "texture";
   const lightBg = isTex && textures.isLight(bg.tex);
-  const imgSrc = bg.type === "image" ? bg.img : bg.type === "texture" ? textures.src(bg.tex) : null;
+  const imgSrc =
+    bg.type === "image" ? bg.img : bg.type === "texture" ? (exportRes ? textures.src(bg.tex) : textures.display(bg.tex)) : null;
   const baseColor =
     bg.type === "gradient" ? "linear-gradient(157deg, #16110b 0%, #0A0A0A 52%)" : "#0A0A0A";
   const textColor = lightBg ? "#1a140d" : "#F8F6F3";
