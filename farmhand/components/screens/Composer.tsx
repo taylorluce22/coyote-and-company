@@ -11,6 +11,7 @@ import {
   coordinatedPool,
   downloadDataUrl,
   pickTextures,
+  makeThumb,
   processImageFile,
   processImageURL,
   slugify,
@@ -65,6 +66,10 @@ const STATUSES = [
    died), these records let ⟳ Recover pull the already-paid-for images. */
 /** how many thumbnails render at once — each is a full-size dataURL */
 const VAULT_PAGE = 12;
+/** same ceiling for the uploaded-image strip. Chrome holds a decoded bitmap
+    per distinct image source for as long as it's painted, so an unbounded
+    strip is an unbounded raster bill. */
+const ASSET_PAGE = 12;
 
 type PendingItem = { url: string; prompt: string; role: string; index: number; title: string };
 // per-client so a batch started under one client can never be recovered into
@@ -374,6 +379,28 @@ export default function Composer() {
 
   /* ---- image library (analyzed, persisted, auto-fill) ---- */
   const assets = state.stAssets;
+  const [assetPage, setAssetPage] = useState(ASSET_PAGE);
+  // newest last, matching insertion order — take the tail
+  const shownAssets = assets.length > assetPage ? assets.slice(-assetPage) : assets;
+  // Assets banked before thumbs existed have none, and those are exactly the
+  // ones costing ~5.8MB of raster apiece. Backfill only what's ON SCREEN, one
+  // at a time so the transient full-size decodes never stack up.
+  useEffect(() => {
+    const missing = shownAssets.filter((a) => !a.thumb && a.dataURL.startsWith("data:"));
+    if (!missing.length) return;
+    let alive = true;
+    (async () => {
+      for (const a of missing) {
+        const thumb = await makeThumb(a.dataURL);
+        if (!alive) return;
+        if (thumb) set((s) => ({ stAssets: s.stAssets.map((x) => (x.id === a.id ? { ...x, thumb } : x)) }));
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownAssets.map((a) => (a.thumb ? "" : a.id)).join(",")]);
   const fileRef = useRef<HTMLInputElement>(null);
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || []);
@@ -382,7 +409,7 @@ export default function Composer() {
       try {
         const r = await processImageFile(f, 1200, 0.8);
         set((s) => ({
-          stAssets: [...s.stAssets, { id: uid(), name: f.name.replace(/\.[^.]+$/, ""), dataURL: r.dataURL, lum: r.lum, busy: r.busy }].slice(-40),
+          stAssets: [...s.stAssets, { id: uid(), name: f.name.replace(/\.[^.]+$/, ""), dataURL: r.dataURL, thumb: r.thumb, lum: r.lum, busy: r.busy }].slice(-40),
         }));
       } catch {}
     }
@@ -539,7 +566,7 @@ export default function Composer() {
         // vault FIRST — the paid-for image is safe before anything else
         await vaultAdd({ id: uid(), dataURL: p.dataURL, lum: p.lum, busy: p.busy, prompt: it.prompt, label: `${it.title.slice(0, 48)} · ${it.role}`, createdAt: Date.now() });
         meterRecord(workspace, "image", 1); // E4: log the generation against this client's ledger
-        set((s) => ({ stAssets: [...s.stAssets, { id: uid(), name: `${it.role} visual`, dataURL: p.dataURL, lum: p.lum, busy: p.busy, source: "higgsfield" }].slice(-40) }));
+        set((s) => ({ stAssets: [...s.stAssets, { id: uid(), name: `${it.role} visual`, dataURL: p.dataURL, thumb: p.thumb, lum: p.lum, busy: p.busy, source: "higgsfield" }].slice(-40) }));
         if (applyToSlides) {
           const b: Bg = { type: "image", img: p.dataURL };
           set((s) => {
@@ -1187,10 +1214,16 @@ export default function Composer() {
             })}
           </div>
 
-          {/* row 2 — your images (own row, underneath) */}
+          {/* row 2 — your images (own row, underneath).
+              PAGED, and painted from the small `thumb` copy: an 80px button
+              backed by the full-size dataURL costs ~5.8MB of decoded raster
+              each, so rendering all forty held ~230MB of bitmap to draw forty
+              postage stamps. The AI vault below already got this treatment. */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "12px 0 9px", borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 12 }}>
             <span className="fh-kicker" style={{ fontSize: 9.5 }}>Your images</span>
-            <span style={{ fontSize: 10, color: "#6E6C82" }}>{assets.length} saved · scroll →</span>
+            <span style={{ fontSize: 10, color: "#6E6C82" }}>
+              {assets.length} saved{assets.length > shownAssets.length ? ` · newest ${shownAssets.length} shown` : ""} · scroll →
+            </span>
             <button
               onClick={() => fileRef.current?.click()}
               style={{ marginLeft: "auto", background: "rgba(65,217,138,0.12)", border: "1px dashed rgba(65,217,138,0.5)", color: "#41D98A", borderRadius: 8, padding: "4px 11px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}
@@ -1199,14 +1232,25 @@ export default function Composer() {
             </button>
           </div>
           <div className="fh-hscroll" style={{ display: "flex", gap: 8, paddingBottom: 8 }}>
-            {assets.map((a) => {
+            {assets.length > shownAssets.length && (
+              <button
+                onClick={() => setAssetPage((n) => n + ASSET_PAGE)}
+                title={`Show ${Math.min(ASSET_PAGE, assets.length - shownAssets.length)} older`}
+                style={{ flexShrink: 0, width: 80, height: 80, borderRadius: 8, border: "1.5px dashed rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.03)", color: "#8B89A0", fontSize: 10.5, fontWeight: 700, cursor: "pointer", lineHeight: 1.35 }}
+              >
+                ＋{assets.length - shownAssets.length}
+                <br />
+                older
+              </button>
+            )}
+            {shownAssets.map((a) => {
               const on = isActive({ type: "image", img: a.dataURL });
               return (
                 <div key={a.id} style={{ position: "relative", flexShrink: 0 }}>
                   <button
                     title={a.name}
                     onClick={() => applyBg({ type: "image", img: a.dataURL })}
-                    style={{ display: "block", width: 80, height: 80, padding: 0, borderRadius: 8, overflow: "hidden", border: `2px solid ${on ? "#FF5D8F" : "rgba(255,255,255,0.1)"}`, cursor: "pointer", background: `#111 url(${a.dataURL}) center/cover`, boxShadow: on ? "0 0 12px rgba(255,93,143,0.4)" : "none" }}
+                    style={{ display: "block", width: 80, height: 80, padding: 0, borderRadius: 8, overflow: "hidden", border: `2px solid ${on ? "#FF5D8F" : "rgba(255,255,255,0.1)"}`, cursor: "pointer", background: `#111 url(${a.thumb || a.dataURL}) center/cover`, boxShadow: on ? "0 0 12px rgba(255,93,143,0.4)" : "none" }}
                   />
                   <button
                     title="Remove"

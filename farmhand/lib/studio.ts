@@ -34,6 +34,11 @@ export interface Asset {
   id: string;
   name: string;
   dataURL: string;
+  /** the small copy the picker paints. See THUMB_MAX — an 80px button backed
+      by the full-size dataURL costs ~5.8MB of decoded raster EACH. Optional
+      because assets banked before this existed have none; the UI falls back
+      to dataURL and the Studio backfills a thumb on first view. */
+  thumb?: string;
   lum?: number;
   busy?: number;
   source?: string;
@@ -142,11 +147,52 @@ export function copyToSlides(copyText: string, cta: string): Slide[] {
 }
 
 /* ---- image intelligence (studio parity) ---- */
+
+/**
+ * Longest edge of the small copy the pickers paint.
+ *
+ * The picker buttons are 80px. Backing one with the full-size 1200px dataURL
+ * makes Chrome decode and hold 1200 x 1200 x 4 = ~5.8MB of raster PER
+ * THUMBNAIL — forty of them is ~230MB of decoded bitmap to draw forty
+ * postage stamps, retained for as long as the panel is mounted. (WebKit
+ * purges decoded image data far more aggressively, which is a large part of
+ * why the same build felt fine in Safari and not in Chrome.) At 200px the
+ * same forty cost ~6MB, and the button still looks sharp on a 2x display.
+ */
+export const THUMB_MAX = 200;
+
+/** Draw the already-decoded source down to thumbnail size. Called while the
+    full-size decode is still in hand, so it costs no extra decode. */
+function thumbFrom(img: CanvasImageSource, w: number, h: number): string | undefined {
+  try {
+    const s = Math.min(1, THUMB_MAX / Math.max(w, h));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(w * s));
+    c.height = Math.max(1, Math.round(h * s));
+    c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.7);
+  } catch {
+    return undefined; // tainted canvas — caller falls back to the full image
+  }
+}
+
+/** Backfill a thumb for an asset banked before thumbs existed. One transient
+    full-size decode, released immediately — versus holding forty of them. */
+export function makeThumb(src: string): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(thumbFrom(img, img.width, img.height));
+    img.onerror = () => resolve(undefined);
+    img.src = src;
+  });
+}
+
 export function processImageFile(
   file: File,
   max = 1200,
   q = 0.8
-): Promise<{ dataURL: string; lum: number; busy: number }> {
+): Promise<{ dataURL: string; thumb?: string; lum: number; busy: number }> {
   return new Promise((res, rej) => {
     const img = new Image();
     img.onload = () => {
@@ -156,7 +202,7 @@ export function processImageFile(
       c.height = Math.round(img.height * s);
       c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
       const { lum, busy } = analyze(c);
-      res({ dataURL: c.toDataURL("image/jpeg", q), lum, busy });
+      res({ dataURL: c.toDataURL("image/jpeg", q), thumb: thumbFrom(c, c.width, c.height), lum, busy });
     };
     img.onerror = rej;
     img.src = URL.createObjectURL(file);
@@ -167,7 +213,7 @@ export function processImageURL(
   url: string,
   max = 1200,
   q = 0.82
-): Promise<{ dataURL: string; lum: number; busy: number } | null> {
+): Promise<{ dataURL: string; thumb?: string; lum: number; busy: number } | null> {
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -179,7 +225,7 @@ export function processImageURL(
         c.height = Math.round(img.height * s);
         c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
         const { lum, busy } = analyze(c);
-        resolve({ dataURL: c.toDataURL("image/jpeg", q), lum, busy });
+        resolve({ dataURL: c.toDataURL("image/jpeg", q), thumb: thumbFrom(c, c.width, c.height), lum, busy });
       } catch {
         resolve({ dataURL: url, lum: 0.5, busy: 0.4 });
       }

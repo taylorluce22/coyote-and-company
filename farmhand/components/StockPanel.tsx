@@ -206,7 +206,7 @@ function HiggsfieldGen({ addAsset }: { addAsset: (a: Omit<Asset, "id">) => void 
     // proxy through our API so the canvas pipeline isn't CORS-tainted
     const p = await processImageURL(`/api/higgsfield?img=${encodeURIComponent(url)}`, 1200, 0.85);
     if (p) {
-      addAsset({ name: "higgsfield-" + Date.now(), dataURL: p.dataURL, lum: p.lum, busy: p.busy, source: "higgsfield" });
+      addAsset({ name: "higgsfield-" + Date.now(), dataURL: p.dataURL, thumb: p.thumb, lum: p.lum, busy: p.busy, source: "higgsfield" });
       // permanent vault copy — generated images cost credits, never lose them
       vaultAdd({ id: uid(), dataURL: p.dataURL, lum: p.lum, busy: p.busy, prompt, label: "Single image", createdAt: Date.now() });
       meterRecord(workspace, "image", 1); // E4: count against this client's ledger
@@ -369,6 +369,7 @@ export default function StockPanel({ pillar }: { pillar: string }) {
       addAsset({
         name: r.provider.toLowerCase() + "-" + r.key,
         dataURL: p.dataURL,
+        thumb: p.thumb,
         lum: p.lum,
         busy: p.busy,
         source: r.provider.toLowerCase(),

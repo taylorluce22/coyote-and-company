@@ -223,7 +223,7 @@ export default function NewsDesk() {
       set((s2) => ({
         stAssets: [
           ...s2.stAssets,
-          { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: `📰 ${credit}`, dataURL: p.dataURL, lum: p.lum, busy: p.busy, source: "news" },
+          { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: `📰 ${credit}`, dataURL: p.dataURL, thumb: p.thumb, lum: p.lum, busy: p.busy, source: "news" },
         ].slice(-40),
         contentTab: "studio",
       }));
