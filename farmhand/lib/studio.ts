@@ -181,6 +181,90 @@ function thumbFrom(img: CanvasImageSource, w: number, h: number): string | undef
   }
 }
 
+/**
+ * Longest edge for a user photo painted ON SCREEN.
+ *
+ * The slide DOM is laid out at true export size and CSS-scaled to ~0.3, so a
+ * 1200px photo background was decoded and held at 1200x1200 (~5.8MB of
+ * raster) to fill a box shown at roughly 324 css px — and re-decoded on every
+ * Studio remount. Same split as the textures: display size on screen, the
+ * original only for export.
+ */
+const PHOTO_DISPLAY_MAX = 900;
+
+/**
+ * These are keyed by the SOURCE dataURL, which is a multi-hundred-KB string,
+ * so an unbounded Map would keep every photo the user ever deleted alive by
+ * its key alone. Capped and evicted oldest-first.
+ */
+function boundedCache(limit: number) {
+  const m = new Map<string, string>();
+  return {
+    get: (k: string) => m.get(k),
+    set: (k: string, v: string) => {
+      if (m.size >= limit) {
+        const oldest = m.keys().next().value;
+        if (oldest !== undefined) m.delete(oldest);
+      }
+      m.set(k, v);
+    },
+  };
+}
+const DISPLAY_CACHE = boundedCache(24);
+const THUMB_CACHE = boundedCache(60);
+
+/** Synchronous peek, so a cached photo paints on first render with no flash. */
+export function displayPhotoCached(src: string): string | null {
+  if (!src || !src.startsWith("data:")) return src || null;
+  return DISPLAY_CACHE.get(src) ?? null;
+}
+
+/**
+ * A screen-sized copy of a photo. Non-data URLs (blob-backed vault media) and
+ * photos already small enough pass straight through — only inline base64 gets
+ * rebuilt, once, then cached.
+ */
+export function displayPhoto(src: string): Promise<string> {
+  if (!src || !src.startsWith("data:")) return Promise.resolve(src);
+  const hit = DISPLAY_CACHE.get(src);
+  if (hit) return Promise.resolve(hit);
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const max = Math.max(img.width, img.height);
+      if (max <= PHOTO_DISPLAY_MAX) {
+        DISPLAY_CACHE.set(src, src);
+        return resolve(src);
+      }
+      const s = PHOTO_DISPLAY_MAX / max;
+      try {
+        const c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(img.width * s));
+        c.height = Math.max(1, Math.round(img.height * s));
+        c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+        const out = c.toDataURL("image/jpeg", 0.82);
+        DISPLAY_CACHE.set(src, out);
+        resolve(out);
+      } catch {
+        resolve(src); // tainted canvas — better the full image than none
+      }
+    };
+    img.onerror = () => resolve(src);
+    img.src = src;
+  });
+}
+
+/** makeThumb with a cache, for pickers that re-mount (the AI vault strip). */
+export function cachedThumb(src: string): Promise<string | undefined> {
+  const hit = THUMB_CACHE.get(src);
+  if (hit) return Promise.resolve(hit);
+  return makeThumb(src).then((t) => {
+    if (t) THUMB_CACHE.set(src, t);
+    return t;
+  });
+}
+
 /** Backfill a thumb for an asset banked before thumbs existed. One transient
     full-size decode, released immediately — versus holding forty of them. */
 export function makeThumb(src: string): Promise<string | undefined> {

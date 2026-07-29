@@ -11,6 +11,7 @@ import {
   coordinatedPool,
   downloadDataUrl,
   pickTextures,
+  cachedThumb,
   makeThumb,
   processImageFile,
   processImageURL,
@@ -571,6 +572,11 @@ export default function Composer() {
   // MB of decoded bitmaps, which takes the whole browser down on a
   // unified-memory Mac. Now: opened on demand, newest page only.
   const [vaultOpen, setVaultOpen] = useState(false);
+  /* The vault tiles are 80px but were painted from the full-size dataURL —
+     twelve full decodes (~5.8MB of raster each) the moment the vault opens.
+     Thumb them, one per idle slice, same discipline as the asset strip. */
+  const [vThumbs, setVThumbs] = useState<Record<string, string>>({});
+  const vSeen = useRef<Set<string>>(new Set());
   const [vaultPage, setVaultPage] = useState(VAULT_PAGE);
   const loadVault = (n = vaultPage) => vaultRecent(n).then(setVault);
   useEffect(() => {
@@ -578,6 +584,34 @@ export default function Composer() {
     else setVault([]); // closing frees the bitmaps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vaultOpen, vaultPage]);
+  useEffect(() => {
+    if (!vault.length) return;
+    let alive = true;
+    const idle = (fn: () => void) => {
+      const w = window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+      if (w.requestIdleCallback) w.requestIdleCallback(fn, { timeout: 3000 });
+      else setTimeout(fn, 120);
+    };
+    const step = () => {
+      if (!alive) return;
+      const v = vault.find((x) => !vSeen.current.has(x.id));
+      if (!v) return;
+      vSeen.current.add(v.id);
+      cachedThumb(v.dataURL)
+        .then((t) => {
+          if (!alive) return;
+          if (t) setVThumbs((m) => ({ ...m, [v.id]: t }));
+          idle(step);
+        })
+        .catch(() => {
+          if (alive) idle(step);
+        });
+    };
+    idle(step);
+    return () => {
+      alive = false;
+    };
+  }, [vault]);
 
   /* ---- whole-post AI visuals: one Higgsfield image per slide, shared
      seed + shared style language so the carousel reads as one piece.
@@ -1383,7 +1417,7 @@ export default function Composer() {
                   <button
                     title={`${v.label}${v.prompt ? `\n\n${v.prompt}` : ""}`}
                     onClick={() => applyBg({ type: "image", img: v.dataURL })}
-                    style={{ display: "block", width: 80, height: 80, padding: 0, borderRadius: 8, overflow: "hidden", border: `2px solid ${on ? "#FF9A62" : "rgba(255,154,98,0.25)"}`, cursor: "pointer", background: `#111 url(${v.dataURL}) center/cover`, boxShadow: on ? "0 0 12px rgba(255,154,98,0.4)" : "none" }}
+                    style={{ display: "block", width: 80, height: 80, padding: 0, borderRadius: 8, overflow: "hidden", border: `2px solid ${on ? "#FF9A62" : "rgba(255,154,98,0.25)"}`, cursor: "pointer", background: vThumbs[v.id] ? `#111 url(${vThumbs[v.id]}) center/cover` : "linear-gradient(160deg,#20202c,#12121a)", boxShadow: on ? "0 0 12px rgba(255,154,98,0.4)" : "none" }}
                   />
                   <button
                     title="Delete from vault"

@@ -11,6 +11,7 @@ import {
   type Bg,
 } from "@/lib/studio";
 import { textures } from "@/lib/textures";
+import { displayPhoto, displayPhotoCached } from "@/lib/studio";
 
 /**
  * Full-resolution post slide — faithful port of the Coyote engine's
@@ -91,11 +92,39 @@ const PostSlide = forwardRef<HTMLDivElement, Props>(function PostSlide(
   const justify = design.layout === "bottom" ? "flex-end" : "center";
   const textAlign = design.layout === "center" ? ("center" as const) : ("left" as const);
 
+  /* A photo background is decoded at its natural size (a 1200px photo is
+     ~5.8MB of raster) to fill a box that is CSS-scaled to ~0.3 on screen —
+     and re-decoded on every remount. Paint a screen-sized copy instead; the
+     hidden export node still gets the original. Primed from the cache so a
+     photo already seen paints on the first render with no flash. */
+  const photoKey = bg.type === "image" ? bg.img : "";
+  const [displaySrc, setDisplaySrc] = useState<string | null>(() =>
+    photoKey && !exportRes ? displayPhotoCached(photoKey) : null
+  );
+  useEffect(() => {
+    if (!photoKey || exportRes) return;
+    let alive = true;
+    displayPhoto(photoKey).then((s) => {
+      if (alive) setDisplaySrc(s);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [photoKey, exportRes]);
+
   const isPhoto = bg.type === "image";
   const isTex = bg.type === "texture";
   const lightBg = isTex && textures.isLight(bg.tex);
   const imgSrc =
-    bg.type === "image" ? bg.img : bg.type === "texture" ? (exportRes ? textures.src(bg.tex) : textures.display(bg.tex)) : null;
+    bg.type === "image"
+      ? exportRes
+        ? bg.img
+        : displaySrc // null until the screen-sized copy is ready — deliberately
+      : bg.type === "texture"
+        ? exportRes
+          ? textures.src(bg.tex)
+          : textures.display(bg.tex)
+        : null;
   const baseColor =
     bg.type === "gradient" ? "linear-gradient(157deg, #16110b 0%, #0A0A0A 52%)" : "#0A0A0A";
   const textColor = lightBg ? "#1a140d" : "#F8F6F3";
