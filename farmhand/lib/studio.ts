@@ -195,6 +195,12 @@ export function processImageFile(
 ): Promise<{ dataURL: string; thumb?: string; lum: number; busy: number }> {
   return new Promise((res, rej) => {
     const img = new Image();
+    // An object url pins its whole File in memory until it's revoked, and
+    // this one never was — every image dropped into the Studio leaked its
+    // source blob for the life of the tab. Revoke on BOTH paths, once the
+    // decode no longer needs it.
+    const objectUrl = URL.createObjectURL(file);
+    const release = () => URL.revokeObjectURL(objectUrl);
     img.onload = () => {
       const s = Math.min(1, max / Math.max(img.width, img.height));
       const c = document.createElement("canvas");
@@ -202,10 +208,15 @@ export function processImageFile(
       c.height = Math.round(img.height * s);
       c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
       const { lum, busy } = analyze(c);
-      res({ dataURL: c.toDataURL("image/jpeg", q), thumb: thumbFrom(c, c.width, c.height), lum, busy });
+      const out = { dataURL: c.toDataURL("image/jpeg", q), thumb: thumbFrom(c, c.width, c.height), lum, busy };
+      release();
+      res(out);
     };
-    img.onerror = rej;
-    img.src = URL.createObjectURL(file);
+    img.onerror = (e) => {
+      release();
+      rej(e);
+    };
+    img.src = objectUrl;
   });
 }
 
