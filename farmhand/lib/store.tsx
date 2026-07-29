@@ -23,6 +23,7 @@ import { DEFAULT_TRAINING, isProvablyStaleLead, type LeadTraining } from "./hunt
 import { VERTICALS } from "./verticals";
 import { memoryConfigured, pullSnapshot, pushSnapshot, mergeById } from "./memorySync";
 import { setVaultClient } from "./vault";
+import { setRefClient, refPutMany, refGetMany, refPrune, type ImageRef } from "./imageRefs";
 import { setReelVaultClient } from "./reelVault";
 import { setClipVaultClient } from "./clipVault";
 import {
@@ -249,6 +250,185 @@ const PERSIST_FIELDS = [
   "streak",
 ] as const;
 
+/* ------------------------------------------------------------------ */
+/* base64 OUT of the localStorage snapshot                             */
+/* ------------------------------------------------------------------ */
+/**
+ * `stAssets[].dataURL` and `stStudio[ch].slideBg[n].img` are full-size
+ * base64 JPEGs (~400-940KB of UTF-16 heap each). They used to be serialized
+ * into the snapshot, which meant `JSON.stringify` over 15-35MB plus a
+ * SYNCHRONOUS `localStorage.setItem` every 350ms of use — the Chrome freeze
+ * that got progressively worse the more images were banked, and which blew
+ * the ~5MB origin quota so nothing persisted at all.
+ *
+ * Now the snapshot carries `idbref:<id>` and the bytes live in IndexedDB.
+ * In-memory state is untouched — it still holds real dataURLs, so every
+ * component renders exactly as before.
+ */
+const REF = "idbref:";
+const isDataUrl = (v: unknown): v is string => typeof v === "string" && v.startsWith("data:");
+const isRefUrl = (v: unknown): v is string => typeof v === "string" && v.startsWith(REF);
+
+/** Ref id per LIVE OBJECT, not per string: a WeakMap can't pin a dropped
+    image in memory the way a `Map<dataURL, id>` would, and object identity
+    is stable across saves so an unchanged image keeps one id. */
+const refIdOf = new WeakMap<object, string>();
+let refSeq = 0;
+
+interface DehydrateCtx {
+  /** refs minted this pass — the only ones that need writing */
+  writes: ImageRef[];
+  /** the objects those ids were minted for, so a FAILED write can un-register
+      them and the next save retries instead of stranding the image */
+  owners: object[];
+  /** every id the snapshot still points at — the prune keep-set */
+  keep: Set<string>;
+}
+const newCtx = (): DehydrateCtx => ({ writes: [], owners: [], keep: new Set() });
+
+function refIdFor(owner: object, data: string, ctx: DehydrateCtx): string {
+  let id = refIdOf.get(owner);
+  if (!id) {
+    id = `r${Date.now().toString(36)}${(refSeq++).toString(36)}`;
+    refIdOf.set(owner, id);
+    ctx.writes.push({ id, data }); // unchanged images are never rewritten
+    ctx.owners.push(owner);
+  }
+  return id;
+}
+
+function dehydrateBg(bg: Bg | null | undefined, ctx: DehydrateCtx): Bg | null | undefined {
+  if (!bg || bg.type !== "image") return bg;
+  if (isRefUrl(bg.img)) {
+    ctx.keep.add(bg.img.slice(REF.length));
+    return bg;
+  }
+  if (!isDataUrl(bg.img)) return bg; // http/blob url — cheap, leave it inline
+  const id = refIdFor(bg, bg.img, ctx);
+  ctx.keep.add(id);
+  return { type: "image", img: REF + id };
+}
+
+/** Swap every dataURL in the outgoing snapshot for a marker. Mutates `out`
+    (a shallow copy built for persistence), never live state. */
+function dehydrateImages(out: Record<string, unknown>, ctx: DehydrateCtx) {
+  const assets = out.stAssets;
+  if (Array.isArray(assets)) {
+    out.stAssets = (assets as Asset[]).map((a) => {
+      if (!a) return a;
+      if (isRefUrl(a.dataURL)) {
+        ctx.keep.add(a.dataURL.slice(REF.length));
+        return a;
+      }
+      if (!isDataUrl(a.dataURL)) return a;
+      const id = refIdFor(a, a.dataURL, ctx);
+      ctx.keep.add(id);
+      return { ...a, dataURL: REF + id };
+    });
+  }
+  const studio = out.stStudio;
+  if (studio && typeof studio === "object") {
+    const next: Record<string, ChannelStudio> = {};
+    for (const [ch, cs] of Object.entries(studio as Record<string, ChannelStudio>)) {
+      if (!cs) continue;
+      const slideBg: Record<number, Bg> = {};
+      for (const [k, bg] of Object.entries(cs.slideBg || {})) {
+        const d = dehydrateBg(bg, ctx);
+        if (d) slideBg[Number(k)] = d;
+      }
+      next[ch] = { ...cs, slideBg, coverBg: dehydrateBg(cs.coverBg, ctx) ?? null };
+    }
+    out.stStudio = next;
+  }
+}
+
+/**
+ * Ids the LIVE state already owns — read-only, it must never mint.
+ *
+ * The prune keep-set has to be built with this rather than by re-running
+ * dehydrateImages: dehydrate mints an id for any image added since the last
+ * save, which would register it in the WeakMap without writing it, and the
+ * next save would then see a WeakMap hit, skip the write, and persist a
+ * marker pointing at bytes that were never stored. That loses the image.
+ */
+function collectLiveRefIds(s: Pick<AppState, "stAssets" | "stStudio">): Set<string> {
+  const ids = new Set<string>();
+  const take = (owner: object | null | undefined, url: unknown) => {
+    if (isRefUrl(url)) ids.add(url.slice(REF.length));
+    else if (owner) {
+      const id = refIdOf.get(owner);
+      if (id) ids.add(id);
+    }
+  };
+  (s.stAssets || []).forEach((a) => a && take(a, a.dataURL));
+  Object.values(s.stStudio || {}).forEach((cs) => {
+    if (!cs) return;
+    [...Object.values(cs.slideBg || {}), cs.coverBg].forEach((bg) => {
+      if (bg && bg.type === "image") take(bg, bg.img);
+    });
+  });
+  return ids;
+}
+
+/** Every ref id a parsed snapshot points at. */
+function collectRefIds(s: Partial<AppState>): string[] {
+  const ids = new Set<string>();
+  (s.stAssets || []).forEach((a) => {
+    if (a && isRefUrl(a.dataURL)) ids.add(a.dataURL.slice(REF.length));
+  });
+  Object.values(s.stStudio || {}).forEach((cs) => {
+    if (!cs) return;
+    const bgs: (Bg | null | undefined)[] = [...Object.values(cs.slideBg || {}), cs.coverBg];
+    bgs.forEach((bg) => {
+      if (bg && bg.type === "image" && isRefUrl(bg.img)) ids.add(bg.img.slice(REF.length));
+    });
+  });
+  return [...ids];
+}
+
+/** Put the real bytes back on the in-memory state. An id that no longer
+    resolves (pruned, or a DB wiped by the browser) drops the image rather
+    than rendering a broken `idbref:` marker. Re-registers each resolved
+    object so the next save reuses the same id instead of duplicating it. */
+function applyRefs(s: Partial<AppState>, map: Record<string, string>): Partial<AppState> {
+  const out: Partial<AppState> = {};
+  if (s.stAssets) {
+    out.stAssets = s.stAssets
+      .map((a) => {
+        if (!a || !isRefUrl(a.dataURL)) return a;
+        const data = map[a.dataURL.slice(REF.length)];
+        if (!data) return null;
+        const next = { ...a, dataURL: data };
+        refIdOf.set(next, a.dataURL.slice(REF.length));
+        return next;
+      })
+      .filter(Boolean) as Asset[];
+  }
+  if (s.stStudio) {
+    const studio: Record<string, ChannelStudio> = {};
+    const fix = (bg: Bg | null | undefined): Bg | null | undefined => {
+      if (!bg || bg.type !== "image" || !isRefUrl(bg.img)) return bg;
+      const id = bg.img.slice(REF.length);
+      const data = map[id];
+      if (!data) return undefined; // unresolvable → fall back to the default bg
+      const next: Bg = { type: "image", img: data };
+      refIdOf.set(next, id);
+      return next;
+    };
+    for (const [ch, cs] of Object.entries(s.stStudio)) {
+      if (!cs) continue;
+      const slideBg: Record<number, Bg> = {};
+      for (const [k, bg] of Object.entries(cs.slideBg || {})) {
+        const f = fix(bg);
+        if (f) slideBg[Number(k)] = f;
+      }
+      studio[ch] = { ...cs, slideBg, coverBg: fix(cs.coverBg) ?? null };
+    }
+    out.stStudio = studio;
+  }
+  return out;
+}
+
 /** Parse + migrate a persisted snapshot. Shared by hydrate and switching. */
 function parseSaved(raw: string): Partial<AppState> {
   const saved = JSON.parse(raw);
@@ -380,6 +560,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     []
   ) as React.MutableRefObject<string | null>;
 
+  /** Put the real image bytes back on state after a snapshot loads. Async by
+      construction (IndexedDB) — the app renders immediately with everything
+      else and images fill in a tick later, which is the trade that got the
+      megabytes off the synchronous save path. */
+  const resolveRefs = useCallback((parsed: Partial<AppState>, client: string) => {
+    const ids = collectRefIds(parsed);
+    if (!ids.length) return;
+    refGetMany(ids, client)
+      .then((map) => {
+        if (workspaceRef.current !== client) return; // switched away mid-read
+        setState((s) => ({ ...s, ...applyRefs(s, map) }));
+      })
+      .catch(() => {});
+  }, []);
+
   // hydrate the active client's persisted state
   useEffect(() => {
     try {
@@ -392,11 +587,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       workspaceRef.current = ws;
       setWorkspace(ws);
       setVaultClient(ws);
+      setRefClient(ws);
       setReelVaultClient(ws);
       setClipVaultClient(ws);
       const raw = localStorage.getItem(persistKeyFor(ws));
       if (raw) {
-        setState((s) => ({ ...s, ...parseSaved(raw) }));
+        const parsed = parseSaved(raw);
+        setState((s) => ({ ...s, ...parsed }));
+        resolveRefs(parsed, ws);
       } else if (ws === "solar") {
         setState(solarSeed());
       }
@@ -545,12 +743,57 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       saveTimer.current = null;
     }
     if (!hydrated.current) return;
+    // pin the client for this pass: a workspace switch calls flushSave() and
+    // THEN repoints the ref store, so the async writes below must carry the
+    // client they were computed for or they land in the wrong DB
+    const client = workspaceRef.current;
+    const ctx = newCtx();
     try {
       const out: Record<string, unknown> = {};
       PERSIST_FIELDS.forEach((k) => (out[k] = stateRef.current[k]));
-      localStorage.setItem(persistKeyFor(workspaceRef.current), JSON.stringify(out));
-    } catch {}
+      dehydrateImages(out, ctx);
+      localStorage.setItem(persistKeyFor(client), JSON.stringify(out));
+    } catch (e) {
+      // NEVER swallow this silently again: a full quota means the user's work
+      // stopped being saved, and the old bare `catch {}` hid that completely.
+      const name = e instanceof DOMException ? e.name : "";
+      if (name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED") {
+        console.error("[farmhand] localStorage is full — this workspace's latest changes were NOT saved.");
+      } else {
+        console.error("[farmhand] save failed", e);
+      }
+    }
+    // bytes go to IndexedDB out-of-band. Not awaited: the 350ms debounce runs
+    // long before any unload, so a queued write has ample time to land, and a
+    // lost write costs one image rather than blocking the main thread.
+    if (ctx.writes.length) {
+      refPutMany(ctx.writes, client)
+        .then((ok) => {
+          // a failed write would strand the snapshot pointing at a ref that
+          // doesn't exist — forget the ids so the next save mints and retries
+          if (!ok) {
+            console.error("[farmhand] couldn't bank image data — retrying on the next save");
+            ctx.owners.forEach((o) => refIdOf.delete(o));
+          }
+        })
+        .catch(() => ctx.owners.forEach((o) => refIdOf.delete(o)));
+    }
+    schedulePrune.current(client);
   }, []);
+
+  /** Reclaim refs the live snapshot no longer points at, so deleting an image
+      actually frees its bytes. Deferred, and the keep-set is recomputed from
+      CURRENT state at fire time — that is what keeps it from racing a write
+      that is still in flight. Held in a ref so flushSave (defined above it)
+      can call it without a declaration-order dance. */
+  const pruneTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const schedulePrune = useRef((client: string) => {
+    if (pruneTimer.current) clearTimeout(pruneTimer.current);
+    pruneTimer.current = setTimeout(() => {
+      if (workspaceRef.current !== client) return; // switched away — leave it alone
+      refPrune(collectLiveRefIds(stateRef.current), client).catch(() => {});
+    }, 8000);
+  });
   useEffect(() => {
     if (!hydrated.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -630,6 +873,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     flushSave();
     try { localStorage.setItem(WS_ACTIVE_KEY, target); } catch {}
     setVaultClient(target);
+    setRefClient(target);
     setReelVaultClient(target);
     setClipVaultClient(target);
     let next: AppState;
@@ -643,7 +887,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     workspaceRef.current = target;
     setWorkspace(target);
     setState(next);
-  }, [flushSave]);
+    resolveRefs(next, target);
+  }, [flushSave, resolveRefs]);
 
   // ——— client roster management (E1) ———
   const persistRoster = useCallback((list: ClientMeta[]) => {
@@ -662,6 +907,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // switchWorkspace reads the ref we just set, so the new client is switchable
     try { localStorage.setItem(WS_ACTIVE_KEY, id); } catch {}
     setVaultClient(id);
+    setRefClient(id);
     setReelVaultClient(id);
     setClipVaultClient(id);
     workspaceRef.current = id;

@@ -12,6 +12,7 @@
  */
 
 import { vaultAllFor, vaultAddManyTo, deleteVaultDb, type VaultImage } from "./vault";
+import { deleteRefDb, refAllFor, refPutMany, type ImageRef } from "./imageRefs";
 import { reelVaultAllFor, reelVaultAddManyTo, deleteReelVaultDb, type VaultReel } from "./reelVault";
 import { deleteClipVaultDb } from "./clipVault";
 import { exportMeter, importMeter, purgeMeter, type MeterExport } from "./meter";
@@ -78,6 +79,10 @@ export interface ClientBundle {
   kind: "farmhand-client-bundle";
   client: ClientMeta;
   state: unknown; // the persisted app-state snapshot (PERSIST_FIELDS)
+  /** the base64 the snapshot's `idbref:` markers point at — studio assets and
+      slide backgrounds. Absent on bundles exported before the snapshot stopped
+      carrying inline base64; those still restore, their images are inline. */
+  refs?: ImageRef[];
   images: VaultImage[];
   reels?: VaultReel[]; // reel-coach analyses
   meter?: MeterExport; // generation ledger + cap
@@ -92,9 +97,9 @@ export async function exportClientBundle(client: ClientMeta): Promise<ClientBund
     const raw = localStorage.getItem(persistKeyFor(client.id));
     state = raw ? JSON.parse(raw) : null;
   } catch {}
-  const [images, reels] = await Promise.all([vaultAllFor(client.id), reelVaultAllFor(client.id)]);
+  const [images, reels, refs] = await Promise.all([vaultAllFor(client.id), reelVaultAllFor(client.id), refAllFor(client.id)]);
   const meter = exportMeter(client.id);
-  return { version: 1, kind: "farmhand-client-bundle", client, state, images, reels, meter, exportedAt: Date.now() };
+  return { version: 1, kind: "farmhand-client-bundle", client, state, refs, images, reels, meter, exportedAt: Date.now() };
 }
 
 /**
@@ -110,6 +115,7 @@ export async function importClientBundle(bundle: ClientBundle, existing: ClientM
   try {
     if (bundle.state) localStorage.setItem(persistKeyFor(id), JSON.stringify(bundle.state));
   } catch {}
+  if (Array.isArray(bundle.refs) && bundle.refs.length) await refPutMany(bundle.refs, id);
   if (Array.isArray(bundle.images) && bundle.images.length) await vaultAddManyTo(id, bundle.images);
   if (Array.isArray(bundle.reels) && bundle.reels.length) await reelVaultAddManyTo(id, bundle.reels);
   importMeter(id, bundle.meter);
@@ -122,5 +128,5 @@ export async function purgeClient(id: ClientId): Promise<void> {
   if (id === "default" || id === "solar") return;
   try { localStorage.removeItem(persistKeyFor(id)); } catch {}
   purgeMeter(id);
-  await Promise.all([deleteVaultDb(id), deleteReelVaultDb(id), deleteClipVaultDb(id)]);
+  await Promise.all([deleteVaultDb(id), deleteRefDb(id), deleteReelVaultDb(id), deleteClipVaultDb(id)]);
 }
