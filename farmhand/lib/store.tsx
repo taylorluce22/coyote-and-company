@@ -370,6 +370,30 @@ function collectLiveRefIds(s: Pick<AppState, "stAssets" | "stStudio">): Set<stri
   return ids;
 }
 
+/**
+ * One-time migration for a snapshot that still carries inline base64.
+ *
+ * Without this the shrink only happens on the next studio save — and simply
+ * navigating the app never touches a persisted field, so a returning user
+ * keeps their multi-megabyte snapshot (and re-pays the parse on every load)
+ * until they happen to edit something in the Studio.
+ *
+ * Banks the bytes FIRST and reports back; the caller rewrites the snapshot
+ * only on success, so a failed IndexedDB write can never strand the images.
+ * Nothing is written if every image is already a marker.
+ */
+async function bankInlineImages(parsed: Partial<AppState>, client: string): Promise<boolean> {
+  const ctx = newCtx();
+  // walks a throwaway copy: it registers a ref id against each live image
+  // object and collects the bytes, while `parsed` — the objects that go into
+  // state — keeps its real dataURLs so rendering is unaffected
+  dehydrateImages({ ...(parsed as Record<string, unknown>) }, ctx);
+  if (!ctx.writes.length) return false; // already marker-based
+  const ok = await refPutMany(ctx.writes, client);
+  if (!ok) ctx.owners.forEach((o) => refIdOf.delete(o));
+  return ok;
+}
+
 /** Every ref id a parsed snapshot points at. */
 function collectRefIds(s: Partial<AppState>): string[] {
   const ids = new Set<string>();
@@ -595,6 +619,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const parsed = parseSaved(raw);
         setState((s) => ({ ...s, ...parsed }));
         resolveRefs(parsed, ws);
+        // shrink an inherited base64 snapshot NOW rather than waiting for the
+        // user to happen to save. flushSave re-reads live state, so there is
+        // no stale copy to clobber a concurrent edit with.
+        void bankInlineImages(parsed, ws).then((ok) => {
+          if (ok && workspaceRef.current === ws) flushSave();
+        });
       } else if (ws === "solar") {
         setState(solarSeed());
       }
@@ -888,6 +918,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setWorkspace(target);
     setState(next);
     resolveRefs(next, target);
+    void bankInlineImages(next, target).then((ok) => {
+      if (ok && workspaceRef.current === target) flushSave();
+    });
   }, [flushSave, resolveRefs]);
 
   // ——— client roster management (E1) ———
