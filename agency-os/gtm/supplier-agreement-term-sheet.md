@@ -6,7 +6,7 @@ Basis: `docs/10-regulatory-research.md` §5 (compensation contract terms) and §
 
 | Term | Position |
 |---|---|
-| Parties | [Existing LLC] dba [AGENCY] ("Agency") and [Supplier legal name] ("Supplier") |
+| Parties | [Existing LLC] dba Sonoran Clinical Partners ("Agency") and [Supplier legal name] ("Supplier") |
 | Services | B2B marketing, buyer qualification and license verification, and warm introductions of prospective institutional purchasers to Supplier |
 | Term | 12 months, auto-renewing; either party may terminate on 30 days' notice after month 3 ⚑ *(≥1-year written term is a safe-harbor styling factor)* |
 | Exclusivity | Agency: non-exclusive by default (may serve non-competing facilities). Supplier category exclusivity available as a negotiating concession in exchange for higher commission or longer commitment |

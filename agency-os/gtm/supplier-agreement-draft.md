@@ -6,7 +6,7 @@ Status: negotiation draft generated from `supplier-agreement-term-sheet.md` and 
 
 **MARKETING AND INTRODUCTION SERVICES AGREEMENT**
 
-This Agreement is entered into as of [DATE] (the "Effective Date") by and between [LLC LEGAL NAME], an Arizona limited liability company doing business as [AGENCY TRADE NAME] ("Agency"), and [SUPPLIER LEGAL NAME], a [STATE] [ENTITY TYPE] ("Supplier").
+This Agreement is entered into as of [DATE] (the "Effective Date") by and between [EXISTING LLC LEGAL NAME], an Arizona limited liability company doing business as Sonoran Clinical Partners ("Agency"), and [SUPPLIER LEGAL NAME], a [STATE] [ENTITY TYPE] ("Supplier").
 
 **Recitals.** Supplier is an outsourcing facility registered with the U.S. Food and Drug Administration under section 503B of the Federal Food, Drug, and Cosmetic Act [adjust if other supplier type] that sells its products directly to licensed healthcare facilities and providers. Agency provides business-to-business marketing, buyer qualification, license-verification, and introduction services. The parties intend that Supplier is and remains the seller of record in every transaction with any purchaser, and that Agency at no time engages in the wholesale distribution, sale, or brokerage of any drug product.
 

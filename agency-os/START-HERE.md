@@ -18,7 +18,7 @@ Check availability at porkbun.com or Cloudflare Registrar, then buy **three** do
 
 **Hard rule:** sending domains must be obvious variants of the real brand. No unrelated words, no lookalikes — truthful sender identity is legally required (CAN-SPAM; California's anti-spam statute carries $1,000-per-email private damages).
 
-Once the name is picked, replace `[AGENCY]` throughout `agency-os/`.
+Once the name is picked, replace `Sonoran Clinical Partners` throughout `agency-os/`.
 
 ### 2. Email infrastructure
 Google Workspace on the brand domain → add both sending domains as secondary domains (free) → mailboxes on each → SPF/DKIM/DMARC on all three, verified at mxtoolbox.com → Instantly.ai, connect mailboxes, **warm-up ON**, cap 30/day/mailbox.

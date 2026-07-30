@@ -1,6 +1,6 @@
 # Tier 1 First-Touch Drafts — Ready to Personalize & Send
 
-LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-template variants personalized from the researched hooks. Replace [AGENCY]/[FOUNDER]/[booking link]; add the standard footer (postal address + opt-out) to emails. Send LinkedIn day 0, email day 1. Five sends — these can go from your real business email before the cold-infrastructure is warm; they're 1:1 relationship outreach, not bulk.
+LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-template variants personalized from the researched hooks. Replace [FOUNDER] with your name and [booking link] with your Cal.com link; add the standard footer (postal address + opt-out) to emails. Send LinkedIn day 0, email day 1. Five sends — these can go from your real business email before the cold-infrastructure is warm; they're 1:1 relationship outreach, not bulk.
 
 ## 1. Pine Pharmaceuticals — Alfonse J. Muto, PharmD (co-owner) · in/alfonsejmuto + sales@pinepharmaceuticals.com
 
@@ -10,7 +10,7 @@ LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-t
 
 > Hi Alfonse,
 >
-> I run [AGENCY], a B2B introduction firm. We build pipelines of license-verified clinical buyers and hand facilities warm introductions — you quote and invoice directly; we never touch product, pricing, or paper.
+> I run Sonoran Clinical Partners, a B2B introduction firm. We build pipelines of license-verified clinical buyers and hand facilities warm introductions — you quote and invoice directly; we never touch product, pricing, or paper.
 >
 > Why Pine, why now: a lot of ophthalmology practices are re-sourcing after the California licensure shake-up, and Pine's expanded Tonawanda capacity plus the Athenex book makes you the natural landing spot. We'd bring you the private-practice and ASC accounts that don't come through hospital channels — each one license-verified with evidence before you ever see it.
 >
@@ -26,7 +26,7 @@ LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-t
 
 > Hi Bonnie,
 >
-> [AGENCY] here — we're a B2B introduction firm. Belmar's AmSpa membership says you want the med spa and wellness-clinic channel; we deliver it as warm, pre-verified introductions: every buyer's licensure primary-source-checked with evidence, medical director confirmed, state matched against your ship-to map. Belmar stays seller-of-record on everything — we never touch pricing or product.
+> Sonoran Clinical Partners here — we're a B2B introduction firm. Belmar's AmSpa membership says you want the med spa and wellness-clinic channel; we deliver it as warm, pre-verified introductions: every buyer's licensure primary-source-checked with evidence, medical director confirmed, state matched against your ship-to map. Belmar stays seller-of-record on everything — we never touch pricing or product.
 >
 > With Pasco coming online you'll have capacity to fill. We fill it without you hiring a field team: retainer + per-meeting fee + commission on collections from introduced accounts.
 >
@@ -40,7 +40,7 @@ LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-t
 
 > Hi Joshua,
 >
-> Congratulations on stepping into the President role. I run [AGENCY], a B2B introduction firm — we build license-verified pipelines of clinic buyers (men's health, IV therapy, wellness practices) and hand facilities warm introductions. You quote and invoice directly.
+> Congratulations on stepping into the President role. I run Sonoran Clinical Partners, a B2B introduction firm — we build license-verified pipelines of clinic buyers (men's health, IV therapy, wellness practices) and hand facilities warm introductions. You quote and invoice directly.
 >
 > I know Olympia has its own sales motion — that's exactly why I'm writing. We work the long tail your reps can't economically cover: the two-location TRT clinics and independent IV practices, each license-verified with evidence before introduction. Incremental accounts, zero channel conflict with your house list — we'd put that in writing.
 >
@@ -54,7 +54,7 @@ LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-t
 
 > Hi Michelle,
 >
-> I run [AGENCY], a B2B introduction firm. The med spa / IV-therapy / men's-health clinic market is compounding at 9–15% a year, and Anazao's Las Vegas menu maps to it one-for-one. We're the buyer-acquisition layer for that long tail: license-verified clinic buyers (medical director confirmed, licensure evidence on file), introduced warm, with Anazao as seller-of-record on every transaction.
+> I run Sonoran Clinical Partners, a B2B introduction firm. The med spa / IV-therapy / men's-health clinic market is compounding at 9–15% a year, and Anazao's Las Vegas menu maps to it one-for-one. We're the buyer-acquisition layer for that long tail: license-verified clinic buyers (medical director confirmed, licensure evidence on file), introduced warm, with Anazao as seller-of-record on every transaction.
 >
 > Two things upfront: we work non-GLP-1 categories only, and we take a small number of non-competing facilities per category — Anazao would anchor aesthetics/IV for us.
 >
@@ -70,7 +70,7 @@ LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-t
 >
 > Congrats on the Inc. 5000 — impressive for a founder-led facility in this market.
 >
-> I run [AGENCY], a B2B introduction firm: we deliver license-verified clinic buyers (med spas, IV clinics, physician practices) as warm introductions, with the facility as seller-of-record on every sale. We never touch product or pricing — we do the qualification, licensure verification with evidence, and the introduction; you do the business.
+> I run Sonoran Clinical Partners, a B2B introduction firm: we deliver license-verified clinic buyers (med spas, IV clinics, physician practices) as warm introductions, with the facility as seller-of-record on every sale. We never touch product or pricing — we do the qualification, licensure verification with evidence, and the introduction; you do the business.
 >
 > For Nubratori specifically: your out-of-state footprint is where we'd focus — we sequence buyer campaigns to the states where you hold licensure.
 >
@@ -92,7 +92,7 @@ Log every touch in the CRM (Messages/Tasks) from send #1. Cadence after these: A
 
 > Hi Austin,
 >
-> I run [AGENCY], a B2B introduction firm. We build pipelines of license-verified clinical buyers — IV hydration clinics, wellness and functional medicine practices, physician offices — and hand facilities warm introductions. McGuff quotes and invoices directly; we never touch product, pricing, or paper.
+> I run Sonoran Clinical Partners, a B2B introduction firm. We build pipelines of license-verified clinical buyers — IV hydration clinics, wellness and functional medicine practices, physician offices — and hand facilities warm introductions. McGuff quotes and invoices directly; we never touch product, pricing, or paper.
 >
 > Why I'm writing you specifically: you brought 86,000 square feet of FDA-approved sterile capacity online last year, and the channel you describe publicly — physician practices, IV hydration, functional medicine — is fragmented and high-touch. It's a hundred small conversations, not ten big ones. That's the work we do, and we do it with every buyer's licensure primary-source verified with evidence before you ever see them.
 >
@@ -106,7 +106,7 @@ Log every touch in the CRM (Messages/Tasks) from send #1. Cadence after these: A
 
 **Email subject:** Buyer introductions for the only 503B in San Antonio
 
-> Hi — I run [AGENCY], a B2B introduction firm. We build pipelines of license-verified clinical buyers and hand facilities warm introductions; you quote and invoice directly, and we never take title, possession, or any role in the transaction.
+> Hi — I run Sonoran Clinical Partners, a B2B introduction firm. We build pipelines of license-verified clinical buyers and hand facilities warm introductions; you quote and invoice directly, and we never take title, possession, or any role in the transaction.
 >
 > Apocus stands out for two reasons. You're the only outsourcing facility in San Antonio, which is a real advantage nobody is out there telling Texas practices about. And your shortage/backordered-drug line solves a problem clinics feel constantly — that's an easy conversation to open with a practice manager.
 >
@@ -128,7 +128,7 @@ Log every touch in the CRM (Messages/Tasks) from send #1. Cadence after these: A
 >
 > Congratulations on the Kansas 503B license — going from fifteen years of CDMO work into outsourcing-facility distribution is a real expansion.
 >
-> I run [AGENCY], a B2B introduction firm. We build pipelines of license-verified clinical buyers — practices, clinics, ASCs — and hand facilities warm introductions. Excite quotes and invoices directly; we never touch product or pricing.
+> I run Sonoran Clinical Partners, a B2B introduction firm. We build pipelines of license-verified clinical buyers — practices, clinics, ASCs — and hand facilities warm introductions. Excite quotes and invoices directly; we never touch product or pricing.
 >
 > The reason I'm writing: a new 503B line means a customer base you're building from zero, and end-buyer distribution to practices is a fundamentally different motion than CDMO contract selling. I'd position this as additive to David's business development work rather than overlapping it — he's selling to pharma companies; we'd be filling the practice and clinic channel underneath that. Happy to have him on the call.
 >

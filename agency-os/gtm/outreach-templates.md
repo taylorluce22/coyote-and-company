@@ -4,7 +4,7 @@ Two audiences: (A) supplier recruitment (pitching 503Bs — this is selling *you
 
 Standard footer (every message, both audiences):
 
-> {sender_name} · [AGENCY] · [postal address]
+> {sender_name} · Sonoran Clinical Partners · [postal address]
 > Don't want these emails? [Unsubscribe — one click]
 
 ---
@@ -16,7 +16,7 @@ Subject: `Buyer introductions for {facility_name} — you stay seller-of-record`
 
 > Hi {first_name},
 >
-> I run [AGENCY], a B2B introduction firm. We build pipelines of license-verified clinical buyers — {category_examples: e.g., med spas, IV therapy clinics, men's health practices} — and hand facilities like {facility_name} warm introductions. You quote and invoice directly; we never touch product, pricing, or paper.
+> I run Sonoran Clinical Partners, a B2B introduction firm. We build pipelines of license-verified clinical buyers — {category_examples: e.g., med spas, IV therapy clinics, men's health practices} — and hand facilities like {facility_name} warm introductions. You quote and invoice directly; we never touch product, pricing, or paper.
 >
 > Every buyer arrives pre-verified: state license primary-source-checked with evidence, state matched against your licensure map, buyer type confirmed for office-use purchasing.
 >
@@ -50,7 +50,7 @@ Subject: `Sourcing {product_category} for {practice_name}`
 
 > Hi {first_name},
 >
-> I'm {sender_name} with [AGENCY]. We connect {buyer_type_phrase: e.g., aesthetic practices} with FDA-registered 503B outsourcing facilities for {product_category: e.g., office-use sterile preparations} — facilities we've vetted for state licensure, inspection history, and insurance.
+> I'm {sender_name} with Sonoran Clinical Partners. We connect {buyer_type_phrase: e.g., aesthetic practices} with FDA-registered 503B outsourcing facilities for {product_category: e.g., office-use sterile preparations} — facilities we've vetted for state licensure, inspection history, and insurance.
 >
 > If sourcing {product_category} is on your plate, I can introduce you directly to a facility licensed to ship to {state}. They quote you directly; there's no cost to your practice for the introduction.
 >
