@@ -49,8 +49,17 @@ NPPES_API = "https://npiregistry.cms.hhs.gov/api/"
 PLACES_TEXT_SEARCH = "https://maps.googleapis.com/maps/api/place/textsearch/json"
 PLACES_DETAILS = "https://maps.googleapis.com/maps/api/place/details/json"
 
-# Carve-outs from docs/10-regulatory-research.md sections 3 and 6. Enforced here as
-# well as in import-prospects.py -- cheaper to never collect the row than to filter it.
+# Carve-outs from docs/10-regulatory-research.md sections 3 and 6.
+#
+# FL is settled: all-payor Patient Brokering Act plus an explicit broker-permit regime.
+#
+# CA/AL/NJ are DISPUTED as of 2026-07-28 -- gtm/state-office-use-matrix.md argues these
+# flags confuse 503A pharmacy rules with 503B rules, and that CA in particular is a
+# supplier-licensure gate rather than a buyer prohibition. That research is itself
+# unverified (search-derived, no primary text), so the carve-outs stay until a human
+# confirms with the boards. Wrongly excluding CA costs market we can reclaim in a week;
+# wrongly campaigning into a prohibited state is the failure this system exists to
+# prevent. See the verification path in docs/10-regulatory-research.md section 6.
 CARVE_OUT_STATES = {"FL", "CA", "AL", "NJ"}
 
 CSV_HEADER = [

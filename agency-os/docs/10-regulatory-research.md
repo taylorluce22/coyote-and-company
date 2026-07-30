@@ -75,7 +75,24 @@ Put these in every supplier agreement; they are what makes the commission clean:
 | Start here | AZ (home), plus states with no broker-reaching definitions found (most states) | Introduction model, full speed |
 | Watch structure discipline | **CA, TX, AZ, IL** | Definitions reach non-possessing brokers who *negotiate/offer/contract* sales. The introduction model is defensible precisely because you don't do those acts — the §5.5 seller-of-record clause and the WF13 change below are the defense. If volume justifies it later, either get a written board determination that the model is outside "wholesale distribution," or take the state's permit (they exist for possession-less entities: FL Broker permit, AZ virtual wholesaler, etc.). AZ note: we're AZ-based — getting the AZ Board's read early is cheap and settles the home state. |
 | Carve out initially | **FL** | Double flag: explicit broker permit regime *plus* the all-payor Patient Brokering Act (felony statute whose "patronage" language plausibly reaches licensed pharmacies; B2B application untested). Exclude Florida buyers from campaigns until it's worth doing properly. |
-| Also avoid for office-use products | CA, AL, NJ (+ verify per state) | State restrictions on office-use compounded shipments regardless of your model. |
+| Also avoid for office-use products | CA, AL, NJ (+ verify per state) | State restrictions on office-use compounded shipments regardless of your model. **⚠ DISPUTED as of 2026-07-28 — see below.** |
+
+### ⚠ Open conflict: the CA / AL / NJ carve-outs (raised 2026-07-28)
+
+A second research pass (`gtm/state-office-use-matrix.md`) argues all three flags are a **category error**: public "office-use prohibited" lists (Pew, GAO) describe **503A pharmacies**, whereas office-use distribution is the *defining purpose* of the **503B** category. Its specific claims:
+
+- **California** — the 72-hour-supply limit everyone cites was superseded by SB 1193 (2016), which created CA nonresident outsourcing-facility licensure permitting non-patient-specific distribution. So CA is a **supplier-licensure gate, not a buyer prohibition**.
+- **New Jersey** — N.J.A.C. 13:39-11.18 binds *pharmacists* and carves out "except to the extent permitted by Federal law," which is exactly what a 503B operates under. The ban reads as a 503A rule.
+- **Alabama** — the only documented restriction is 503B→*pharmacy*, not 503B→prescriber office. Genuinely unresolved in both directions.
+- It also flags **Georgia** as the highest-stakes ambiguity: O.C.G.A. §26-4-86 excludes Schedule II–V substances, which would bar compounded testosterone office stock — directly relevant to any TRT campaign.
+
+**Why the carve-outs stay in force anyway.** Both passes were assembled from search snippets with no primary-text access; a second search-derived analysis is not proof the first was wrong. The asymmetry decides it: wrongly excluding CA costs market we can reclaim in a week, while wrongly campaigning into a prohibited state is the exact failure this system exists to prevent. Carve-outs remain enforced in `build-prospects.py` and `import-prospects.py` until verified.
+
+**Verification path (cheap, and CA is worth the hour).**
+1. Read the primary text: CA BPC §§4129.1–4129.2 + SB 1193; N.J.A.C. 13:39-11.18; Ala. Admin. Code r. 680-X-2-.23 (was under amendment in 2025–26 — confirm current text); O.C.G.A. §26-4-86.
+2. Call the boards. One call each to CA, AL, and GA board staff resolves all three; ask specifically: *"May an in-state licensed practitioner purchase non-patient-specific compounded preparations for office administration from a nonresident 503B outsourcing facility licensed in this state?"*
+3. Record the answer as a `compliance_reviews` record citing the source, then flip the carve-out in both scripts and the CRM's allowed-states rows.
+4. Practical note that limits the upside: even where permitted, it only matters if **your specific supplier holds that state's license**. CA requires board inspection before issuing one, so CA is only reachable through a 503B that already holds it — check the supplier's license map first, which the workflow already does.
 | Rep-licensing (only if in-person selling starts) | DC, Chicago, OR, NV, CT | All triggered by physical presence — remote-only model never touches them. |
 
 **System encoding:** these become `product_geographic_restrictions` / campaign-scoping rows with this document as the basis source. FL + CA/AL/NJ exclusions ship in the seed.

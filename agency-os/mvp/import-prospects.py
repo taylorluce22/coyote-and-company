@@ -24,6 +24,8 @@ import re
 import sys
 from datetime import date
 
+# FL settled; CA/AL/NJ disputed pending board confirmation -- see
+# docs/10-regulatory-research.md section 6 and gtm/state-office-use-matrix.md.
 CARVE_OUT_STATES = {"FL", "CA", "AL", "NJ"}
 
 # Research specialty label -> CRM Buyer Type single-select value
