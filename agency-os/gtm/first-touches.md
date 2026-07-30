@@ -79,3 +79,61 @@ LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-t
 ## Send-tracking
 
 Log every touch in the CRM (Messages/Tasks) from send #1. Cadence after these: A2 at day 3, A3 at day 7, A4 breakup at day 14 (`outreach-templates.md`). Phone follow-up (manual dial) on Belmar's confirmed 800 line if no reply by day 10 — the others' numbers are unverified directory data.
+
+---
+
+# Wave 2 Drafts — New Tier 1 Candidates
+
+## 6. McGuff Outsourcing Solutions — Austin McGuff, CSO · in/austinmcguff (alt: Trevor McGuff, Dir. Corp Ops at the 503B)
+
+**LinkedIn:** Austin — I run a B2B introduction firm that brings license-verified IV therapy, wellness, and physician-practice buyers to 503B facilities. You've got new sterile capacity and target exactly that channel. Worth 20 minutes? Seller-of-record stays with you throughout.
+
+**Email subject:** Clinic buyers for the new Santa Ana capacity
+
+> Hi Austin,
+>
+> I run [AGENCY], a B2B introduction firm. We build pipelines of license-verified clinical buyers — IV hydration clinics, wellness and functional medicine practices, physician offices — and hand facilities warm introductions. McGuff quotes and invoices directly; we never touch product, pricing, or paper.
+>
+> Why I'm writing you specifically: you brought 86,000 square feet of FDA-approved sterile capacity online last year, and the channel you describe publicly — physician practices, IV hydration, functional medicine — is fragmented and high-touch. It's a hundred small conversations, not ten big ones. That's the work we do, and we do it with every buyer's licensure primary-source verified with evidence before you ever see them.
+>
+> Commercials: retainer + per-qualified-meeting fee + commission on collected revenue. No fixed sales-force cost, no headcount to hire. We take a small number of non-competing facilities per category.
+>
+> Worth 20 minutes this week? [booking link]
+
+*Why this lands: new capacity, no commercial team, actively hiring for marketing. They're solving this problem right now — the only question is whether they solve it with headcount or with us.*
+
+## 7. Apocus, Inc. — Suryanarayana Raju Sagi, Owner · info@apocus.com · (210) 920-6525
+
+**Email subject:** Buyer introductions for the only 503B in San Antonio
+
+> Hi — I run [AGENCY], a B2B introduction firm. We build pipelines of license-verified clinical buyers and hand facilities warm introductions; you quote and invoice directly, and we never take title, possession, or any role in the transaction.
+>
+> Apocus stands out for two reasons. You're the only outsourcing facility in San Antonio, which is a real advantage nobody is out there telling Texas practices about. And your shortage/backordered-drug line solves a problem clinics feel constantly — that's an easy conversation to open with a practice manager.
+>
+> We'd bring you verified buyers in the states you're licensed for, at no fixed cost: retainer plus per-meeting fee plus commission on collected revenue.
+>
+> One honest question before anything else — what monthly volume could you comfortably absorb? I'd rather size the pipeline to your capacity than flood you.
+>
+> 20 minutes? [booking link]
+
+*Why this lands: owner-led with zero commercial function, and the capacity question shows you're thinking about their constraints, not just your commission.*
+
+## 8. Excite Pharma Services — Keith Koehler, President & CEO · in/keith-koehler-9309ba · info@excitepharma.com · cc David Dinwiddie (BD)
+
+**LinkedIn:** Keith — congrats on the 503B license. I run a B2B introduction firm that brings license-verified clinic and practice buyers to outsourcing facilities. New 503B line + no installed end-buyer base is exactly where we're useful. Worth 20 minutes?
+
+**Email subject:** Building the end-buyer base for the new 503B line
+
+> Hi Keith,
+>
+> Congratulations on the Kansas 503B license — going from fifteen years of CDMO work into outsourcing-facility distribution is a real expansion.
+>
+> I run [AGENCY], a B2B introduction firm. We build pipelines of license-verified clinical buyers — practices, clinics, ASCs — and hand facilities warm introductions. Excite quotes and invoices directly; we never touch product or pricing.
+>
+> The reason I'm writing: a new 503B line means a customer base you're building from zero, and end-buyer distribution to practices is a fundamentally different motion than CDMO contract selling. I'd position this as additive to David's business development work rather than overlapping it — he's selling to pharma companies; we'd be filling the practice and clinic channel underneath that. Happy to have him on the call.
+>
+> Retainer + per-meeting fee + commission on collections, non-competing facilities only.
+>
+> 20 minutes this week? [booking link]
+
+*Why this lands: naming Dinwiddie and framing the work as additive defuses the channel-conflict objection before it's raised. Going around the one commercial person is how these deals die.*
