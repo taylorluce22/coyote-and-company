@@ -4,7 +4,8 @@ Two audiences: (A) supplier recruitment (pitching 503Bs — this is selling *you
 
 Standard footer (every message, both audiences):
 
-> {sender_name} · Sonoran Clinical Partners · [postal address]
+> Taylor Luce · Sonoran Clinical Partners
+> 15560 N Frank Lloyd Wright, Suite B4-7226, Scottsdale, AZ 85260
 > Don't want these emails? [Unsubscribe — one click]
 
 ---
@@ -50,7 +51,7 @@ Subject: `Sourcing {product_category} for {practice_name}`
 
 > Hi {first_name},
 >
-> I'm {sender_name} with Sonoran Clinical Partners. We connect {buyer_type_phrase: e.g., aesthetic practices} with FDA-registered 503B outsourcing facilities for {product_category: e.g., office-use sterile preparations} — facilities we've vetted for state licensure, inspection history, and insurance.
+> I'm Taylor Luce with Sonoran Clinical Partners. We connect {buyer_type_phrase: e.g., aesthetic practices} with FDA-registered 503B outsourcing facilities for {product_category: e.g., office-use sterile preparations} — facilities we've vetted for state licensure, inspection history, and insurance.
 >
 > If sourcing {product_category} is on your plate, I can introduce you directly to a facility licensed to ship to {state}. They quote you directly; there's no cost to your practice for the introduction.
 >

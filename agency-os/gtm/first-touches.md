@@ -1,6 +1,15 @@
 # Tier 1 First-Touch Drafts — Ready to Personalize & Send
 
-LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-template variants personalized from the researched hooks. Replace [FOUNDER] with your name and [booking link] with your Cal.com link; add the standard footer (postal address + opt-out) to emails. Send LinkedIn day 0, email day 1. Five sends — these can go from your real business email before the cold-infrastructure is warm; they're 1:1 relationship outreach, not bulk.
+**Signature block for every email (CAN-SPAM physical address requirement — a CMRA box qualifies):**
+
+```
+Taylor Luce
+Sonoran Clinical Partners
+15560 N Frank Lloyd Wright, Suite B4-7226
+Scottsdale, AZ 85260
+```
+
+LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-template variants personalized from the researched hooks. Replace [booking link] with your Cal.com link; add the standard footer (postal address + opt-out) to emails. Send LinkedIn day 0, email day 1. Five sends — these can go from your real business email before the cold-infrastructure is warm; they're 1:1 relationship outreach, not bulk.
 
 ## 1. Pine Pharmaceuticals — Alfonse J. Muto, PharmD (co-owner) · in/alfonsejmuto + sales@pinepharmaceuticals.com
 

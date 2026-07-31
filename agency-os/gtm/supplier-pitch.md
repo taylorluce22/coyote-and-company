@@ -1,6 +1,6 @@
 # Supplier Pitch One-Pager
 
-Template. Replace [FOUNDER] with your name. Keep to one page in the sent version (PDF or body of a short email). Every claim in here is about *our service*, never about any drug product — that keeps the pitch itself outside FDA claim rules.
+Template. Replace Taylor Luce with your name. Keep to one page in the sent version (PDF or body of a short email). Every claim in here is about *our service*, never about any drug product — that keeps the pitch itself outside FDA claim rules.
 
 ---
 
@@ -25,7 +25,7 @@ Template. Replace [FOUNDER] with your name. Keep to one page in the sent version
 
 **Commercials (standard):** $[X,XXX]/mo retainer + $[XXX] per qualified meeting held + [XX]% of collected revenue from introduced accounts, 12-month term, either party may exit with 30 days' notice after month 3. Commission excludes any product billed to a federal healthcare program. Full term sheet attached.
 
-**Who we are:** Sonoran Clinical Partners is a [state] B2B marketing and introduction firm founded by [FOUNDER]. [One sentence of real background.] We work with a small number of non-competing facilities per category.
+**Who we are:** Sonoran Clinical Partners is a Arizona B2B marketing and introduction firm founded by Taylor Luce. [One sentence of real background.] We work with a small number of non-competing facilities per category.
 
 **Next step:** 20 minutes this week to see if your product categories and licensed states match our buyer pipeline. [Booking link]
 
