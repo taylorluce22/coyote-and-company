@@ -1,4 +1,10 @@
-# Tier 1 First-Touch Drafts — Ready to Personalize & Send
+# First Touches — General Intros + Call Briefs
+
+**Structure (founder direction, 2026-08-01):** intro emails are SUPER GENERAL —
+one value proposition, professional voice, no company-specific research in the
+body. All personalization and research lives in the per-supplier **call brief**
+below each contact; the founder brings it up live on the call. The emails' job
+is to earn the 20 minutes, nothing more.
 
 **Signature block for every email (CAN-SPAM physical address requirement — a CMRA box qualifies):**
 
@@ -9,148 +15,102 @@ Sonoran Clinical Partners
 Scottsdale, AZ 85260
 ```
 
-LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-template variants personalized from the researched hooks. Replace [booking link] with your Cal.com link; add the standard footer (postal address + opt-out) to emails. Send LinkedIn day 0, email day 1. Five sends — these can go from your real business email before the cold-infrastructure is warm; they're 1:1 relationship outreach, not bulk.
+Replace [booking link] with your Cal.com link; add the standard footer (postal
+address + opt-out). Send LinkedIn day 0, email day 1. These go from your real
+business email — 1:1 relationship outreach, not bulk, so no warm-up needed.
 
-**Pipeline numbers behind these drafts (launch pull, 2026-08-01 — the source of truth for every count below):**
-- **3,200 unique practice organizations**, pulled from the federal NPI registry (NPPES), every one carrying its **registry-named authorized official**
-- Raw splits — specialty: **ophthalmology 1,139 · dermatology 1,019 · plastic surgery 554 · urology 517**; state: **TX 1,905 · AZ 592 · CO 413 · NV 212**, plus ~107 orgs whose practice location fell outside the four target states (NPPES matches the state filter on either address; kept — they're real practices and several target suppliers ship multi-state; zero carve-out states present)
-- Because raw splits precede the 29-row dedupe, drafts quote **floor numbers** ("1,100+ ophthalmology", "roughly 1,900 Texas") and say the file is **anchored in** AZ/TX/CO/NV rather than "across" exactly those four — never a count we can't defend
-- These are registry-identified prospects. Licensure verification with evidence happens per-buyer before any introduction — that stays the process promise, so the drafts say "registry pull," never "verified buyers."
-- **Voice rule (founder, 2026-08-01): drafts speak as an established operation — present tense, no "building/setting up/starting" narration, GENERAL rounded figures only ("more than 3,000", "over fifteen hundred") with no registry mechanics in the emails. The exact splits above are the audit trail; every rounded figure must round DOWN from them. Hard rule 7 still applies: no invented clients, placements, or track record.**
-- **Commercial model (DECIDED 2026-08-01, founder): Option B pay-on-performance — no retainer, $350–400 per qualified meeting held + 15% of collected revenue, 24-month tail. Numbers stay OUT of first emails (rep-industry convention: structure in the email, rates in the term sheet). See `pricing-benchmarks.md` §7.**
-
-## 1. Pine Pharmaceuticals — Alfonse J. Muto, PharmD (co-owner) · in/alfonsejmuto + sales@pinepharmaceuticals.com
-
-**LinkedIn:** Alfonse — I run a B2B introduction firm bringing license-verified ophthalmology practices and ASCs to 503B facilities. With the CA shake-up leaving practices re-sourcing, thought Pine's expanded capacity was worth a conversation.
-
-**Email subject:** Ophthalmology practice buyers for Pine — you stay seller-of-record
-
-> Hi Alfonse,
->
-> I run Sonoran Clinical Partners, a B2B introduction firm. We build pipelines of license-verified clinical buyers and hand facilities warm introductions — you quote and invoice directly; we never touch product, pricing, or paper.
->
-> Why Pine, why now: a lot of ophthalmology practices are re-sourcing after the California licensure shake-up, and Pine's expanded Tonawanda capacity plus the Athenex book makes you the natural landing spot. We bring you the private-practice and ASC accounts that don't come through hospital channels — each one license-verified with evidence before you ever see it. Our buyer file covers more than a thousand ophthalmology practices across the Southwest, each with a named decision-maker.
->
-> Commercials: pay-on-performance only — a fee per qualified meeting held plus commission on collected revenue from introduced accounts. No retainer, no fixed cost: if we don't produce, you don't pay. We take a small number of non-competing facilities per category.
->
-> Worth 20 minutes this week? [booking link]
-
-## 2. Belmar Pharma Solutions — Bonnie Scerbo (Dir. Marketing & Corp Comm) · in/bonnie-scerbo · 800-525-9473
-
-**LinkedIn:** Bonnie — I run a B2B introduction firm delivering license-verified med spa and HRT-clinic buyers to compounding facilities. Given Belmar's AmSpa presence and the Pasco expansion, I think there's a fit worth 20 minutes. Marketing partnership, not a distributor.
-
-**Email subject:** Converting Belmar's med spa intent into verified buyers
-
-> Hi Bonnie,
->
-> Sonoran Clinical Partners here — we're a B2B introduction firm. Belmar's AmSpa membership says you want the med spa and wellness-clinic channel; we deliver it as warm, pre-verified introductions: every buyer's licensure primary-source-checked with evidence, medical director confirmed, state matched against your ship-to map. Belmar stays seller-of-record on everything — we never touch pricing or product. Our buyer file covers the clinical core of the aesthetics channel — over fifteen hundred dermatology and plastic-surgery practices across the Southwest — and each supplier's pipeline is sequenced to their ship-to map before the first introduction.
->
-> With Pasco coming online you'll have capacity to fill. We fill it without you hiring a field team — and without a retainer: a fee per qualified meeting held plus commission on collections from introduced accounts. If we don't produce, you don't pay.
->
-> If this is worth exploring, happy to send the one-pager and term sheet ahead of a call with you and Rob: [booking link]
-
-## 3. Olympia Pharmaceuticals — Joshua Fritzler (President, new 5/2026) · LinkedIn search + main line
-
-**LinkedIn:** Joshua — congrats on the move to President. I run a B2B introduction firm delivering license-verified clinic buyers to 503Bs. We reach the long-tail accounts in-house teams don't — worth 20 minutes as you set this year's growth plan?
-
-**Email subject:** Congrats on the presidency — a channel your reps don't cover
-
-> Hi Joshua,
->
-> Congratulations on stepping into the President role. I run Sonoran Clinical Partners, a B2B introduction firm — we build license-verified pipelines of clinic buyers (men's health, IV therapy, wellness practices) and hand facilities warm introductions. You quote and invoice directly.
->
-> I know Olympia has its own sales motion — that's exactly why I'm writing. We work the long tail your reps can't economically cover: the two-location TRT clinics and independent IV practices, each license-verified with evidence before introduction. Incremental accounts, zero channel conflict with your house list — we'd put that in writing. Our buyer file spans more than 3,000 practice organizations across the Southwest, including hundreds of urology practices — exactly the men's-health adjacency.
->
-> Commercials are pay-on-performance: per qualified meeting held + commission on collections — no retainer, non-GLP-1 categories only. 20 minutes: [booking link]
-
-## 4. AnazaoHealth — Michelle Kennedy (VP Sales & Marketing) · in/michelle-kennedy-7725585
-
-**LinkedIn:** Michelle — I run a B2B introduction firm bringing license-verified med spa, IV-therapy, and men's-health clinic buyers to 503Bs. Anazao's menu maps 1:1 to our pipeline. Non-GLP-1 categories only. Worth 20 minutes?
-
-**Email subject:** The clinic long tail for Anazao's Vegas 503B
-
-> Hi Michelle,
->
-> I run Sonoran Clinical Partners, a B2B introduction firm. The med spa / IV-therapy / men's-health clinic market is compounding at 9–15% a year, and Anazao's Las Vegas menu maps to it one-for-one. We're the buyer-acquisition layer for that long tail: license-verified clinic buyers (medical director confirmed, licensure evidence on file), introduced warm, with Anazao as seller-of-record on every transaction. Our buyer file spans more than 3,000 licensed practices across the Southwest — including the aesthetics channel's clinical core and solid Nevada coverage — with campaigns sequenced to each supplier's licensure map.
->
-> Two things upfront: we work non-GLP-1 categories only, and we take a small number of non-competing facilities per category — Anazao would anchor aesthetics/IV for us.
->
-> If it's a fit, I'll send the term sheet before we talk so the call is substance: [booking link]
-
-## 5. Nubratori RX — Robert P. Nickell (Founder & CEO) · nubratorirx.com/about-us
-
-**LinkedIn:** Robert — congrats on the Inc. 5000. Founder to founder: I run a B2B introduction firm delivering license-verified clinic buyers to 503Bs, seller-of-record stays with you. Nubratori's multi-state footprint + our pipeline seems worth 20 minutes.
-
-**Email subject:** Congrats on Inc. 5000 — buyers for the footprint beyond CA
-
-> Hi Robert,
->
-> Congrats on the Inc. 5000 — impressive for a founder-led facility in this market.
->
-> I run Sonoran Clinical Partners, a B2B introduction firm: we deliver license-verified clinic buyers (med spas, IV clinics, physician practices) as warm introductions, with the facility as seller-of-record on every sale. We never touch product or pricing — we do the qualification, licensure verification with evidence, and the introduction; you do the business.
->
-> For Nubratori specifically: your out-of-state footprint is where we'd focus — we sequence buyer campaigns to the states where you hold licensure. We maintain a buyer file of more than 3,000 licensed practices across the Southwest, with named decision-makers.
->
-> Founder to founder, I'll keep it simple: no retainer — you pay per qualified meeting held and a commission on collections, exit on 30 days' notice after month 3. If we don't produce, you don't pay. 20 minutes: [booking link]
-
-## Send-tracking
-
-Log every touch in the CRM (Messages/Tasks) from send #1. Cadence after these: A2 at day 3, A3 at day 7, A4 breakup at day 14 (`outreach-templates.md`). Phone follow-up (manual dial) on Belmar's confirmed 800 line if no reply by day 10 — the others' numbers are unverified directory data.
+**Pipeline numbers (launch pull, 2026-08-01 — the audit trail behind every figure):**
+- 3,200 unique practice organizations from the federal NPI registry (NPPES), each with its registry-named authorized official
+- Raw splits — specialty: ophthalmology 1,139 · dermatology 1,019 · plastic surgery 554 · urology 517; state: TX 1,905 · AZ 592 · CO 413 · NV 212 (+~107 orgs located outside the four target states; kept — several suppliers ship multi-state; zero carve-out states)
+- Any figure spoken on a call rounds DOWN from these. Hard rule 7 applies everywhere: no invented clients, placements, or track record.
+- Commercial model (DECIDED 2026-08-01): Option B pay-on-performance — no retainer, $350–400 per qualified meeting held + 15% of collected revenue, 24-month tail. Numbers stay out of emails AND out of the first call unless asked; the term sheet carries them. See `pricing-benchmarks.md` §7.
 
 ---
 
-# Wave 2 Drafts — New Tier 1 Candidates
+## The master intro (identical for every supplier — only the name changes)
 
-## 6. McGuff Outsourcing Solutions — Austin McGuff, CSO · in/austinmcguff (alt: Trevor McGuff, Dir. Corp Ops at the 503B)
+**LinkedIn connect note (under 300 chars):**
 
-**LinkedIn:** Austin — I run a B2B introduction firm that brings license-verified IV therapy, wellness, and physician-practice buyers to 503B facilities. You've got new sterile capacity and target exactly that channel. Worth 20 minutes? Seller-of-record stays with you throughout.
+> [First name] — I run a B2B introduction firm for 503B facilities: we deliver license-verified clinical buyers as warm introductions, and you stay seller-of-record throughout. Pay-on-performance, no retainer. Worth 20 minutes?
 
-**Email subject:** Clinic buyers for the new Santa Ana capacity
+**Email subject:** `Buyer introductions for [Company] — pay on performance`
 
-> Hi Austin,
+> Hi [First name],
 >
-> I run Sonoran Clinical Partners, a B2B introduction firm. We build pipelines of license-verified clinical buyers — IV hydration clinics, wellness and functional medicine practices, physician offices — and hand facilities warm introductions. McGuff quotes and invoices directly; we never touch product, pricing, or paper.
+> I run Sonoran Clinical Partners, a B2B introduction firm for 503B outsourcing facilities. We maintain a buyer file of more than 3,000 licensed clinical practices across the Southwest, and we deliver them to facilities as warm introductions — every buyer license-verified with evidence before you see them. You quote and invoice directly; we never touch product, pricing, or paper, and you stay seller-of-record on every sale.
 >
-> Why I'm writing you specifically: you brought 86,000 square feet of FDA-approved sterile capacity online last year, and the channel you describe publicly — physician practices, IV hydration, functional medicine — is fragmented and high-touch. It's a hundred small conversations, not ten big ones. That's the work we do, and we do it with every buyer's licensure primary-source verified with evidence before you ever see them. Our buyer file covers more than 3,000 clinical practices across Arizona, Texas, Colorado, and Nevada, each with a named decision-maker, and pipelines are sequenced to each supplier's channel and delivery states.
+> Selling to practices is a different motion from the selling most facilities are built around: it's a hundred small conversations with practice decision-makers, not ten big ones. That's the work we do, so your team doesn't have to.
 >
-> Commercials: pay-on-performance only — a fee per qualified meeting held plus commission on collected revenue. No retainer, no headcount to hire, no fixed cost of any kind. We take a small number of non-competing facilities per category.
+> Commercials are pay-on-performance: a fee per qualified meeting held plus a commission on collected revenue — no retainer, no fixed cost. If we don't produce, you don't pay. We work non-GLP-1 categories only and take a small number of non-competing facilities per category.
 >
 > Worth 20 minutes this week? [booking link]
 
-*Why this lands: new capacity, no commercial team, actively hiring for marketing. They're solving this problem right now — the only question is whether they solve it with headcount or with us.*
+---
 
-## 7. Apocus, Inc. — Suryanarayana Raju Sagi, Owner · info@apocus.com · (210) 920-6525
+## Tier 1 — send first
 
-**Email subject:** Buyer introductions for the only 503B in San Antonio
+### 1. Pine Pharmaceuticals — Alfonse J. Muto, PharmD (co-owner) · in/alfonsejmuto + sales@pinepharmaceuticals.com
 
-> Hi — I run Sonoran Clinical Partners, a B2B introduction firm. We build pipelines of license-verified clinical buyers and hand facilities warm introductions; you quote and invoice directly, and we never take title, possession, or any role in the transaction.
->
-> Apocus stands out for two reasons. You're the only outsourcing facility in San Antonio, which is a real advantage nobody is out there telling Texas practices about — and nearly two thousand Texas practices sit in our buyer file. And your shortage/backordered-drug line solves a problem clinics feel constantly — that's an easy conversation to open with a practice manager.
->
-> We bring you verified buyers in the states you're licensed for, at zero fixed cost: a fee per qualified meeting held plus commission on collected revenue — no retainer, nothing owed until we produce.
->
-> One honest question before anything else — what monthly volume could you comfortably absorb? I'd rather size the pipeline to your capacity than flood you.
->
-> 20 minutes? [booking link]
+**Call brief (bring up live, not in email):**
+- Ophthalmology is their lane — our file holds 1,100+ ophthalmology practices (say "more than a thousand")
+- The California licensure shake-up has ophthalmology practices re-sourcing; Pine's expanded Tonawanda capacity + the Athenex book make them a natural landing spot
+- Angle: the private-practice and ASC accounts that don't come through hospital channels
 
-*Why this lands: owner-led with zero commercial function, and the capacity question shows you're thinking about their constraints, not just your commission.*
+### 2. Belmar Pharma Solutions — Bonnie Scerbo (Dir. Marketing & Corp Comm) · in/bonnie-scerbo · 800-525-9473
 
-## 8. Excite Pharma Services — Keith Koehler, President & CEO · in/keith-koehler-9309ba · info@excitepharma.com · cc David Dinwiddie (BD)
+**Call brief:**
+- Their AmSpa membership signals med-spa/wellness channel intent; Pasco expansion = capacity to fill
+- Our file: 1,500+ dermatology and plastic-surgery practices (the aesthetics channel's clinical core); med-spa pipelines sequenced per supplier ship-to map
+- Decision path: Bonnie → Rob; offer the one-pager + term sheet ahead of a joint call
+- Phone follow-up OK — their 800 line is confirmed
 
-**LinkedIn:** Keith — congrats on the 503B license. I run a B2B introduction firm that brings license-verified clinic and practice buyers to outsourcing facilities. New 503B line + no installed end-buyer base is exactly where we're useful. Worth 20 minutes?
+### 3. Olympia Pharmaceuticals — Joshua Fritzler (President, new 5/2026) · LinkedIn search + main line
 
-**Email subject:** Building the end-buyer base for the new 503B line
+**Call brief:**
+- New President as of May 2026 — setting growth plans now; congratulate live
+- They have an in-house sales motion: our position is the LONG TAIL their reps can't economically cover (two-location TRT clinics, independent IV practices) — incremental, zero channel conflict, put it in writing
+- Our file: nearly 500 urology practices — the men's-health adjacency
 
-> Hi Keith,
->
-> Congratulations on the Kansas 503B license — going from fifteen years of CDMO work into outsourcing-facility distribution is a real expansion.
->
-> I run Sonoran Clinical Partners, a B2B introduction firm. We build pipelines of license-verified clinical buyers — practices, clinics, ASCs — and hand facilities warm introductions. Excite quotes and invoices directly; we never touch product or pricing.
->
-> The reason I'm writing: a new 503B line means a customer base you're building from zero, and end-buyer distribution to practices is a fundamentally different motion than CDMO contract selling. We bring a buyer file of more than 3,000 licensed practices to it from day one. I'd position this as additive to David's business development work rather than overlapping it — he's selling to pharma companies; we'd be filling the practice and clinic channel underneath that. Happy to have him on the call.
->
-> Pay-on-performance: per qualified meeting held + commission on collections, no retainer, non-competing facilities only.
->
-> 20 minutes this week? [booking link]
+### 4. AnazaoHealth — Michelle Kennedy (VP Sales & Marketing) · in/michelle-kennedy-7725585
 
-*Why this lands: naming Dinwiddie and framing the work as additive defuses the channel-conflict objection before it's raised. Going around the one commercial person is how these deals die.*
+**Call brief:**
+- Las Vegas 503B; menu maps 1:1 to med spa / IV / men's health; that market compounds 9–15%/yr
+- Our file: 1,500+ derm/plastics + 200+ organizations in Nevada alone
+- Offer: Anazao anchors aesthetics/IV as a non-competing category; term sheet before the call so the call is substance
+
+### 5. Nubratori RX — Robert P. Nickell (Founder & CEO) · nubratorirx.com/about-us
+
+**Call brief:**
+- Congratulate the Inc. 5000 live; founder-to-founder framing works here
+- Their base is CA — our four-state file is exactly the out-of-state footprint play; campaigns sequenced to states where they hold licensure
+- Keep terms simple on the call: pay-on-performance, exit on 30 days' notice after month 3
+
+## Wave 2
+
+### 6. McGuff Outsourcing Solutions — Austin McGuff, CSO · in/austinmcguff (alt: Trevor McGuff, Dir. Corp Ops)
+
+**Call brief:**
+- TOP TARGET: 86,000 sq ft of new FDA-approved sterile capacity, no commercial team, actively hiring marketing — they are solving this exact problem right now, with headcount or with us
+- Their stated channel (physician practices, IV hydration, functional medicine) is fragmented and high-touch — literally our pitch paragraph
+- Our file: 3,000+ physician-practice organizations; IV/wellness pipelines sequenced to their delivery states
+
+### 7. Apocus, Inc. — Suryanarayana Raju Sagi, Owner · info@apocus.com · (210) 920-6525
+
+**Call brief:**
+- Only 503B in San Antonio — a real advantage nobody is telling Texas practices about; our file holds nearly 2,000 Texas practices (the largest share)
+- Their shortage/backordered-drug line opens practice-manager conversations easily
+- Ask the capacity question early ("what monthly volume could you comfortably absorb?") — sizes the pipeline to them, builds trust
+
+### 8. Excite Pharma Services — Keith Koehler, President & CEO · in/keith-koehler-9309ba · info@excitepharma.com · cc David Dinwiddie (BD)
+
+**Call brief:**
+- Congratulate the Kansas 503B license live; 15 years of CDMO work → outsourcing distribution is a real expansion
+- New 503B line = customer base from zero; end-buyer distribution is a fundamentally different motion than CDMO contract selling — we bring the practice file from day one
+- Channel-conflict defusal: position as ADDITIVE to David Dinwiddie's BD work (he sells to pharma companies; we fill the practice/clinic channel underneath) — offer to have him on the call. Going around the one commercial person is how these deals die.
+
+## Send-tracking
+
+Log every touch in the CRM (Messages/Tasks) from send #1. Cadence after the
+intro: A2 at day 3, A3 at day 7, A4 breakup at day 14 (`outreach-templates.md`).
+Phone follow-up (manual dial) on Belmar's confirmed 800 line if no reply by
+day 10 — the others' numbers are unverified directory data.
