@@ -36,6 +36,11 @@ Examples
   python3 build-prospects.py taxonomies
 """
 
+# `str | None` in an annotation is PEP 604 syntax, evaluated at def time on
+# Python < 3.10 and a TypeError there. macOS still ships 3.9 as `python3`,
+# so defer annotation evaluation instead of pinning a newer interpreter.
+from __future__ import annotations
+
 import argparse
 import csv
 import json
