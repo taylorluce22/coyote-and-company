@@ -19,11 +19,13 @@ Basis: `docs/10-regulatory-research.md` §5 (compensation contract terms) and §
 
 ## ⚑ Compensation
 
+Standard offer is pay-on-performance (Option B, decided 2026-08-01 — benchmarks and variants in `pricing-benchmarks.md` §7). No retainer.
+
 | Component | Term |
 |---|---|
-| Retainer | $[X,XXX]/month, due monthly in advance |
-| Qualified-meeting fee | $[XXX] per qualified meeting held (definition: scheduled meeting between Supplier and a buyer contact Agency introduced, where the buyer holds a verified active license and an eligible buyer type — held, not merely booked) |
-| Commission | [XX]% of Collected Revenue from Introduced Accounts, payable monthly within [30] days of month-end, based on Supplier's monthly collections report |
+| Retainer | None — pay-on-performance. *(Variant A: if Supplier prefers a lower rate, $3,000/mo market-development fee buys commission down to 8–10%.)* |
+| Qualified-meeting fee | $400 per qualified meeting held — open at $400, floor $350 (definition: scheduled meeting between Supplier and a buyer contact Agency introduced, where the buyer holds a verified active license and an eligible buyer type — held, not merely booked). *(Variant C: fold into commission — pure 18–20%, tail non-negotiable.)* |
+| Commission | 15% of Collected Revenue from Introduced Accounts — floor 12% without a retainer, payable monthly within [30] days of month-end, based on Supplier's monthly collections report |
 | Introduced Account | A buyer entity first introduced to Supplier by Agency, evidenced by the introduction record; status persists for [24] months from first order ("tail") |
 | Methodology fixed in advance ⚑ | Rates and definitions set in the agreement; changes only by written amendment *(safe-harbor styling)* |
 
@@ -56,4 +58,4 @@ Basis: `docs/10-regulatory-research.md` §5 (compensation contract terms) and §
 
 ## Open items for negotiation per deal
 
-Retainer amount vs. commission rate trade; category exclusivity; tail length (12–24 months); meeting-fee definition edge cases (no-shows, reschedules); minimum monthly introduction commitments (offer only after month 1 data).
+Meeting-fee vs. commission trade (variants A and C above); category exclusivity; tail length (12–24 months — concede tail before rate); meeting-fee definition edge cases (no-shows, reschedules); minimum monthly introduction commitments (offer only after month 1 data).

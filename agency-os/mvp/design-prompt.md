@@ -11,7 +11,7 @@ THE BUSINESS (context you need to design correctly):
 I run a one-founder B2B introduction agency in the pharma space. I connect vetted 503B
 compounding facilities (my "Suppliers") with license-verified clinical buyers (med spas,
 IV-therapy clinics, men's-health clinics, ophthalmology practices — my "Buyers"). I never
-sell or touch product: suppliers quote and invoice buyers directly; I get paid retainers,
+sell or touch product: suppliers quote and invoice buyers directly; I get paid per-meeting fees,
 per-meeting fees, and commissions on supplier-reported collections. The whole business is
 compliance-gated automation: emails only send to fully qualified contacts, opt-outs
 suppress instantly, and a handful of actions stay human — approving templates, verifying

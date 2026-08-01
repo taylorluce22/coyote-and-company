@@ -58,7 +58,7 @@ Airtable form per supplier (tokenized link) for quotes/orders/collections report
 
 ### M8 — Money engine · on Collection created + monthly 1st
 - Per Collection: find Agreement (Signed Active, Federal Exclusion Clause checked, Effective covering Collected Date) → write Commission row (Draft, Type=Commission, Amount = Amount × Commission Pct). No qualifying agreement → Exception, no calc (G7).
-- Monthly 1st: add Retainer + Meeting Fee lines (meetings held last month × fee), assemble the period statement, notify founder → **Awaiting Approval** view.
+- Monthly 1st: add Meeting Fee lines (meetings held last month × fee; retainer lines only if the agreement is a variant-A type), assemble the period statement, notify founder → **Awaiting Approval** view.
 - Founder approves (one click per period) → M8 generates the QBO invoice to the supplier, marks Invoiced, emails statement. Payment recorded in QBO → webhook → mark Paid. Mismatches → Disputed + Exception.
 
 ### M9 — Daily digest · 07:00

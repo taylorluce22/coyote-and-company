@@ -21,7 +21,7 @@ Subject: `Buyer introductions for {facility_name} — you stay seller-of-record`
 >
 > Every buyer arrives pre-verified: state license primary-source-checked with evidence, state matched against your licensure map, buyer type confirmed for office-use purchasing.
 >
-> Commercials are retainer + per-meeting + commission on collected revenue — no fixed sales-force cost. We take a small number of non-competing facilities per category.
+> Commercials are pay-on-performance — a fee per qualified meeting held plus commission on collected revenue, no retainer, no fixed cost. We take a small number of non-competing facilities per category.
 >
 > Worth 20 minutes this week? {booking_link}
 

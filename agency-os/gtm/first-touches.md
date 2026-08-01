@@ -16,6 +16,7 @@ LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-t
 - Raw splits — specialty: **ophthalmology 1,139 · dermatology 1,019 · plastic surgery 554 · urology 517**; state: **TX 1,905 · AZ 592 · CO 413 · NV 212**, plus ~107 orgs whose practice location fell outside the four target states (NPPES matches the state filter on either address; kept — they're real practices and several target suppliers ship multi-state; zero carve-out states present)
 - Because raw splits precede the 29-row dedupe, drafts quote **floor numbers** ("1,100+ ophthalmology", "roughly 1,900 Texas") and say the file is **anchored in** AZ/TX/CO/NV rather than "across" exactly those four — never a count we can't defend
 - These are registry-identified prospects. Licensure verification with evidence happens per-buyer before any introduction — that stays the process promise, so the drafts say "registry pull," never "verified buyers."
+- **Commercial model (DECIDED 2026-08-01, founder): Option B pay-on-performance — no retainer, $350–400 per qualified meeting held + 15% of collected revenue, 24-month tail. Numbers stay OUT of first emails (rep-industry convention: structure in the email, rates in the term sheet). See `pricing-benchmarks.md` §7.**
 
 ## 1. Pine Pharmaceuticals — Alfonse J. Muto, PharmD (co-owner) · in/alfonsejmuto + sales@pinepharmaceuticals.com
 
@@ -29,7 +30,7 @@ LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-t
 >
 > Why Pine, why now: a lot of ophthalmology practices are re-sourcing after the California licensure shake-up, and Pine's expanded Tonawanda capacity plus the Athenex book makes you the natural landing spot. We'd bring you the private-practice and ASC accounts that don't come through hospital channels — each one license-verified with evidence before you ever see it. And we're not starting from zero: 1,100+ ophthalmology practices are already on file — part of a 3,200-organization registry pull anchored in AZ, TX, CO, and NV — each with the registry's named decision-maker.
 >
-> Commercials: retainer + per-meeting fee + commission on collected revenue. No fixed sales-force cost. We take a small number of non-competing facilities per category.
+> Commercials: pay-on-performance only — a fee per qualified meeting held plus commission on collected revenue from introduced accounts. No retainer, no fixed cost: if we don't produce, you don't pay. We take a small number of non-competing facilities per category.
 >
 > Worth 20 minutes this week? [booking link]
 
@@ -43,7 +44,7 @@ LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-t
 >
 > Sonoran Clinical Partners here — we're a B2B introduction firm. Belmar's AmSpa membership says you want the med spa and wellness-clinic channel; we deliver it as warm, pre-verified introductions: every buyer's licensure primary-source-checked with evidence, medical director confirmed, state matched against your ship-to map. Belmar stays seller-of-record on everything — we never touch pricing or product. 1,500+ dermatology and plastic-surgery practices are already on file from our 3,200-organization registry pull anchored in AZ, TX, CO, and NV; the med-spa layer is what we're building on top of it now.
 >
-> With Pasco coming online you'll have capacity to fill. We fill it without you hiring a field team: retainer + per-meeting fee + commission on collections from introduced accounts.
+> With Pasco coming online you'll have capacity to fill. We fill it without you hiring a field team — and without a retainer: a fee per qualified meeting held plus commission on collections from introduced accounts. If we don't produce, you don't pay.
 >
 > If this is worth exploring, happy to send the one-pager and term sheet ahead of a call with you and Rob: [booking link]
 
@@ -59,7 +60,7 @@ LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-t
 >
 > I know Olympia has its own sales motion — that's exactly why I'm writing. We work the long tail your reps can't economically cover: the two-location TRT clinics and independent IV practices, each license-verified with evidence before introduction. Incremental accounts, zero channel conflict with your house list — we'd put that in writing. Our launch file already runs 3,200 practice organizations with decision-makers named — nearly 500 of them urology, which is exactly the men's-health adjacency.
 >
-> Commercials are retainer + per-meeting + commission on collections, non-GLP-1 categories only. 20 minutes: [booking link]
+> Commercials are pay-on-performance: per qualified meeting held + commission on collections — no retainer, non-GLP-1 categories only. 20 minutes: [booking link]
 
 ## 4. AnazaoHealth — Michelle Kennedy (VP Sales & Marketing) · in/michelle-kennedy-7725585
 
@@ -89,7 +90,7 @@ LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-t
 >
 > For Nubratori specifically: your out-of-state footprint is where we'd focus — we sequence buyer campaigns to the states where you hold licensure. We're holding a 3,200-organization practice file today, anchored in AZ, TX, CO, and NV, decision-makers named from the federal registry.
 >
-> Founder to founder, I'll keep it simple: retainer + per-meeting + commission on collections, month-to-month exit after 90 days. 20 minutes: [booking link]
+> Founder to founder, I'll keep it simple: no retainer — you pay per qualified meeting held and a commission on collections, exit on 30 days' notice after month 3. If we don't produce, you don't pay. 20 minutes: [booking link]
 
 ## Send-tracking
 
@@ -111,7 +112,7 @@ Log every touch in the CRM (Messages/Tasks) from send #1. Cadence after these: A
 >
 > Why I'm writing you specifically: you brought 86,000 square feet of FDA-approved sterile capacity online last year, and the channel you describe publicly — physician practices, IV hydration, functional medicine — is fragmented and high-touch. It's a hundred small conversations, not ten big ones. That's the work we do, and we do it with every buyer's licensure primary-source verified with evidence before you ever see them. The pipeline is already real: 3,200 physician-practice organizations anchored in Arizona, Texas, Colorado, and Nevada, pulled this week from the federal NPI registry with each organization's decision-maker named — and the IV-hydration and wellness layer is building on top of it now.
 >
-> Commercials: retainer + per-qualified-meeting fee + commission on collected revenue. No fixed sales-force cost, no headcount to hire. We take a small number of non-competing facilities per category.
+> Commercials: pay-on-performance only — a fee per qualified meeting held plus commission on collected revenue. No retainer, no headcount to hire, no fixed cost of any kind. We take a small number of non-competing facilities per category.
 >
 > Worth 20 minutes this week? [booking link]
 
@@ -125,7 +126,7 @@ Log every touch in the CRM (Messages/Tasks) from send #1. Cadence after these: A
 >
 > Apocus stands out for two reasons. You're the only outsourcing facility in San Antonio, which is a real advantage nobody is out there telling Texas practices about — and roughly 1,900 Texas practices are already in our file, the largest share of our 3,200-organization registry pull. And your shortage/backordered-drug line solves a problem clinics feel constantly — that's an easy conversation to open with a practice manager.
 >
-> We'd bring you verified buyers in the states you're licensed for, at no fixed cost: retainer plus per-meeting fee plus commission on collected revenue.
+> We'd bring you verified buyers in the states you're licensed for, at zero fixed cost: a fee per qualified meeting held plus commission on collected revenue — no retainer, nothing owed until we produce.
 >
 > One honest question before anything else — what monthly volume could you comfortably absorb? I'd rather size the pipeline to your capacity than flood you.
 >
@@ -147,7 +148,7 @@ Log every touch in the CRM (Messages/Tasks) from send #1. Cadence after these: A
 >
 > The reason I'm writing: a new 503B line means a customer base you're building from zero, and end-buyer distribution to practices is a fundamentally different motion than CDMO contract selling. We'd bring a 3,200-organization practice file to that from day one. I'd position this as additive to David's business development work rather than overlapping it — he's selling to pharma companies; we'd be filling the practice and clinic channel underneath that. Happy to have him on the call.
 >
-> Retainer + per-meeting fee + commission on collections, non-competing facilities only.
+> Pay-on-performance: per qualified meeting held + commission on collections, no retainer, non-competing facilities only.
 >
 > 20 minutes this week? [booking link]
 
