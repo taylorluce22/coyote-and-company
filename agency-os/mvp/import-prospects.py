@@ -93,6 +93,12 @@ def main() -> int:
 
     buyers, contacts, worklist, rejects = [], [], [], []
     seen: dict[tuple[str, str], str] = {}
+    # Evidence for the near-duplicate review: city/phone/source per accepted row.
+    # buyers-import.csv doesn't carry these (its columns mirror the CRM buyers
+    # table), but a human deciding "same practice or not?" needs them ON the
+    # review row — the first run produced 602 name-pairs with no way to judge
+    # any of them without grepping the raw CSV per pair.
+    meta: dict[tuple[str, str], tuple[str, str, str]] = {}
 
     for path in files:
         with path.open(newline="", encoding="utf-8-sig") as fh:
@@ -118,6 +124,11 @@ def main() -> int:
                     )
                     continue
                 seen[key] = source_file
+                meta[key] = (
+                    (row.get("City") or "").strip().title(),
+                    re.sub(r"\D", "", row.get("Phone") or "")[-10:],  # digits, last 10
+                    (row.get("Source URL") or "").strip(),
+                )
 
                 specialty = row.get("Specialty", "")
                 buyer_type = map_buyer_type(specialty)
@@ -178,6 +189,17 @@ def main() -> int:
     for row in buyers:
         by_state.setdefault(row[3], []).append((row[0], normalize_name(row[0])))
 
+    # Each flagged pair gets the registry's own evidence and a verdict, then the
+    # file is sorted so the real merge work sits at the top. NOTHING is merged
+    # here (WF6: fuzzy matches are a human decision) — the verdict only orders
+    # and frames the review:
+    #   LIKELY SAME      both rows share a phone number. One practice, two name
+    #                    spellings. These are the rows worth careful eyes.
+    #   LIKELY DISTINCT  different city AND different phone. NPPES names are
+    #                    formulaic ("Valley Eye Care" / "West Valley Eye Care
+    #                    Center"), so most flags land here — skim, don't study.
+    #   REVIEW           evidence incomplete or mixed. Actual judgment calls.
+    VERDICT_ORDER = {"LIKELY SAME": 0, "REVIEW": 1, "LIKELY DISTINCT": 2}
     near_dupes: list[list[str]] = []
     for st, entries in by_state.items():
         for i in range(len(entries)):
@@ -190,14 +212,27 @@ def main() -> int:
                 )
                 if ratio >= NEAR_DUPE_RATIO or contained:
                     reason = "containment" if contained else "similarity"
+                    city_a, phone_a, url_a = meta.get((a, st), ("", "", ""))
+                    city_b, phone_b, url_b = meta.get((b, st), ("", "", ""))
+                    if phone_a and phone_a == phone_b:
+                        verdict = "LIKELY SAME"
+                    elif (
+                        city_a and city_b and city_a != city_b
+                        and phone_a and phone_b and phone_a != phone_b
+                    ):
+                        verdict = "LIKELY DISTINCT"
+                    else:
+                        verdict = "REVIEW"
                     near_dupes.append(
                         [
-                            entries[i][0],
-                            entries[j][0],
+                            verdict,
+                            entries[i][0], city_a, phone_a, url_a,
+                            entries[j][0], city_b, phone_b, url_b,
                             st,
                             f"{ratio:.3f} ({reason})",
                         ]
                     )
+    near_dupes.sort(key=lambda r: (VERDICT_ORDER.get(r[0], 1), r[9], r[1]))
 
     def write(fname: str, header: list[str], rows: list[list[str]]) -> None:
         with (out_dir / fname).open("w", newline="", encoding="utf-8") as fh:
@@ -233,9 +268,18 @@ def main() -> int:
     write("rejects.csv", ["Name", "State", "Source File", "Reason"], rejects)
     write(
         "near-duplicate-review.csv",
-        ["Name A", "Name B", "State", "Similarity"],
+        [
+            "Verdict",
+            "Name A", "City A", "Phone A", "Registry A",
+            "Name B", "City B", "Phone B", "Registry B",
+            "State", "Similarity",
+        ],
         near_dupes,
     )
+
+    by_verdict = {v: 0 for v in VERDICT_ORDER}
+    for r in near_dupes:
+        by_verdict[r[0]] = by_verdict.get(r[0], 0) + 1
 
     print(f"\nSource files: {len(files)}")
     print(f"Unique buyers: {len(buyers)}   contacts: {len(contacts)}")
@@ -244,6 +288,11 @@ def main() -> int:
     print(
         f"Near-duplicate pairs for human review: {len(near_dupes)} "
         "(not auto-merged, per WF6)"
+    )
+    print(
+        f"  likely same (shared phone — review these): {by_verdict['LIKELY SAME']}\n"
+        f"  judgment calls (mixed evidence):           {by_verdict['REVIEW']}\n"
+        f"  likely distinct (diff city+phone — skim):  {by_verdict['LIKELY DISTINCT']}"
     )
     return 0
 
