@@ -1,5 +1,7 @@
 # First Touches — General Intros + Call Briefs
 
+**APPROVED by founder 2026-08-01 at commit 2a794c9 ("its good to go") — this exact master-intro text is cleared to send. Any edit to the master intro creates a new version requiring re-approval (hard rule 6).**
+
 **Structure (founder direction, 2026-08-01):** intro emails are SUPER GENERAL —
 one value proposition, professional voice, no company-specific research in the
 body. All personalization and research lives in the per-supplier **call brief**
