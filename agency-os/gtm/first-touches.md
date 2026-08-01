@@ -12,9 +12,9 @@ Scottsdale, AZ 85260
 LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-template variants personalized from the researched hooks. Replace [booking link] with your Cal.com link; add the standard footer (postal address + opt-out) to emails. Send LinkedIn day 0, email day 1. Five sends — these can go from your real business email before the cold-infrastructure is warm; they're 1:1 relationship outreach, not bulk.
 
 **Pipeline numbers behind these drafts (launch pull, 2026-08-01 — the source of truth for every count below):**
-- **3,200 unique practice organizations** across **AZ, TX, CO, NV**, pulled from the federal NPI registry (NPPES)
-- Specialties pulled: **ophthalmology, dermatology, urology, plastic surgery**
-- Every organization carries its **registry-named authorized official** — 3,200 named decision-makers
+- **3,200 unique practice organizations**, pulled from the federal NPI registry (NPPES), every one carrying its **registry-named authorized official**
+- Raw splits — specialty: **ophthalmology 1,139 · dermatology 1,019 · plastic surgery 554 · urology 517**; state: **TX 1,905 · AZ 592 · CO 413 · NV 212**, plus ~107 orgs whose practice location fell outside the four target states (NPPES matches the state filter on either address; kept — they're real practices and several target suppliers ship multi-state; zero carve-out states present)
+- Because raw splits precede the 29-row dedupe, drafts quote **floor numbers** ("1,100+ ophthalmology", "roughly 1,900 Texas") and say the file is **anchored in** AZ/TX/CO/NV rather than "across" exactly those four — never a count we can't defend
 - These are registry-identified prospects. Licensure verification with evidence happens per-buyer before any introduction — that stays the process promise, so the drafts say "registry pull," never "verified buyers."
 
 ## 1. Pine Pharmaceuticals — Alfonse J. Muto, PharmD (co-owner) · in/alfonsejmuto + sales@pinepharmaceuticals.com
@@ -27,7 +27,7 @@ LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-t
 >
 > I run Sonoran Clinical Partners, a B2B introduction firm. We build pipelines of license-verified clinical buyers and hand facilities warm introductions — you quote and invoice directly; we never touch product, pricing, or paper.
 >
-> Why Pine, why now: a lot of ophthalmology practices are re-sourcing after the California licensure shake-up, and Pine's expanded Tonawanda capacity plus the Athenex book makes you the natural landing spot. We'd bring you the private-practice and ASC accounts that don't come through hospital channels — each one license-verified with evidence before you ever see it. And we're not starting from zero: our file already holds 3,200 practice organizations across AZ, TX, CO, and NV — ophthalmology among the four specialties it was built from — each with the registry's named decision-maker.
+> Why Pine, why now: a lot of ophthalmology practices are re-sourcing after the California licensure shake-up, and Pine's expanded Tonawanda capacity plus the Athenex book makes you the natural landing spot. We'd bring you the private-practice and ASC accounts that don't come through hospital channels — each one license-verified with evidence before you ever see it. And we're not starting from zero: 1,100+ ophthalmology practices are already on file — part of a 3,200-organization registry pull anchored in AZ, TX, CO, and NV — each with the registry's named decision-maker.
 >
 > Commercials: retainer + per-meeting fee + commission on collected revenue. No fixed sales-force cost. We take a small number of non-competing facilities per category.
 >
@@ -41,7 +41,7 @@ LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-t
 
 > Hi Bonnie,
 >
-> Sonoran Clinical Partners here — we're a B2B introduction firm. Belmar's AmSpa membership says you want the med spa and wellness-clinic channel; we deliver it as warm, pre-verified introductions: every buyer's licensure primary-source-checked with evidence, medical director confirmed, state matched against your ship-to map. Belmar stays seller-of-record on everything — we never touch pricing or product. Dermatology and plastic-surgery practices are already on file from our 3,200-organization registry pull across AZ, TX, CO, and NV; the med-spa layer is what we're building on top of it now.
+> Sonoran Clinical Partners here — we're a B2B introduction firm. Belmar's AmSpa membership says you want the med spa and wellness-clinic channel; we deliver it as warm, pre-verified introductions: every buyer's licensure primary-source-checked with evidence, medical director confirmed, state matched against your ship-to map. Belmar stays seller-of-record on everything — we never touch pricing or product. 1,500+ dermatology and plastic-surgery practices are already on file from our 3,200-organization registry pull anchored in AZ, TX, CO, and NV; the med-spa layer is what we're building on top of it now.
 >
 > With Pasco coming online you'll have capacity to fill. We fill it without you hiring a field team: retainer + per-meeting fee + commission on collections from introduced accounts.
 >
@@ -57,7 +57,7 @@ LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-t
 >
 > Congratulations on stepping into the President role. I run Sonoran Clinical Partners, a B2B introduction firm — we build license-verified pipelines of clinic buyers (men's health, IV therapy, wellness practices) and hand facilities warm introductions. You quote and invoice directly.
 >
-> I know Olympia has its own sales motion — that's exactly why I'm writing. We work the long tail your reps can't economically cover: the two-location TRT clinics and independent IV practices, each license-verified with evidence before introduction. Incremental accounts, zero channel conflict with your house list — we'd put that in writing. Our launch file already runs 3,200 practice organizations across AZ, TX, CO, and NV with decision-makers named — urology among its four specialties, which is exactly the men's-health adjacency.
+> I know Olympia has its own sales motion — that's exactly why I'm writing. We work the long tail your reps can't economically cover: the two-location TRT clinics and independent IV practices, each license-verified with evidence before introduction. Incremental accounts, zero channel conflict with your house list — we'd put that in writing. Our launch file already runs 3,200 practice organizations with decision-makers named — nearly 500 of them urology, which is exactly the men's-health adjacency.
 >
 > Commercials are retainer + per-meeting + commission on collections, non-GLP-1 categories only. 20 minutes: [booking link]
 
@@ -69,7 +69,7 @@ LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-t
 
 > Hi Michelle,
 >
-> I run Sonoran Clinical Partners, a B2B introduction firm. The med spa / IV-therapy / men's-health clinic market is compounding at 9–15% a year, and Anazao's Las Vegas menu maps to it one-for-one. We're the buyer-acquisition layer for that long tail: license-verified clinic buyers (medical director confirmed, licensure evidence on file), introduced warm, with Anazao as seller-of-record on every transaction. The base is already built — a 3,200-organization registry pull across AZ, TX, CO, and NV including dermatology, plastic surgery, and urology practices, with the aesthetics/IV layer going on top now — and Nevada is one of its four states.
+> I run Sonoran Clinical Partners, a B2B introduction firm. The med spa / IV-therapy / men's-health clinic market is compounding at 9–15% a year, and Anazao's Las Vegas menu maps to it one-for-one. We're the buyer-acquisition layer for that long tail: license-verified clinic buyers (medical director confirmed, licensure evidence on file), introduced warm, with Anazao as seller-of-record on every transaction. The base is already built — a 3,200-organization registry pull anchored in AZ, TX, CO, and NV, with 1,500+ dermatology and plastic-surgery practices and 200+ organizations in Nevada alone — and the aesthetics/IV layer is going on top now.
 >
 > Two things upfront: we work non-GLP-1 categories only, and we take a small number of non-competing facilities per category — Anazao would anchor aesthetics/IV for us.
 >
@@ -87,7 +87,7 @@ LinkedIn notes are under 300 characters (connect-request limit). Emails are A1-t
 >
 > I run Sonoran Clinical Partners, a B2B introduction firm: we deliver license-verified clinic buyers (med spas, IV clinics, physician practices) as warm introductions, with the facility as seller-of-record on every sale. We never touch product or pricing — we do the qualification, licensure verification with evidence, and the introduction; you do the business.
 >
-> For Nubratori specifically: your out-of-state footprint is where we'd focus — we sequence buyer campaigns to the states where you hold licensure. We're holding a 3,200-organization practice file across AZ, TX, CO, and NV today, decision-makers named from the federal registry.
+> For Nubratori specifically: your out-of-state footprint is where we'd focus — we sequence buyer campaigns to the states where you hold licensure. We're holding a 3,200-organization practice file today, anchored in AZ, TX, CO, and NV, decision-makers named from the federal registry.
 >
 > Founder to founder, I'll keep it simple: retainer + per-meeting + commission on collections, month-to-month exit after 90 days. 20 minutes: [booking link]
 
@@ -109,7 +109,7 @@ Log every touch in the CRM (Messages/Tasks) from send #1. Cadence after these: A
 >
 > I run Sonoran Clinical Partners, a B2B introduction firm. We build pipelines of license-verified clinical buyers — IV hydration clinics, wellness and functional medicine practices, physician offices — and hand facilities warm introductions. McGuff quotes and invoices directly; we never touch product, pricing, or paper.
 >
-> Why I'm writing you specifically: you brought 86,000 square feet of FDA-approved sterile capacity online last year, and the channel you describe publicly — physician practices, IV hydration, functional medicine — is fragmented and high-touch. It's a hundred small conversations, not ten big ones. That's the work we do, and we do it with every buyer's licensure primary-source verified with evidence before you ever see them. The pipeline is already real: 3,200 physician-practice organizations across Arizona, Texas, Colorado, and Nevada, pulled this week from the federal NPI registry with each organization's decision-maker named — and the IV-hydration and wellness layer is building on top of it now.
+> Why I'm writing you specifically: you brought 86,000 square feet of FDA-approved sterile capacity online last year, and the channel you describe publicly — physician practices, IV hydration, functional medicine — is fragmented and high-touch. It's a hundred small conversations, not ten big ones. That's the work we do, and we do it with every buyer's licensure primary-source verified with evidence before you ever see them. The pipeline is already real: 3,200 physician-practice organizations anchored in Arizona, Texas, Colorado, and Nevada, pulled this week from the federal NPI registry with each organization's decision-maker named — and the IV-hydration and wellness layer is building on top of it now.
 >
 > Commercials: retainer + per-qualified-meeting fee + commission on collected revenue. No fixed sales-force cost, no headcount to hire. We take a small number of non-competing facilities per category.
 >
@@ -123,7 +123,7 @@ Log every touch in the CRM (Messages/Tasks) from send #1. Cadence after these: A
 
 > Hi — I run Sonoran Clinical Partners, a B2B introduction firm. We build pipelines of license-verified clinical buyers and hand facilities warm introductions; you quote and invoice directly, and we never take title, possession, or any role in the transaction.
 >
-> Apocus stands out for two reasons. You're the only outsourcing facility in San Antonio, which is a real advantage nobody is out there telling Texas practices about — and Texas practices are already in our file, part of a 3,200-organization registry pull across four states. And your shortage/backordered-drug line solves a problem clinics feel constantly — that's an easy conversation to open with a practice manager.
+> Apocus stands out for two reasons. You're the only outsourcing facility in San Antonio, which is a real advantage nobody is out there telling Texas practices about — and roughly 1,900 Texas practices are already in our file, the largest share of our 3,200-organization registry pull. And your shortage/backordered-drug line solves a problem clinics feel constantly — that's an easy conversation to open with a practice manager.
 >
 > We'd bring you verified buyers in the states you're licensed for, at no fixed cost: retainer plus per-meeting fee plus commission on collected revenue.
 >
@@ -145,7 +145,7 @@ Log every touch in the CRM (Messages/Tasks) from send #1. Cadence after these: A
 >
 > I run Sonoran Clinical Partners, a B2B introduction firm. We build pipelines of license-verified clinical buyers — practices, clinics, ASCs — and hand facilities warm introductions. Excite quotes and invoices directly; we never touch product or pricing.
 >
-> The reason I'm writing: a new 503B line means a customer base you're building from zero, and end-buyer distribution to practices is a fundamentally different motion than CDMO contract selling. We'd bring a 3,200-organization, four-state practice file to that from day one. I'd position this as additive to David's business development work rather than overlapping it — he's selling to pharma companies; we'd be filling the practice and clinic channel underneath that. Happy to have him on the call.
+> The reason I'm writing: a new 503B line means a customer base you're building from zero, and end-buyer distribution to practices is a fundamentally different motion than CDMO contract selling. We'd bring a 3,200-organization practice file to that from day one. I'd position this as additive to David's business development work rather than overlapping it — he's selling to pharma companies; we'd be filling the practice and clinic channel underneath that. Happy to have him on the call.
 >
 > Retainer + per-meeting fee + commission on collections, non-competing facilities only.
 >
