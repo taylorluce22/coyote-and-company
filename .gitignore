@@ -6,3 +6,7 @@ agency-os/mvp/.setup-progress.json
 agency-os/mvp/.setup-config.json
 agency-os/mvp/raw/
 agency-os/mvp/out/
+
+# Python bytecode — regenerated on every run, per-machine, never committed
+__pycache__/
+*.pyc
