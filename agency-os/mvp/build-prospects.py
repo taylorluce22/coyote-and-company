@@ -72,24 +72,32 @@ CSV_HEADER = [
     "Specialty", "Owner or Medical Director", "Source URL", "Notes",
 ]
 
-# Friendly name -> NPPES taxonomy code (organizational and individual providers)
+# Friendly shortcut -> NPPES taxonomy_description SEARCH VALUE.
+#
+# The API's taxonomy_description parameter matches the NUCC taxonomy's
+# description or specialty TEXT — "Exact Description or Exact Specialty, or
+# wildcard * after 2 characters." It does not match taxonomy codes. This map
+# originally held codes ("207W00000X"), which the API answered with
+# result_count 0 on every query, so the launch pull "succeeded" with zero
+# rows. Codes stay in comments because they're how you verify a value
+# against https://taxonomy.nucc.org/ — never paste them into the query.
 TAXONOMIES = {
-    "ophthalmology": "207W00000X",
-    "dermatology": "207N00000X",
-    "orthopedics": "207X00000X",
-    "otolaryngology": "207Y00000X",
-    "urology": "208800000X",
-    "plastic-surgery": "208200000X",
-    "family-medicine": "207Q00000X",
-    "internal-medicine": "207R00000X",
-    "obgyn": "207V00000X",
-    "pain-medicine": "208VP0014X",
-    "asc": "261QA1903X",
-    "clinic-primary-care": "261QP2300X",
-    "clinic-multispecialty": "261QM1300X",
-    "pharmacy-community": "3336C0003X",
-    "pharmacy-specialty": "3336S0011X",
-    "nurse-practitioner": "363L00000X",
+    "ophthalmology": "Ophthalmology",                   # 207W00000X
+    "dermatology": "Dermatology",                       # 207N00000X
+    "orthopedics": "Orthopaedic Surgery",               # 207X00000X (NUCC spells it "ae")
+    "otolaryngology": "Otolaryngology",                 # 207Y00000X
+    "urology": "Urology",                               # 208800000X
+    "plastic-surgery": "Plastic Surgery",               # 208200000X
+    "family-medicine": "Family Medicine",               # 207Q00000X
+    "internal-medicine": "Internal Medicine",           # 207R00000X
+    "obgyn": "Obstetrics & Gynecology",                 # 207V00000X
+    "pain-medicine": "Pain Medicine",                   # 208VP0014X
+    "asc": "Ambulatory Surgical",                       # 261QA1903X (Clinic/Center specialty)
+    "clinic-primary-care": "Primary Care",              # 261QP2300X (Clinic/Center specialty)
+    "clinic-multispecialty": "Multi-Specialty",         # 261QM1300X (Clinic/Center specialty)
+    "pharmacy-community": "Community/Retail Pharmacy",  # 3336C0003X
+    "pharmacy-specialty": "Specialty Pharmacy",         # 3336S0011X
+    "nurse-practitioner": "Nurse Practitioner",         # 363L00000X
 }
 
 
@@ -120,14 +128,14 @@ def pick_location(addresses: list) -> dict:
     return (addresses or [{}])[0]
 
 
-def fetch_nppes(taxonomy_code: str, state: str, city: str | None, limit_total: int) -> list[dict]:
+def fetch_nppes(taxonomy_desc: str, state: str, city: str | None, limit_total: int) -> list[dict]:
     """Page through NPPES for organizational providers. skip caps at 1000, limit at 200."""
     rows, skip = [], 0
     while skip <= 1000 and len(rows) < limit_total:
         params = {
             "version": "2.1",
             "enumeration_type": "NPI-2",   # organizations, not individuals
-            "taxonomy_description": taxonomy_code,
+            "taxonomy_description": taxonomy_desc,  # description TEXT, never a code
             "state": state,
             "limit": 200,
             "skip": skip,
@@ -206,19 +214,30 @@ def cmd_nppes(args) -> int:
 
     all_rows: list[list[str]] = []
     for tax in taxes:
-        code = TAXONOMIES[tax]
+        desc = TAXONOMIES[tax]
         for st in states:
             for city in cities:
                 where = f"{tax}/{st}" + (f"/{city}" if city else "")
                 print(f"  querying NPPES: {where} ...", file=sys.stderr)
                 try:
-                    results = fetch_nppes(code, st, city, args.max_per_query)
+                    results = fetch_nppes(desc, st, city, args.max_per_query)
                 except RuntimeError as exc:
                     print(f"    FAILED: {exc}", file=sys.stderr)
                     continue
                 rows = nppes_to_csv_rows(results, tax)
                 print(f"    {len(rows)} organizations", file=sys.stderr)
                 all_rows.extend(rows)
+
+    # An all-zero run is a QUERY problem, not an empty market — real specialties
+    # in real states are never uniformly empty in the federal registry. This is
+    # exactly how the taxonomy-code bug above shipped an empty launch list with
+    # exit 0. Refuse to write: overwriting a previous good pull with nothing
+    # would compound the failure, and downstream import must not see the file.
+    if not all_rows:
+        print("\nEvery query returned zero organizations. That means the queries are wrong,", file=sys.stderr)
+        print("not that the market is empty. Nothing was written. Check one query by hand:", file=sys.stderr)
+        print('  curl "https://npiregistry.cms.hhs.gov/api/?version=2.1&enumeration_type=NPI-2&taxonomy_description=Ophthalmology&state=AZ&limit=1"', file=sys.stderr)
+        return 1
     return write_csv(all_rows, args.out)
 
 
