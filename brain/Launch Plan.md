@@ -39,9 +39,21 @@ Five steps, each under an hour. Do them in order. When they're done, week 1 runs
 
 ## Phase 1 — The test account (weeks 1–4)
 
+**The model (founder direction, 2026-08-01): a realtor's page, translated to solar.** The archetype: face-first local expert — the person IS the brand, the market data is the proof. Every element maps cleanly:
+
+| Realtor page | This account |
+|---|---|
+| Market update posts ("Phoenix housing this month") | Rate/APS-news cards from the editorial engine (DESERT GRID becomes the *market-update pillar*, not the spine) |
+| "Just sold" / closing-day posts | "Just installed / just saved" posts — real jobs, real permissioned numbers only |
+| Community & neighborhood spotlights | Valley community spotlights (heat, growth, energy angle) |
+| Personal/lifestyle (family, day-in-the-life) | The photo dump lane — Taylor, truck, rooftops, desert |
+| Buyer tips | Home-energy and solar-decision tips |
+
+**Grid re-weighting under this model:** flip the mix face-forward — roughly **45% personable/lifestyle/story, 30% market-update educational (designed cards), 25% proof-of-work** — and push the grid's photo-feel:designed-card balance from ~2:1 toward **~3:1**. The founder's face or a real photo should be the first thing a profile visit sees. Educational cards still carry the authority; they're seasoning, not the meal. Everything else in this plan (Phase 0 steps, cadence, Sunday loop, compliance rules, Phase 2) is unchanged by this pivot — the built editorial system keeps running as one pillar instead of the whole page.
+
 **Cadence (playbook interim — sustainable for one person): 1 reel + 2 carousels per week + a daily 3-minute Story.** Do not attempt the spec's full 3-reel target until this holds for 4 straight weeks. Consistency beats volume.
 
-**Content ratio:** editorial spine ~40% rising-prices / ~30% solar decision education / ~20% personable-realistic / ~10% timely — which nets out near the research's thirds. In practice: **roughly 1 personable post for every 2 educational posts**, hard sales confined to at most 1-in-5 posts.
+**Content ratio:** superseded by the realtor-page model above (45/30/25 face-forward); the original editorial-spine weighting (~40% rising-prices led) remains the fallback if the personable lane runs dry — which nets out near the research's thirds. In practice: **roughly 1 personable post for every 2 educational posts**, hard sales confined to at most 1-in-5 posts.
 
 ### Weekly grid (owner: Taylor; production via Farmhand; ~2–3 hrs/week total)
 
@@ -145,7 +157,7 @@ The demo is not a pitch deck — it is **@taylorlucesolar's before/after**: 1 re
 10. Build the pain, never soothe it; pro-solar, honestly anti-rate-design, VPPs framed as proof of strain — never "the grid is unstable."
 11. Be realistic about costs and savings always — it is the number-one trust factor and the anti-door-knocker positioning.
 12. At most 1-in-5 posts carries an offer; keyword-DM CTAs on ≤20% of posts; the conversion object is always a useful asset.
-13. No two same-look posts adjacent; the grid must pass a 2-second credibility scan at ~2:1 photo-feel to designed-card.
+13. No two same-look posts adjacent; the grid must pass a 2-second credibility scan — ~3:1 photo-feel to designed-card under the realtor-page model (founder direction 2026-08-01; supersedes the spec's ~2:1).
 14. Nothing publishes without a fact-check receipt against the KB; perishable news items get re-verified before use.
 
 ---
