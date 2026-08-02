@@ -128,3 +128,8 @@ opener that needs the consultant in it. Batch a set to build the library fast.
 - **A09 photo covers + reel openers/closers** in the DESERT GRID system pull from this library.
 - QA each (Higgsfield playbook gate): hands/eyes survive zoom? light natural? nothing screams AI? Regenerate misses; don't ship a tell.
 - As you shoot **real** photos, swap them in — real always wins for anything captioned as a specific event.
+
+## Field notes (production learnings — append, don't rewrite)
+- **2026-08-02, Soul 2.0 style slot:** the UI has ONE style slot, so the "Digital camera" curated preset and a custom moodboard cannot stack. Resolution that works in practice (verified on taylor-consultant-v2 + AZ Homes): put the **moodboard in the slot** (environment authenticity is the harder problem) and carry the candid look in prompt language — "candid iPhone photo… natural iPhone photo look, everyday snapshot."
+- **2026-08-02, moodboard source:** the AZ Homes board was built entirely from the founder's own photos (night/street exteriors, xeriscape backyards, interiors, rooftop, PV-meter + rapid-shutdown close-ups, Phoenix aerial) — own-library photos beat listing pulls: same authenticity, zero rights questions. Listing top-up optional.
+- **2026-08-02, recurring QA tell:** invented pseudo-logo marks on clothing survive no-logo negatives. Check chest/sleeve on every person gen; regenerate or inpaint before anything ships.
