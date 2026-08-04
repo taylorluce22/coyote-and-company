@@ -183,3 +183,35 @@ alongside the original KB. Refinements adopted from it:
    history) is real and citable — used respectfully, never implying solar
    fixes a tragedy it doesn't. The Chamblee family's ~$400→$60 outcome is
    citable as THEIR account only.
+
+## Rulings — data-center reel v2 (2026-08-02)
+
+Precedent set while producing the news-alert reel. These bind future content.
+
+1. **Adjacency IS assertion.** Showing data-center load and the rate-case ask
+   back-to-back, without naming the dispute, makes the causal claim while
+   keeping deniability — and fails "presents both sides, ALWAYS." A contested
+   claim must be *named as contested on screen and in narration* (utilities
+   say X, AG Mayes says Y). Implication is not a loophole; it is the weaker,
+   less honest version of stating it.
+2. **Modeled catastrophe death tolls are barred from marketing content.**
+   The 12,800-deaths blackout model (Stone et al., ES&T 2023) is real,
+   peer-reviewed, and citable in a briefing — but using a hypothetical mass-
+   casualty figure to sell solar is the fear tactic this brand positions
+   AGAINST, and it implies solar prevents a tragedy it does not. Capacity
+   framing (~800k needing care vs ~3,000 ER beds) is the ceiling, and it must
+   be labeled a *modeled scenario*, never a forecast.
+3. **Quoting real journalism clears rule 7.** Headline cards showing a real
+   outlet, real headline, real date are quotation, not fabricated proof —
+   conditional on being verbatim: exact published headline text, exact outlet
+   and date, no paraphrase styled to look like a headline, and no AI-recreated
+   outlet logos (plain type only).
+4. **Unreconciled source variance gets rounded, not picked.** When two
+   credible outlets differ (KTAR 9,053 MW vs KJZZ 9,063 MW), cite the dated
+   specific source but *speak* the rounded figure ("just over 9,000 megawatts").
+   Precision we cannot reconcile is precision we do not claim.
+5. **Strain posture, confirmed acceptable:** every strain number attributed to
+   the utility's own filings or a labeled academic scenario, landing on "the
+   lights stayed on, the margin got thinner." Strengthen it by adding the
+   rule's own positive proof — utilities *paying homeowners* for evening
+   battery access is strain evidence that requires no alarm.
