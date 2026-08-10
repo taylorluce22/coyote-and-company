@@ -32,7 +32,7 @@ Sent "Introduction work for 503B facilities" to: Olympia (ocs@), Carie Boyd (ord
 
 ProRx has **two recent FDA warning letters (Dec 2024 and Apr 2026 — three months ago)** and an **Oct 2025 sterility recall**, and was historically GLP-1-centric. This is the exact profile our vetting standard exists to catch — and vetted introductions are the product Sonoran sells. Introducing a buyer to a facility with an active adverse regulatory trajectory undercuts the pitch to every other supplier and creates real exposure if a buyer is harmed.
 
-Recommended posture: keep the relationship warm (the conversation was good and Dave is receptive), but make any introduction contingent on diligence — remediation evidence, closeout status on the 2026 letter, current product mix. Verification research is running now. Separately: 3% of gross with no retainer and no meeting fee is well under the 10–30% industry norm — worth renegotiating once you have buyer volume as leverage, but the regulatory question comes first.
+Recommended posture: keep the relationship warm (the conversation was good and Dave is receptive), but make any introduction contingent on diligence — remediation evidence, closeout status on the 2026 letter, current product mix. Verification research is running now. Separately, on terms: no retainer is by design now (pay-on-performance model), but 3% with no meeting fee sits at the bottom of the researched bands in `pricing-benchmarks.md` — the qualified-held meeting fee is the part of the menu worth defending in the next round. The regulatory question comes first regardless.
 
 ## This week
 
