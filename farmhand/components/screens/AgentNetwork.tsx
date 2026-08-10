@@ -1,6 +1,58 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { AGENTS, AGENT_STATUS_STYLE, MEMORY_LAYER, type AgentDef } from "@/lib/agentOs";
+
+/* ---- live last-run overlay -------------------------------------------------
+   The research loop (lib/researchLoop.ts) logs every run to the shared memory
+   layer. This hook pulls the latest run per agent and overlays real status +
+   "ran Xh ago" on the static roster, so the graph shows the loop actually
+   running instead of hardcoded labels. Degrades silently to the static
+   roster when the memory layer isn't configured. */
+
+const RUN_KEYS: Record<string, string[]> = {
+  "CEO / Orchestrator": ["orchestrator"],
+  Researcher: ["researcher", "competitor_audit"],
+  CMO: ["cmo"],
+  "Data Analyst": ["data_analyst"],
+  "Lead Manager": ["lead_manager"],
+  Dev: ["dev"],
+};
+
+function agoLabel(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return "ran just now";
+  const m = Math.floor(ms / 60000);
+  if (m < 60) return `ran ${Math.max(1, m)}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 48) return `ran ${h}h ago`;
+  return `ran ${Math.floor(h / 24)}d ago`;
+}
+
+function useLiveAgents(): AgentDef[] {
+  const [latest, setLatest] = useState<Record<string, { at: string; summary: string }>>({});
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/agent-runs")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (alive && d?.configured && d.latest) setLatest(d.latest);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return AGENTS.map((a) => {
+    const runs = (RUN_KEYS[a.id] || [])
+      .map((k) => latest[k])
+      .filter(Boolean)
+      .sort((x, y) => (x!.at < y!.at ? 1 : -1));
+    const newest = runs[0];
+    if (!newest) return a;
+    return { ...a, status: "active" as const, statusLabel: agoLabel(newest.at) };
+  });
+}
 
 /**
  * Agent Network — one AI chief of staff coordinating five specialists on a
@@ -100,8 +152,9 @@ function SpecialistCard({ a, i }: { a: AgentDef; i: number }) {
 }
 
 export default function AgentNetwork() {
-  const ceo = AGENTS[0];
-  const specialists = AGENTS.slice(1);
+  const live = useLiveAgents();
+  const ceo = live[0];
+  const specialists = live.slice(1);
   const cStatus = AGENT_STATUS_STYLE[ceo.status];
 
   return (
