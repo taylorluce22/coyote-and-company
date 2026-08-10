@@ -7,7 +7,7 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. This file is t
 | Supplier | Contact | Status | Last touch | Next action |
 |---|---|---|---|---|
 | **Assure Infusions** (assureiv.com) | Andrea Caudill, Dir. of Business Development | 🟢 **Call confirmed: Wed Aug 12, 10:00–11:00 AM MST** (invite accepted 8/5) | 8/4 you → invite sent | Call prep — diligence research in progress; prep doc to follow |
-| **ProRx Pharma** (Sioux Falls SD; also boomrx.com) | Dave Dugas, VP Sales (904-945-1844) + Mark | 🟡 Call held 8/7; your recap 8/8: **3% of gross on introduced customers, no intro fee**. Dave out of country week of 8/10, on email | 8/8 you → recap | ⚠ **Hold introductions pending vetting** (see flag below). Follow up when Dave returns (~8/17) |
+| **ProRx Pharma** (Sioux Falls SD; also boomrx.com) | Dave Dugas, VP Sales (904-945-1844) + Mark | 🟡 Call held 8/7; your recap 8/8: **3% of gross on introduced customers, no intro fee**. Dave out of country week of 8/10, on email | 8/8 you → recap | Follow up when Dave returns (~8/17). Compliance facts below — FYI, not a gate |
 | **STASKA Pharmaceuticals** | Nick Shada | 🟢 Wants the call; rescheduled to this week after his OOO | 8/7 you → "let's put it on next week" | **Send times today** — draft in your Gmail drafts |
 | **Belmar Pharma Solutions** | Rob Kilgore, CEO (direct) | 🟡 Strong personalized men's-health email sent 8/6 (after belmarselect@ bounced) | 8/6 you → rob@ | Day-3/4 follow-up due — draft in your Gmail drafts |
 
@@ -26,13 +26,15 @@ These three letters are exactly the verification path from `docs/10-regulatory-r
 
 Sent "Introduction work for 503B facilities" to: Olympia (ocs@), Carie Boyd (orders@), Brookfield Medical (Brookfield503B@gmail.com), CAPS, Leiters, Empower (officeuse@), FarmaKeio, GenoGenix, Apollo Care, New Life Rx. Belmar batch address bounced (superseded by the direct Rob email).
 
-**Vetting note on this batch:** several recipients are on our own excluded/watch list — GenoGenix (WL 1/2026, peptide-centric), Apollo Care (WL 2/2026), Carie Boyd (Watch — WL 12/2024), and CAPS/Leiters/Empower are GPO-channel nationals. A pitch email is harmless, but **if any of these reply, the partnership gate still applies** — same standard as ProRx below. Recommend: skip A2 follow-ups to GenoGenix and Apollo Care; send A2s to Olympia, Brookfield, FarmaKeio, New Life Rx.
+**Regulatory status FYI on this batch** (facts only): GenoGenix — WL 1/2026, peptide-centric; Apollo Care — WL 2/2026; Carie Boyd — WL 12/2024; CAPS/Leiters/Empower — GPO-channel nationals with in-house sales. All follow-ups are Taylor's call; the tracker records status, it doesn't gate conversations.
 
-## ⚠ The ProRx flag — read before introducing any buyer
+## ProRx — compliance facts (decision is Taylor's)
 
-ProRx has **two recent FDA warning letters (Dec 2024 and Apr 2026 — three months ago)** and an **Oct 2025 sterility recall**, and was historically GLP-1-centric. This is the exact profile our vetting standard exists to catch — and vetted introductions are the product Sonoran sells. Introducing a buyer to a facility with an active adverse regulatory trajectory undercuts the pitch to every other supplier and creates real exposure if a buyer is harmed.
-
-Recommended posture: keep the relationship warm (the conversation was good and Dave is receptive), but make any introduction contingent on diligence — remediation evidence, closeout status on the 2026 letter, current product mix. Verification research is running now. Separately, on terms: no retainer is by design now (pay-on-performance model), but 3% with no meeting fee sits at the bottom of the researched bands in `pricing-benchmarks.md` — the qualified-held meeting fee is the part of the menu worth defending in the next round. The regulatory question comes first regardless.
+- FDA warning letters 12/2024 and 4/2026; sterility recall 10/2025. Verification research in progress; closeout status will be tracked here.
+- A warning letter is not a legal prohibition. Nothing in law prevents introducing buyers to ProRx.
+- Accuracy constraint (this part is law, not advice): buyer-facing copy currently says facilities are "vetted for state licensure, inspection history, and insurance." Statements made to buyers must be true as applied to any facility introduced — false B2B representations are reachable under FTC Act §5 and state UDAP statutes. What "vetted" means for a given facility, and what is said about it, is Taylor's call; the words used must match the facts.
+- Civil-exposure allocation for supplier-caused harm lives in the indemnification section of the draft agreement.
+- Terms on the table: 3% of collected revenue, no meeting fee (pay-on-performance model; benchmarks in `pricing-benchmarks.md` for reference).
 
 ## This week
 
