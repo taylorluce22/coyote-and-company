@@ -6,9 +6,9 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. This file is t
 
 | Supplier | Contact | Status | Last touch | Next action |
 |---|---|---|---|---|
-| **Assure Infusions** (assureiv.com) | Andrea Caudill, Dir. of Business Development | 🟢 **Call confirmed: Wed Aug 12, 10:00–11:00 AM MST** (invite accepted 8/5) | 8/4 you → invite sent | Call prep — diligence research in progress; prep doc to follow |
-| **ProRx Pharma** (Sioux Falls SD; also boomrx.com) | Dave Dugas, VP Sales (904-945-1844) + Mark | 🟡 Call held 8/7; your recap 8/8: **3% of gross on introduced customers, no intro fee**. Dave out of country week of 8/10, on email | 8/8 you → recap | Follow up when Dave returns (~8/17). Compliance facts below — FYI, not a gate |
-| **STASKA Pharmaceuticals** | Nick Shada | 🟢 Wants the call; rescheduled to this week after his OOO | 8/7 you → "let's put it on next week" | **Send times today** — draft in your Gmail drafts |
+| **Assure Infusions** (assureiv.com) | Andrea Caudill, Dir. of Business Development | 🟢 **Call confirmed: Wed Aug 12, 10:00–11:00 AM MST** (invite accepted 8/5) | 8/4 you → invite sent | **Prep brief ready: `call-brief-assure-infusions.md`** (FL-based IV-fluids 503B, registered 11/2024, never FDA-inspected as of 6/2025 — inspection question leads) |
+| **ProRx Pharma** (Exton PA — location corrected 8/10; affiliated BoomRx portal) | Dave Dugas, VP Sales (904-945-1844) + Mark | 🟡 Call held 8/7; your recap 8/8: **3% of gross on introduced customers, no intro fee**. Dave out of country week of 8/10, on email | 8/8 you → recap | Follow up when Dave returns (~8/17). Compliance facts below — FYI, not a gate |
+| **STASKA Pharmaceuticals** | Nick Shada | 🟢 Wants the call; rescheduled to this week after his OOO | 8/7 you → "let's put it on next week" | **Send times (draft in Gmail)** · **Prep brief ready: `call-brief-staska.md`** (Class I recall 9/2024 + WL 5/2025, close-out unverified — remediation questions lead) |
 | **Belmar Pharma Solutions** | Rob Kilgore, CEO (direct) | 🟡 Strong personalized men's-health email sent 8/6 (after belmarselect@ bounced) | 8/6 you → rob@ | Day-3/4 follow-up due — draft in your Gmail drafts |
 | **Globyz Pharma / Nexgen Formulations** (Folcroft PA) | Salman Pathan, CEO (sal@globyz.com) | 🟢 Replied 8/6 to the batch send; **call set: Thu Aug 13, 1:25 PM ET / 10:25 AM MST** (rescheduled from 8/10 via Microsoft Bookings) | 8/6 → reply received | **Prep brief ready: `call-brief-globyz-nexgen.md`.** One MAC TASK open: verify 503B registration on FDA's list (5 min, browser) — the single biggest unverified item |
 
@@ -31,7 +31,7 @@ Sent "Introduction work for 503B facilities" to: Olympia (ocs@), Carie Boyd (ord
 
 ## ProRx — compliance facts (decision is Taylor's)
 
-- FDA warning letters 12/2024 and 4/2026; sterility recall 10/2025. Verification research in progress; closeout status will be tracked here.
+- Verification complete — see `prorx-verification.md`. Both WLs confirmed (12/20/2024 amended 3/4/2025; 4/7/2026 after reinspection), Class II semaglutide/tirzepatide recall 10/2025 confirmed, no close-out letters found. Location corrected to Exton PA. FDA's 2026 letter cites post-eligibility tirzepatide production — overlaps the product categories SCP's own draft agreement §6(c) excludes from marketing. Contact note: 'Dave Dugas' unverifiable publicly; 'Mark' likely Mark Mousseau, VP Strategic Partnerships (BoomRx).
 - A warning letter is not a legal prohibition. Nothing in law prevents introducing buyers to ProRx.
 - Accuracy constraint (this part is law, not advice): buyer-facing copy currently says facilities are "vetted for state licensure, inspection history, and insurance." Statements made to buyers must be true as applied to any facility introduced — false B2B representations are reachable under FTC Act §5 and state UDAP statutes. What "vetted" means for a given facility, and what is said about it, is Taylor's call; the words used must match the facts.
 - Civil-exposure allocation for supplier-caused harm lives in the indemnification section of the draft agreement.
