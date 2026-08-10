@@ -97,10 +97,20 @@ single-tenant `fh:default` lead-store namespace.
 ## Build order
 
 1. Mesa adapter + set-difference + CSV, proven end-to-end ✅
-2. Maricopa enrichment
-3. Phone-append interface
-4. COMPLY gate
-5. P1 adapters: Tempe, Scottsdale
+2. Maricopa enrichment ✅
+3. Phone-append interface ✅
+4. COMPLY gate ✅
+5. P1 adapters: Tempe, Scottsdale (queued)
+
+## Environment variables
+
+| Var | Purpose |
+| --- | --- |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | store (Upstash/Vercel-KV, already used by leadStore) |
+| `MESA_SOCRATA_APP_TOKEN` | optional, higher Socrata rate limits |
+| `MARICOPA_ASSESSOR_TOKEN` | free assessor API token (contact form, subject "API Token/Question") |
+| `DATAZAPP_API_KEY` (+ optional `DATAZAPP_API_URL`) | phone append |
+| `PERMITS_DIALING_ENABLED` | **ships absent = dialing OFF.** Setting it to `true` is the deliberate act that allows the dial queue to return unmasked numbers — and only when the gate is also armed |
 
 ## STATUS
 
@@ -121,4 +131,44 @@ _Updated as work lands. Timezone: America/Phoenix._
   live-verified — adapter tries documented candidate lists and degrades
   to `recency: "unknown"`; verify on first live run and promote into
   `VERIFIED_FIELDS` in `adapters/mesa.ts`.
-- Next: client-scoped store + `/api/permits` route.
+- **2026-08-10 — Stage 2 landed.** Client-scoped KV store
+  (`fh:<client>:permits:*`, memory-layer sanitizer, idempotent upserts)
+  + `/api/permits`: state summary, CSV download, `ingest` / `filter`
+  actions, and a stateless `preview` action (live fetch → filter → CSV,
+  no KV) for proving adapters from a deployed environment.
+- **2026-08-10 — Stage 3 landed.** ENRICH: Maricopa assessor client
+  (`/parcel/{apn}/owner-details` with `/search/property/` fallback,
+  tolerant response-key scan — tighten against a live response on first
+  run), owner-occupied heuristic, and the `PhoneAppendProvider` contract
+  (line-type flag mandatory; vendor miss ⇒ null; per-field provenance).
+  Datazapp wired as first provider — **verify its request/response shape
+  against current Datazapp docs before the first paid run.** Manual
+  numbers enter via `setPhone` with source `"manual"`.
+- **2026-08-10 — Stage 4 landed.** COMPLY hard gate + manual call queue +
+  append-only compliance log. Structural no-dial guarantee: the comply
+  route's dial-queue payload is the only place an unmasked number ever
+  leaves the server, and it requires gate-armed AND
+  `PERMITS_DIALING_ENABLED=true` (absent in every environment). Smoke
+  script proves 15 gate/verdict cases: fresh state not armed; armed but
+  env-off can't dial; stale scrub / suppression-off / missing SAN /
+  missing AZ registration each disarm; wireless + unknown line types
+  suppressed; DNC-listed, unscrubbed, internal-DNC, and opted-out numbers
+  blocked; call window follows the Phoenix clock.
+- **2026-08-10 — Stage 5 landed.** `Permit Leads` screen in Farmhand
+  (Targets / Enrich / Comply / Call queue tabs), scoped to the active
+  client. Queue enforces one-call-at-a-time in the UI (call button locks
+  until an outcome is logged) and renders a `tel:` link only when the
+  server sent an unmasked number. Nav entry + screen registered in the
+  app shell.
+- **Ship state: list-building + compliance-armed, dialing OFF.** ✅
+- Open items, in order:
+  1. First live run (from Vercel or any machine with egress to
+     `data.mesaaz.gov`): `npm run permits:smoke -- --live`, or POST
+     `{action:"preview"}` to `/api/permits`. Verify permit-number /
+     address / issue-date field names; promote to `VERIFIED_FIELDS`.
+  2. Request the Maricopa assessor token; confirm owner-details response
+     keys against the tolerant scanner.
+  3. Verify the Datazapp API contract before funding an append batch.
+  4. Get the SAN + file the A.R.S. 44-1272.01 limited registration;
+     record both in the Comply tab.
+  5. P1 adapters: Tempe, Scottsdale.

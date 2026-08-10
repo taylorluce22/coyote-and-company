@@ -23,6 +23,7 @@ import TemplateStudio from "./screens/TemplateStudio";
 import ConsultantLibrary from "./screens/ConsultantLibrary";
 import PacketExport from "./screens/PacketExport";
 import Progress from "./screens/Progress";
+import Permits from "./screens/Permits";
 
 function Screen() {
   const { state } = useStore();
@@ -53,6 +54,8 @@ function Screen() {
       return <ConsultantLibrary />;
     case "engage":
       return <Engage />;
+    case "permits":
+      return <Permits />;
     case "insights":
       return <Results />;
     case "settings":
