@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/hunt",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/research-cycle",
+      "schedule": "0 14 * * 1"
     }
   ]
 }

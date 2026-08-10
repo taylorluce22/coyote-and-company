@@ -73,8 +73,12 @@ GitHub-issue bridge.
 
 ## STATUS (Engineering updates this)
 
-- [ ] Researcher weekly sweep — inactive
-- [ ] Competitor Audit biweekly — inactive
-- [ ] Data Analyst metrics ingest — inactive
-- [ ] CMO queue review — inactive
-- [ ] Orchestrator/Schedule cadence — inactive
+- [x] Researcher weekly sweep — WIRED (`lib/researchLoop.ts` → `/api/cron/research-cycle`, Mondays 14:00 UTC; writes kb_refs + agent_runs). First live run pending deploy trigger.
+- [x] Competitor Audit biweekly — WIRED (same cron, even ISO weeks; findings → kb_refs `competitor-audit` + agent_runs). First live run pending.
+- [x] Data Analyst metrics ingest — WIRED (`POST /api/metrics` per-post capture + weekly growth check in the cycle). Numbers come only from real IG insights — never estimated.
+- [x] CMO queue review — WIRED (scores drafts vs Step-3 rules via Claude; kickbacks get a revision stored alongside the original with an AI-disclosure flag; **status never advanced — drafts only**; capped 3/run).
+- [x] Orchestrator/Schedule cadence — WIRED (weekly cycle chains all of the above; every node logs to agent_runs).
+- [ ] Graph last-run timestamps — in progress (`/api/agent-runs` + Agent Network overlay).
+- [ ] One full cycle executed end-to-end — **needs Cowork/Vercel side**: deploy, trigger the cron once, verify agent_runs + a CMO-reviewed draft. See `docs/research-activation-cowork-tasks.md`.
+
+**Blocker (filed, not skipped):** `ig-account-direction-2026.md` and `higgsfield-board-state-2026.md` are referenced by this spec but are not in the repo (Mac-only). Rules encoded in `lib/researchLoop.ts` RULES from this spec's own text; reconcile when the docs land.
