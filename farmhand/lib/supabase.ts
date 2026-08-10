@@ -106,6 +106,31 @@ export async function sbUpsert(
 }
 
 /**
+ * PATCH rows matching a PostgREST filter, e.g. "workspace=eq.agency&id=eq.<uuid>".
+ * A filter is REQUIRED — an empty filter is refused so we can never rewrite a
+ * whole table. Returns true on success (2xx).
+ */
+export async function sbUpdate(
+  table: string,
+  filter: string,
+  patch: Record<string, unknown>
+): Promise<boolean> {
+  if (!supabaseEnabled() || !filter) return false;
+  try {
+    const r = await fetch(`${restUrl(table)}?${filter}`, {
+      method: "PATCH",
+      headers: headers({ Prefer: "return=minimal" }),
+      body: JSON.stringify(patch),
+      cache: "no-store",
+      signal: AbortSignal.timeout(10000),
+    });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * DELETE rows matching a PostgREST filter, e.g. "workspace=eq.solar&app_id=eq.x".
  * A filter is REQUIRED — an empty filter is refused so we can never wipe a table.
  */

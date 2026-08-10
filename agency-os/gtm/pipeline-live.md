@@ -36,7 +36,7 @@ These three letters are exactly the verification path from `docs/10-regulatory-r
 | Bounced | 3 | belmarselect@belmarpharma.com (superseded by rob@), pharmacistconsult@carieboyd.com (orders@ delivered fine), ernestos@pharmaceuticlabs.com (Galaxy — permanent failure 8/8, route dead, needs the web form) |
 | No reply | 39 | everyone below |
 
-**A2 follow-ups drafted 8/10 for all 39 non-responders** — threaded replies on the original messages, day-3 diligence angle per `outreach-templates.md`, no phone-vs-video language, postal footer plus reply-based opt-out. In Taylor's drafts folder, unsent:
+**A2 follow-ups drafted 8/10 for all 39 non-responders** — threaded replies on the original messages, day-3 diligence angle per `outreach-templates.md`, no phone-vs-video language, postal footer plus reply-based opt-out. In Taylor's drafts folder, unsent, and mirrored into the OS at **`/agency/outreach`** (one-click open-in-Gmail per row, status tracked; activation steps in `farmhand/docs/agency-outreach-activation.md`):
 
 Orion Specialty Labs · BPI Labs · GFC Pharma · Apertus · OurPharma · SCA Pharmaceuticals · Fagron Sterile Services · PQ Pharmacy · PGRrx · Olympia (ocs@) · Ocyon Bio · Wilcrest · Wesley Pharmaceuticals · Wells Pharmacy (wellsrx) · Wells Pharma (wellspharmatx) · US Specialty Formulations · Turbare · Medivant Health · STAQ Pharma · SKNV · RC Outsourcing · QuVa Pharma · OSRX · Nephron · Navinta · Medi-Fare Drug · Cost Plus · IntegraDose · ImprimisRx · Hybrid Pharma · GenoGenix · FarmaKeio · Empower · Leiters · CAPS · Brookfield Medical · Carie Boyd (orders@) · Apollo Care · New Life Rx
 

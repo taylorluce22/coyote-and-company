@@ -82,6 +82,9 @@ export default async function AgencyMoney() {
       <div style={S.wrap}>
         <div style={S.kicker}>Sonoran Clinical Partners · Agency OS</div>
         <h1 style={S.h1}>Money — as of {m.asOf}</h1>
+        <p style={{ ...S.note, marginTop: -20, marginBottom: 28 }}>
+          <a href="/agency/outreach" style={{ color: "#8ab4d1" }}>Outreach queue →</a>
+        </p>
 
         <div style={S.grid}>
           {tiles.map((t) => (
