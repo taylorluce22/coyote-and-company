@@ -12,6 +12,12 @@
 
 import { kvGetJSON, kvSetJSON } from "@/lib/kv";
 import type { EnrichedLead, PermitRecord, TargetParcel } from "./types";
+import {
+  defaultComplianceState,
+  type ComplianceLogEntry,
+  type ComplianceState,
+  type InternalDncEntry,
+} from "./comply";
 
 const MAX_RECORDS = 6000;
 
@@ -82,6 +88,45 @@ export async function upsertLeads(client: string, fresh: EnrichedLead[]): Promis
   const merged = [...byApn.values()].slice(-MAX_RECORDS);
   await kvSetJSON(`${ns(client)}:leads`, merged);
   return merged.length;
+}
+
+export async function getComplianceState(client: string): Promise<ComplianceState> {
+  return (await kvGetJSON<ComplianceState>(`${ns(client)}:comply`)) ?? defaultComplianceState();
+}
+
+export async function setComplianceState(client: string, state: ComplianceState): Promise<void> {
+  await kvSetJSON(`${ns(client)}:comply`, state);
+}
+
+/**
+ * Append-only compliance log — call log, scrub receipts, opt-outs, vendor
+ * licenses, gate changes. Retention requirement is 5+ years: entries are
+ * never auto-pruned; the count cap exists only as a runaway backstop and is
+ * far above any plausible manual-dialing volume.
+ */
+const MAX_LOG_ENTRIES = 50000;
+
+export async function appendComplianceLog(client: string, entry: ComplianceLogEntry): Promise<void> {
+  const log = (await kvGetJSON<ComplianceLogEntry[]>(`${ns(client)}:log`)) ?? [];
+  log.push(entry);
+  await kvSetJSON(`${ns(client)}:log`, log.slice(-MAX_LOG_ENTRIES));
+}
+
+export async function getComplianceLog(client: string): Promise<ComplianceLogEntry[]> {
+  return (await kvGetJSON<ComplianceLogEntry[]>(`${ns(client)}:log`)) ?? [];
+}
+
+/** Internal do-not-call list — honored instantly, retained 10 years, never auto-pruned. */
+export async function getInternalDnc(client: string): Promise<InternalDncEntry[]> {
+  return (await kvGetJSON<InternalDncEntry[]>(`${ns(client)}:idnc`)) ?? [];
+}
+
+export async function addInternalDnc(client: string, entry: InternalDncEntry): Promise<void> {
+  const list = await getInternalDnc(client);
+  if (!list.some((e) => e.number === entry.number)) {
+    list.push(entry);
+    await kvSetJSON(`${ns(client)}:idnc`, list);
+  }
 }
 
 export async function getMeta(client: string): Promise<PermitMeta> {

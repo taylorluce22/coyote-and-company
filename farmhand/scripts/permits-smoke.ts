@@ -15,6 +15,8 @@ import { mesaFixtureRows, EXPECTED_TARGET_APNS } from "../lib/permits/fixtures/m
 import { solarWithoutBattery } from "../lib/permits/setDifference";
 import { targetsToCsv } from "../lib/permits/csv";
 import { classifyDescription } from "../lib/permits/classify";
+import { defaultComplianceState, evaluateGate, leadDialVerdict, type ComplianceState } from "../lib/permits/comply";
+import type { EnrichedLead } from "../lib/permits/types";
 
 let failures = 0;
 function check(label: string, ok: boolean, detail?: string) {
@@ -76,12 +78,80 @@ async function runLive(now: string) {
   console.log(targetsToCsv(targets.slice(0, 20)));
 }
 
+function runGateProof(now: string) {
+  console.log("== COMPLY hard gate");
+  const empty = defaultComplianceState();
+  const emptyGate = evaluateGate(empty, now);
+  check("fresh state: gate NOT armed", !emptyGate.armed && emptyGate.blockers.length === 3);
+  check("dialing ships OFF (env absent)", !emptyGate.dialingEnabled && !emptyGate.canDial);
+
+  const armedState: ComplianceState = {
+    san: { number: "SAN-TEST-1", recordedAt: now },
+    azRegistration: { status: "filed", kind: "roc-limited-44-1272.01", recordedAt: now },
+    wirelessSuppression: true,
+    lastDncScrubAt: now,
+    callWindow: { startHour: 9, endHour: 20 },
+  };
+  const armedGate = evaluateGate(armedState, now);
+  check("SAN + AZ reg + suppression + fresh scrub: armed", armedGate.armed);
+  check("armed but env OFF: still cannot dial", !armedGate.canDial);
+  check(
+    "stale scrub (32 days) disarms",
+    !evaluateGate(
+      { ...armedState, lastDncScrubAt: new Date(Date.parse(now) - 32 * 86400000).toISOString() },
+      now
+    ).armed
+  );
+  check("suppression OFF disarms", !evaluateGate({ ...armedState, wirelessSuppression: false }, now).armed);
+  check("missing SAN disarms", !evaluateGate({ ...armedState, san: undefined }, now).armed);
+  check(
+    "missing AZ registration disarms",
+    !evaluateGate({ ...armedState, azRegistration: undefined }, now).armed
+  );
+
+  // Force an in-window check regardless of when this runs: window spans the full legal day.
+  const openWindow: ComplianceState = { ...armedState, callWindow: { startHour: 8, endHour: 21 } };
+  const baseLead: EnrichedLead = {
+    apn: "APNA00000",
+    jurisdiction: "mesa",
+    address: "101 E MAIN ST",
+    phone: { value: { number: "4805551234", lineType: "landline" }, prov: { source: "manual", fetchedAt: now } },
+    dnc: { status: "clear", scrubbedAt: now, receipt: "R-1" },
+    updatedAt: now,
+  };
+  const idnc = new Set<string>();
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", { timeZone: "America/Phoenix", hour: "numeric", hour12: false }).format(new Date(now))
+  ) % 24;
+  const inLegalWindow = hour >= 8 && hour < 21;
+  const v = leadDialVerdict(baseLead, openWindow, idnc, now);
+  check("clear landline lead: verdict matches Phoenix clock", v.eligible === inLegalWindow);
+  const wireless = leadDialVerdict(
+    { ...baseLead, phone: { value: { number: "4805551234", lineType: "wireless" }, prov: baseLead.phone!.prov } },
+    openWindow, idnc, now
+  );
+  check("wireless suppressed while flag ON", !wireless.eligible);
+  const unknownType = leadDialVerdict(
+    { ...baseLead, phone: { value: { number: "4805551234", lineType: "unknown" }, prov: baseLead.phone!.prov } },
+    openWindow, idnc, now
+  );
+  check("unknown line type treated as wireless (suppressed)", !unknownType.eligible);
+  check("DNC-listed blocked", !leadDialVerdict({ ...baseLead, dnc: { status: "listed", scrubbedAt: now } }, openWindow, idnc, now).eligible);
+  check("unscrubbed blocked", !leadDialVerdict({ ...baseLead, dnc: undefined }, openWindow, idnc, now).eligible);
+  check(
+    "internal DNC honored instantly",
+    !leadDialVerdict(baseLead, openWindow, new Set(["4805551234"]), now).eligible
+  );
+  check("opt-out honored instantly", !leadDialVerdict({ ...baseLead, optedOutAt: now }, openWindow, idnc, now).eligible);
+}
+
 async function main() {
   const now = new Date().toISOString();
   if (process.argv.includes("--live")) {
     await runLive(now);
   } else {
     runFixtureProof(now);
+    runGateProof(now);
   }
   if (failures > 0) {
     console.error(`\n${failures} check(s) FAILED`);
