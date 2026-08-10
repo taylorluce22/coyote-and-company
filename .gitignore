@@ -10,3 +10,5 @@ agency-os/mvp/out/
 # Python bytecode — regenerated on every run, per-machine, never committed
 __pycache__/
 *.pyc
+farmhand/node_modules/
+farmhand/.next/
