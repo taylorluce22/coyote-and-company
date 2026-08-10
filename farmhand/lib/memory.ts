@@ -133,7 +133,9 @@ export async function syncRecords(
     .map((r) => {
       const appId = String(r.id ?? "").trim();
       if (!appId) return null;
-      return { workspace: ws(workspace), app_id: appId, ...d.flat(r), data: r };
+      // updated_at must be sent explicitly: the DB default only fires on INSERT,
+      // so upserted reviews/edits were keeping the original stamp (found live 8/10).
+      return { workspace: ws(workspace), app_id: appId, ...d.flat(r), data: r, updated_at: new Date().toISOString() };
     })
     .filter(Boolean);
   if (!rows.length) return true; // nothing to push is a success, not a failure

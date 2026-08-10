@@ -19,8 +19,7 @@ Expect JSON: `{ ok: true, research: {...}, audit: {...}, cmo: {...}, analyst: {.
   → expect rows for researcher, cmo, data_analyst, orchestrator (+ competitor_audit on even ISO weeks).
 - `select claim, label, source, url from kb_refs order by created_at desc limit 10;`
   → expect sourced sweep claims (source `researcher-weekly-sweep`).
-- If the Content Queue has drafts: `select app_id, status, data->'cmoReview' from planned_posts
-  where data ? 'cmoReview';` → reviews present, **status still draft** (guardrail check).
+- If the Content Queue has drafts: `select app_id, status, updated_at, data->'cmoReview' from planned_posts where data ? 'cmoReview';` (planned_posts has updated_at, not created_at) → reviews present, **status still draft** (guardrail check).
 
 ## 4. Verify the graph
 Open the app → Agent Network: Researcher/CMO/Data Analyst/Orchestrator cards should read

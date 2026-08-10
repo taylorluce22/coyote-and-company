@@ -15,10 +15,10 @@
    field-sales persona never generated; dead angle (expired federal
    tax credit) skipped; AI-disclosure field on regenerated items.
 
-   NOTE: ig-account-direction-2026.md and higgsfield-board-state-2026.md
-   are referenced by the spec but are NOT in the repo (Mac-only files).
-   The rules below encode what the spec itself states. When those docs
-   land, reconcile RULES with them.
+   RULES reconciled 2026-08-10 against docs/ig-account-direction-2026.md and
+   docs/higgsfield-board-state-2026.md (both now in-repo). Board selection must
+   pick 'AZ Grid v2' explicitly — never by name-pattern (board names on the
+   account are historical and unreliable).
    ============================================================ */
 
 import { logAgentRun, addKbRefs, pullRecords, syncRecords, memoryEnabled } from "@/lib/memory";
@@ -32,8 +32,10 @@ export const RULES = {
   lanes: ["lifestyle", "educational-solar"] as const,
   bannedGridContent: ["sales wins", "commission", "recruiting"],
   neverFabricate: ["installs", "savings figures", "customer results"],
+  // Exact phrases from docs/ig-account-direction-2026.md (now in-repo, reconciled 8/10)
   retiredPersonaMarkers: [
-    "route", "roofs every morning", "knocking doors", "field sales grind",
+    "route", "roofs every morning", "driving all over the valley", "commute",
+    "knocking doors", "field sales grind",
   ],
   deadAngles: ["federal tax credit", "30% tax credit", "ITC"],
   approvedAngles: [

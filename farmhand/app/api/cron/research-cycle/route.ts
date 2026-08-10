@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { memoryEnabled } from "@/lib/memory";
 import { runWeeklyCycle } from "@/lib/researchLoop";
 
@@ -14,7 +14,7 @@ import { runWeeklyCycle } from "@/lib/researchLoop";
  * Same CRON_SECRET convention as /api/cron/hunt.
  */
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
@@ -28,6 +28,24 @@ export async function GET(req: NextRequest) {
   if (!memoryEnabled()) {
     return NextResponse.json({ ok: false, reason: "shared memory layer not configured (Supabase env vars)" });
   }
-  const result = await runWeeklyCycle();
-  return NextResponse.json({ ok: true, ...result });
+  // The full cycle exceeds the 60s edge-response window (verified live:
+  // first run 504'd at the edge while completing fine underneath). Respond
+  // immediately and run the cycle in after() — the orchestrator's agent_runs
+  // row is the completion record. ?sync=1 keeps the old awaited behavior for
+  // manual debugging where the JSON result is wanted.
+  if (req.nextUrl.searchParams.get("sync") === "1") {
+    const result = await runWeeklyCycle();
+    return NextResponse.json({ ok: true, ...result });
+  }
+  after(async () => {
+    try {
+      await runWeeklyCycle();
+    } catch (e) {
+      console.error("research-cycle failed:", e);
+    }
+  });
+  return NextResponse.json(
+    { ok: true, accepted: true, note: "cycle running; completion logged to agent_runs (orchestrator row)" },
+    { status: 202 }
+  );
 }

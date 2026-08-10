@@ -10,6 +10,7 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. This file is t
 | **ProRx Pharma** (Sioux Falls SD; also boomrx.com) | Dave Dugas, VP Sales (904-945-1844) + Mark | 🟡 Call held 8/7; your recap 8/8: **3% of gross on introduced customers, no intro fee**. Dave out of country week of 8/10, on email | 8/8 you → recap | Follow up when Dave returns (~8/17). Compliance facts below — FYI, not a gate |
 | **STASKA Pharmaceuticals** | Nick Shada | 🟢 Wants the call; rescheduled to this week after his OOO | 8/7 you → "let's put it on next week" | **Send times today** — draft in your Gmail drafts |
 | **Belmar Pharma Solutions** | Rob Kilgore, CEO (direct) | 🟡 Strong personalized men's-health email sent 8/6 (after belmarselect@ bounced) | 8/6 you → rob@ | Day-3/4 follow-up due — draft in your Gmail drafts |
+| **Globyz Pharma / Nexgen Formulations** (Folcroft PA) | Salman Pathan, CEO (sal@globyz.com) | 🟢 Replied 8/6 to the batch send; **call set: Thu Aug 13, 1:25 PM ET / 10:25 AM MST** (rescheduled from 8/10 via Microsoft Bookings) | 8/6 → reply received | Diligence research launched 8/10 — prep brief to follow (source: Cowork calendar verification) |
 
 ## Counsel & regulatory
 
@@ -43,4 +44,5 @@ Sent "Introduction work for 503B facilities" to: Olympia (ocs@), Carie Boyd (ord
 | **Mon 8/10** | Confirm Frier Levitt slot · send STASKA times (draft ready) · send Belmar follow-up (draft ready) · A2s to the four cleared batch targets |
 | **Tue 8/11** | **Frier Levitt call** — agenda doc ready |
 | **Wed 8/12** | **Assure Infusions call, 10 AM MST** — prep doc coming from diligence research |
-| **Thu–Fri** | STASKA call (proposed 8/13–8/14) · log outcomes here |
+| **Thu 8/13** | **Globyz/Nexgen call, 10:25 AM MST** (Salman Pathan) · STASKA call if Nick picks a Thu slot (proposed 9:00 or 11:00 AM MST — no overlap with Globyz) |
+| **Fri 8/14** | STASKA fallback slot (morning) · log the week's outcomes here |
