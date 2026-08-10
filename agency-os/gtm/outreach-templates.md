@@ -2,7 +2,7 @@
 
 Two audiences: (A) supplier recruitment (pitching 503Bs — this is selling *your service*, no drug claims involved), (B) buyer outreach (on behalf of a signed supplier — claims rules fully apply, G10 gates every send). All templates follow `docs/06-outreach.md`: real name, real business, postal address + one-click opt-out in footer, truthful subject lines, no efficacy/equivalence/approval claims. Merge fields in {braces} come only from the approved whitelist.
 
-**Standing rule (founder, 2026-08-10): meetings are PHONE CALLS.** Booking links use a phone-call location (we call them, or they call 480-253-7232) — never a video-conference link. For meetings booked on a counterparty's system, ask to switch to phone.
+**Standing rule (founder, 2026-08-10, refined same day): meetings are PHONE CALLS — but email copy never mentions phone vs. video.** Schedule normally in the email ("I'll send a calendar invite" / "send me a good time and I'll put 15 minutes on the calendar"). The phone preference is expressed only in the calendar invite itself: a Google Calendar invite whose location is a phone call (we call them, or they call 480-253-7232) — no Meet/video link attached. Cal.com event types likewise use a phone-call location. No switch-request language in any email.
 
 Standard footer (every message, both audiences):
 

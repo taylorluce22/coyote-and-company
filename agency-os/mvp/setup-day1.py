@@ -204,7 +204,8 @@ def step1(prog: dict, cfg: dict, dry: bool) -> None:
         do("Create all three. No configuration needed yet — mvp/automations.md covers wiring.")
         do("In Cal.com, create a 20-minute 'Intro Call' event type — location: PHONE CALL")
         do("('organizer will call attendee' — collects their number at booking). Standing")
-        do("rule: phone calls only, no video-conference links on any meeting we create.")
+        do("rule: phone calls only — expressed ONLY via the calendar invite/booking location")
+        do("(no Meet/video link on the invite). Email copy never mentions phone vs. video.")
         cfg["booking_link"] = ask("Paste your Cal.com booking link", cfg, "booking_link", dry)
         if confirm("Accounts created?", dry):
             prog["1e"] = True
