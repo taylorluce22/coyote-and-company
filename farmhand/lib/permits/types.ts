@@ -52,6 +52,43 @@ export interface Provenance {
   fetchedAt: string;
 }
 
+/** A value that only exists together with where it came from. */
+export interface Sourced<T> {
+  value: T;
+  prov: Provenance;
+}
+
+/** Line type MUST be carried on every appended number — wireless suppression depends on it. */
+export type LineType = "wireless" | "landline" | "voip" | "unknown";
+
+export interface PhoneData {
+  number: string; // E.164-ish digits as returned by the source
+  lineType: LineType;
+}
+
+export interface OwnerData {
+  name: string;
+  mailingAddress?: string;
+  /** Situs and mailing address match — false suggests absentee owner. */
+  ownerOccupied?: boolean;
+}
+
+/** ENRICH output: one row per target parcel, every enriched field with provenance. */
+export interface EnrichedLead {
+  apn: string;
+  jurisdiction: Jurisdiction;
+  address: string;
+  newestSolarIssuedAt?: string;
+  owner?: Sourced<OwnerData>;
+  phone?: Sourced<PhoneData>;
+  /** National DNC scrub result. Stale (> 31 days) scrubs block dialing in COMPLY. */
+  dnc?: { status: "clear" | "listed" | "unknown"; scrubbedAt: string; receipt?: string };
+  /** Internal do-not-call — honored instantly, retained 10 years. */
+  internalDnc?: boolean;
+  optedOutAt?: string;
+  updatedAt: string;
+}
+
 /** Normalize an APN for cross-source joins: uppercase, alphanumerics only. */
 export function normalizeApn(raw: unknown): string {
   return String(raw ?? "")

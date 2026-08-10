@@ -11,7 +11,7 @@
  */
 
 import { kvGetJSON, kvSetJSON } from "@/lib/kv";
-import type { PermitRecord, TargetParcel } from "./types";
+import type { EnrichedLead, PermitRecord, TargetParcel } from "./types";
 
 const MAX_RECORDS = 6000;
 
@@ -65,6 +65,23 @@ export async function getTargets(client: string): Promise<TargetParcel[]> {
 
 export async function setTargets(client: string, targets: TargetParcel[]): Promise<void> {
   await kvSetJSON(`${ns(client)}:targets`, targets);
+}
+
+export async function getLeads(client: string): Promise<EnrichedLead[]> {
+  return (await kvGetJSON<EnrichedLead[]>(`${ns(client)}:leads`)) ?? [];
+}
+
+/** Upsert by APN. Existing enrichment survives a re-seed (merge keeps whichever side has the field). */
+export async function upsertLeads(client: string, fresh: EnrichedLead[]): Promise<number> {
+  const existing = await getLeads(client);
+  const byApn = new Map(existing.map((l) => [l.apn, l]));
+  for (const lead of fresh) {
+    const prev = byApn.get(lead.apn);
+    byApn.set(lead.apn, prev ? { ...prev, ...lead, owner: lead.owner ?? prev.owner, phone: lead.phone ?? prev.phone, dnc: lead.dnc ?? prev.dnc, internalDnc: lead.internalDnc ?? prev.internalDnc, optedOutAt: lead.optedOutAt ?? prev.optedOutAt } : lead);
+  }
+  const merged = [...byApn.values()].slice(-MAX_RECORDS);
+  await kvSetJSON(`${ns(client)}:leads`, merged);
+  return merged.length;
 }
 
 export async function getMeta(client: string): Promise<PermitMeta> {
