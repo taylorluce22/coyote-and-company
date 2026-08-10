@@ -207,6 +207,56 @@ _Updated as work lands. Timezone: America/Phoenix._
   drop an entry. The compliance log is also stored as a single rewritten
   value, which will outgrow the KV timeout at retention scale. These need a
   durable append-only store, not a patch.
+- **2026-08-10 — First live Mesa run, and the residential gate it forced.**
+  Run from the Vercel preview in a signed-in browser (the preview is
+  SSO-protected; curl from outside 401s). Returned `totalPermits` 10033,
+  `parcelsWithSolar` 323, `targets` 111, every row with a populated address
+  and date — so the promoted field names resolve. Against the previous
+  build the same call gave `parcelsWithSolar` 739 / `targets` 353 with every
+  address empty, so the completion and ancillary gates were demonstrably
+  working. Hand-classifying all 111 found only ~20–25 genuine residential
+  rooftop installs: ~20 were commercial or municipal (parking canopies,
+  carports, shade structures, a flagpole with solar lighting) and ~36 were
+  electrical/service work still passing the ancillary gate. Fixed:
+  - **The install gate was inverted.** It asked "does this mention a panel?"
+    and tried to enumerate ancillary phrasings — which never converges. It
+    now asks "does this install PV?", requiring affirmative evidence (a kW
+    rating, roof/ground mount, modules, array, solar panels). A bare
+    "PV SOLAR SYSTEM" mention counts only outside a purpose clause, since
+    "INSTALL SUBPANEL **FOR** PV SOLAR SYSTEM" names the beneficiary.
+  - **New residential gate** (`lib/permits/residential.ts`), separate from
+    the install gate: system size with a 30 kW DC ceiling (no size stated is
+    *unknown*, never a pass), residential permit type, commercial structure
+    words (`CANOPY` **and** `CANOPIES` — matching only the singular is how
+    the Chase and Mesa Public Library arrays got through), and named
+    organizations.
+  - **Two guards against overcorrecting**, both from real keeper rows:
+    RES/COM markers are read only from `permit_type`/`type_of_work`, never
+    description text, because a genuine residential row opens
+    "IND-2873."; and the named-entity signal is suppressed inside an
+    approval clause, because "CONDITIONED ON CITY OF MESA AND SRP APPROVAL"
+    is a homeowner self-install, not a municipal project.
+  - **Date anchoring** now prefers `finaled_date`, then the source's own
+    `finaled_year` at year precision, then `issued_date` — each labeled in
+    `completion_date_source`. Mesa's dominant completed status
+    ("C of C Issued") does not always carry `finaled_date`, so without the
+    year rung most completed permits silently read as issue-dated.
+  - **Recency window is now 2–20 years** (was 6 months–5 years).
+  - Stats now report `parcelsCommercial` with a per-reason tally,
+    `parcelsUnknownOccupancy`, and per-parcel `systemKwDc`, so the next live
+    run shows exactly which signal is doing the work.
+- **2026-08-10 — County-layer coverage settled; West Valley needs city
+  adapters.** Maricopa County permits only unincorporated territory.
+  Confirmed by `WorkClass='Solar'` counts per ZIP against the county layer:
+  Goodyear 85395 = 1 and Glendale 85308 = 3 (both wholly inside city limits,
+  i.e. nothing), versus Litchfield Park 85340 = 290, Buckeye 85326 = 127,
+  Peoria 85383 = 91 — exactly the ZIPs that sprawl past city limits. Those
+  are county residents sharing a ZIP with a city. Consequences, recorded in
+  `lib/permits/adapters/README.md`: all five West Valley cities need their
+  own adapters; county rows are labeled `jurisdiction=maricopa-unincorporated`;
+  and **ZIP must never be used as a city filter on county data** — it looks
+  right and silently returns the wrong population, the same failure shape as
+  the ESS over-fetch.
 - **Ship state: list-building + compliance-armed, dialing OFF.** ✅
 - Open items, in order:
   1. First live run (from Vercel or any machine with egress to

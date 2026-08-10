@@ -13,10 +13,11 @@
 import { mesaRowToRecord, fetchMesaPermits, mesaSoqlWhere } from "../lib/permits/adapters/mesa";
 import { canonicalPhone, isDialable } from "../lib/permits/phone";
 import { normalizeLineType } from "../lib/permits/enrich/phoneAppend";
-import { mesaFixtureRows, EXPECTED_TARGET_APNS, MESA_STATUS_FIXTURES } from "../lib/permits/fixtures/mesa";
+import { mesaFixtureRows, EXPECTED_TARGET_APNS, MESA_STATUS_FIXTURES, LIVE_CONTAMINANTS } from "../lib/permits/fixtures/mesa";
 import { solarWithoutBattery } from "../lib/permits/setDifference";
 import { targetsToCsv } from "../lib/permits/csv";
 import { classifyDescription, isAncillaryScope } from "../lib/permits/classify";
+import { assessResidential, parseKwDc } from "../lib/permits/residential";
 import { classifyMesaStatus, MESA_COMPLETED_SOLAR_BASELINE, MESA_SOLAR_MATCH_BASELINE } from "../lib/permits/status";
 import { detectUtility } from "../lib/permits/utility";
 import { normalizeApn } from "../lib/permits/types";
@@ -314,6 +315,87 @@ function runSchemaRegressions() {
   check("Maricopa dashed APN normalizes to the same key", normalizeApn("304-33-505") === "30433505");
 }
 
+/**
+ * Regressions against the VERBATIM rows that contaminated the first live run.
+ * Every string here came out of real Mesa data, not out of imagination.
+ */
+function runLiveContaminationRegressions(now: string) {
+  console.log("== live contamination regressions (real Mesa rows)");
+
+  const asRecord = (description: string, permitType?: string, workType?: string) =>
+    mesaRowToRecord(
+      {
+        permit_number: "X",
+        parcel_number: "30400001",
+        property_address: "1 TEST ST",
+        description_of_work: description,
+        status: "C of C Issued",
+        permit_type: permitType,
+        type_of_work: workType,
+      },
+      now
+    );
+
+  // (c) + (a): commercial structures and oversize systems.
+  for (const desc of LIVE_CONTAMINANTS.commercial) {
+    const verdict = assessResidential(asRecord(desc)).verdict;
+    check(`commercial rejected: "${desc.slice(0, 52)}…"`, verdict === "commercial");
+  }
+  check(
+    "plural CANOPIES caught (a CANOPY-only pattern is how these leaked)",
+    assessResidential(asRecord("INSTALL (8) STEEL FRAMED PV SOLAR PARKING CANOPIES")).verdict === "commercial"
+  );
+  check(
+    "singular CANOPY also caught",
+    assessResidential(asRecord("PV SOLAR CANOPY OVER PATIO AREA")).verdict === "commercial"
+  );
+  check("1019.83 kW DC is commercial by size alone", parseKwDc("1019.83 KW DC / 815 KW AC") === 1019.83);
+  check("712.215 KWDC parses", parseKwDc("712.215 KWDC") === 712.215);
+  check(
+    "size ceiling rejects 555 KW",
+    assessResidential(asRecord("INSTALL 555 KW SOLAR ARRAY")).verdict === "commercial"
+  );
+
+  // The install gate: electrical/service work that names PV but installs none.
+  for (const desc of LIVE_CONTAMINANTS.ancillary) {
+    const cls = classifyDescription(desc);
+    check(`ancillary rejected: "${desc.slice(0, 52)}…"`, cls !== "solar", `got ${cls}`);
+  }
+  check(
+    "hyphenated 200-AMP no longer slips the gate",
+    classifyDescription("REPLACE 200-AMP ELECTRICAL PANEL FOR NEW PV SOLAR") === "solar-ancillary"
+  );
+
+  // The keepers — and the two traps that would have wrongly rejected them.
+  for (const desc of LIVE_CONTAMINANTS.keepers) {
+    check(`keeper survives install gate: "${desc.slice(0, 46)}…"`, classifyDescription(desc) === "solar");
+  }
+  check(
+    "keeper survives residential gate despite 'IND-2873.' in its text",
+    assessResidential(asRecord(LIVE_CONTAMINANTS.keepers[0], "RES")).verdict === "residential"
+  );
+  check(
+    "RES/COM markers are read from type fields, not description text",
+    assessResidential(asRecord("IND-2873. 6.300 KW DC ROOF MOUNTED SOLAR", "RES")).verdict === "residential"
+  );
+  check(
+    "keeper naming CITY OF MESA in an approval clause is NOT commercial",
+    assessResidential(asRecord(LIVE_CONTAMINANTS.keepers[1], "RES")).verdict === "residential"
+  );
+  check(
+    "same city name OUTSIDE an approval clause still reads commercial",
+    assessResidential(asRecord("PV SOLAR ARRAY AT CITY OF MESA WATER TREATMENT PLANT")).verdict === "commercial"
+  );
+  check(
+    "'does it install PV', not 'does it mention a panel' — panel mention kept",
+    classifyDescription("6.300 KW DC ROOF MOUNTED SOLAR WITH (N) 225A MAIN SERVICE PANEL") === "solar"
+  );
+  check(
+    "no size + no residential type is unknown, not a pass",
+    assessResidential(asRecord("INSTALL ROOFTOP PV SOLAR SYSTEM")).verdict === "unknown"
+  );
+}
+
 async function main() {
   const now = new Date().toISOString();
   if (process.argv.includes("--live")) {
@@ -323,6 +405,7 @@ async function main() {
     runGateProof(now);
     runAuditRegressions(now);
     runSchemaRegressions();
+    runLiveContaminationRegressions(now);
   }
   if (failures > 0) {
     console.error(`\n${failures} check(s) FAILED`);

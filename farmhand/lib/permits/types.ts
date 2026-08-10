@@ -11,7 +11,30 @@
 
 import type { CompletionStatus } from "./status";
 
-export type Jurisdiction = "mesa" | "tempe" | "scottsdale";
+/**
+ * Permit-issuing jurisdictions. Each incorporated city issues its own permits;
+ * Maricopa County issues only for UNINCORPORATED territory.
+ *
+ * "maricopa-unincorporated" is named that way deliberately. Verified 2026-08-10
+ * by querying the county layer for WorkClass='Solar' by ZIP: the two ZIPs that
+ * sit wholly inside city limits returned 1 (Goodyear 85395) and 3 (Glendale
+ * 85308) — zero for practical purposes — while the ZIPs with real counts
+ * (Litchfield Park 85340 = 290, Buckeye 85326 = 127, Peoria 85383 = 91) are
+ * exactly the ones that sprawl past city limits into unincorporated county.
+ * Those rows are county residents who share a ZIP with a city, not city
+ * residents. Labeling the jurisdiction plainly keeps anyone downstream from
+ * reading them as Goodyear or Glendale leads.
+ */
+export type Jurisdiction =
+  | "mesa"
+  | "tempe"
+  | "scottsdale"
+  | "goodyear"
+  | "buckeye"
+  | "litchfield-park"
+  | "glendale"
+  | "peoria"
+  | "maricopa-unincorporated";
 
 /** One permit as ingested from a jurisdiction source, normalized. */
 export interface PermitRecord {
@@ -77,8 +100,10 @@ export interface TargetParcel {
   newestSolarIssuedAt?: string;
   /** "in-window" when the newest solar permit falls inside the recency window; "unknown" when the source had no usable date. */
   recency: "in-window" | "unknown";
-  /** Whether the date above is a real completion date or a fallback. Never silently a derived value. */
-  completionSource: "finaled" | "issued" | "unverified";
+  /** Whether the date above is a real completion date, a year-precision one, or a fallback. Never silently derived. */
+  completionSource: "finaled" | "finaled-year" | "issued" | "unverified";
+  /** Largest DC rating on the parcel's solar permits, when stated. */
+  systemKwDc?: number;
   /** Install year straight from the source, when the source states one. */
   installYear?: number;
   /** Contractor of record on the solar permit — useful for spotting a defunct installer. */

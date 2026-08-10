@@ -61,61 +61,65 @@ const THERMAL_PATTERNS: RegExp[] = [
 ];
 
 /**
- * Electrical infrastructure done IN SERVICE OF solar — not a PV install.
+ * Positive evidence that this permit INSTALLS a photovoltaic array.
  *
- * Live Mesa record: "ELECTRICAL PERMIT TO INSTALL 225 AMP PANEL METER MAIN
- * COMBO FOR PV SOLAR", type_of_work "Res (OTH) -- Electrical". It matches
- * PV SOLAR cleanly, but the thing being installed is a service panel. Counting
- * it as an install puts a house on the target list on the strength of a panel
- * swap, and the house may have no array at all — or may have had one for a
- * decade.
+ * The gate is stated this way round on purpose. An earlier version asked "does
+ * this mention a panel?" and tried to enumerate every ancillary phrasing; the
+ * first live run leaked ~36 electrical and service-panel permits through it,
+ * including "REPLACE 200-AMP ELECTRICAL PANEL WITH 400-AMP ELECTRICAL PLAN AND
+ * INSTALL BI-DIRECTIONAL ELECTRICAL METER FOR NEW PV SOLAR" — which names PV
+ * SOLAR but installs a meter. Enumerating the negative space never converges.
+ *
+ * So a solar-worded permit counts as an install only when it affirmatively
+ * shows an array: a kW rating, roof or ground mounting, modules, an array, or
+ * a named PV system. Everything else is ancillary, whatever it mentions.
+ *
+ * Both live keepers satisfy this:
+ *   "IND-2873. 6.300 KW DC ROOF MOUNTED SOLAR WITH (N) 225A MAIN SERVICE PANEL"
+ *   "SELF-INSTALL (BY OWNER) OF ROOFTOP PV SOLAR SYSTEM, CONDITIONED ON ..."
+ * and both keep their panel mentions, because mentioning a panel was never
+ * the disqualifier — failing to install PV is.
  */
-const ANCILLARY_SUBJECT_PATTERNS: RegExp[] = [
-  /\b(?:MAIN|SERVICE|SUB)\s*PANEL\b/,
-  /\bPANEL\s+(?:UPGRADE|CHANGE|CHANGE ?OUT|REPLACEMENT|SWAP|RELOCAT)/,
-  /\bPANEL\s+METER\b/,
-  /\bMETER\s+(?:MAIN|COMBO|SOCKET|BASE|CAN|RELOCAT)/,
-  /\bMAIN\s+COMBO\b/,
-  /\bMPU\b/,
-  /\bSERVICE\s+(?:UPGRADE|CHANGE|ENTRANCE|REPLACEMENT|RECONNECT)/,
-  /\bSUB\s?PANEL\b/,
-  /\b\d{2,4}\s*AMP\b/, // "225 AMP" — a rating quoted on gear, never on an array
-  /\bDERATE\b/,
-  /\bRECONDUCTOR\b/,
-  /\bLOAD\s+CENTER\b/,
+const PV_INSTALL_EVIDENCE: RegExp[] = [
+  /\b\d+(?:[.,]\d+)?\s*KW\b/,
+  /\bMODULES?\b/,
+  /\bARRAY\b/,
+  /\bROOF\s*(?:TOP)?\s*[- ]?MOUNT/,
+  /\bROOFTOP\b/,
+  /\bGROUND\s*[- ]?MOUNT/,
+  /\b(?:SOLAR|PV)\s+PANELS?\b/,
 ];
 
 /**
- * Evidence of an actual photovoltaic array, as opposed to gear that serves one.
- * A kW rating, modules, an array, roof mounting, or the literal phrase
- * "SOLAR/PV PANELS" (which is the array itself, not a load center).
+ * Naming a "PV SOLAR SYSTEM" is weaker evidence than the list above, because
+ * the phrase appears just as readily as the BENEFICIARY of ancillary work
+ * ("INSTALL SUBPANEL FOR PV SOLAR SYSTEM") as it does as the subject of an
+ * install. It only counts when no purpose clause is pointing at it.
  */
-const PV_ARRAY_PATTERNS: RegExp[] = [
-  /\b\d+(?:\.\d+)?\s*KW\b/,
-  /\bMODULES?\b/,
-  /\bARRAY\b/,
-  /\bROOF\s*(?:TOP)?\s*MOUNT/,
-  /\bGROUND\s*MOUNT/,
-  /\b(?:SOLAR|PV)\s+PANELS?\b/,
-  /\bINVERTER\b/,
-];
+const PV_SYSTEM_MENTION = /\b(?:PV|SOLAR)(?:\s+\w+){0,2}\s+SYSTEM\b/;
+
+/** "...FOR PV SOLAR", "...FOR THE NEW SOLAR SYSTEM" — solar as the beneficiary, not the work. */
+const PURPOSE_CLAUSE = /\bFOR\s+(?:A\s+|THE\s+|NEW\s+|FUTURE\s+){0,2}(?:PV|SOLAR)/;
 
 export function hasBatteryEvidence(desc: string): boolean {
   const d = desc.toUpperCase();
   return BATTERY_PATTERNS.some((r) => r.test(d));
 }
 
+/** Affirmative evidence that an array is going in. */
+export function hasPvInstallEvidence(desc: string): boolean {
+  const d = desc.toUpperCase();
+  if (PV_INSTALL_EVIDENCE.some((r) => r.test(d))) return true;
+  return PV_SYSTEM_MENTION.test(d) && !PURPOSE_CLAUSE.test(d);
+}
+
 /**
- * True when the description's subject is electrical gear rather than an array.
- * A permit that does both ("INSTALL 7.5 KW PV SOLAR AND 200 AMP MAIN PANEL
- * UPGRADE") is a real install and must not be caught here — hence the array
- * check overriding the ancillary markers.
+ * True when a solar-worded permit does not actually install PV. A permit that
+ * does both ("INSTALL 7.5 KW PV SOLAR AND 200 AMP MAIN PANEL UPGRADE") is a
+ * real install and is not caught here.
  */
 export function isAncillaryScope(desc: string): boolean {
-  const d = desc.toUpperCase();
-  const ancillary = ANCILLARY_SUBJECT_PATTERNS.some((r) => r.test(d));
-  const array = PV_ARRAY_PATTERNS.some((r) => r.test(d));
-  return ancillary && !array;
+  return !hasPvInstallEvidence(desc);
 }
 
 export function classifyDescription(desc: string): PermitClass {
