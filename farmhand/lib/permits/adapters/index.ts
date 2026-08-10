@@ -5,6 +5,8 @@
 
 import type { Jurisdiction, PermitRecord } from "../types";
 import { fetchMesaPermits } from "./mesa";
+import { fetchPeoriaPermits } from "./peoria";
+import { fetchBuckeyePermits } from "./buckeye";
 
 export interface PermitAdapter {
   id: Jurisdiction;
@@ -17,6 +19,16 @@ export const ADAPTERS: Partial<Record<Jurisdiction, PermitAdapter>> = {
     id: "mesa",
     label: "Mesa, AZ (Socrata dzpk-hxfb)",
     fetchPermits: fetchMesaPermits,
+  },
+  peoria: {
+    id: "peoria",
+    label: "Peoria, AZ (ArcGIS Solar_Parcels — structured PV + battery flags)",
+    fetchPermits: fetchPeoriaPermits,
+  },
+  buckeye: {
+    id: "buckeye",
+    label: "Buckeye, AZ (ArcGIS EnerGov — workclass Photovoltaic, not Solar)",
+    fetchPermits: fetchBuckeyePermits,
   },
 };
 

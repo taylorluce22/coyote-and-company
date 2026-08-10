@@ -12,6 +12,18 @@
 import type { CompletionStatus } from "./status";
 
 /**
+ * Where an install date came from. Sources differ in what they publish, and a
+ * weaker provenance must never be presented as a completion date: Peoria has
+ * no date field at all and its year is decoded from the permit-number prefix.
+ */
+export type CompletionDateSource =
+  | "finaled"
+  | "finaled-year"
+  | "issued"
+  | "permit-number-prefix"
+  | "unverified";
+
+/**
  * Permit-issuing jurisdictions. Each incorporated city issues its own permits;
  * Maricopa County issues only for UNINCORPORATED territory.
  *
@@ -56,7 +68,7 @@ export interface PermitRecord {
    * source with no completion field must say so rather than let install year
    * be quietly computed from the issue date.
    */
-  completionSource: "finaled" | "issued" | "unverified";
+  completionSource: CompletionDateSource;
   /** Contractor / applicant of record (Mesa: applicant, e.g. "SOLARCITY CORP"). */
   contractor?: string;
   /** Source work-type classification (Mesa: type_of_work, e.g. "Res (OTH) -- Electrical"). */
@@ -69,6 +81,20 @@ export interface PermitRecord {
   completionStatus: CompletionStatus;
   /** Utility named in the description text, when it names one. */
   utility?: UtilityMention;
+  /**
+   * Classification stated STRUCTURALLY by the source, which always beats
+   * reading the free text. Peoria publishes a battery flag
+   * (USER_B1_CHECKBOX_DESC='Battery Storage') and a PV checklist code, so
+   * guessing from a description there would only introduce error.
+   */
+  classOverride?: PermitClass;
+  /**
+   * Occupancy stated structurally by the source. Peoria's checklist separates
+   * '801 - Photovoltaic RES' from '806 - Photovoltaic COM' outright.
+   */
+  occupancyOverride?: "residential" | "commercial";
+  /** How battery presence was determined — free text is weaker and worth surfacing. */
+  batteryDetection?: "source-flag" | "description-only";
   /** ISO timestamp of the ingest fetch — record-level provenance. */
   fetchedAt: string;
 }
@@ -101,7 +127,7 @@ export interface TargetParcel {
   /** "in-window" when the newest solar permit falls inside the recency window; "unknown" when the source had no usable date. */
   recency: "in-window" | "unknown";
   /** Whether the date above is a real completion date, a year-precision one, or a fallback. Never silently derived. */
-  completionSource: "finaled" | "finaled-year" | "issued" | "unverified";
+  completionSource: CompletionDateSource;
   /** Largest DC rating on the parcel's solar permits, when stated. */
   systemKwDc?: number;
   /** Install year straight from the source, when the source states one. */

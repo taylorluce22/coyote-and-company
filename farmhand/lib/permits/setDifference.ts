@@ -89,7 +89,10 @@ export function solarWithoutBattery(
   let missingApn = 0;
 
   for (const rec of records) {
-    const cls = classifyDescription(rec.description);
+    // A source that classifies its own rows always beats reading the text.
+    // Peoria publishes a battery checkbox and a RES/COM checklist code, so
+    // running its rows through the keyword classifier would only add error.
+    const cls = rec.classOverride ?? classifyDescription(rec.description);
     if (cls === "other") continue;
     if (!rec.apn) {
       missingApn += 1;
@@ -117,7 +120,9 @@ export function solarWithoutBattery(
       // Residential gate, separate from the install gate above. The first live
       // run put ~20 parking canopies, carports and a municipal flagpole on the
       // list; none of them are a household anyone can sell a battery to.
-      const res = assessResidential(rec);
+      const res = rec.occupancyOverride
+        ? { verdict: rec.occupancyOverride, reason: "source-classified occupancy", kwDc: undefined }
+        : assessResidential(rec);
       if (res.verdict === "commercial") {
         commercialApns.add(rec.apn);
         commercialReasons.set(rec.apn, res.reason);

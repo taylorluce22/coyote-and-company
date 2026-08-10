@@ -257,6 +257,40 @@ _Updated as work lands. Timezone: America/Phoenix._
   and **ZIP must never be used as a city filter on county data** — it looks
   right and silently returns the wrong population, the same failure shape as
   the ESS over-fetch.
+- **2026-08-10 — West Valley adapters: Peoria and Buckeye built.** Both from
+  live-verified endpoints, both public and unauthenticated. Full source notes
+  in `farmhand/lib/permits/adapters/README.md`.
+  - **Peoria** (`Accela/Solar_Parcels/MapServer/0`) is the best source in the
+    program: a purpose-built solar layer, 8312 rows, all `Final`, with
+    occupancy AND battery published as **structured fields** rather than free
+    text. The filter now honors `classOverride`/`occupancyOverride` so a
+    source that classifies its own rows beats the keyword heuristics.
+    Caveat encoded: no date field, so year decodes from the permit-number
+    prefix and `completion_date_source=permit-number-prefix`; history starts
+    2019, so "2–20 years" is really 2019–2024 and the extra depth is not
+    claimed.
+  - **Buckeye** (`Hosted/EnergovPermitswReviewHistory2/FeatureServer/0`):
+    `workclass LIKE '%SOLAR%'` returns **exactly zero** — the city's word is
+    **Photovoltaic** (8942 rows, 8066 `Finaled`). A solar-keyword adapter
+    would report zero and read as a coverage gap rather than a bug, so the
+    keyword is asserted in the suite. Addresses are unusable (~21%
+    populated), so the join is on `parcelnumber`; battery is free-text only
+    and every record carries `batteryDetection=description-only`.
+  - **Glendale** deferred: no API, monthly PDFs only, and no APN, status or
+    completion date — so if the parser is built every Glendale lead must
+    carry `completion_status=unconfirmed` and stay out of the default queue.
+  - **Goodyear** not buildable — the published layer is a 245-row commercial
+    stub with zero solar. This becomes a data request to the city, an owner
+    action rather than an engineering one.
+  - **Litchfield Park** skipped: no permit API, and ~80% of ZIP 85340 is
+    unincorporated county already covered by the county layer.
+- **⚠ OPEN LEGAL QUESTION — owner + counsel, alongside the telemarketing
+  gate.** The Maricopa County permit layer's license restricts commercial
+  download and resale without a sublicensing agreement, citing **A.R.S.
+  39-121.03**, and a lead-generation pipeline is a commercial purpose. This
+  is not an engineering decision and is recorded here rather than resolved.
+  It does not affect Peoria or Buckeye, which are city sources under their
+  own terms — so it does not block the West Valley work.
 - **Ship state: list-building + compliance-armed, dialing OFF.** ✅
 - Open items, in order:
   1. First live run (from Vercel or any machine with egress to

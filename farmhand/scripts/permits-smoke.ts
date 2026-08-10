@@ -20,6 +20,14 @@ import { classifyDescription, isAncillaryScope } from "../lib/permits/classify";
 import { assessResidential, parseKwDc } from "../lib/permits/residential";
 import { classifyMesaStatus, MESA_COMPLETED_SOLAR_BASELINE, MESA_SOLAR_MATCH_BASELINE } from "../lib/permits/status";
 import { detectUtility } from "../lib/permits/utility";
+import { peoriaRowToRecord, peoriaYearFromPermitNumber, PEORIA_VERIFIED } from "../lib/permits/adapters/peoria";
+import { buckeyeRowToRecord, buckeyeWhere, classifyBuckeyeStatus, BUCKEYE_VERIFIED } from "../lib/permits/adapters/buckeye";
+import {
+  peoriaFixtureRows,
+  buckeyeFixtureRows,
+  PEORIA_EXPECTED_TARGETS,
+  BUCKEYE_EXPECTED_TARGETS,
+} from "../lib/permits/fixtures/westvalley";
 import { normalizeApn } from "../lib/permits/types";
 import { defaultComplianceState, evaluateGate, leadDialVerdict, type ComplianceState } from "../lib/permits/comply";
 import type { EnrichedLead } from "../lib/permits/types";
@@ -396,6 +404,84 @@ function runLiveContaminationRegressions(now: string) {
   );
 }
 
+/** West Valley adapters: Peoria (structured) and Buckeye (the PHOTOVOLTAIC trap). */
+function runWestValleyRegressions(now: string) {
+  console.log("== West Valley adapters");
+
+  // --- Peoria: structured occupancy and battery, year from permit prefix.
+  const peoriaRecords = peoriaFixtureRows()
+    .map((r) => peoriaRowToRecord(r, now))
+    .filter((r): r is NonNullable<typeof r> => r !== null);
+  check("peoria rows map", peoriaRecords.length === 7, `got ${peoriaRecords.length}`);
+  check(
+    "peoria battery row uses the SOURCE FLAG, not free text",
+    peoriaRecords.some((r) => r.classOverride === "battery" && r.batteryDetection === "source-flag")
+  );
+  check(
+    "peoria RES code sets occupancy structurally",
+    peoriaRecords.find((r) => r.permitNumber === "19PV0001")?.occupancyOverride === "residential"
+  );
+  check(
+    "peoria COM code sets occupancy commercial",
+    peoriaRecords.find((r) => r.permitNumber === "20PV0004")?.occupancyOverride === "commercial"
+  );
+  check("peoria year decodes from permit prefix", peoriaYearFromPermitNumber("26PV0001", 2026) === 2026);
+  check("peoria year rejects an implausible prefix", peoriaYearFromPermitNumber("99PV0001", 2026) === undefined);
+  check(
+    "peoria completion source is labeled permit-number-prefix, not a date",
+    peoriaRecords[0].completionSource === "permit-number-prefix"
+  );
+  check(
+    "peoria history starts 2019 — the source has no 20 years of depth",
+    Math.min(...Object.keys(PEORIA_VERIFIED.yearHistogram).map(Number)) === PEORIA_VERIFIED.historyStartsYear
+  );
+  check(
+    `peoria year histogram sums to ${PEORIA_VERIFIED.distinctResPvParcels} distinct RES PV parcels`,
+    Object.values(PEORIA_VERIFIED.yearHistogram).reduce((a, b) => a + b, 0) ===
+      PEORIA_VERIFIED.distinctResPvParcels
+  );
+  const peoriaOut = solarWithoutBattery(peoriaRecords, { now });
+  const peoriaApns = peoriaOut.targets.map((t) => t.apn).sort();
+  check(
+    `peoria targets = ${PEORIA_EXPECTED_TARGETS.join(", ")}`,
+    JSON.stringify(peoriaApns) === JSON.stringify([...PEORIA_EXPECTED_TARGETS].sort()),
+    `got ${peoriaApns.join(", ") || "(none)"}`
+  );
+  check("peoria battery parcel excluded via source flag", !peoriaApns.includes("30500003"));
+  check("peoria commercial parcel excluded via checklist code", !peoriaApns.includes("30500004"));
+
+  // --- Buckeye: the single most important fact about this source.
+  const where = buckeyeWhere().toUpperCase();
+  check(
+    "buckeye queries PHOTOVOLTAIC — a SOLAR-only workclass query returns zero rows",
+    where.includes("PHOTOVOLTAIC") && BUCKEYE_VERIFIED.workclassSolarKeyword === 0
+  );
+  check("buckeye battery keywords present (free text is the only source here)", where.includes("BATTER"));
+
+  const buckeyeRecords = buckeyeFixtureRows(now).map((r) => buckeyeRowToRecord(r, now));
+  check(
+    "buckeye flags weaker battery provenance",
+    buckeyeRecords.every((r) => r.batteryDetection === "description-only")
+  );
+  check(
+    "buckeye 'Finaled' is complete; other statuses are unknown, not guessed",
+    classifyBuckeyeStatus("Finaled") === "complete" && classifyBuckeyeStatus("Issued") === "unknown"
+  );
+  check(
+    "buckeye keeps a row whose address fields are both blank (APN is the join key)",
+    buckeyeRecords.find((r) => r.permitNumber === "BLD-004")?.apn === "30600004"
+  );
+  const buckeyeOut = solarWithoutBattery(buckeyeRecords, { now });
+  const buckeyeApns = buckeyeOut.targets.map((t) => t.apn).sort();
+  check(
+    `buckeye targets = ${BUCKEYE_EXPECTED_TARGETS.join(", ")}`,
+    JSON.stringify(buckeyeApns) === JSON.stringify([...BUCKEYE_EXPECTED_TARGETS].sort()),
+    `got ${buckeyeApns.join(", ") || "(none)"}`
+  );
+  check("buckeye battery-in-description parcel excluded", !buckeyeApns.includes("30600002"));
+  check("buckeye non-Finaled parcel excluded", !buckeyeApns.includes("30600003"));
+}
+
 async function main() {
   const now = new Date().toISOString();
   if (process.argv.includes("--live")) {
@@ -406,6 +492,7 @@ async function main() {
     runAuditRegressions(now);
     runSchemaRegressions();
     runLiveContaminationRegressions(now);
+    runWestValleyRegressions(now);
   }
   if (failures > 0) {
     console.error(`\n${failures} check(s) FAILED`);

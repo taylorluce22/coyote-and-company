@@ -30,14 +30,90 @@ geometry — point-in-polygon against city limits — never the ZIP.
 
 | Jurisdiction | Status | Source |
 | --- | --- | --- |
-| `mesa` | **live-verified** | Socrata SODA, dataset `dzpk-hxfb` |
-| `goodyear` | not built | Accela Citizen Access |
-| `peoria` | not built | Accela (`devservices.peoriaaz.gov`) |
-| `glendale` | not built | SmartGov public portal |
-| `buckeye` | not built | own development services |
-| `litchfield-park` | not built | own development services |
-| `maricopa-unincorporated` | not built | county ArcGIS feature layer |
+| `mesa` | **built, live-verified** | Socrata SODA, dataset `dzpk-hxfb` |
+| `peoria` | **built, live-verified** | ArcGIS `Accela/Solar_Parcels/MapServer/0` |
+| `buckeye` | **built, live-verified** | ArcGIS `Hosted/EnergovPermitswReviewHistory2/FeatureServer/0` |
+| `glendale` | **deferred — PDF only** | monthly Combined Permits Report PDFs |
+| `goodyear` | **not buildable** | no usable public data |
+| `litchfield-park` | **won't build** | no API; ~80% of the ZIP is county anyway |
+| `maricopa-unincorporated` | not built | county ArcGIS layer — see licensing note below |
 | `tempe`, `scottsdale` | not built | P1, unscoped |
+
+### Peoria — the best source in the program
+
+A purpose-built solar layer: 8312 rows, all `USER_B1_APPL_STATUS='Final'`, so
+completed-only is free. Occupancy and battery are both **structured**
+(`'801 - Photovoltaic RES'` / `'806 - Photovoltaic COM'`, and a
+`'Battery Storage'` checkbox), which is why the adapter sets `classOverride`
+and `occupancyOverride` — a source that classifies its own rows always beats
+reading free text.
+
+Its one weakness: **no date field**. Year is decoded from the permit-number
+prefix, so `completionSource` is `permit-number-prefix`. History starts in
+2019, so a "2–20 year" window really means 2019–2024 here. The depth does not
+exist and must not be implied.
+
+### Buckeye — the keyword trap
+
+`workclass LIKE '%SOLAR%'` returns **exactly zero**. Buckeye's word is
+**Photovoltaic** (`'Photovoltaic System'`, `'Photovoltaic Standard Plan'`):
+8942 rows, 8066 of them `Finaled`. A solar-keyword adapter reports zero and
+reads as a coverage gap rather than a bug — the same failure shape as the ESS
+over-fetch. The test suite asserts the keyword for that reason.
+
+Addresses are unusable (`addressline1` ~21% populated, `situsaddress` blank on
+sampled solar rows) — **join on `parcelnumber` or geometry, never address**.
+Battery is free-text only (no battery workclass among 106 values), so every
+Buckeye record carries `batteryDetection: "description-only"`.
+
+### Glendale — deferred, and it cannot satisfy completed-only
+
+No API. Granicus SmartGov; the GIS `Building_Safety` folder returns *Token
+Required* and the AGOL org publishes no permit datasets. The only record-level
+publication is a monthly PDF series:
+<https://www.glendaleaz.gov/Work/Building-Safety-Codes-Services/Permit-Reports>
+
+The Combined Permits Report carries Permit Number, Permit Type, Issued Date,
+**Owner Name**, Property Street Address, Contractor License No, Construction
+Type, Value, Permit Fee. Solar is permit type `12PHOT`, construction type
+`RES PHOTOVOLATAIC GRID-TIED` — **match that misspelling literally, it is the
+city's own**. Roughly 85 residential PV permits a month.
+
+The gap: **no APN, no permit status, no completion date** — issued date only.
+So if the parser is built, every Glendale lead must carry
+`completion_status=unconfirmed` and stay out of the default queue, per the
+completed-only rule. Scrape the index page for links; do **not** construct
+filenames, since the path segment and spellings vary month to month.
+
+### Goodyear — not buildable, and it is a request, not code
+
+The published layer is a 245-row stub with 8 distinct `JobDescription` values,
+all commercial (mini mart, carport, addition, hospital, tenant improvement,
+repair garage, hotel, school). Solar count is zero, confirmed twice. The schema
+is genuinely good (`ParcelId`, `OwnerName`, `CompletionDate`, `FullAddress`,
+contractor license) but the residential universe is simply not published, and
+Accela ACA is web-UI only. Getting Goodyear means asking the city for a data
+extract — an owner action, not an engineering one.
+
+### Litchfield Park — deliberately skipped
+
+3.3 sq mi, ~6,800 people, no GIS org and no permit API; the GovBuilt portal is
+a one-record lookup that appears to cover licensing and code cases rather than
+building permits. ZIP 85340 is 31.3 sq mi and ~33,800 people, so the city is
+roughly 10% of the land and 20% of the population — the other 80% is
+unincorporated county and already falls under the county layer. Not worth an
+adapter.
+
+## Licensing — unresolved, owner + counsel
+
+The Maricopa County permit layer's license restricts commercial download and
+resale without a sublicensing agreement, citing **A.R.S. 39-121.03**. A
+lead-generation pipeline is a commercial purpose, so this is a real question
+before the county layer is used — and it is a decision for Taylor and counsel,
+not something to resolve in code.
+
+It does **not** touch Peoria or Buckeye, which are city sources under their own
+terms.
 
 ## What "live-verified" requires
 
