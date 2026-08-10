@@ -60,6 +60,10 @@ Computed by this rule against live Gmail, not from the tracker:
 | Assure (Andrea Caudill) | 8/4 12:18 human; 8/5 accept = machine | 8/4 22:16 | BALL WITH THEM — call Wed 8/12 |
 | Frier Levitt | 8/7 14:35 | 8/7 14:33 | **MUTED** (founder, 8/10) |
 | AZ / OH / TN boards | never | 8/8 12:41 | NO REPLY YET — nudge at 2 weeks (8/22) |
+| 8/5 batch — 39 facilities | never (2 auto-acks don't count) | 8/5 | NO REPLY YET — A2 drafted 8/10, unsent |
+| Galaxy Pharmaceuticals | never | 8/5, failed 8/8 | **UNDELIVERED** — route dead, needs the web form |
+
+The batch row is why the count matters: the tracker listed 10 of 45 sends, so 29 conversations existed in Gmail and nowhere else. A triage view built only from what a tracker remembers will miss whatever the tracker forgot — the counts have to come from mail state each run.
 
 **Zero conversations are genuinely "your move" right now.** The card's 7 were: one answered out-of-thread, three answered 8/10, one calendar acceptance, one muted, one auto-acknowledgement.
 

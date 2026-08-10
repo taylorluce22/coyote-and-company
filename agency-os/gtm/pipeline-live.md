@@ -25,11 +25,24 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. **Standing rul
 
 These three letters are exactly the verification path from `docs/10-regulatory-research.md` §6 — executed. Answers get recorded against the RC register when they arrive.
 
-## 8/5 batch sends — awaiting replies (A2 follow-ups now overdue, due day 3)
+## 8/5 batch — full accounting (reconstructed from sent mail 8/10)
 
-Sent "Introduction work for 503B facilities" to: Olympia (ocs@), Carie Boyd (orders@), Brookfield Medical (Brookfield503B@gmail.com), CAPS, Leiters, Empower (officeuse@), FarmaKeio, GenoGenix, Apollo Care, New Life Rx. Belmar batch address bounced (superseded by the direct Rob email).
+**The earlier version of this section listed 10 recipients. Sent mail shows 45.** The tracker was undercounting the batch by roughly three quarters, so most of it had no follow-up scheduled at all. Reconstructed from `in:sent after:2026/08/04 before:2026/08/07`:
 
-**Regulatory status FYI on this batch** (facts only): GenoGenix — WL 1/2026, peptide-centric; Apollo Care — WL 2/2026; Carie Boyd — WL 12/2024; CAPS/Leiters/Empower — GPO-channel nationals with in-house sales. All follow-ups are Taylor's call; the tracker records status, it doesn't gate conversations.
+| Outcome | Count | Who |
+|---|---|---|
+| Human reply | 3 | ProRx (info@ → Mark, then Dave), NexGen/Globyz (sal@), Assure (from the 8/3 send) |
+| Auto-acknowledgement only | 2 | Olympia (customerservice@ replied to the clientservices@ send), GenoGenix (help@) — machine mail, day-3 clock kept running |
+| Bounced | 3 | belmarselect@belmarpharma.com (superseded by rob@), pharmacistconsult@carieboyd.com (orders@ delivered fine), ernestos@pharmaceuticlabs.com (Galaxy — permanent failure 8/8, route dead, needs the web form) |
+| No reply | 39 | everyone below |
+
+**A2 follow-ups drafted 8/10 for all 39 non-responders** — threaded replies on the original messages, day-3 diligence angle per `outreach-templates.md`, no phone-vs-video language, postal footer plus reply-based opt-out. In Taylor's drafts folder, unsent:
+
+Orion Specialty Labs · BPI Labs · GFC Pharma · Apertus · OurPharma · SCA Pharmaceuticals · Fagron Sterile Services · PQ Pharmacy · PGRrx · Olympia (ocs@) · Ocyon Bio · Wilcrest · Wesley Pharmaceuticals · Wells Pharmacy (wellsrx) · Wells Pharma (wellspharmatx) · US Specialty Formulations · Turbare · Medivant Health · STAQ Pharma · SKNV · RC Outsourcing · QuVa Pharma · OSRX · Nephron · Navinta · Medi-Fare Drug · Cost Plus · IntegraDose · ImprimisRx · Hybrid Pharma · GenoGenix · FarmaKeio · Empower · Leiters · CAPS · Brookfield Medical · Carie Boyd (orders@) · Apollo Care · New Life Rx
+
+**Regulatory status FYI on this batch** (facts only, not a gate): GenoGenix — WL 1/2026, peptide-centric; Apollo Care — WL 2/2026; Carie Boyd — WL 12/2024; CAPS/Leiters/Empower — GPO-channel nationals with in-house sales. Every non-responder got a draft; who actually gets sent is Taylor's call. The prior instruction here — "A2s to the four cleared batch targets" — was gating by the agent's own risk read, which the compliance charter forbids; it's removed.
+
+**Deliverability fact (not advice):** sonoranclinicalpartners.com is a new sending domain — 45 sends on 8/5 and 39 more in one pass is the volume pattern spam filters score on. Spacing the sends over a few days reduces that signal. Taylor's call.
 
 ## ProRx — compliance facts (decision is Taylor's)
 
@@ -43,7 +56,7 @@ Sent "Introduction work for 503B facilities" to: Olympia (ocs@), Carie Boyd (ord
 
 | Day | Item |
 |---|---|
-| **Mon 8/10** | ✅ STASKA times, Belmar follow-up, Globyz Thursday confirm — **all three sent 21:01 UTC** · ⬜ A2s to the four cleared batch targets · ⬜ start the counsel referral (retired-lawyer contact) |
+| **Mon 8/10** | ✅ STASKA times, Belmar follow-up, Globyz Thursday confirm — **all three sent 21:01 UTC** · ✅ A2 follow-ups drafted for all 39 batch non-responders (in drafts, Taylor sends) · ⬜ start the counsel referral (retired-lawyer contact) |
 | **Tue 8/11** | ~~Frier Levitt call~~ — slot unconfirmed/likely off after the counsel pivot; no nudge. Day is open unless the referral moves fast |
 | **Wed 8/12** | **Assure Infusions call, 10 AM MST** — prep doc coming from diligence research |
 | **Thu 8/13** | **Globyz/Nexgen call, 10:25 AM MST** (Salman Pathan) · STASKA call if Nick picks a Thu slot (proposed 9:00 or 11:00 AM MST — no overlap with Globyz) |
