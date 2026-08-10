@@ -1,6 +1,8 @@
-# Frier Levitt Call — Agenda (Tue Aug 11)
+# Counsel Call — Agenda
 
-They said it plainly: no legal advice before engagement, but they'll discuss the regulatory issues generally. So the goal of this free call is threefold: (1) test whether our structural read is right, (2) find out what an engagement costs and what it should cover, (3) leave a good impression — this firm literally wrote half the articles our research cites, and they know every 503B in the country.
+> **Status update 2026-08-10:** Taylor withdrew the Frier Levitt nudge; the Tue 8/11 slot is unconfirmed and likely off. Counsel is now being routed through a personal referral (a retired lawyer in Taylor's network who can connect him). **This agenda carries over to whichever counsel engages** — the questions are about the business, not the firm. Standing item: counsel sees the ProRx recap (`prorx-verification.md`) and the three state-board guidance letters before advising.
+
+*Original context (Frier Levitt free consult, kept for reference):* They said it plainly: no legal advice before engagement, but they'll discuss the regulatory issues generally. So the goal of this free call is threefold: (1) test whether our structural read is right, (2) find out what an engagement costs and what it should cover, (3) leave a good impression — this firm literally wrote half the articles our research cites, and they know every 503B in the country.
 
 ## 60-second business description (open with this, verbatim-ready)
 

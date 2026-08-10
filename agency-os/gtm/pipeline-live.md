@@ -16,7 +16,7 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. **Standing rul
 
 | Item | Status | Next |
 |---|---|---|
-| **Frier Levitt** (healthcare law firm) | Arielle Miliambro responded 8/7; call proposed for **Tue Aug 11, 11 AM or 3 PM ET — time not yet confirmed in the thread** | Confirm the slot this morning. Agenda: `counsel-call-agenda.md` |
+| **Counsel — pivot 8/10** | Taylor withdrew the Frier Levitt nudge draft (trashed). **Tue 8/11 Frier Levitt slot: unconfirmed, likely off — do NOT nudge Denise/the thread.** New path: personal referral — a retired lawyer in Taylor's network will connect him to counsel | Taylor works the referral. Whoever engages: they see the ProRx recap + the three board letters first, before advising. Agenda `counsel-call-agenda.md` carries over to whichever counsel it ends up being |
 | **AZ Board of Pharmacy** (K. Gandhi) | Guidance letter sent 8/8 — virtual wholesaler/broker classification | Await; nudge in 2 weeks if silent |
 | **Ohio Board of Pharmacy** | Guidance letter sent 8/8 — broker classification, OAC 4729:6-1-01(G) | Await |
 | **Tennessee Board of Pharmacy** | Guidance letter sent 8/8 — non-handling intermediary licensure | Await |
@@ -41,8 +41,8 @@ Sent "Introduction work for 503B facilities" to: Olympia (ocs@), Carie Boyd (ord
 
 | Day | Item |
 |---|---|
-| **Mon 8/10** | Confirm Frier Levitt slot · send STASKA times (draft ready) · send Belmar follow-up (draft ready) · A2s to the four cleared batch targets |
-| **Tue 8/11** | **Frier Levitt call** — agenda doc ready |
+| **Mon 8/10** | Send STASKA times (draft ready) · send Belmar follow-up (draft ready) · send Globyz phone-switch confirm (draft ready) · A2s to the four cleared batch targets · start the counsel referral (retired-lawyer contact) |
+| **Tue 8/11** | ~~Frier Levitt call~~ — slot unconfirmed/likely off after the counsel pivot; no nudge. Day is open unless the referral moves fast |
 | **Wed 8/12** | **Assure Infusions call, 10 AM MST** — prep doc coming from diligence research |
 | **Thu 8/13** | **Globyz/Nexgen call, 10:25 AM MST** (Salman Pathan) · STASKA call if Nick picks a Thu slot (proposed 9:00 or 11:00 AM MST — no overlap with Globyz) |
 | **Fri 8/14** | STASKA fallback slot (morning) · log the week's outcomes here |
