@@ -34,10 +34,17 @@ export interface SetDifferenceOptions {
 
 export interface SetDifferenceStats {
   totalPermits: number;
+  /** Parcels with a COMPLETED solar install permit — the honest denominator. */
   parcelsWithSolar: number;
   parcelsWithBattery: number;
   /** Parcels whose battery evidence came from inside a solar permit description. */
   combinedPermitParcels: number;
+  /** Parcels whose only solar permit was a panel/meter/service upgrade, not an install. */
+  parcelsAncillaryOnly: number;
+  /** Parcels whose solar permit hasn't completed yet. */
+  parcelsIncompleteSolar: number;
+  /** Parcels whose solar permit status couldn't be resolved either way — surfaced, not assumed. */
+  parcelsAmbiguousStatus: number;
   excludedByBattery: number;
   excludedByWindow: number;
   permitsMissingApn: number;
@@ -62,6 +69,9 @@ export function solarWithoutBattery(
 
   const batteryApns = new Set<string>();
   const combinedApns = new Set<string>();
+  const ancillaryApns = new Set<string>();
+  const incompleteApns = new Set<string>();
+  const ambiguousApns = new Set<string>();
   const solarByApn = new Map<string, PermitRecord[]>();
   let missingApn = 0;
 
@@ -72,12 +82,29 @@ export function solarWithoutBattery(
       missingApn += 1;
       continue;
     }
+    // Battery evidence subtracts regardless of permit status. Someone who has
+    // merely PULLED a battery permit is getting a battery; waiting for it to
+    // final before excluding them would put them on the call list in the
+    // meantime.
     if (cls === "battery" || cls === "solar+battery") batteryApns.add(rec.apn);
     if (cls === "solar+battery") combinedApns.add(rec.apn);
+    if (cls === "solar-ancillary") {
+      ancillaryApns.add(rec.apn);
+      continue;
+    }
     if (cls === "solar") {
-      const list = solarByApn.get(rec.apn) ?? [];
-      list.push(rec);
-      solarByApn.set(rec.apn, list);
+      // Only a COMPLETED solar permit means a system is on the roof. An issued
+      // or in-review permit is a job that hasn't happened yet, and ambiguous
+      // statuses are surfaced rather than assumed either way.
+      if (rec.completionStatus === "complete") {
+        const list = solarByApn.get(rec.apn) ?? [];
+        list.push(rec);
+        solarByApn.set(rec.apn, list);
+      } else if (rec.completionStatus === "ambiguous" || rec.completionStatus === "unknown") {
+        ambiguousApns.add(rec.apn);
+      } else {
+        incompleteApns.add(rec.apn);
+      }
     }
   }
 
@@ -90,11 +117,20 @@ export function solarWithoutBattery(
       excludedByBattery += 1;
       continue;
     }
+    // Completion date is the install date and is what the retrofit window
+    // should measure from. Issue date is the fallback, and which one was used
+    // travels with the row so a reported install year is never mistaken for a
+    // verified one.
     const dated = permits
-      .map((p) => ({ p, ms: p.issuedAt ? Date.parse(p.issuedAt) : NaN }))
+      .map((p) => {
+        const anchor = p.finaledAt ?? p.issuedAt;
+        return { p, ms: anchor ? Date.parse(anchor) : NaN, anchor };
+      })
       .filter((x) => Number.isFinite(x.ms));
     let recency: TargetParcel["recency"];
     let newestSolarIssuedAt: string | undefined;
+    let completionSource: PermitRecord["completionSource"] = "unverified";
+    let installYear: number | undefined;
     if (dated.length === 0) {
       if (!keepUndated) {
         excludedByWindow += 1;
@@ -103,7 +139,9 @@ export function solarWithoutBattery(
       recency = "unknown";
     } else {
       const newest = dated.reduce((a, b) => (a.ms >= b.ms ? a : b));
-      newestSolarIssuedAt = newest.p.issuedAt;
+      newestSolarIssuedAt = newest.anchor;
+      completionSource = newest.p.completionSource;
+      installYear = newest.p.finaledYear;
       const ageMs = nowMs - newest.ms;
       if (ageMs < minAgeMonths * MONTH_MS || ageMs > maxAgeYears * 12 * MONTH_MS) {
         excludedByWindow += 1;
@@ -123,6 +161,10 @@ export function solarWithoutBattery(
       })),
       newestSolarIssuedAt,
       recency,
+      completionSource,
+      installYear,
+      contractor: permits.find((p) => p.contractor)?.contractor,
+      utility: permits.find((p) => p.utility)?.utility,
       computedAt: opts.now,
     });
   }
@@ -141,6 +183,12 @@ export function solarWithoutBattery(
       parcelsWithSolar: solarByApn.size,
       parcelsWithBattery: batteryApns.size,
       combinedPermitParcels: combinedApns.size,
+      // Counted only where the parcel has no completed install permit of its
+      // own, so a house that upgraded its panel AND has an array isn't
+      // reported as ancillary-only.
+      parcelsAncillaryOnly: [...ancillaryApns].filter((a) => !solarByApn.has(a)).length,
+      parcelsIncompleteSolar: [...incompleteApns].filter((a) => !solarByApn.has(a)).length,
+      parcelsAmbiguousStatus: [...ambiguousApns].filter((a) => !solarByApn.has(a)).length,
       excludedByBattery,
       excludedByWindow,
       permitsMissingApn: missingApn,

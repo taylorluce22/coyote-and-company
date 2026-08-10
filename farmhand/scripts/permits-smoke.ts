@@ -13,10 +13,13 @@
 import { mesaRowToRecord, fetchMesaPermits, mesaSoqlWhere } from "../lib/permits/adapters/mesa";
 import { canonicalPhone, isDialable } from "../lib/permits/phone";
 import { normalizeLineType } from "../lib/permits/enrich/phoneAppend";
-import { mesaFixtureRows, EXPECTED_TARGET_APNS } from "../lib/permits/fixtures/mesa";
+import { mesaFixtureRows, EXPECTED_TARGET_APNS, MESA_STATUS_FIXTURES } from "../lib/permits/fixtures/mesa";
 import { solarWithoutBattery } from "../lib/permits/setDifference";
 import { targetsToCsv } from "../lib/permits/csv";
-import { classifyDescription } from "../lib/permits/classify";
+import { classifyDescription, isAncillaryScope } from "../lib/permits/classify";
+import { classifyMesaStatus, MESA_COMPLETED_SOLAR_BASELINE, MESA_SOLAR_MATCH_BASELINE } from "../lib/permits/status";
+import { detectUtility } from "../lib/permits/utility";
+import { normalizeApn } from "../lib/permits/types";
 import { defaultComplianceState, evaluateGate, leadDialVerdict, type ComplianceState } from "../lib/permits/comply";
 import type { EnrichedLead } from "../lib/permits/types";
 
@@ -41,7 +44,7 @@ function runFixtureProof(now: string) {
   );
   check(
     "ESS word boundary: ADDRESS/PROCESS don't misfire",
-    classifyDescription("PV SOLAR 9.6 KW DC — PROCESS PANEL UPGRADE AT SAME ADDRESS") === "solar"
+    classifyDescription("PV SOLAR 9.6 KW DC — PROCESS UPGRADE AT SAME ADDRESS") === "solar"
   );
 
   console.log("== fixture ingest -> set-difference");
@@ -56,13 +59,22 @@ function runFixtureProof(now: string) {
     JSON.stringify(targetApns) === JSON.stringify(expected),
     `got ${targetApns.join(", ") || "(none)"}`
   );
-  check("solar parcels counted", stats.parcelsWithSolar === 7, `got ${stats.parcelsWithSolar}`);
+  check("completed-solar parcels counted", stats.parcelsWithSolar === 8, `got ${stats.parcelsWithSolar}`);
   check("battery parcels counted", stats.parcelsWithBattery === 4, `got ${stats.parcelsWithBattery}`);
-  check("combined-permit parcel excluded (APN-C)", stats.combinedPermitParcels === 1 && !targetApns.includes("APNC00000"));
-  check("separate-battery parcels excluded (APN-B, APN-J)", stats.excludedByBattery === 2, `got ${stats.excludedByBattery}`);
+  check("combined-permit parcel excluded", stats.combinedPermitParcels === 1 && !targetApns.includes("30433503"));
+  check("separate-battery parcels excluded", stats.excludedByBattery === 2, `got ${stats.excludedByBattery}`);
   check("recency window excludes too-old + too-new", stats.excludedByWindow === 2, `got ${stats.excludedByWindow}`);
   check("missing-APN permit counted, not listed", stats.permitsMissingApn === 1, `got ${stats.permitsMissingApn}`);
-  check("undated parcel kept with recency unknown", targets.some((t) => t.apn === "APNK00000" && t.recency === "unknown"));
+  check("undated parcel kept with recency unknown", targets.some((t) => t.apn === "30433511" && t.recency === "unknown"));
+  check("ancillary-only parcel not a target", stats.parcelsAncillaryOnly === 1 && !targetApns.includes("30433512"));
+  check("incomplete solar parcel not a target", stats.parcelsIncompleteSolar === 1 && !targetApns.includes("30433514"));
+  check("ambiguous-status parcel not a target", stats.parcelsAmbiguousStatus === 1 && !targetApns.includes("30433515"));
+  check(
+    "install date comes from finaled_date, flagged as such",
+    targets.find((t) => t.apn === "30433501")?.completionSource === "finaled"
+  );
+  check("install year read from source, not derived", !!targets.find((t) => t.apn === "30433501")?.installYear);
+  check("contractor carried through", targets.find((t) => t.apn === "30433501")?.contractor === "SOLARCITY CORP");
 
   console.log("== CSV output");
   const csv = targetsToCsv(targets);
@@ -230,6 +242,78 @@ function runAuditRegressions(now: string) {
   );
 }
 
+/**
+ * Regressions for the 2026-08-10 live-schema addendum: Mesa completion status,
+ * the en-dash parsing trap, install semantics, and utility detection.
+ */
+function runSchemaRegressions() {
+  console.log("== live-schema regressions (Mesa)");
+
+  // All twelve observed status strings, including the genuine EN DASH one.
+  let statusTotal = 0;
+  let completeTotal = 0;
+  for (const f of MESA_STATUS_FIXTURES) {
+    statusTotal += f.count;
+    if (f.expect === "complete") completeTotal += f.count;
+    check(`status "${f.status}" -> ${f.expect}`, classifyMesaStatus(f.status) === f.expect);
+  }
+  check(`status fixtures sum to the live SOLAR total (${MESA_SOLAR_MATCH_BASELINE})`, statusTotal === MESA_SOLAR_MATCH_BASELINE, `got ${statusTotal}`);
+  check(`completed solar baseline is ${MESA_COMPLETED_SOLAR_BASELINE}, not ${MESA_SOLAR_MATCH_BASELINE}`, completeTotal === MESA_COMPLETED_SOLAR_BASELINE, `got ${completeTotal}`);
+
+  // The trap that a substring test would fall into.
+  check(
+    "en-dash 'Finaled – C of C Required' is NOT complete",
+    classifyMesaStatus("Finaled – C of C Required") === "ambiguous"
+  );
+  check(
+    "hyphen variant normalizes the same way",
+    classifyMesaStatus("Finaled - C of C Required") === "ambiguous"
+  );
+  check(
+    "a naive startsWith('Finaled') would have been wrong — exact match holds",
+    classifyMesaStatus("Finaled") === "complete" &&
+      classifyMesaStatus("Finaled – C of C Required") !== "complete"
+  );
+  check("unseen status is 'unknown', not assumed", classifyMesaStatus("Withdrawn") === "unknown");
+  check("whitespace/case noise normalizes", classifyMesaStatus("  c of c   ISSUED ") === "complete");
+
+  // Install semantics.
+  const trap = "ELECTRICAL PERMIT TO INSTALL 225 AMP PANEL METER MAIN COMBO FOR PV SOLAR";
+  check("live trap: panel/meter upgrade FOR PV SOLAR is ancillary", classifyDescription(trap) === "solar-ancillary");
+  check("ancillary detector agrees", isAncillaryScope(trap));
+  check(
+    "service upgrade for solar is ancillary",
+    classifyDescription("200 AMP SERVICE UPGRADE FOR SOLAR") === "solar-ancillary"
+  );
+  check(
+    "subpanel for solar is ancillary",
+    classifyDescription("INSTALL SUBPANEL FOR PV SOLAR SYSTEM") === "solar-ancillary"
+  );
+  check(
+    "install that ALSO upgrades the panel is still a real install",
+    classifyDescription("INSTALL 7.5 KW PV SOLAR AND 200 AMP MAIN PANEL UPGRADE") === "solar"
+  );
+  check(
+    "'SOLAR PANELS' is an array, not a service panel",
+    classifyDescription("INSTALL ROOF MOUNTED SOLAR PANELS") === "solar"
+  );
+  check("plain PV install unaffected", classifyDescription("8.40 KW DC PV SOLAR") === "solar");
+  check(
+    "panel upgrade for a POWERWALL still subtracts as battery",
+    classifyDescription("200 AMP PANEL UPGRADE FOR TESLA POWERWALL") === "battery"
+  );
+
+  // Utility named in the text — direct signal.
+  check("SRP detected from 'PER SRP SPECIFICATIONS'", detectUtility("... FOR PV SOLAR PER SRP SPECIFICATIONS") === "SRP");
+  check("APS detected", detectUtility("PV SOLAR PER APS INTERCONNECTION") === "APS");
+  check("no utility named -> undefined", detectUtility("8.40 KW DC PV SOLAR") === undefined);
+  check("two utilities named -> undefined, not a guess", detectUtility("SRP AND APS COORDINATION") === undefined);
+
+  // APN join key: Mesa's 8-digit bare form and Maricopa's dashed form must meet.
+  check("Mesa bare APN normalizes", normalizeApn("30433505") === "30433505");
+  check("Maricopa dashed APN normalizes to the same key", normalizeApn("304-33-505") === "30433505");
+}
+
 async function main() {
   const now = new Date().toISOString();
   if (process.argv.includes("--live")) {
@@ -238,6 +322,7 @@ async function main() {
     runFixtureProof(now);
     runGateProof(now);
     runAuditRegressions(now);
+    runSchemaRegressions();
   }
   if (failures > 0) {
     console.error(`\n${failures} check(s) FAILED`);

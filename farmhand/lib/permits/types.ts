@@ -9,6 +9,8 @@
  * `now` so the same inputs always produce the same outputs (idempotent stages).
  */
 
+import type { CompletionStatus } from "./status";
+
 export type Jurisdiction = "mesa" | "tempe" | "scottsdale";
 
 /** One permit as ingested from a jurisdiction source, normalized. */
@@ -22,12 +24,45 @@ export interface PermitRecord {
   description: string;
   /** ISO date the permit was issued, when the source exposes one. */
   issuedAt?: string;
+  /** ISO date the permit was finaled — completion, i.e. when the system actually went in. */
+  finaledAt?: string;
+  /** Install year straight from the source, not derived. */
+  finaledYear?: number;
+  /**
+   * Which field the recency window should trust, and where it came from. A
+   * source with no completion field must say so rather than let install year
+   * be quietly computed from the issue date.
+   */
+  completionSource: "finaled" | "issued" | "unverified";
+  /** Contractor / applicant of record (Mesa: applicant, e.g. "SOLARCITY CORP"). */
+  contractor?: string;
+  /** Source work-type classification (Mesa: type_of_work, e.g. "Res (OTH) -- Electrical"). */
+  workType?: string;
+  /** Source permit-type classification (Mesa: permit_type). */
+  permitType?: string;
+  /** Source permit status verbatim (Mesa: status). */
+  status?: string;
+  /** That status folded into whether the work is actually done. */
+  completionStatus: CompletionStatus;
+  /** Utility named in the description text, when it names one. */
+  utility?: UtilityMention;
   /** ISO timestamp of the ingest fetch — record-level provenance. */
   fetchedAt: string;
 }
 
-/** What a permit's description says it covers. */
-export type PermitClass = "solar" | "battery" | "solar+battery" | "other";
+/**
+ * What a permit's description says it covers.
+ *
+ * "solar-ancillary" is the trap case: a permit whose subject is electrical
+ * infrastructure done IN SERVICE OF solar — a service-panel upgrade, a meter
+ * main combo — rather than a PV install. Those descriptions mention PV SOLAR
+ * cleanly and would otherwise put a house on the target list on the strength
+ * of a panel swap.
+ */
+export type PermitClass = "solar" | "battery" | "solar+battery" | "solar-ancillary" | "other";
+
+/** Utility named in the permit text. Direct signal, ahead of any jurisdiction lookup. */
+export type UtilityMention = "SRP" | "APS" | "TEP" | "TRICO" | "SSVEC";
 
 /**
  * A parcel with solar PV and no battery/energy-storage evidence anywhere —
@@ -42,6 +77,14 @@ export interface TargetParcel {
   newestSolarIssuedAt?: string;
   /** "in-window" when the newest solar permit falls inside the recency window; "unknown" when the source had no usable date. */
   recency: "in-window" | "unknown";
+  /** Whether the date above is a real completion date or a fallback. Never silently a derived value. */
+  completionSource: "finaled" | "issued" | "unverified";
+  /** Install year straight from the source, when the source states one. */
+  installYear?: number;
+  /** Contractor of record on the solar permit — useful for spotting a defunct installer. */
+  contractor?: string;
+  /** Utility named in the permit text. Absent means unknown, not "not SRP". */
+  utility?: UtilityMention;
   /** ISO timestamp of the FILTER run that produced this row. */
   computedAt: string;
 }

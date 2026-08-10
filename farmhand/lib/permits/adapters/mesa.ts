@@ -23,37 +23,32 @@
 
 import type { PermitRecord } from "../types";
 import { normalizeApn } from "../types";
+import { classifyMesaStatus } from "../status";
+import { detectUtility } from "../utility";
 
 export const MESA_DATASET_URL = "https://data.mesaaz.gov/resource/dzpk-hxfb.json";
 
-/** Live-verified 2026-08-10. */
+/**
+ * Live-verified against a real record 2026-08-10. No candidate-list guessing
+ * remains: every field below was confirmed present on an actual Mesa row.
+ *
+ * finaled_date is the completion date and finaled_year is the install year, so
+ * neither has to be inferred from the issue date on this jurisdiction.
+ */
 const VERIFIED_FIELDS = {
-  apn: "parcel_number",
+  permitNumber: "permit_number",
+  address: "property_address",
+  apn: "parcel_number", // 8-digit, no dashes, e.g. 30433505
   description: "description_of_work",
+  status: "status",
+  issuedDate: "issued_date",
+  finaledDate: "finaled_date",
+  finaledYear: "finaled_year",
+  contractor: "applicant", // e.g. "SOLARCITY CORP"
+  workType: "type_of_work", // e.g. "Res (OTH) -- Electrical"
+  permitType: "permit_type",
+  valuation: "total_valuation",
 } as const;
-
-const PERMIT_NUMBER_CANDIDATES = [
-  "permit_number",
-  "permit_no",
-  "record_number",
-  "case_number",
-  "permit_id",
-];
-const ADDRESS_CANDIDATES = [
-  "address",
-  "site_address",
-  "full_address",
-  "permit_address",
-  "project_address",
-];
-const DATE_CANDIDATES = [
-  "issued_date",
-  "issue_date",
-  "permit_issued_date",
-  "issueddate",
-  "final_date",
-  "applied_date",
-];
 
 /**
  * Coarse server-side over-fetch. Every token the local classifier can treat as
@@ -98,33 +93,44 @@ const MAX_DESCRIPTION = 2000;
 
 export type SocrataRow = Record<string, unknown>;
 
-function pick(row: SocrataRow, candidates: string[]): string {
-  for (const key of candidates) {
-    const v = row[key];
-    if (typeof v === "string" && v.trim()) return v.trim();
-  }
-  return "";
+function str(row: SocrataRow, key: string, max = 160): string {
+  const v = row[key];
+  return typeof v === "string" ? v.trim().slice(0, max) : "";
 }
 
-function pickDate(row: SocrataRow): string | undefined {
-  for (const key of DATE_CANDIDATES) {
-    const v = row[key];
-    if (typeof v === "string" && !Number.isNaN(Date.parse(v))) return v;
-  }
-  return undefined;
+function date(row: SocrataRow, key: string): string | undefined {
+  const v = row[key];
+  return typeof v === "string" && !Number.isNaN(Date.parse(v)) ? v : undefined;
 }
 
 /** Map one raw Socrata row to a PermitRecord. Exported so fixtures exercise the same path as live ingest. */
 export function mesaRowToRecord(row: SocrataRow, fetchedAt: string): PermitRecord {
+  const description = String(row[VERIFIED_FIELDS.description] ?? "")
+    .trim()
+    .slice(0, MAX_DESCRIPTION);
+  const finaledAt = date(row, VERIFIED_FIELDS.finaledDate);
+  const issuedAt = date(row, VERIFIED_FIELDS.issuedDate);
+  const rawYear = Number(row[VERIFIED_FIELDS.finaledYear]);
+
   return {
     jurisdiction: "mesa",
-    permitNumber: pick(row, PERMIT_NUMBER_CANDIDATES),
+    permitNumber: str(row, VERIFIED_FIELDS.permitNumber, 60),
     apn: normalizeApn(row[VERIFIED_FIELDS.apn]),
-    address: pick(row, ADDRESS_CANDIDATES).slice(0, 160),
-    description: String(row[VERIFIED_FIELDS.description] ?? "")
-      .trim()
-      .slice(0, MAX_DESCRIPTION),
-    issuedAt: pickDate(row),
+    address: str(row, VERIFIED_FIELDS.address),
+    description,
+    issuedAt,
+    finaledAt,
+    finaledYear: Number.isFinite(rawYear) && rawYear > 1900 ? rawYear : undefined,
+    // Mesa exposes a real completion date, so recency never has to be guessed
+    // from the issue date here. Jurisdictions without one must say "unverified"
+    // rather than let an install year be quietly derived.
+    completionSource: finaledAt ? "finaled" : issuedAt ? "issued" : "unverified",
+    status: str(row, VERIFIED_FIELDS.status, 60),
+    completionStatus: classifyMesaStatus(row[VERIFIED_FIELDS.status]),
+    contractor: str(row, VERIFIED_FIELDS.contractor, 120) || undefined,
+    workType: str(row, VERIFIED_FIELDS.workType, 80) || undefined,
+    permitType: str(row, VERIFIED_FIELDS.permitType, 80) || undefined,
+    utility: detectUtility(description),
     fetchedAt,
   };
 }

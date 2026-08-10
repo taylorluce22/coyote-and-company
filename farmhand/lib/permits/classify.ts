@@ -60,9 +60,62 @@ const THERMAL_PATTERNS: RegExp[] = [
   /\bSOLAR\s+ATTIC\s+FAN\b/,
 ];
 
+/**
+ * Electrical infrastructure done IN SERVICE OF solar — not a PV install.
+ *
+ * Live Mesa record: "ELECTRICAL PERMIT TO INSTALL 225 AMP PANEL METER MAIN
+ * COMBO FOR PV SOLAR", type_of_work "Res (OTH) -- Electrical". It matches
+ * PV SOLAR cleanly, but the thing being installed is a service panel. Counting
+ * it as an install puts a house on the target list on the strength of a panel
+ * swap, and the house may have no array at all — or may have had one for a
+ * decade.
+ */
+const ANCILLARY_SUBJECT_PATTERNS: RegExp[] = [
+  /\b(?:MAIN|SERVICE|SUB)\s*PANEL\b/,
+  /\bPANEL\s+(?:UPGRADE|CHANGE|CHANGE ?OUT|REPLACEMENT|SWAP|RELOCAT)/,
+  /\bPANEL\s+METER\b/,
+  /\bMETER\s+(?:MAIN|COMBO|SOCKET|BASE|CAN|RELOCAT)/,
+  /\bMAIN\s+COMBO\b/,
+  /\bMPU\b/,
+  /\bSERVICE\s+(?:UPGRADE|CHANGE|ENTRANCE|REPLACEMENT|RECONNECT)/,
+  /\bSUB\s?PANEL\b/,
+  /\b\d{2,4}\s*AMP\b/, // "225 AMP" — a rating quoted on gear, never on an array
+  /\bDERATE\b/,
+  /\bRECONDUCTOR\b/,
+  /\bLOAD\s+CENTER\b/,
+];
+
+/**
+ * Evidence of an actual photovoltaic array, as opposed to gear that serves one.
+ * A kW rating, modules, an array, roof mounting, or the literal phrase
+ * "SOLAR/PV PANELS" (which is the array itself, not a load center).
+ */
+const PV_ARRAY_PATTERNS: RegExp[] = [
+  /\b\d+(?:\.\d+)?\s*KW\b/,
+  /\bMODULES?\b/,
+  /\bARRAY\b/,
+  /\bROOF\s*(?:TOP)?\s*MOUNT/,
+  /\bGROUND\s*MOUNT/,
+  /\b(?:SOLAR|PV)\s+PANELS?\b/,
+  /\bINVERTER\b/,
+];
+
 export function hasBatteryEvidence(desc: string): boolean {
   const d = desc.toUpperCase();
   return BATTERY_PATTERNS.some((r) => r.test(d));
+}
+
+/**
+ * True when the description's subject is electrical gear rather than an array.
+ * A permit that does both ("INSTALL 7.5 KW PV SOLAR AND 200 AMP MAIN PANEL
+ * UPGRADE") is a real install and must not be caught here — hence the array
+ * check overriding the ancillary markers.
+ */
+export function isAncillaryScope(desc: string): boolean {
+  const d = desc.toUpperCase();
+  const ancillary = ANCILLARY_SUBJECT_PATTERNS.some((r) => r.test(d));
+  const array = PV_ARRAY_PATTERNS.some((r) => r.test(d));
+  return ancillary && !array;
 }
 
 export function classifyDescription(desc: string): PermitClass {
@@ -72,8 +125,11 @@ export function classifyDescription(desc: string): PermitClass {
   const pvStrong = PV_STRONG_PATTERNS.some((r) => r.test(d));
   const thermalOnly = solarHit && !pvStrong && THERMAL_PATTERNS.some((r) => r.test(d));
   const solar = solarHit && !thermalOnly;
+  // Battery evidence wins over the ancillary test on purpose: a panel upgrade
+  // "FOR POWERWALL" is still proof a battery is going in on that parcel, and
+  // subtracting the parcel is the safe direction.
   if (solar && battery) return "solar+battery";
-  if (solar) return "solar";
   if (battery) return "battery";
+  if (solar) return isAncillaryScope(d) ? "solar-ancillary" : "solar";
   return "other";
 }
