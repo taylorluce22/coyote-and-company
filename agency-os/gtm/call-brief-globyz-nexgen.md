@@ -2,11 +2,11 @@
 
 Format per the compliance charter: facts, law, and open questions with sources. No recommendations — the read on fit is Taylor's.
 
-## The one thing to resolve before or on the call
+## Registration — RESOLVED (Cowork FDA-registry check, list update 8/4/2026)
 
-**NexGen's 503B registration is UNVERIFIED.** Their site self-describes as "FDA-registered," but the research environment couldn't reach FDA's Registered Outsourcing Facilities list to confirm, and no search snippet surfaced a NexGen entry. FEI unknown; 503A-vs-503B status unconfirmed beyond self-description. Sector context: as of 7/2025, 81% of 503Bs registered since mid-2021 had never been FDA-inspected — "registered" does not imply "inspected."
+**NexGen Formulations (Folcroft PA) IS a registered 503B** — initial registration **1/15/2026**, contact Salman Pathan (610-455-5125, matches the booking-page phone), "intends to compound sterile drugs: Yes." Registration is under NexGen Formulations, not Globyz. **Never FDA-inspected** — no 483, no entries on the compounding Inspections/Recalls page for NexGen or Globyz.
 
-**MAC TASK (5 min, browser):** check fda.gov → Registered Outsourcing Facilities + the compounding Inspections/Recalls page for "NexGen Formulations" (Folcroft PA). Report registration date, FEI, inspection history.
+Read for the call: a legitimately registered 503B, ~7 months old, uninspected — the same "clean because untested" caveat as Assure. Question 1 below adjusts accordingly.
 
 ## Identity — do not confuse with similarly named companies
 
@@ -33,7 +33,7 @@ Pathan: founder/CEO since 2007; B.Sc. Chemistry (Mumbai), MBA (Ivey), HBS exec e
 
 ## Questions for the call
 
-1. 503B registration date + FEI; FDA inspected yet? Any 483 + responses shareable? (Frame: standard disclosure before any buyer introduction.)
+1. Registration confirmed (1/15/2026, uninspected). So: what third-party cGMP audits or consultant assessments exist? How are you approaching selling ahead of a first FDA inspection — and will you share the 483/EIR with us when the inspection comes? (Frame: standard disclosure before any buyer introduction.)
 2. State licensure map — resident PA permit + which nonresident licenses today, which pending?
 3. Exact formulary: categories, sterile/non-sterile, bulk API vs approved starting drugs. Any GLP-1s, weight-loss, or peptides now or planned?
 4. Capacity & quality: cleanroom class, batch sizes, utilization, environmental monitoring, third-party testing, BUD data; who is the PIC / head of quality?

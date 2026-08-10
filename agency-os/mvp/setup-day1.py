@@ -202,7 +202,9 @@ def step1(prog: dict, cfg: dict, dry: bool) -> None:
         open_url("https://cal.com/signup", "Cal.com — meeting booking (free tier)", dry)
         open_url("https://www.make.com/en/register", "Make — automation engine (free tier to start)", dry)
         do("Create all three. No configuration needed yet — mvp/automations.md covers wiring.")
-        do("In Cal.com, create a 20-minute 'Intro Call' event type and copy its booking link.")
+        do("In Cal.com, create a 20-minute 'Intro Call' event type — location: PHONE CALL")
+        do("('organizer will call attendee' — collects their number at booking). Standing")
+        do("rule: phone calls only, no video-conference links on any meeting we create.")
         cfg["booking_link"] = ask("Paste your Cal.com booking link", cfg, "booking_link", dry)
         if confirm("Accounts created?", dry):
             prog["1e"] = True
