@@ -33,9 +33,13 @@ Spot-check two rows against Gmail before trusting the rest — CAPS (`customerse
 
 The app holds no mail credentials and no route transmits email. **Open in Gmail** is the trigger: it opens the conversation with the draft in it, and the send happens in Gmail where the account and send authority live. Marking a row records what happened; it never causes a send. This keeps the standing rule intact — drafts only, Taylor sends — while giving the OS a real queue instead of a list that lives in one agent's context.
 
-## What true in-app send would require
+## In-app send — built 8/10, inert until credentials exist
 
-One click inside the OS that actually transmits would need Gmail API credentials in the app: a Google Cloud project, OAuth consent screen, `gmail.send` scope, and a refresh token stored as a Vercel env var (or a service account with domain-wide delegation on the Workspace). Only the account owner can create those. Not built, not stubbed — the screen does what it says it does.
+`lib/gmailSend.ts` + `app/api/agency/outreach/send/route.ts` + a **Send** button on each queued row. With no credentials the button doesn't render and the route returns 503, so nothing changes until you finish setup.
+
+Setup is three steps and only the account owner can do them (create the OAuth client, approve the consent screen, paste three env vars into Vercel): **`docs/gmail-send-setup.md`**. `scripts/gmail-oauth.mjs` mints the refresh token.
+
+Scope is `gmail.compose` — send and manage drafts, **no inbox read access**. One row per press, two presses to fire, only `queued` rows, no cron or agent path. Unrun against live Gmail until the first real send.
 
 ## Keeping the queue honest
 

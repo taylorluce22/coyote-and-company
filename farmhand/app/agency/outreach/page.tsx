@@ -1,5 +1,6 @@
 import { supabaseEnabled, sbSelect } from "@/lib/supabase";
 import { summarizeOutreach } from "@/lib/agencyOutreach.mjs";
+import { gmailEnabled } from "@/lib/gmailSend";
 import OutreachRow, { type Item } from "./OutreachRow";
 
 /**
@@ -62,6 +63,7 @@ export default async function AgencyOutreach() {
 
   const rows = await sbSelect("agency_outreach", "workspace=eq.agency&order=drafted_on.desc&limit=2000");
   const s = summarizeOutreach(rows) as unknown as Summary;
+  const canSend = gmailEnabled();
 
   const tiles = [
     { label: "Queued", value: String(s.queued), sub: s.oldestQueuedDays ? `oldest drafted ${s.oldestQueuedDays}d ago` : "nothing waiting" },
@@ -77,9 +79,18 @@ export default async function AgencyOutreach() {
         <h1 style={S.h1}>Outreach — as of {s.asOf}</h1>
         <p style={S.lede}>
           Every row is a real draft sitting in Gmail. <strong>Open in Gmail</strong> takes you
-          straight to the conversation with the draft in it — review, then send from there. The app
-          holds no mail credentials and cannot send on its own; marking a row only records what you
-          did.
+          straight to the conversation with the draft in it.{" "}
+          {canSend ? (
+            <>
+              <strong>Send</strong> arms, and a second press sends that one draft as written — one
+              row per press, never a batch, and only rows still queued.
+            </>
+          ) : (
+            <>
+              Sending from this screen is not configured, so the app cannot transmit mail — send
+              from Gmail and mark the row. Setup: <code>docs/gmail-send-setup.md</code>.
+            </>
+          )}
         </p>
 
         <div style={S.grid}>
@@ -100,7 +111,7 @@ export default async function AgencyOutreach() {
         </div>
 
         {s.items.map((item) => (
-          <OutreachRow key={item.id} item={item} />
+          <OutreachRow key={item.id} item={item} canSend={canSend} />
         ))}
 
         <p style={{ ...S.note, marginTop: 40 }}>

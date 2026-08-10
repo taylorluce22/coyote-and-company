@@ -38,10 +38,11 @@ const btn: React.CSSProperties = {
   fontFamily: "inherit",
 };
 
-export default function OutreachRow({ item }: { item: Item }) {
+export default function OutreachRow({ item, canSend }: { item: Item; canSend: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   const setStatus = (status: string) => {
     setError(null);
@@ -60,6 +61,34 @@ export default function OutreachRow({ item }: { item: Item }) {
         router.refresh();
       } catch {
         setError("not saved");
+      }
+    });
+  };
+
+  // Two-step: the first press arms, the second sends. No single click on this
+  // screen ever puts mail on the wire.
+  const send = () => {
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
+    setError(null);
+    setConfirming(false);
+    start(async () => {
+      try {
+        const r = await fetch("/api/agency/outreach/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: item.id }),
+        });
+        const j = await r.json();
+        if (!j.ok) {
+          setError(String(j.error || "send failed"));
+          return;
+        }
+        router.refresh();
+      } catch {
+        setError("send failed");
       }
     });
   };
@@ -105,6 +134,21 @@ export default function OutreachRow({ item }: { item: Item }) {
 
       {item.status === "queued" ? (
         <>
+          {canSend && (
+            <button
+              style={{
+                ...btn,
+                color: confirming ? "#0c0f0d" : "#7fd18a",
+                background: confirming ? "#7fd18a" : "transparent",
+                borderColor: "#3a5a3f",
+              }}
+              onClick={send}
+              onBlur={() => setConfirming(false)}
+              disabled={pending}
+            >
+              {confirming ? "Confirm send" : "Send"}
+            </button>
+          )}
           <button style={btn} onClick={() => setStatus("sent")} disabled={pending}>
             Mark sent
           </button>
