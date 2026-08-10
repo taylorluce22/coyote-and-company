@@ -4,12 +4,14 @@ import { getAdapter, ADAPTERS } from "@/lib/permits/adapters";
 import { solarWithoutBattery } from "@/lib/permits/setDifference";
 import { targetsToCsv } from "@/lib/permits/csv";
 import {
+  getLeads,
   getMeta,
   getRecords,
   getTargets,
   mergeRecords,
   patchMeta,
   setTargets,
+  upsertLeads,
 } from "@/lib/permits/store";
 
 /**
@@ -107,13 +109,22 @@ export async function POST(req: NextRequest) {
     if (!adapter) return NextResponse.json({ ok: false, error: "unknown jurisdiction" });
     try {
       const fetched = await adapter.fetchPermits({ now, maxRows: num(body.maxRows, 20000, 100, 50000) });
-      const { total, added } = await mergeRecords(client, fetched);
+      const { total, added, truncated } = await mergeRecords(client, fetched);
       const meta = await getMeta(client);
       await patchMeta(client, {
         lastIngestAt: now,
         lastIngestCounts: { ...meta.lastIngestCounts, [adapter.id]: fetched.length },
       });
-      return NextResponse.json({ ok: true, fetched: fetched.length, added, total });
+      return NextResponse.json({
+        ok: true,
+        fetched: fetched.length,
+        added,
+        total,
+        truncated,
+        // Dropped records can remove the battery permit that disqualifies a
+        // parcel, so this surfaces rather than sitting in the store unseen.
+        ...(truncated ? { warning: `${truncated} oldest permit records dropped at the storage cap — target list may contain false positives` } : {}),
+      });
     } catch (err) {
       return NextResponse.json({ ok: false, error: String(err).slice(0, 300) });
     }
@@ -129,6 +140,27 @@ export async function POST(req: NextRequest) {
     });
     await setTargets(client, targets);
     await patchMeta(client, { lastFilterAt: now });
+
+    // Reconcile existing leads against the new target set. A parcel that just
+    // dropped out — because its battery permit finally landed in the ingest —
+    // must stop being callable, and a parcel that came back must become
+    // callable again. Leads are retired, never deleted: the row carries
+    // opt-out and scrub history that has to outlive the target list.
+    const leads = await getLeads(client);
+    if (leads.length) {
+      const targetApns = new Set(targets.map((t) => t.apn));
+      const changed = leads
+        .filter((l) => !!l.retired !== !targetApns.has(l.apn))
+        .map((l) => ({ ...l, retired: !targetApns.has(l.apn), updatedAt: now }));
+      if (changed.length) await upsertLeads(client, changed);
+      return NextResponse.json({
+        ok: true,
+        stats,
+        targets: targets.slice(0, 200),
+        leadsRetired: changed.filter((l) => l.retired).length,
+        leadsRestored: changed.filter((l) => !l.retired).length,
+      });
+    }
     return NextResponse.json({ ok: true, stats, targets: targets.slice(0, 200) });
   }
 

@@ -33,6 +33,7 @@
  */
 
 import type { EnrichedLead } from "./types";
+import { canonicalPhone } from "./phone";
 
 export const DNC_SCRUB_MAX_AGE_DAYS = 31;
 export const INTERNAL_DNC_RETENTION_YEARS = 10;
@@ -143,9 +144,14 @@ export function leadDialVerdict(
   nowIso: string
 ): DialVerdict {
   if (lead.optedOutAt || lead.internalDnc) return { eligible: false, reason: "internal do-not-call" };
+  if (lead.retired) return { eligible: false, reason: "retired — no longer in the current target list" };
   const phone = lead.phone?.value;
   if (!phone?.number) return { eligible: false, reason: "no phone on file" };
-  if (internalDncNumbers.has(phone.number)) return { eligible: false, reason: "internal do-not-call" };
+  // Caller supplies a canonicalized set; canonicalize this side too so the
+  // membership test can't miss on formatting.
+  if (internalDncNumbers.has(canonicalPhone(phone.number))) {
+    return { eligible: false, reason: "internal do-not-call" };
+  }
   if (state.wirelessSuppression && phone.lineType !== "landline") {
     return { eligible: false, reason: `line type ${phone.lineType} suppressed (wireless suppression ON)` };
   }

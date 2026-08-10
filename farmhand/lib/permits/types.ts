@@ -86,6 +86,12 @@ export interface EnrichedLead {
   /** Internal do-not-call — honored instantly, retained 10 years. */
   internalDnc?: boolean;
   optedOutAt?: string;
+  /**
+   * No longer in the current target list (a later FILTER run subtracted this
+   * parcel). Held out of the dial queue but kept on file — deleting the row
+   * would take its opt-out and scrub history with it.
+   */
+  retired?: boolean;
   updatedAt: string;
 }
 

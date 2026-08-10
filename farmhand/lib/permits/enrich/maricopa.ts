@@ -42,29 +42,44 @@ async function getJson(path: string, opts: MaricopaFetchOptions): Promise<unknow
   return res.json();
 }
 
-/** Depth-first scan for the first string value under any of the candidate key names (case/format-insensitive). */
-function scanForKey(node: unknown, candidates: string[], depth = 0): string {
-  if (depth > 4 || node == null) return "";
-  const wanted = candidates.map((c) => c.toLowerCase().replace(/[^a-z]/g, ""));
+const norm = (k: string) => k.toLowerCase().replace(/[^a-z]/g, "");
+
+/** Read a candidate key directly off ONE object. No descent — the caller controls scope. */
+function readKey(obj: Record<string, unknown>, candidates: string[]): string {
+  const wanted = candidates.map(norm);
+  for (const [key, value] of Object.entries(obj)) {
+    if (wanted.includes(norm(key)) && typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+/**
+ * Find the single object that carries the owner name, and return THAT object.
+ *
+ * Owner name and mailing address must come from the same record. Scanning the
+ * payload twice from the root lets the name descend into one subtree and the
+ * address into another, which stitches a real person's name onto a different
+ * person's address — a fabricated record that looks perfectly well-formed.
+ * Returning one node keeps the pair intact.
+ */
+function findOwnerRecord(node: unknown, depth = 0): Record<string, unknown> | null {
+  if (depth > 4 || node == null) return null;
   if (Array.isArray(node)) {
     for (const item of node) {
-      const hit = scanForKey(item, candidates, depth + 1);
+      const hit = findOwnerRecord(item, depth + 1);
       if (hit) return hit;
     }
-    return "";
+    return null;
   }
   if (typeof node === "object") {
     const obj = node as Record<string, unknown>;
-    for (const [key, value] of Object.entries(obj)) {
-      const norm = key.toLowerCase().replace(/[^a-z]/g, "");
-      if (wanted.includes(norm) && typeof value === "string" && value.trim()) return value.trim();
-    }
+    if (readKey(obj, OWNER_KEYS)) return obj;
     for (const value of Object.values(obj)) {
-      const hit = scanForKey(value, candidates, depth + 1);
+      const hit = findOwnerRecord(value, depth + 1);
       if (hit) return hit;
     }
   }
-  return "";
+  return null;
 }
 
 const OWNER_KEYS = ["Ownership", "OwnerName", "Owner_Name", "Owner"];
@@ -79,8 +94,14 @@ function sameStreet(a: string, b: string): boolean {
 }
 
 /**
- * Fetch owner details for one APN. Returns null on a miss (unknown parcel,
- * no owner fields in the payload) — the lead simply stays unenriched.
+ * Fetch owner details for one APN. Returns null on a miss — the lead simply
+ * stays unenriched, which is always preferable to a wrong owner.
+ *
+ * Only the APN-keyed endpoint is used. A free-text /search/property fallback
+ * was removed: its results are not guaranteed to be the requested parcel, so
+ * taking an owner from them attaches some other household's name to this
+ * address and stamps it with assessor provenance, which reads as verified.
+ * A failed lookup is a miss, not an invitation to guess.
  */
 export async function fetchOwner(
   apn: string,
@@ -92,22 +113,22 @@ export async function fetchOwner(
   try {
     payload = await getJson(`/parcel/${encodeURIComponent(apn)}/owner-details`, opts);
   } catch {
-    // fallback: free-text property search by situs address
-    try {
-      payload = await getJson(`/search/property/?q=${encodeURIComponent(situsAddress || apn)}`, opts);
-    } catch {
-      return null;
-    }
+    return null;
   }
-  const name = scanForKey(payload, OWNER_KEYS);
+  const record = findOwnerRecord(payload);
+  if (!record) return null;
+  const name = readKey(record, OWNER_KEYS);
   if (!name) return null;
-  const mailingAddress = scanForKey(payload, MAILING_KEYS) || undefined;
+  const mailingAddress = readKey(record, MAILING_KEYS) || undefined;
   const prov: Provenance = { source: MARICOPA_SOURCE, fetchedAt: opts.now };
   return {
     value: {
       name: name.slice(0, 120),
       mailingAddress: mailingAddress?.slice(0, 200),
-      ownerOccupied: mailingAddress ? sameStreet(situsAddress, mailingAddress) : undefined,
+      // Undefined, not false: with no situs address to compare there is no
+      // evidence either way, and a hard `false` reads as "confirmed absentee".
+      ownerOccupied:
+        mailingAddress && situsAddress.trim() ? sameStreet(situsAddress, mailingAddress) : undefined,
     },
     prov,
   };

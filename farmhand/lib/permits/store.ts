@@ -19,7 +19,15 @@ import {
   type InternalDncEntry,
 } from "./comply";
 
-const MAX_RECORDS = 6000;
+/**
+ * Runaway backstop, not a working limit. Truncating permit records is not a
+ * neutral space saving: drop a parcel's BATTERY permit while its solar permit
+ * survives and the set-difference promotes that parcel to a target — a
+ * battery-equipped home on the call list. Mesa alone contributes roughly 3k
+ * rows and Tempe and Scottsdale are queued, so this sits far above real
+ * volume, and hitting it is reported rather than absorbed.
+ */
+const MAX_RECORDS = 60000;
 
 export function sanitizeClient(client?: string): string {
   return (
@@ -51,7 +59,7 @@ function recordKey(r: PermitRecord): string {
 export async function mergeRecords(
   client: string,
   fresh: PermitRecord[]
-): Promise<{ total: number; added: number }> {
+): Promise<{ total: number; added: number; truncated: number }> {
   const existing = await getRecords(client);
   const byKey = new Map(existing.map((r) => [recordKey(r), r]));
   let added = 0;
@@ -60,9 +68,11 @@ export async function mergeRecords(
     if (!byKey.has(key)) added += 1;
     byKey.set(key, r); // re-ingest refreshes the stored copy (newer fetchedAt)
   }
-  const merged = [...byKey.values()].slice(-MAX_RECORDS);
+  const all = [...byKey.values()];
+  const truncated = Math.max(0, all.length - MAX_RECORDS);
+  const merged = truncated ? all.slice(-MAX_RECORDS) : all;
   await kvSetJSON(`${ns(client)}:records`, merged);
-  return { total: merged.length, added };
+  return { total: merged.length, added, truncated };
 }
 
 export async function getTargets(client: string): Promise<TargetParcel[]> {
@@ -77,15 +87,26 @@ export async function getLeads(client: string): Promise<EnrichedLead[]> {
   return (await kvGetJSON<EnrichedLead[]>(`${ns(client)}:leads`)) ?? [];
 }
 
-/** Upsert by APN. Existing enrichment survives a re-seed (merge keeps whichever side has the field). */
+/**
+ * Upsert by APN. The incoming object is authoritative for exactly the keys it
+ * carries; keys it omits keep their stored value, so a re-seed (which sends
+ * only parcel fields) never disturbs enrichment.
+ *
+ * The merge is a plain spread on purpose. An earlier version pinned each
+ * sensitive field with `lead.dnc ?? prev.dnc`, which made the fields
+ * impossible to clear: replacing a lead's phone number left the previous
+ * number's scrub result attached, so a number that was never scrubbed carried
+ * the old number's "clear" verdict and receipt as its compliance evidence.
+ * Passing `dnc: undefined` explicitly now clears it.
+ */
 export async function upsertLeads(client: string, fresh: EnrichedLead[]): Promise<number> {
   const existing = await getLeads(client);
   const byApn = new Map(existing.map((l) => [l.apn, l]));
   for (const lead of fresh) {
     const prev = byApn.get(lead.apn);
-    byApn.set(lead.apn, prev ? { ...prev, ...lead, owner: lead.owner ?? prev.owner, phone: lead.phone ?? prev.phone, dnc: lead.dnc ?? prev.dnc, internalDnc: lead.internalDnc ?? prev.internalDnc, optedOutAt: lead.optedOutAt ?? prev.optedOutAt } : lead);
+    byApn.set(lead.apn, prev ? { ...prev, ...lead } : lead);
   }
-  const merged = [...byApn.values()].slice(-MAX_RECORDS);
+  const merged = [...byApn.values()];
   await kvSetJSON(`${ns(client)}:leads`, merged);
   return merged.length;
 }
@@ -100,16 +121,28 @@ export async function setComplianceState(client: string, state: ComplianceState)
 
 /**
  * Append-only compliance log — call log, scrub receipts, opt-outs, vendor
- * licenses, gate changes. Retention requirement is 5+ years: entries are
- * never auto-pruned; the count cap exists only as a runaway backstop and is
- * far above any plausible manual-dialing volume.
+ * licenses, gate changes. Retention requirement is 5+ years.
+ *
+ * Known limitation, deliberately left visible rather than papered over: this
+ * stores the whole log as one KV value and rewrites it on every append, so at
+ * genuine retention scale the write outgrows the KV timeout. The cap below is
+ * a runaway backstop far above manual-dialing volume, and reaching it is
+ * reported to the caller instead of silently discarding the oldest entries —
+ * which would drop exactly the records still inside the retention window. A
+ * durable append-only store is required before dialing is enabled; see the
+ * open items in docs/lead-gen-permit-system-2026.md.
  */
 const MAX_LOG_ENTRIES = 50000;
 
-export async function appendComplianceLog(client: string, entry: ComplianceLogEntry): Promise<void> {
+export async function appendComplianceLog(
+  client: string,
+  entry: ComplianceLogEntry
+): Promise<{ ok: boolean; atCap: boolean }> {
   const log = (await kvGetJSON<ComplianceLogEntry[]>(`${ns(client)}:log`)) ?? [];
+  if (log.length >= MAX_LOG_ENTRIES) return { ok: false, atCap: true };
   log.push(entry);
-  await kvSetJSON(`${ns(client)}:log`, log.slice(-MAX_LOG_ENTRIES));
+  await kvSetJSON(`${ns(client)}:log`, log);
+  return { ok: true, atCap: false };
 }
 
 export async function getComplianceLog(client: string): Promise<ComplianceLogEntry[]> {

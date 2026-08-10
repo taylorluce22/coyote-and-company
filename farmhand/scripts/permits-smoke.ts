@@ -10,7 +10,9 @@
  * Exits non-zero if any expectation fails.
  */
 
-import { mesaRowToRecord, fetchMesaPermits } from "../lib/permits/adapters/mesa";
+import { mesaRowToRecord, fetchMesaPermits, mesaSoqlWhere } from "../lib/permits/adapters/mesa";
+import { canonicalPhone, isDialable } from "../lib/permits/phone";
+import { normalizeLineType } from "../lib/permits/enrich/phoneAppend";
 import { mesaFixtureRows, EXPECTED_TARGET_APNS } from "../lib/permits/fixtures/mesa";
 import { solarWithoutBattery } from "../lib/permits/setDifference";
 import { targetsToCsv } from "../lib/permits/csv";
@@ -145,6 +147,89 @@ function runGateProof(now: string) {
   check("opt-out honored instantly", !leadDialVerdict({ ...baseLead, optedOutAt: now }, openWindow, idnc, now).eligible);
 }
 
+/**
+ * Regressions for defects found by the 2026-08-10 adversarial audit. Each check
+ * fails on the code as it was before the hardening pass.
+ */
+function runAuditRegressions(now: string) {
+  console.log("== audit regressions");
+
+  // The ingest filter must be able to fetch every permit the classifier can
+  // call battery evidence. A standalone "ESS INSTALL 27 KWH" permit was
+  // classified correctly offline but never fetched live, so its parcel kept
+  // its solar permit and landed on the call list.
+  const where = mesaSoqlWhere().toUpperCase();
+  const mustFetch = [
+    "ESS INSTALL 27 KWH",
+    "BESS 13.5 KWH",
+    "TESLA POWER-WALL 3",
+    "ENERGY-STORAGE SYSTEM",
+    "PHOTO-VOLTAIC 6 KW",
+  ];
+  for (const desc of mustFetch) {
+    const reachable = where
+      .split(" OR ")
+      .some((clause) => {
+        const m = clause.match(/LIKE '%(.+)%'/);
+        return m ? desc.includes(m[1]) : false;
+      });
+    check(`coarse filter fetches "${desc}"`, reachable);
+  }
+
+  check("hyphenated POWER-WALL is battery", classifyDescription("TESLA POWER-WALL 3") === "battery");
+  check("BESS (undotted) is battery", classifyDescription("BESS 13.5 KWH") === "battery");
+  check("hyphenated ENERGY-STORAGE is battery", classifyDescription("ENERGY-STORAGE SYSTEM") === "battery");
+  check("hyphenated PHOTO-VOLTAIC is solar", classifyDescription("PHOTO-VOLTAIC 6 KW") === "solar");
+  check(
+    "combined permit with hyphenated battery term still excluded",
+    classifyDescription("PV SOLAR 7.2 KW WITH POWER-WALL 3") === "solar+battery"
+  );
+  check("'SOLAR THERMAL SYSTEM' is not PV", classifyDescription("SOLAR THERMAL SYSTEM") === "other");
+  check("'SOLAR ATTIC FAN' is not PV", classifyDescription("SOLAR ATTIC FAN") === "other");
+  check(
+    "real PV permit that also touches a water heater stays solar",
+    classifyDescription("PV SOLAR 8 KW DC AND WATER HEATER REPLACEMENT") === "solar"
+  );
+
+  // Phone canonicalization: an 11-digit stored number and a 10-digit scrub
+  // result are the same number. Comparing them raw stamped listed numbers
+  // "clear" and let opt-outs fail to suppress their own lead.
+  check("canonical: +1 (602) 555-1234 -> 6025551234", canonicalPhone("+1 (602) 555-1234") === "6025551234");
+  check("canonical: 602-555-1234 -> 6025551234", canonicalPhone("602-555-1234") === "6025551234");
+  check("canonical forms of the same number match", canonicalPhone("16025551234") === canonicalPhone("(602) 555-1234"));
+  check("isDialable rejects a short number", !isDialable(canonicalPhone("555-1234")));
+
+  // Line type: "Fixed VOIP" must not read as the one dialable type.
+  check("'Fixed VOIP' is voip, not landline", normalizeLineType("Fixed VOIP") === "voip");
+  check("'Non-Fixed VOIP' is voip", normalizeLineType("Non-Fixed VOIP") === "voip");
+  check("'Wireless' still wireless", normalizeLineType("Wireless") === "wireless");
+  check("'Landline' still landline", normalizeLineType("Landline") === "landline");
+
+  const openWindow: ComplianceState = {
+    san: { number: "SAN-1", recordedAt: now },
+    azRegistration: { status: "filed", kind: "roc-limited-44-1272.01", recordedAt: now },
+    wirelessSuppression: true,
+    lastDncScrubAt: now,
+    callWindow: { startHour: 8, endHour: 21 },
+  };
+  const lead: EnrichedLead = {
+    apn: "APNA00000",
+    jurisdiction: "mesa",
+    address: "101 E MAIN ST",
+    phone: { value: { number: "16025551234", lineType: "landline" }, prov: { source: "manual", fetchedAt: now } },
+    dnc: { status: "clear", scrubbedAt: now, receipt: "R-1" },
+    updatedAt: now,
+  };
+  check(
+    "opt-out in a different format still suppresses the lead",
+    !leadDialVerdict(lead, openWindow, new Set([canonicalPhone("(602) 555-1234")]), now).eligible
+  );
+  check(
+    "a retired lead is never dialable",
+    !leadDialVerdict({ ...lead, retired: true }, openWindow, new Set(), now).eligible
+  );
+}
+
 async function main() {
   const now = new Date().toISOString();
   if (process.argv.includes("--live")) {
@@ -152,6 +237,7 @@ async function main() {
   } else {
     runFixtureProof(now);
     runGateProof(now);
+    runAuditRegressions(now);
   }
   if (failures > 0) {
     console.error(`\n${failures} check(s) FAILED`);

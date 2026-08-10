@@ -14,6 +14,7 @@
  */
 
 import type { LineType, PhoneData, Provenance } from "../types";
+import { canonicalPhone, isDialable } from "../phone";
 
 export interface PhoneAppendInput {
   apn: string;
@@ -39,11 +40,18 @@ export interface PhoneAppendProvider {
   ): Promise<PhoneAppendMatch[]>;
 }
 
-function normalizeLineType(raw: unknown): LineType {
+/**
+ * VOIP is tested FIRST on purpose. Vendors label these lines "Fixed VOIP" and
+ * "Non-Fixed VOIP"; a /land|fixed/ test running first captures both as
+ * "landline" — the one line type the suppression rule lets through. Getting
+ * this order wrong misclassifies in the only direction that can put a call
+ * through to a number that should have been held back.
+ */
+export function normalizeLineType(raw: unknown): LineType {
   const s = String(raw ?? "").toLowerCase();
-  if (/cell|wireless|mobile/.test(s)) return "wireless";
-  if (/land|fixed/.test(s)) return "landline";
   if (/voip/.test(s)) return "voip";
+  if (/cell|wireless|mobile/.test(s)) return "wireless";
+  if (/land ?line|landline|fixed|residential|business/.test(s)) return "landline";
   return "unknown";
 }
 
@@ -89,8 +97,10 @@ export const datazappProvider: PhoneAppendProvider = {
     }
     return batch.map((b) => {
       const row = byId.get(b.apn);
-      const number = String(row?.Phone ?? row?.CellPhone ?? "").replace(/\D/g, "");
-      if (!row || number.length < 10) return { apn: b.apn, phone: null, prov };
+      // `||` not `??`: a vendor row with Phone: "" and a populated CellPhone is a
+      // match, not a miss — `??` only falls through on null/undefined.
+      const number = canonicalPhone(String(row?.Phone || row?.CellPhone || ""));
+      if (!row || !isDialable(number)) return { apn: b.apn, phone: null, prov };
       return {
         apn: b.apn,
         phone: { number, lineType: normalizeLineType(row.PhoneType ?? row.LineType) },

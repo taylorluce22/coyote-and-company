@@ -55,19 +55,46 @@ const DATE_CANDIDATES = [
   "applied_date",
 ];
 
+/**
+ * Coarse server-side over-fetch. Every token the local classifier can treat as
+ * battery evidence MUST have a match here, or the battery permit is never
+ * fetched, never subtracts its parcel, and that parcel lands on the call list
+ * as a false positive — the failure the whole module exists to prevent.
+ *
+ * The earlier revision omitted ESS/BESS/KWH on the theory that a standalone
+ * ESS permit would also say BATTERY or ENERGY STORAGE. That was an assumption,
+ * not a verified fact, and a real Mesa description reading only
+ * "ESS INSTALL 27 KWH" would have been silently skipped. Bare "ESS" can't be
+ * used raw (LIKE '%ESS%' matches ADDRESS), so it's space-prefixed; STORAGE and
+ * KWH are safe as substrings and catch the same permits by another route.
+ * Over-fetching costs a few rows — under-fetching costs list correctness.
+ */
 const COARSE_KEYWORDS = [
   "SOLAR",
   "PHOTOVOLTAIC",
+  "PHOTO-VOLTAIC",
+  "PHOTO VOLTAIC",
   "PV",
   "BATTER",
   "POWERWALL",
+  "POWER WALL",
+  "POWER-WALL",
   "PW3",
-  "ENERGY STORAGE",
+  "STORAGE",
+  " ESS",
+  "BESS",
   "B.E.S.S",
+  "KWH",
 ];
 
 const PAGE_SIZE = 1000;
-const MAX_DESCRIPTION = 300;
+/**
+ * Classification runs on the STORED copy, so anything trimmed here is invisible
+ * to battery detection forever. A combined scope that lists the PV array first
+ * and the storage system in a trailing clause is exactly the description that
+ * runs long, so this has to be generous enough to never cut one in half.
+ */
+const MAX_DESCRIPTION = 2000;
 
 export type SocrataRow = Record<string, unknown>;
 

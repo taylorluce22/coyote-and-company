@@ -160,6 +160,53 @@ _Updated as work lands. Timezone: America/Phoenix._
   until an outcome is logged) and renders a `tel:` link only when the
   server sent an unmasked number. Nav entry + screen registered in the
   app shell.
+- **2026-08-10 — Adversarial audit + hardening pass.** An independent
+  multi-agent audit of the branch against its own claimed guarantees found
+  real defects, including two that falsified claims made above. Fixed, each
+  with a regression check (suite is now 53 checks):
+  - **The no-dial guarantee was false.** `optOut` wrote the raw number into
+    the compliance-log entry's `data`, and the COMPLY `GET` returned the last
+    50 log entries verbatim — a second, ungated exit for a full phone number
+    regardless of gate state. Log entries are now redacted on the way out;
+    the stored record keeps the raw number as retained evidence.
+  - **The live ingest could not fetch the battery permits it subtracts.**
+    `COARSE_KEYWORDS` omitted `ESS`/`BESS`/`KWH`, so a Mesa permit reading
+    only "ESS INSTALL 27 KWH" was never fetched, its parcel never subtracted,
+    and the parcel shipped as a target. The fixture suite passed because it
+    bypasses the SoQL filter entirely — an offline green run said nothing
+    about the live path. Bare `ESS` is space-prefixed (`%  ESS%` can't match
+    ADDRESS); `STORAGE`/`KWH`/`BESS` catch the rest.
+  - **No canonical phone form.** An 11-digit stored number never matched a
+    10-digit scrub result, so DNC-listed numbers were stamped `clear`, and an
+    opt-out recorded in one format never suppressed a lead stored in another.
+    New `lib/permits/phone.ts`; every store and compare canonicalizes.
+  - **"Fixed VOIP" classified as landline** — the one line type suppression
+    lets through. VOIP is now tested first.
+  - **Replacing a number kept the old number's scrub** as its compliance
+    evidence (`dnc: lead.dnc ?? prev.dnc` made the field unclearable).
+  - **Assessor enrichment could fabricate a household**: the free-text
+    `/search/property` fallback attached an owner from a record never
+    verified to be the requested parcel, and name and mailing address were
+    two independent scans that could pair across records. Fallback removed
+    (a miss beats a wrong owner); both fields now read from one record.
+  - **Retired leads stayed callable.** The queue reads leads, which were
+    never reconciled with targets, so a parcel correctly subtracted by a
+    later filter kept its phone number in the queue forever. Filter now
+    retires and restores leads; retired rows are held out but never deleted,
+    because the row carries opt-out history.
+  - Also: silent record truncation now reported (and the cap raised well
+    above real volume), descriptions no longer truncated before
+    classification, hyphen/separator tolerance across all compound keywords,
+    solar-thermal scopes excluded properly, AZ registration status defaults
+    to `not_filed` instead of `filed`, empty-string vendor `Phone` no longer
+    masks a populated `CellPhone`.
+- **Known and NOT fixed — required before dialing is enabled:** the KV layer
+  swallows write failures (`kvSetJSON` returns void; a lost opt-out write is
+  indistinguishable from a successful one), and read-modify-write on the log,
+  the internal DNC list, and leads has no atomicity, so concurrent writes can
+  drop an entry. The compliance log is also stored as a single rewritten
+  value, which will outgrow the KV timeout at retention scale. These need a
+  durable append-only store, not a patch.
 - **Ship state: list-building + compliance-armed, dialing OFF.** ✅
 - Open items, in order:
   1. First live run (from Vercel or any machine with egress to

@@ -8,6 +8,11 @@
  * module exists to prevent. So classification is per-description and the
  * combined case gets its own class.
  *
+ * Separator tolerance is deliberate throughout: permit clerks type
+ * "POWER-WALL", "PHOTO-VOLTAIC", "ENERGY  STORAGE" with a double space. Every
+ * multi-word pattern accepts space, hyphen, or slash, because a battery
+ * keyword that fails to match is a false positive on the call list.
+ *
  * Patterns are word-bounded where the keyword is short: a substring match for
  * ESS would fire on ADDRESS/ASSESSMENT/ACCESS, and KWH must still match when
  * glued to a number ("13.5KWH").
@@ -15,27 +20,44 @@
 
 import type { PermitClass } from "./types";
 
+/** Space, hyphen, slash, or nothing — between the words of a compound keyword. */
+const SEP = "[\\s\\-/]*";
+
 const BATTERY_PATTERNS: RegExp[] = [
   /\bBATTER(?:Y|IES)\b/,
-  /\bPOWER ?WALL/, // POWERWALL, POWERWALL3, POWER WALL
-  /\bPW ?3\b/,
-  /\bENERGY STORAGE\b/,
+  new RegExp(`\\bPOWER${SEP}WALL`), // POWERWALL, POWER WALL, POWER-WALL
+  new RegExp(`\\bPW${SEP}3\\b`),
+  new RegExp(`\\bENERGY${SEP}STORAGE\\b`),
+  new RegExp(`\\bSTORAGE${SEP}SYSTEM\\b`),
   /\bESS\b/,
-  /\bB\.?E\.?S\.?S\b/, // B.E.S.S / BESS
+  /\bBESS\b/,
+  /\bB\.E\.S\.S\.?/,
   /(?:\d\s*|\b)KWH\b/, // battery capacity is quoted in kWh; PV size is kW DC
 ];
 
 /** Unambiguous PV evidence — immune to the thermal exclusions below. */
-const PV_STRONG_PATTERNS: RegExp[] = [/\bPV\b/, /\bPHOTO ?VOLTAIC\b/];
+const PV_STRONG_PATTERNS: RegExp[] = [
+  /\bPV\b/,
+  new RegExp(`\\bPHOTO${SEP}VOLTAIC\\b`),
+];
 
 const SOLAR_PATTERNS: RegExp[] = [...PV_STRONG_PATTERNS, /\bSOLAR\b/];
 
-/** Solar-thermal scopes (water/pool heat) are not PV — no battery retrofit angle. */
+/**
+ * Solar-thermal scopes are not PV — no battery retrofit angle. These only
+ * apply when the description has NO strong PV token, so a real PV permit that
+ * also mentions a water heater still classifies as solar.
+ */
 const THERMAL_PATTERNS: RegExp[] = [
-  /\bSOLAR (?:HOT )?WATER\b/,
-  /\bSOLAR POOL\b/,
-  /\bPOOL (?:HEAT|HEATER|HEATING)\b/,
-  /\bWATER HEATER\b/,
+  /\bSOLAR\s+THERMAL\b/,
+  /\bTHERMAL\s+SOLAR\b/,
+  /\bSOLAR\s+(?:HOT\s+)?WATER\b/,
+  /\bSOLAR\s+POOL\b/,
+  /\bSOLAR\s+(?:HEAT|HEATER|HEATING)\b/,
+  /\bWATER\s+HEATER\b/,
+  /\bPOOL\s+(?:HEAT|HEATER|HEATING)\b/,
+  /\bSOLAR\s+(?:TUBE|TUBES|SCREEN|SCREENS|SHADE|SHADES|LIGHT|LIGHTS)\b/,
+  /\bSOLAR\s+ATTIC\s+FAN\b/,
 ];
 
 export function hasBatteryEvidence(desc: string): boolean {

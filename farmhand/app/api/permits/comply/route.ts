@@ -18,6 +18,27 @@ import {
   upsertLeads,
 } from "@/lib/permits/store";
 import type { EnrichedLead } from "@/lib/permits/types";
+import { normalizeApn } from "@/lib/permits/types";
+import { canonicalPhone, isDialable } from "@/lib/permits/phone";
+import type { ComplianceLogEntry } from "@/lib/permits/comply";
+
+/**
+ * The compliance log legitimately stores raw numbers — it is the retained
+ * evidence record. This masks them on the way OUT, so the log slice in the GET
+ * response can never become a second, ungated exit for a full phone number
+ * alongside the dial queue. Anything that looks like a phone number in an
+ * entry's `data` is reduced to its last four digits before it leaves the
+ * server.
+ */
+function redactLogEntry(entry: ComplianceLogEntry): ComplianceLogEntry {
+  if (!entry.data) return entry;
+  const data: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(entry.data)) {
+    const canon = typeof value === "string" ? canonicalPhone(value) : "";
+    data[key] = isDialable(canon) ? maskPhone(canon) : value;
+  }
+  return { ...entry, data };
+}
 
 /**
  * COMPLY — the hard gate in front of the manual call queue.
@@ -55,12 +76,20 @@ export async function GET(req: NextRequest) {
     getComplianceLog(client),
   ]);
   const gate = evaluateGate(state, now);
-  const idncNumbers = new Set(idnc.map((e) => e.number));
+  const idncNumbers = new Set(idnc.map((e) => canonicalPhone(e.number)));
 
   const queue: Array<Record<string, unknown>> = [];
   const suppressed: Array<{ apn: string; reason: string }> = [];
   for (const lead of leads) {
     if (!lead.phone) continue;
+    // A parcel dropped from the target set by a later FILTER run (its battery
+    // permit finally ingested, say) must stop being callable. Leads are never
+    // deleted — that would discard opt-out state we're required to keep — so a
+    // retired lead stays on file and is simply held out of the queue.
+    if (lead.retired) {
+      suppressed.push({ apn: lead.apn, reason: "retired — no longer in the current target list" });
+      continue;
+    }
     const verdict = leadDialVerdict(lead, state, idncNumbers, now);
     if (verdict.eligible) {
       queue.push({
@@ -86,7 +115,7 @@ export async function GET(req: NextRequest) {
     queue,
     suppressed,
     internalDnc: idnc.length,
-    log: log.slice(-50),
+    log: log.slice(-50).map(redactLogEntry),
   });
 }
 
@@ -125,9 +154,12 @@ export async function POST(req: NextRequest) {
       next.san = { number: body.san.trim().slice(0, 40), recordedAt: now };
     }
     if (body.azRegistration) {
+      // Unrecognized or absent status falls to "not_filed". Defaulting the
+      // other way would write an affirmative registration claim — into the
+      // retained compliance record — that nobody actually asserted.
       const status = ["not_filed", "filed", "active"].includes(String(body.azRegistration.status))
         ? (String(body.azRegistration.status) as "not_filed" | "filed" | "active")
-        : "filed";
+        : "not_filed";
       next.azRegistration = {
         status,
         kind: body.azRegistration.kind === "full" ? "full" : "roc-limited-44-1272.01",
@@ -160,11 +192,14 @@ export async function POST(req: NextRequest) {
   if (action === "recordScrub") {
     const receipt = String(body.receipt ?? "").slice(0, 200);
     if (!receipt) return NextResponse.json({ ok: false, error: "scrub receipt required — no receipt, no scrub" });
-    const listed = new Set((body.listedNumbers ?? []).map((n) => String(n).replace(/\D/g, "")));
+    // Both sides canonicalized: the operator's list and the stored numbers can
+    // arrive in different formats, and a mismatch here silently stamps a
+    // DNC-listed number "clear".
+    const listed = new Set((body.listedNumbers ?? []).map((n) => canonicalPhone(n)));
     const leads = await getLeads(client);
     const updated: EnrichedLead[] = [];
     for (const lead of leads) {
-      const num = lead.phone?.value.number;
+      const num = canonicalPhone(lead.phone?.value.number);
       if (!num) continue;
       updated.push({
         ...lead,
@@ -186,12 +221,17 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === "optOut") {
-    const number = String(body.number ?? "").replace(/\D/g, "");
-    if (number.length < 10) return NextResponse.json({ ok: false, error: "10+ digit number required" });
-    const apn = body.apn ? String(body.apn) : undefined;
+    // Canonical on the way in and on both sides of every comparison — an
+    // opt-out that records but fails to match the lead it belongs to is the
+    // worst failure this route has, and format drift alone used to cause it.
+    const number = canonicalPhone(body.number);
+    if (!isDialable(number)) return NextResponse.json({ ok: false, error: "10-digit number required" });
+    const apn = body.apn ? normalizeApn(body.apn) : undefined;
     await addInternalDnc(client, { number, addedAt: now, apn, reason: body.reason ? String(body.reason).slice(0, 200) : undefined });
     const leads = await getLeads(client);
-    const hit = leads.filter((l) => l.phone?.value.number === number || (apn && l.apn === apn));
+    const hit = leads.filter(
+      (l) => canonicalPhone(l.phone?.value.number) === number || (apn && normalizeApn(l.apn) === apn)
+    );
     if (hit.length) {
       await upsertLeads(client, hit.map((l) => ({ ...l, internalDnc: true, optedOutAt: now, updatedAt: now })));
     }

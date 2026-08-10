@@ -4,6 +4,8 @@ import { maricopaEnabled, fetchOwner } from "@/lib/permits/enrich/maricopa";
 import { getPhoneProvider, PHONE_PROVIDERS } from "@/lib/permits/enrich/phoneAppend";
 import { getLeads, getTargets, upsertLeads } from "@/lib/permits/store";
 import type { EnrichedLead, LineType } from "@/lib/permits/types";
+import { normalizeApn } from "@/lib/permits/types";
+import { canonicalPhone, isDialable } from "@/lib/permits/phone";
 
 /**
  * ENRICH stage: target parcels -> owner (Maricopa Assessor) -> phone
@@ -65,6 +67,9 @@ export async function POST(req: NextRequest) {
       jurisdiction: t.jurisdiction,
       address: t.address,
       newestSolarIssuedAt: t.newestSolarIssuedAt,
+      // Everything seeded is in the current target set, so a parcel that was
+      // retired by an earlier filter and has since come back is restored here.
+      retired: false,
       updatedAt: now,
     }));
     const total = await upsertLeads(client, leads);
@@ -123,15 +128,23 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === "setPhone") {
-    const apn = String(body.apn ?? "").trim();
-    const number = String(body.number ?? "").replace(/\D/g, "");
+    const apn = normalizeApn(body.apn);
+    const number = canonicalPhone(body.number);
     const lineType = LINE_TYPES.includes(body.lineType as LineType) ? (body.lineType as LineType) : "unknown";
-    if (!apn || number.length < 10) return NextResponse.json({ ok: false, error: "apn and a 10+ digit number required" });
+    if (!apn || !isDialable(number)) return NextResponse.json({ ok: false, error: "apn and a 10-digit number required" });
     const leads = await getLeads(client);
-    const lead = leads.find((l) => l.apn === apn);
+    const lead = leads.find((l) => normalizeApn(l.apn) === apn);
     if (!lead) return NextResponse.json({ ok: false, error: "unknown apn" });
     await upsertLeads(client, [
-      { ...lead, phone: { value: { number, lineType }, prov: { source: "manual", fetchedAt: now } }, updatedAt: now },
+      {
+        ...lead,
+        phone: { value: { number, lineType }, prov: { source: "manual", fetchedAt: now } },
+        // A new number has never been scrubbed. Carrying the old number's
+        // verdict and receipt forward would let it stand as compliance
+        // evidence for a number the scrub never saw.
+        dnc: undefined,
+        updatedAt: now,
+      },
     ]);
     return NextResponse.json({ ok: true });
   }
