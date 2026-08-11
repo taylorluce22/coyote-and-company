@@ -61,18 +61,56 @@ Four idempotent, incremental stages:
 The system must be structurally unable to dial until **all** of:
 
 - (a) FTC **SAN** on file;
-- (b) **AZ telephonic-seller registration** status recorded — the
+- (b) **AZ telephonic-seller registration status recorded** — the
   ROC-licensed-installer path is confirmed, so this is the free limited
   registration under **A.R.S. 44-1272.01** (build the flag, don't block on
-  it);
+  it). **Recording it is not permission to call — see below;**
 - (c) **wireless suppression** active.
+
+### Registration is not exemption — A.R.S. 44-1273
+
+**A.R.S. 44-1273** lists the exempt sellers and then carves out two sections
+by name:
+
+> "The following sellers are not required to register and, **except for
+> section 44-1278, subsection B and section 44-1282**, are exempt from this
+> article."
+
+44-1278(B) is the calling-**conduct** section. So the ROC path and the free
+limited registration remove the **registration** requirement and nothing
+else: every calling restriction still binds. Nor does working through an
+agent insulate anyone — 44-1278(B) binds "any seller or solicitor or anyone
+acting on their behalf."
+
+The `az_registration` flag in the gate therefore means **"status recorded,"
+never "exemption obtained,"** and no check in the gate may relax because of
+it.
+
+### Wireless: the binding constraint is federal
+
+**A.R.S. 44-1278(B)(3)** bars an unsolicited telephone sales call to any
+**"mobile or telephone paging device"** — pager-era drafting, with no
+Arizona case law and no AG opinion construing it. That ambiguity is a reason
+to stay conservative, not a reason to feel covered.
+
+The constraint that actually binds is **47 CFR 64.1200(e)**, which extends
+the federal Do-Not-Call rules to **wireless** numbers with **no autodialer
+element** — manual dialing does not help. Private right of action at **$500
+per call, $1,500 if willful**, and the **Ninth Circuit** (binding in
+Arizona) held in **Chennette v. Porch.com** that a cell number on the
+registry is **presumptively residential**.
+
+Consequence, enforced in `leadDialVerdict`: **DNC scrubbing is mandatory for
+wireless as well as landline.** The scrub check runs *before* the line-type
+check, so a wireless number is never blocked merely "because suppression is
+on" — relaxing suppression must not be able to expose an unscrubbed cell.
 
 Also enforced:
 
-- **DNC scrub** re-run on a **31-day-max** clock; stale numbers blocked.
-- Wireless-flagged numbers suppressed from the dial queue by default
-  (config flag, default **ON**) — A.R.S. 44-1278(B)(3) likely bars cold
-  calls to AZ cell phones.
+- **DNC scrub** re-run on a **31-day-max** clock, for **every line type**;
+  stale numbers blocked.
+- Wireless-flagged numbers additionally suppressed from the dial queue by
+  default (config flag, default **ON**).
 - **Internal do-not-call list** honored instantly, retained **10 years**.
 - **Call-window guard** 8am–9pm at the **called party's location by
   address** (not area code); default window 9am–8pm.
@@ -86,6 +124,40 @@ Ship state: list-building + compliance-armed with dialing **OFF**
 (server-side `PERMITS_DIALING_ENABLED` env, absent by default; the dial
 queue never returns phone numbers unless the env is set AND the gate
 passes).
+
+## Channels — audience upload is OFF the table
+
+**Google Customer Match: prohibited for this list.** Google's policy permits
+only customer data "collected in the first-party context… where customers
+shared their information directly with you." Permit and assessor records are
+public records, not first-party data — nobody on this list gave us anything.
+Google separately prohibits ad creative implying knowledge of personally
+identifiable information, which a "we see you have solar and no battery"
+creative plainly does.
+
+**Meta: unverified, do not upload.** Meta's customer-list terms are
+robots-blocked, so nobody has actually read them. Unverified is not
+permission.
+
+**The compliant pattern, and it is the roadmap item:** mail drives to a
+landing page; Pixel/Tag audiences are then built from **website visitors**,
+which is first-party by definition and matches at device level rather than
+by name. The mailing address now on every enriched lead is what makes that
+buildable.
+
+No audience-upload feature exists in this codebase, and none may be added.
+
+## Data scope — these sources start in 2019
+
+Buckeye and Peoria both begin in **2019**, verified: Buckeye has zero
+photovoltaic permits finalized before 2019-01-01, one permit of any type
+applied in 2018, and zero in 2016–2017. That is an **EnerGov system
+cutover**, not a filter artifact.
+
+So the 2-to-20-year retrofit window can only ever return 2019-onward from
+these sources. Each adapter records `historyStartsYear`, and **no export or
+summary may imply twenty years of coverage.** Pre-2019 history is a
+records-request item, not a code item.
 
 ## Client isolation
 

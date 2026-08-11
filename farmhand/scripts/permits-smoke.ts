@@ -51,7 +51,13 @@ import { normalizeApn } from "../lib/permits/types";
 import { PERMIT_TAGS } from "../lib/permits/taxonomy";
 import { ruleTags, tagPermits, jurisdictionLearned } from "../lib/permits/tagging";
 import { classifyWithLlm, llmClassifyEnabled, needsLlmReview, tagsDisagree } from "../lib/permits/llmClassify";
-import { defaultComplianceState, evaluateGate, leadDialVerdict, type ComplianceState } from "../lib/permits/comply";
+import {
+  defaultComplianceState,
+  evaluateGate,
+  leadDialVerdict,
+  DNC_SCRUB_APPLIES_TO_ALL_LINE_TYPES,
+  type ComplianceState,
+} from "../lib/permits/comply";
 import type { EnrichedLead, Jurisdiction, PermitRecord } from "../lib/permits/types";
 
 let failures = 0;
@@ -192,6 +198,50 @@ function runGateProof(now: string) {
     !leadDialVerdict(baseLead, openWindow, new Set(["4805551234"]), now).eligible
   );
   check("opt-out honored instantly", !leadDialVerdict({ ...baseLead, optedOutAt: now }, openWindow, idnc, now).eligible);
+
+  // 47 CFR 64.1200(e) — the federal registry reaches wireless, no autodialer
+  // element, $500/call. So an unscrubbed cell must be blocked BY THE SCRUB, not
+  // incidentally by wireless suppression: if the reason came back as "line type
+  // suppressed", then relaxing suppression would expose an unscrubbed number.
+  const unscrubbedCell = leadDialVerdict(
+    {
+      ...baseLead,
+      dnc: undefined,
+      phone: { value: { number: "4805551234", lineType: "wireless" }, prov: baseLead.phone!.prov },
+    },
+    openWindow, idnc, now
+  );
+  check(
+    "an unscrubbed WIRELESS lead is blocked by the scrub, not by suppression",
+    !unscrubbedCell.eligible && /DNC-scrubbed/.test(unscrubbedCell.eligible === false ? unscrubbedCell.reason : "")
+  );
+  check(
+    "...and stays blocked by the scrub even with suppression OFF",
+    (() => {
+      const noSuppression: ComplianceState = { ...openWindow, wirelessSuppression: false };
+      const r = leadDialVerdict(
+        {
+          ...baseLead,
+          dnc: { status: "listed", scrubbedAt: now },
+          phone: { value: { number: "4805551234", lineType: "wireless" }, prov: baseLead.phone!.prov },
+        },
+        noSuppression, idnc, now
+      );
+      return !r.eligible && /National DNC registry/.test(r.reason);
+    })()
+  );
+  check("scrubbing is declared to apply to every line type", DNC_SCRUB_APPLIES_TO_ALL_LINE_TYPES);
+
+  // A.R.S. 44-1273 exempts qualifying sellers "except for section 44-1278,
+  // subsection B" — the calling-conduct section. The flag records status; it
+  // must never read as permission.
+  const regBlocker = evaluateGate({ ...armedState, azRegistration: undefined }, now).blockers.find((b) =>
+    /registration/i.test(b)
+  );
+  check(
+    "the AZ registration blocker says status recorded, not exemption obtained",
+    !!regBlocker && /status/i.test(regBlocker) && /not an exemption/i.test(regBlocker)
+  );
 }
 
 /**

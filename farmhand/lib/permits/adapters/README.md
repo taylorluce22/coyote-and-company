@@ -32,6 +32,22 @@ So, for every new jurisdiction:
 4. **Page with a stable `orderByFields`.** Without one, `resultOffset` paging
    repeats and skips rows. Buckeye uses `objectid ASC`.
 
+## Data scope: Buckeye and Peoria both start in 2019
+
+Verified, not inferred: Buckeye has **zero** photovoltaic permits finalized
+before 2019-01-01, **one** permit of any type applied in 2018, and **zero** in
+2016 and 2017. Peoria's year histogram likewise starts at 2019. That is a
+**system cutover to EnerGov**, not a filter artifact and not a gap in our query.
+
+Two consequences that belong in code rather than in someone's head:
+
+1. The 2-to-20-year retrofit window can only ever return **2019 onward** from
+   these sources. Every adapter records `historyStartsYear`, and
+   `HISTORY_STARTS` in `index.ts` collects them so an export can state the real
+   coverage instead of implying twenty years of it.
+2. Pre-2019 history is a **records-request item, not a code item**. No adapter
+   change reaches it.
+
 ## The rule about county data
 
 **Never infer a city from a ZIP code on county data.**

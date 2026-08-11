@@ -9,20 +9,58 @@
  *
  * Gate requirements (all of):
  *   (a) FTC SAN on file — the DNC-registry subscription account number;
- *   (b) AZ telephonic-seller registration status recorded — the
- *       ROC-licensed-installer path is confirmed, so this is the free
- *       limited registration under A.R.S. 44-1272.01 (a flag to record,
- *       not a blocker to wait on);
- *   (c) wireless suppression active (config default ON — A.R.S.
- *       44-1278(B)(3) likely bars cold calls to AZ cell phones);
- *   (d) National DNC scrub no older than 31 days.
+ *   (b) AZ telephonic-seller registration STATUS RECORDED — see the
+ *       registration note below. Recording it is not permission to call;
+ *   (c) wireless suppression active (config default ON);
+ *   (d) National DNC scrub no older than 31 days, for EVERY line type.
+ *
+ * ============================================================================
+ * REGISTRATION IS NOT EXEMPTION — A.R.S. 44-1273
+ * ============================================================================
+ *
+ * An earlier version of this module treated the ROC-licensed-installer path
+ * and the free limited registration under A.R.S. 44-1272.01 as an exemption.
+ * That is wrong, and the statute says so by name. A.R.S. 44-1273 lists the
+ * exempt sellers and then carves out two sections:
+ *
+ *   "The following sellers are not required to register and, EXCEPT FOR
+ *    SECTION 44-1278, SUBSECTION B AND SECTION 44-1282, are exempt from
+ *    this article."
+ *
+ * 44-1278(B) is the calling-CONDUCT section. So the ROC path removes the
+ * REGISTRATION requirement and nothing else: every calling restriction still
+ * binds. Nor does working through an agent insulate anyone — 44-1278(B) binds
+ * "any seller or solicitor or anyone acting on their behalf".
+ *
+ * The azRegistration flag therefore means "status recorded", never
+ * "exemption obtained", and it is never a reason to relax any check below.
+ *
+ * ============================================================================
+ * WIRELESS: THE BINDING CONSTRAINT IS FEDERAL, NOT ARIZONA
+ * ============================================================================
+ *
+ * A.R.S. 44-1278(B)(3) bars an unsolicited telephone sales call to any
+ * "mobile or telephone paging device" — pager-era drafting, with no Arizona
+ * case law and no AG opinion construing it. Ambiguous, so the conservative
+ * landline-only default stands; it is not the reason it stands.
+ *
+ * The real constraint is 47 CFR 64.1200(e), which extends the federal
+ * Do-Not-Call rules to wireless numbers with NO autodialer element — manual
+ * dialing does not help. It carries a private right of action at $500 per
+ * call, $1500 if willful, and the Ninth Circuit (binding in Arizona) held in
+ * Chennette v. Porch.com that a cell number on the registry is presumptively
+ * residential.
+ *
+ * Consequence, enforced in leadDialVerdict below: DNC scrubbing is MANDATORY
+ * FOR WIRELESS AS WELL AS LANDLINE. It is not a landline-only step that
+ * wireless suppression happens to stand in for.
  *
  * Per-number rules on top of the gate: internal do-not-call honored
- * instantly (list retained 10 years); wireless/voip/unknown line types
- * suppressed while suppression is on; per-lead scrub result must be "clear"
- * and fresh; call-window guard 8am–9pm legal bound at the CALLED party's
- * location derived from the parcel address (never area code), default
- * window 9am–8pm.
+ * instantly (list retained 10 years); the DNC scrub must be present, "clear"
+ * and fresh for every line type; wireless/voip/unknown line types then
+ * suppressed while suppression is on; call-window guard 8am–9pm legal bound
+ * at the CALLED party's location derived from the parcel address (never area
+ * code), default window 9am–8pm.
  *
  * Manual click-to-dial only, one human-initiated call at a time. NO
  * predictive/power dialer, NO prerecorded or AI voice, NO ringless
@@ -43,9 +81,24 @@ export const LEGAL_CALL_END_HOUR = 21; // 9pm
 export const DEFAULT_CALL_START_HOUR = 9;
 export const DEFAULT_CALL_END_HOUR = 20;
 
+/**
+ * The federal DNC rules reach wireless numbers with no autodialer element
+ * (47 CFR 64.1200(e)). Stated as a constant so nothing downstream can treat
+ * scrubbing as a landline-only step — there is no line type this system may
+ * dial unscrubbed.
+ */
+export const DNC_SCRUB_APPLIES_TO_ALL_LINE_TYPES = true;
+
 export interface ComplianceState {
   /** FTC Subscription Account Number for National DNC registry access. */
   san?: { number: string; recordedAt: string };
+  /**
+   * Registration STATUS, recorded. NOT an exemption and NOT a permission to
+   * call: A.R.S. 44-1273 exempts qualifying sellers from the article "except
+   * for section 44-1278, subsection B and section 44-1282", and 44-1278(B) is
+   * the calling-conduct section. Nothing in the gate may key off this flag to
+   * relax a calling restriction.
+   */
   azRegistration?: {
     status: "not_filed" | "filed" | "active";
     kind: "roc-limited-44-1272.01" | "full";
@@ -97,7 +150,12 @@ export function evaluateGate(state: ComplianceState, nowIso: string): GateResult
   const blockers: string[] = [];
   if (!state.san?.number) blockers.push("FTC SAN not on file");
   if (!state.azRegistration?.recordedAt) {
-    blockers.push("AZ telephonic-seller registration not recorded (ROC path: free limited registration, A.R.S. 44-1272.01)");
+    // Recording the status is required; it grants nothing. A.R.S. 44-1273
+    // exempts qualifying sellers "except for section 44-1278, subsection B",
+    // so every calling restriction survives the ROC path intact.
+    blockers.push(
+      "AZ telephonic-seller registration status not recorded (ROC path: free limited registration, A.R.S. 44-1272.01 — status only, not an exemption from the 44-1278(B) calling rules)"
+    );
   }
   if (!state.wirelessSuppression) blockers.push("wireless suppression is OFF — must be active to arm");
   if (!scrubIsFresh(state.lastDncScrubAt, nowIso)) {
@@ -158,13 +216,20 @@ export function leadDialVerdict(
   if (internalDncNumbers.has(canonicalPhone(phone.number))) {
     return { eligible: false, reason: "internal do-not-call" };
   }
-  if (state.wirelessSuppression && phone.lineType !== "landline") {
-    return { eligible: false, reason: `line type ${phone.lineType} suppressed (wireless suppression ON)` };
-  }
+  // DNC FIRST, AND FOR EVERY LINE TYPE. 47 CFR 64.1200(e) extends the federal
+  // registry rules to wireless with no autodialer element, and the Ninth
+  // Circuit (Chennette v. Porch.com, binding here) treats a cell number on the
+  // registry as presumptively residential. Checking line type first would let
+  // "wireless is suppressed anyway" stand in for a scrub — and if suppression
+  // were ever relaxed, an unscrubbed cell would be one config flip from
+  // dialable at $500 a call. Scrub is not a landline-only step.
   if (!lead.dnc || lead.dnc.status === "unknown") return { eligible: false, reason: "not DNC-scrubbed" };
   if (lead.dnc.status === "listed") return { eligible: false, reason: "on National DNC registry" };
   if (!scrubIsFresh(lead.dnc.scrubbedAt, nowIso)) {
     return { eligible: false, reason: `DNC scrub older than ${DNC_SCRUB_MAX_AGE_DAYS} days` };
+  }
+  if (state.wirelessSuppression && phone.lineType !== "landline") {
+    return { eligible: false, reason: `line type ${phone.lineType} suppressed (wireless suppression ON)` };
   }
   if (!withinCallWindow(state, nowIso, timezoneForLead(lead))) {
     return { eligible: false, reason: "outside call window at called party's local time" };
