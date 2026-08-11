@@ -16,7 +16,9 @@ import { normalizeLineType } from "../lib/permits/enrich/phoneAppend";
 import { mesaFixtureRows, EXPECTED_TARGET_APNS, MESA_STATUS_FIXTURES, LIVE_CONTAMINANTS } from "../lib/permits/fixtures/mesa";
 import { solarWithoutBattery } from "../lib/permits/setDifference";
 import { targetsToCsv } from "../lib/permits/csv";
-import { classifyDescription, isAncillaryScope, hasBatteryEvidence } from "../lib/permits/classify";
+import { classifyDescription, isAncillaryScope } from "../lib/permits/classify";
+import { hasBatteryEvidence, batteryDetectionMethodFor } from "../lib/permits/batteryMatcher";
+import { BATTERY_POSITIVES, BATTERY_NEGATIVES } from "../lib/permits/fixtures/battery";
 import { BATTERY_COARSE_TOKENS } from "../lib/permits/coarseNet";
 import {
   computeAttachRateByYear,
@@ -501,6 +503,48 @@ function runWestValleyRegressions(now: string) {
   );
   check("buckeye battery-in-description parcel excluded", !buckeyeApns.includes("30600002"));
   check("buckeye non-Finaled parcel excluded", !buckeyeApns.includes("30600003"));
+
+  // Keyword-independent safety net: a second PV permit dated after the first.
+  const twoPv = [
+    ...buckeyeFixtureRows(now).slice(0, 1),
+    {
+      permitnumber: "BLD-001B",
+      parcelnumber: "306-00-001",
+      permitstatus: "Finaled",
+      workclass: "Photovoltaic System",
+      // No battery keyword anywhere — this is exactly the case no matcher sees.
+      permitdesc: "ADDING MODULES TO EXISTING ARRAY AND DERATE MAIN BREAKER",
+      finalizedate: Date.parse(now) - 3 * 365.25 * 86400000,
+      permittype: "Residential",
+    },
+  ].map((r) => buckeyeRowToRecord(r, now));
+  const twoPvOut = solarWithoutBattery(twoPv, { now });
+  const flagged = twoPvOut.targets.find((t) => t.apn === "30600001");
+  check("second PV permit dated after the first is flagged", !!flagged?.reviewFlags?.includes("second-pv-permit"));
+  check("and it is counted in stats", twoPvOut.stats.parcelsFlaggedSecondPvPermit === 1);
+  check(
+    "no battery keyword is involved — the check is keyword-independent",
+    !hasBatteryEvidence("ADDING MODULES TO EXISTING ARRAY AND DERATE MAIN BREAKER")
+  );
+  const flaggedLead: EnrichedLead = {
+    apn: "30600001", jurisdiction: "buckeye", address: "1 N WATSON RD",
+    phone: { value: { number: "6025551234", lineType: "landline" }, prov: { source: "manual", fetchedAt: now } },
+    dnc: { status: "clear", scrubbedAt: now, receipt: "R" },
+    needsReview: true, reviewFlags: ["second-pv-permit"], updatedAt: now,
+  };
+  const openState: ComplianceState = {
+    san: { number: "S", recordedAt: now },
+    azRegistration: { status: "filed", kind: "roc-limited-44-1272.01", recordedAt: now },
+    wirelessSuppression: true, lastDncScrubAt: now, callWindow: { startHour: 8, endHour: 21 },
+  };
+  check(
+    "a flagged lead stays OUT of the dial queue",
+    !leadDialVerdict(flaggedLead, openState, new Set(), now).eligible
+  );
+  check(
+    "targets carry the per-jurisdiction detection method",
+    twoPvOut.targets.every((t) => t.batteryDetectionMethod === "description_text")
+  );
 }
 
 /**
@@ -596,6 +640,22 @@ async function runVocabularyGuardRegressions() {
  * cross-validation that proves detection is measuring something real.
  */
 function runBatteryDetectionRegressions(now: string) {
+  console.log("== battery matcher corpus (core infrastructure)");
+  // There is no battery permit type in ANY of the three systems, so in Buckeye
+  // and Mesa this regex is the only battery signal that exists.
+  for (const c of BATTERY_POSITIVES) {
+    check(`+ "${c.text.slice(0, 44)}" (${c.why})`, hasBatteryEvidence(c.text));
+  }
+  for (const c of BATTERY_NEGATIVES) {
+    check(`- "${c.text.slice(0, 44)}" (${c.why})`, !hasBatteryEvidence(c.text));
+  }
+  check(
+    "detection method is per-jurisdiction: peoria structured, buckeye/mesa text",
+    batteryDetectionMethodFor("peoria") === "structured_flag" &&
+      batteryDetectionMethodFor("buckeye") === "description_text" &&
+      batteryDetectionMethodFor("mesa") === "description_text"
+  );
+
   console.log("== battery detection");
 
   // THE RULE: SQL LIKE cannot express a word boundary. Both spellings fail,
@@ -619,25 +679,16 @@ function runBatteryDetectionRegressions(now: string) {
     classifyDescription("PV SOLAR 6 KW AT SAME ADDRESS") === "solar"
   );
 
-  // The strict matcher, ported verbatim.
-  const batteries = [
-    "TESLA POWERWALL 2", "PW3 INSTALL", "PW 2 BACKUP", "ENPHASE ENCHARGE 10",
-    "IQ BATTERY 5P", "GENERAC PWRCELL", "FRANKLIN WH", "FRANKLINWH APOWER",
-    "SONNEN ECOLINX", "EG4 18KPV", "SIMPLIPHI PHI 3.8", "LG RESU 10H",
-    "TESLA BACKUP GATEWAY", "ENERGY BANK INSTALL", "13.5 KWH STORAGE",
-    "B.E.S.S. INSTALL", "BESS 27 KWH", "ENERGY STORAGE SYSTEM",
-  ];
-  for (const b of batteries) {
-    check(`battery: "${b}"`, hasBatteryEvidence(b), `not detected`);
-  }
-
-  // RESU is the one that must stay bounded — 815 Buckeye rows say RESULTS/RESUBMIT.
-  check("RESU bounded: 'RESULTS' is not a battery", !hasBatteryEvidence("PLAN RESULTS ATTACHED"));
-  check("RESU bounded: 'RESUBMIT' is not a battery", !hasBatteryEvidence("RESUBMIT CORRECTED PLANS"));
-  check("RESU bounded: 'LG RESU 10H' IS a battery", hasBatteryEvidence("LG RESU 10H"));
-  check("ESS bounded: 'ADDRESS' is not a battery", !hasBatteryEvidence("SAME ADDRESS"));
-  check("ESS bounded: 'PROCESS' is not a battery", !hasBatteryEvidence("PROCESS UPGRADE"));
-  check("TESLA counts — 614 Buckeye permits name it without saying Powerwall", hasBatteryEvidence("TESLA INVERTER AND GATEWAY"));
+  // The coarse net must span ALL workclasses, not just photovoltaic: 87% of
+  // Buckeye battery permits file under 'Photovoltaic System' (already fetched)
+  // but 134 sit under 'Misc' and would be lost if the net were narrowed.
+  const where = buckeyeWhere();
+  const clauses = where.split(/\s+OR\s+/i);
+  check(
+    "coarse net is NOT restricted to the PV workclass",
+    clauses.some((c) => /permitdesc/i.test(c) && !/workclass/i.test(c))
+  );
+  check("coarse net reaches battery text on any workclass", where.toUpperCase().includes("BATTERY"));
 
   // Attach-rate cross-validation: the shape, and detection breaking.
   console.log("== attach rate (data quality check)");

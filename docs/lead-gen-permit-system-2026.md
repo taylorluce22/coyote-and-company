@@ -349,6 +349,70 @@ _Updated as work lands. Timezone: America/Phoenix._
      invisible. Every target now carries `battery_evidence=permit-data-only`
      in the record and in the CSV, so "no battery permit" is never mistaken
      downstream for "no battery".
+- **2026-08-10 — STRUCTURAL FINDING: there is no battery permit type
+  anywhere.** Established by enumerating the full permit vocabulary in all
+  three live systems. This is a fact about how AZ jurisdictions file storage,
+  not a gap in the search, and it determines the whole detection design.
+  - **Buckeye** — 105 workclass values, none battery/storage/ESS. Of 1273
+    battery permits, **1104 (87%) file under workclass `Photovoltaic System`,
+    the identical label a solar install gets**, plus 3 under `Photovoltaic
+    Standard Plan` and 134 under `Misc`; the rest scatter across Antenna,
+    Generator, Run, Alarms. `permittype` is trade-level only;
+    `permitclass` has no storage entry.
+  - **Peoria** — `PER_TYPE` is only Miscellaneous/Residential/Commercial and
+    `PER_SUB_TYPE` only Miscellaneous Residential/Commercial, SolarPV,
+    Swimming Pool-Spa-Hot Tub, Commercial Accessory Use. Battery exists ONLY
+    as a checkbox attribute (`USER_B1_CHECKBOX_DESC='Battery Storage'`) — an
+    attribute on a permit, not a category. That is why Peoria is our best
+    structured signal and why it is unique.
+  - **Mesa** — no battery category. 1251 battery-mentioning permits sit at
+    `type_of_work='Electrical'`, exactly where 1123 solar permits also sit.
+    The identical bucket.
+
+  Four consequences, all encoded:
+  1. **Description parsing is not a shortcut — in Buckeye and Mesa it is the
+     only battery signal that exists.** The matcher is now its own module
+     (`lib/permits/batteryMatcher.ts`) with its own corpus
+     (`fixtures/battery.ts`, 27 positives and 13 negatives, every negative a
+     string a plausible matcher has actually mis-fired on).
+  2. **The coarse net keeps running across ALL workclasses, never narrowed to
+     photovoltaic.** Because 87% of battery permits already file under
+     `Photovoltaic System`, those records are *already inside* the data we
+     fetch — we were never missing them, only misreading them. Narrowing the
+     net would lose the 134 filed under `Misc`. A regression asserts the
+     description clauses are not conditioned on workclass.
+  3. **New keyword-independent safety net.** In Buckeye a battery retrofit
+     lands as a SECOND `Photovoltaic System` permit on the parcel. Measured:
+     of 7661 parcels, 7392 have exactly one PV permit and 269 have more, of
+     which 171 carry no battery keyword and sample as genuine array
+     expansions ("ADDING MODULES", "AND DERATE MAIN BREAKER"). So a target
+     holding a second PV permit dated after the first is flagged
+     `second-pv-permit` and **held out of the default dial queue** — ~2% of
+     parcels, caught with no keywords at all.
+  4. **`battery_detection_method` per jurisdiction** on every row —
+     `peoria=structured_flag`, `buckeye=description_text`,
+     `mesa=description_text` — so the confidence difference between a
+     checkbox and a regex is visible in the record rather than assumed
+     uniform. `battery_evidence=permit-data-only` stays on every lead.
+
+  One thing this finding also exposed: **Buckeye's workclass is itself a
+  structured SOLAR signal and has to be used.** Real PV permits there carry
+  descriptions with no solar keyword at all ("ADDING MODULES TO EXISTING
+  ARRAY AND DERATE MAIN BREAKER"), so text-only classification drops them.
+  Battery still comes from the description, because the workclass label
+  cannot separate a battery from an install — only the text can.
+- **2026-08-10 — Recorded negative result: no independent utility signal
+  exists.** Checked whether utility interconnection data could corroborate
+  battery detection. It cannot: APS and SRP publish nothing residential, the
+  ACC REST reports carry no storage field and those rules were repealed in
+  March 2026, and EIA is state-level only. The one real dataset is **LBNL
+  Tracking the Sun**, which does list APS/SRP/TEP as active data providers
+  and carries a `technology_type` flag separating PV-only from PV+Storage
+  from Storage-only — but its finest geography is ZIP+4, so it is a
+  **calibration layer, never a per-home join**. Worth pulling later to
+  measure our expected false-positive rate; not a build dependency.
+  **Permit data remains the only address-resolvable battery signal that
+  exists.**
 - **Ship state: list-building + compliance-armed, dialing OFF.** ✅
 - Open items, in order:
   1. First live run (from Vercel or any machine with egress to

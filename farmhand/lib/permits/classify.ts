@@ -19,57 +19,15 @@
  */
 
 import type { PermitClass } from "./types";
+import { hasBatteryEvidence } from "./batteryMatcher";
+
+// Battery matching lives in batteryMatcher.ts. In Buckeye and Mesa there is no
+// battery permit type at all, so reading descriptions is the ONLY battery
+// signal that exists — core infrastructure, not a helper in this file.
+export { hasBatteryEvidence } from "./batteryMatcher";
 
 /** Space, hyphen, slash, or nothing — between the words of a compound keyword. */
 const SEP = "[\\s\\-/]*";
-
-/**
- * Battery evidence. Word-bounded, ALWAYS — and never expressed as a SQL LIKE.
- *
- * THE RULE, learned twice the hard way: SQL is a coarse over-fetch net only.
- * Precision matching happens here, in code, with word boundaries. Both
- * directions of that mistake have now been observed:
- *
- *   LIKE '%ESS %'  matches "ADDRESS " → false battery hits → real targets
- *                  wrongly excluded (this cost ~105 Buckeye targets).
- *   LIKE '% ESS%'  misses "ESS INSTALL 27 KWH" at the start of a description
- *                  → battery permits never fetched → battery homes shipped
- *                  as targets, which is the worse direction.
- *
- * Neither is fixable by fiddling with the wildcard. Over-fetch broadly in SQL,
- * decide here.
- *
- * Two entries look odd and are load-bearing:
- *   \bRESU\b  — LG's battery line. Unbounded, RESU matches RESULTS and
- *               RESUBMIT (815 Buckeye rows).
- *   \bTESLA\b — 614 Buckeye permits name Tesla, many of which never say
- *               Powerwall. This does over-exclude Tesla solar-only homes, and
- *               that is the accepted trade: excluding a real target is cheap,
- *               calling a battery owner is not.
- */
-const BATTERY_PATTERNS: RegExp[] = [
-  /\bBATTER(?:Y|IES)\b/,
-  /\bIQ BATTER/, // Enphase IQ Battery
-  new RegExp(`\\bPOWER${SEP}WALL\\b`), // POWERWALL, POWER WALL, POWER-WALL
-  new RegExp(`\\bPW${SEP}[23]\\b`), // PW2 and PW3
-  new RegExp(`\\bENERGY${SEP}STORAGE\\b`),
-  new RegExp(`\\bSTORAGE${SEP}SYSTEM\\b`),
-  /\bENERGY BANK\b/,
-  /\bBACKUP GATEWAY\b/,
-  /\bESS\b/,
-  /\bBESS\b/,
-  /\bB\.?E\.?S\.?S\b/,
-  // Storage brands. A permit often names the product and nothing else.
-  /\bENCHARGE\b/,
-  /\bPWRCELL\b/,
-  new RegExp(`\\bFRANKLIN${SEP}WH\\b`),
-  /\bSONNEN\b/,
-  /\bEG4\b/,
-  /\bSIMPLIPHI\b/,
-  /\bRESU\b/,
-  /\bTESLA\b/,
-  /\d+(?:\.\d+)?\s?KWH\b/, // capacity is quoted in kWh; PV size is kW DC
-];
 
 /** Unambiguous PV evidence — immune to the thermal exclusions below. */
 const PV_STRONG_PATTERNS: RegExp[] = [
@@ -137,11 +95,6 @@ const PV_SYSTEM_MENTION = /\b(?:PV|SOLAR)(?:\s+\w+){0,2}\s+SYSTEM\b/;
 /** "...FOR PV SOLAR", "...FOR THE NEW SOLAR SYSTEM" — solar as the beneficiary, not the work. */
 const PURPOSE_CLAUSE = /\bFOR\s+(?:A\s+|THE\s+|NEW\s+|FUTURE\s+){0,2}(?:PV|SOLAR)/;
 
-export function hasBatteryEvidence(desc: string): boolean {
-  const d = desc.toUpperCase();
-  return BATTERY_PATTERNS.some((r) => r.test(d));
-}
-
 /** Affirmative evidence that an array is going in. */
 export function hasPvInstallEvidence(desc: string): boolean {
   const d = desc.toUpperCase();
@@ -160,7 +113,7 @@ export function isAncillaryScope(desc: string): boolean {
 
 export function classifyDescription(desc: string): PermitClass {
   const d = desc.toUpperCase();
-  const battery = BATTERY_PATTERNS.some((r) => r.test(d));
+  const battery = hasBatteryEvidence(d);
   const solarHit = SOLAR_PATTERNS.some((r) => r.test(d));
   const pvStrong = PV_STRONG_PATTERNS.some((r) => r.test(d));
   const thermalOnly = solarHit && !pvStrong && THERMAL_PATTERNS.some((r) => r.test(d));

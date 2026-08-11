@@ -145,6 +145,12 @@ export function leadDialVerdict(
 ): DialVerdict {
   if (lead.optedOutAt || lead.internalDnc) return { eligible: false, reason: "internal do-not-call" };
   if (lead.retired) return { eligible: false, reason: "retired — no longer in the current target list" };
+  if (lead.needsReview) {
+    return {
+      eligible: false,
+      reason: `held for review: ${(lead.reviewFlags ?? ["unspecified"]).join(", ")}`,
+    };
+  }
   const phone = lead.phone?.value;
   if (!phone?.number) return { eligible: false, reason: "no phone on file" };
   // Caller supplies a canonicalized set; canonicalize this side too so the

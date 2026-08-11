@@ -21,6 +21,7 @@
 import type { PermitRecord, TargetParcel } from "./types";
 import { classifyDescription } from "./classify";
 import { assessResidential } from "./residential";
+import { batteryDetectionMethodFor } from "./batteryMatcher";
 
 export interface SetDifferenceOptions {
   /** ISO timestamp injected by the caller. */
@@ -48,6 +49,8 @@ export interface SetDifferenceStats {
   parcelsAmbiguousStatus: number;
   /** Battery permits carrying no date at all. They still subtract; surfaced so the policy is visible. */
   undatedBatteryPermits: number;
+  /** Targets flagged for review by the keyword-independent second-PV-permit check. */
+  parcelsFlaggedSecondPvPermit: number;
   /** Parcels rejected by the residential gate (commercial/municipal arrays). */
   parcelsCommercial: number;
   /** Why each was rejected, tallied — lets the gate be audited from a live run. */
@@ -199,6 +202,21 @@ export function solarWithoutBattery(
       }
       recency = "in-window";
     }
+    // Keyword-independent safety net. In Buckeye a battery retrofit lands as a
+    // SECOND 'Photovoltaic System' permit on the parcel — the same workclass a
+    // new install gets — so a second PV permit dated after the first is a
+    // battery candidate that no keyword can see. Measured: of 7661 parcels,
+    // 7392 have exactly one PV permit and 269 have more; 171 of those carry no
+    // battery keyword anywhere and sampled as genuine array expansions
+    // ("ADDING MODULES", "AND DERATE MAIN BREAKER"). So this flags rather than
+    // excludes — roughly 2% of parcels — and flagged parcels stay out of the
+    // default dial queue until a human looks.
+    const reviewFlags: string[] = [];
+    if (dated.length > 1) {
+      const sorted = [...dated].sort((a, b) => a.ms - b.ms);
+      if (sorted[sorted.length - 1].ms > sorted[0].ms) reviewFlags.push("second-pv-permit");
+    }
+
     const first = permits[0];
     targets.push({
       apn,
@@ -216,7 +234,8 @@ export function solarWithoutBattery(
       systemKwDc: systemKw.get(apn),
       contractor: permits.find((p) => p.contractor)?.contractor,
       batteryEvidence: "permit-data-only",
-      batteryDetection: permits.find((p) => p.batteryDetection)?.batteryDetection,
+      batteryDetectionMethod: batteryDetectionMethodFor(first.jurisdiction),
+      ...(reviewFlags.length ? { reviewFlags } : {}),
       utility: permits.find((p) => p.utility)?.utility,
       computedAt: opts.now,
     });
@@ -255,6 +274,7 @@ export function solarWithoutBattery(
       excludedByWindow,
       permitsMissingApn: missingApn,
       undatedBatteryPermits,
+      parcelsFlaggedSecondPvPermit: targets.filter((t) => t.reviewFlags?.includes("second-pv-permit")).length,
       targets: targets.length,
     },
   };

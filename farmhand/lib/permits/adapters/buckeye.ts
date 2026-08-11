@@ -38,6 +38,7 @@
 import type { PermitRecord } from "../types";
 import { normalizeApn } from "../types";
 import { detectUtility } from "../utility";
+import { hasBatteryEvidence } from "../batteryMatcher";
 import { arcgisQueryAll, assertVocabulary } from "./arcgis";
 import { BATTERY_COARSE_TOKENS, SOLAR_COARSE_TOKENS, likeAny } from "../coarseNet";
 
@@ -176,8 +177,12 @@ export function classifyBuckeyeStatus(raw: unknown): PermitRecord["completionSta
   return "unknown";
 }
 
+const PV_WORKCLASS_SET = new Set<string>(BUCKEYE_SOLAR_WORKCLASSES.map((w) => w.toUpperCase()));
+
 export function buckeyeRowToRecord(row: BuckeyeRow, fetchedAt: string): PermitRecord {
   const description = String(row[FIELDS.description] ?? "").trim().slice(0, 2000);
+  const workClass = String(row[FIELDS.workClass] ?? "").trim();
+  const isPvWorkclass = PV_WORKCLASS_SET.has(workClass.toUpperCase());
   const finaledAt = epochToIso(row[FIELDS.finalizeDate]);
   const issuedAt = epochToIso(row[FIELDS.issueDate]);
   // situsaddress is blank on sampled solar rows and addressline1 is ~21%
@@ -197,7 +202,14 @@ export function buckeyeRowToRecord(row: BuckeyeRow, fetchedAt: string): PermitRe
     completionSource: finaledAt ? "finaled" : issuedAt ? "issued" : "unverified",
     // No contractor field exists in this layer — projectname is not one, and
     // mapping it there would put a project label in a contractor column.
-    workType: String(row[FIELDS.workClass] ?? "").trim() || undefined,
+    workType: workClass || undefined,
+    // Buckeye's workclass IS a structured solar signal, and it has to be used:
+    // real PV permits here carry descriptions with no solar keyword at all
+    // ("ADDING MODULES TO EXISTING ARRAY AND DERATE MAIN BREAKER"), so relying
+    // on the text alone drops them. Battery still comes from the description,
+    // because 87% of battery permits file under this same 'Photovoltaic System'
+    // workclass — the label cannot separate them, only the text can.
+    classOverride: isPvWorkclass ? (hasBatteryEvidence(description) ? "solar+battery" : "solar") : undefined,
     permitType: String(row[FIELDS.permitType] ?? "").trim() || undefined,
     status: String(row[FIELDS.status] ?? "").trim() || undefined,
     completionStatus: classifyBuckeyeStatus(row[FIELDS.status]),

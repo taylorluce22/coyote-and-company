@@ -10,6 +10,7 @@
  */
 
 import type { CompletionStatus } from "./status";
+import type { BatteryDetectionMethod } from "./batteryMatcher";
 
 /**
  * Where an install date came from. Sources differ in what they publish, and a
@@ -143,8 +144,19 @@ export interface TargetParcel {
    * mistakes "no battery permit" for "no battery".
    */
   batteryEvidence: "permit-data-only";
-  /** How battery presence was determined on this parcel's source. */
-  batteryDetection?: "source-flag" | "description-only";
+  /**
+   * How this jurisdiction's battery signal is obtained. Peoria has a checkbox;
+   * Buckeye and Mesa have no battery permit type at all, so a regex over free
+   * text is the only signal that exists. The confidence difference is real, so
+   * it travels on the row instead of being assumed uniform.
+   */
+  batteryDetectionMethod: BatteryDetectionMethod;
+  /**
+   * Keyword-independent review flags. Currently: a parcel holding a SECOND PV
+   * permit dated after the first, which in Buckeye is the shape a battery
+   * retrofit takes. Flagged parcels stay OUT of the default dial queue.
+   */
+  reviewFlags?: string[];
   /** ISO timestamp of the FILTER run that produced this row. */
   computedAt: string;
 }
@@ -189,6 +201,9 @@ export interface EnrichedLead {
   /** Internal do-not-call — honored instantly, retained 10 years. */
   internalDnc?: boolean;
   optedOutAt?: string;
+  /** Held out of the dial queue pending human review — see TargetParcel.reviewFlags. */
+  needsReview?: boolean;
+  reviewFlags?: string[];
   /**
    * No longer in the current target list (a later FILTER run subtracted this
    * parcel). Held out of the dial queue but kept on file — deleting the row

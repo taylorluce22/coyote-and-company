@@ -70,6 +70,11 @@ export async function POST(req: NextRequest) {
       // Everything seeded is in the current target set, so a parcel that was
       // retired by an earlier filter and has since come back is restored here.
       retired: false,
+      // A parcel flagged by the keyword-independent second-PV-permit check is
+      // a battery candidate no keyword can see, so it is held out of the queue
+      // until a human looks rather than dialed on the strength of silence.
+      needsReview: !!t.reviewFlags?.length,
+      reviewFlags: t.reviewFlags,
       updatedAt: now,
     }));
     const total = await upsertLeads(client, leads);

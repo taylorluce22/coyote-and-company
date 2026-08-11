@@ -22,7 +22,8 @@ export function targetsToCsv(targets: TargetParcel[]): string {
     "contractor",
     "utility",
     "battery_evidence",
-    "battery_detection",
+    "battery_detection_method",
+    "review_flags",
     "solar_permit_numbers",
     "solar_descriptions",
   ];
@@ -38,7 +39,8 @@ export function targetsToCsv(targets: TargetParcel[]): string {
       t.contractor ?? "",
       t.utility ?? "",
       t.batteryEvidence,
-      t.batteryDetection ?? "",
+      t.batteryDetectionMethod,
+      (t.reviewFlags ?? []).join("; "),
       t.solarPermits.map((p) => p.permitNumber).join("; "),
       t.solarPermits.map((p) => p.description).join(" | "),
     ]
