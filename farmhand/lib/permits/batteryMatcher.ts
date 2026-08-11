@@ -84,6 +84,11 @@ export const BATTERY_PATTERNS: RegExp[] = [
   /\bRESU\b/,
   /\bTESLA\b/,
   /\d+(?:\.\d+)?\s?KWH\b/, // capacity is quoted in kWh; PV size is kW DC
+  // Bare KWH with no number in front. The pattern above cannot see this one:
+  // in "13.5KWH" there is no word boundary before the K, and in "KWH RATED
+  // BACKUP" there is no leading figure. The unit of measure IS the signal
+  // (Buckeye: 1113 permits contain KWH), so both spellings are matched.
+  /\bKWH\b/,
 ];
 
 export function hasBatteryEvidence(desc: string): boolean {

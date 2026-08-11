@@ -22,6 +22,7 @@ import type { PermitRecord, TargetParcel } from "./types";
 import { classifyDescription } from "./classify";
 import { assessResidential } from "./residential";
 import { batteryDetectionMethodFor } from "./batteryMatcher";
+import { assessPvUnits, mentionsExpansion, parseLinkedPermits } from "./systemSize";
 
 export interface SetDifferenceOptions {
   /** ISO timestamp injected by the caller. */
@@ -49,8 +50,10 @@ export interface SetDifferenceStats {
   parcelsAmbiguousStatus: number;
   /** Battery permits carrying no date at all. They still subtract; surfaced so the policy is visible. */
   undatedBatteryPermits: number;
-  /** Targets flagged for review by the keyword-independent second-PV-permit check. */
-  parcelsFlaggedSecondPvPermit: number;
+  /** Targets carrying a second PV permit. Informational — these stay IN the queue. */
+  parcelsWithSecondPvPermit: number;
+  /** Targets held for review because no PV permit on the parcel states a DC rating. */
+  parcelsNoDcRating: number;
   /** Parcels rejected by the residential gate (commercial/municipal arrays). */
   parcelsCommercial: number;
   /** Why each was rejected, tallied — lets the gate be audited from a live run. */
@@ -202,20 +205,44 @@ export function solarWithoutBattery(
       }
       recency = "in-window";
     }
-    // Keyword-independent safety net. In Buckeye a battery retrofit lands as a
-    // SECOND 'Photovoltaic System' permit on the parcel — the same workclass a
-    // new install gets — so a second PV permit dated after the first is a
-    // battery candidate that no keyword can see. Measured: of 7661 parcels,
-    // 7392 have exactly one PV permit and 269 have more; 171 of those carry no
-    // battery keyword anywhere and sampled as genuine array expansions
-    // ("ADDING MODULES", "AND DERATE MAIN BREAKER"). So this flags rather than
-    // excludes — roughly 2% of parcels — and flagged parcels stay out of the
-    // default dial queue until a human looks.
+    // SECOND PV PERMIT — resolved empirically, and it is a NOTE now.
+    //
+    // The open question was whether a second PV permit under the identical
+    // workclass is an array addition or a hidden battery. Tested against all
+    // 8942 Buckeye photovoltaic permits: of 405 second-or-later PV permits on
+    // parcels with no battery keyword anywhere, 295 stated a DC rating and the
+    // 9 that did not were read by hand — four written in watts, one lowercase
+    // kW, one a commercial canopy, three electrical modifications. ZERO
+    // batteries. So a second PV permit is essentially never a hidden battery,
+    // and quarantining ~2% of parcels for a risk that measured at zero is a
+    // cost with no benefit. It rides along as information instead.
+    const notes: string[] = [];
     const reviewFlags: string[] = [];
     if (dated.length > 1) {
       const sorted = [...dated].sort((a, b) => a.ms - b.ms);
-      if (sorted[sorted.length - 1].ms > sorted[0].ms) reviewFlags.push("second-pv-permit");
+      if (sorted[sorted.length - 1].ms > sorted[0].ms) notes.push("second-pv-permit");
     }
+    if (permits.some((p) => mentionsExpansion(p.description))) notes.push("states-expansion");
+
+    // What DOES warrant review is the third branch of the unit rule: a PV
+    // permit with no battery evidence and no DC rating states neither of the
+    // two things that would settle it. That is a genuinely undecided row, and
+    // it is the only thing held back now.
+    const unitVerdicts = permits.map((p) => assessPvUnits(p.description));
+    if (!unitVerdicts.some((v) => v.verdict === "panels")) reviewFlags.push("no-dc-rating");
+
+    // Panels are DC power, batteries are energy capacity — so summing DC
+    // ratings across the parcel's PV permits gives the system as it stands
+    // today rather than as first installed.
+    const dcRatings = unitVerdicts.map((v) => v.kwDc).filter((k): k is number => k !== undefined);
+    const totalSystemKwDc = dcRatings.length
+      ? Math.round(dcRatings.reduce((a, b) => a + b, 0) * 1000) / 1000
+      : undefined;
+    // Deliberately NOT filtered against the parcel's own permit numbers: an
+    // addition almost always cites the ORIGINAL permit on the same parcel, and
+    // that self-reference is exactly the chain worth keeping — it turns an
+    // inferred sequence of work into a stated one.
+    const linkedPermits = [...new Set(permits.flatMap((p) => parseLinkedPermits(p.description)))].slice(0, 5);
 
     const first = permits[0];
     targets.push({
@@ -232,10 +259,14 @@ export function solarWithoutBattery(
       completionSource,
       installYear,
       systemKwDc: systemKw.get(apn),
+      totalSystemKwDc,
+      expansionCount: Math.max(0, permits.length - 1),
+      ...(linkedPermits.length ? { linkedPermits } : {}),
       contractor: permits.find((p) => p.contractor)?.contractor,
       batteryEvidence: "permit-data-only",
       batteryDetectionMethod: batteryDetectionMethodFor(first.jurisdiction),
       ...(reviewFlags.length ? { reviewFlags } : {}),
+      ...(notes.length ? { notes } : {}),
       utility: permits.find((p) => p.utility)?.utility,
       computedAt: opts.now,
     });
@@ -274,7 +305,8 @@ export function solarWithoutBattery(
       excludedByWindow,
       permitsMissingApn: missingApn,
       undatedBatteryPermits,
-      parcelsFlaggedSecondPvPermit: targets.filter((t) => t.reviewFlags?.includes("second-pv-permit")).length,
+      parcelsWithSecondPvPermit: targets.filter((t) => t.notes?.includes("second-pv-permit")).length,
+      parcelsNoDcRating: targets.filter((t) => t.reviewFlags?.includes("no-dc-rating")).length,
       targets: targets.length,
     },
   };

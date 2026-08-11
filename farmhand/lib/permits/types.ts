@@ -142,6 +142,21 @@ export interface TargetParcel {
   completionSource: CompletionDateSource;
   /** Largest DC rating on the parcel's solar permits, when stated. */
   systemKwDc?: number;
+  /**
+   * Sum of the DC ratings across every PV permit on the parcel — the system as
+   * it stands today, not as first installed. A home that went 6.3 kW in 2020
+   * and added 2.92 kW in 2023 is a homeowner who has already chosen to expand
+   * once, which is a sales fact rather than a data-quality note.
+   */
+  totalSystemKwDc?: number;
+  /** PV permits beyond the first. 0 means one install and no additions. */
+  expansionCount?: number;
+  /**
+   * Permit numbers cited inside the parcel's own descriptions ("PV INSTALL ON
+   * PERMIT ELECR-22-0699"). 43.7% of second permits name the original, which
+   * makes the chain of work verified rather than inferred.
+   */
+  linkedPermits?: string[];
   /** Install year straight from the source, when the source states one. */
   installYear?: number;
   /** Contractor of record on the solar permit — useful for spotting a defunct installer. */
@@ -163,11 +178,22 @@ export interface TargetParcel {
    */
   batteryDetectionMethod: BatteryDetectionMethod;
   /**
-   * Keyword-independent review flags. Currently: a parcel holding a SECOND PV
-   * permit dated after the first, which in Buckeye is the shape a battery
-   * retrofit takes. Flagged parcels stay OUT of the default dial queue.
+   * QUARANTINE flags — these hold a parcel out of the default dial queue.
+   * Reserved for cases where the data genuinely cannot decide, e.g. a PV
+   * permit that states neither battery evidence nor a DC rating.
    */
   reviewFlags?: string[];
+  /**
+   * INFORMATIONAL notes — carried on the row, never a reason to hold it back.
+   *
+   * `second-pv-permit` lives here now. It was a quarantine flag on the theory
+   * that a second PV permit might be a hidden battery; that was tested against
+   * all 8942 Buckeye photovoltaic permits and it is not. Of 405 second-or-later
+   * PV permits on parcels with no battery keyword, 295 stated a DC rating and
+   * the 9 unparsed residuals were read by hand — zero batteries. Quarantining
+   * ~2% of parcels for a risk that measured at zero is a cost with no benefit.
+   */
+  notes?: string[];
   /** ISO timestamp of the FILTER run that produced this row. */
   computedAt: string;
 }

@@ -48,6 +48,15 @@ import {
   BUCKEYE_EXPECTED_TARGETS,
 } from "../lib/permits/fixtures/westvalley";
 import { normalizeApn } from "../lib/permits/types";
+import {
+  assessPvUnits,
+  parseDcKw,
+  hasEnergyCapacity,
+  parseLinkedPermits,
+  mentionsExpansion,
+  BUCKEYE_UNIT_VALIDATION,
+  RESIDUAL_UNPARSED_SAMPLES,
+} from "../lib/permits/systemSize";
 import { PERMIT_TAGS } from "../lib/permits/taxonomy";
 import { ruleTags, tagPermits, jurisdictionLearned } from "../lib/permits/tagging";
 import { classifyWithLlm, llmClassifyEnabled, needsLlmReview, tagsDisagree } from "../lib/permits/llmClassify";
@@ -573,8 +582,11 @@ function runWestValleyRegressions(now: string) {
   ].map((r) => buckeyeRowToRecord(r, now));
   const twoPvOut = solarWithoutBattery(twoPv, { now });
   const flagged = twoPvOut.targets.find((t) => t.apn === "30600001");
-  check("second PV permit dated after the first is flagged", !!flagged?.reviewFlags?.includes("second-pv-permit"));
-  check("and it is counted in stats", twoPvOut.stats.parcelsFlaggedSecondPvPermit === 1);
+  // Downgraded from quarantine to a note: 405 second-or-later PV permits with
+  // no battery keyword were tested and none was a battery.
+  check("second PV permit dated after the first is NOTED", !!flagged?.notes?.includes("second-pv-permit"));
+  check("...and NOT quarantined", !flagged?.reviewFlags?.includes("second-pv-permit"));
+  check("and it is counted in stats", twoPvOut.stats.parcelsWithSecondPvPermit === 1);
   check(
     "no battery keyword is involved — the check is keyword-independent",
     !hasBatteryEvidence("ADDING MODULES TO EXISTING ARRAY AND DERATE MAIN BREAKER")
@@ -583,7 +595,7 @@ function runWestValleyRegressions(now: string) {
     apn: "30600001", jurisdiction: "buckeye", address: "1 N WATSON RD",
     phone: { value: { number: "6025551234", lineType: "landline" }, prov: { source: "manual", fetchedAt: now } },
     dnc: { status: "clear", scrubbedAt: now, receipt: "R" },
-    needsReview: true, reviewFlags: ["second-pv-permit"], updatedAt: now,
+    needsReview: true, reviewFlags: ["no-dc-rating"], updatedAt: now,
   };
   const openState: ComplianceState = {
     san: { number: "S", recordedAt: now },
@@ -591,7 +603,7 @@ function runWestValleyRegressions(now: string) {
     wirelessSuppression: true, lastDncScrubAt: now, callWindow: { startHour: 8, endHour: 21 },
   };
   check(
-    "a flagged lead stays OUT of the dial queue",
+    "a lead held for review stays OUT of the dial queue",
     !leadDialVerdict(flaggedLead, openState, new Set(), now).eligible
   );
   check(
@@ -942,6 +954,117 @@ async function runLlmClassificationRegressions(now: string) {
   })());
 }
 
+/**
+ * The unit of measure — panels are DC power, batteries are energy capacity.
+ * The nine hand-read residuals are the corpus: every one of them was a real
+ * Buckeye row that the original strict regex could not parse.
+ */
+function runUnitOfMeasureRegressions(now: string) {
+  console.log("== unit of measure (second-PV disambiguation)");
+
+  for (const s of RESIDUAL_UNPARSED_SAMPLES) {
+    if (s.kwDc === undefined) {
+      const v = assessPvUnits(s.text);
+      check(`review, not battery: "${s.text.slice(0, 46)}" (${s.why})`, v.verdict === "review");
+      continue;
+    }
+    const got = parseDcKw(s.text);
+    check(`"${s.text.slice(0, 34)}" -> ${s.kwDc} kW (${s.why})`, got === s.kwDc, `got ${got}`);
+  }
+
+  // Watts normalize by UNIT, not by magnitude. Dividing every value over 1000
+  // would turn a real 1019.83 KW DC commercial array into a 1.02 kW house and
+  // walk it through the residential gate — the exact inversion.
+  check("4760W DC normalizes to 4.76 kW", parseDcKw("4760W DC/ 4060W AC") === 4.76);
+  check(
+    "1019.83 KW DC is NOT divided — it stays commercial",
+    parseDcKw("1019.83 KW DC / 815 KW AC") === 1019.83
+  );
+  check(
+    "...and the residential gate still rejects it",
+    assessResidential({
+      jurisdiction: "mesa", permitNumber: "P", apn: "1", address: "", description: "1019.83 KW DC / 815 KW AC",
+      completionSource: "unverified", completionStatus: "unknown", fetchedAt: now,
+    }).verdict === "commercial"
+  );
+  check("comma decimal: '191,40 KW(DC)' is 191.4 kW, not 19140", parseDcKw("191,40 KW(DC)") === 191.4);
+  check("KWDC with no space parses", parseDcKw("712.215 KWDC") === 712.215);
+  check("AC-only figures are ignored", parseDcKw("6.0 KW AC") === undefined);
+  check("DC wins over AC when both appear", parseDcKw("9860W DC / 10000W AC") === 9.86);
+
+  // THE INVERSION THIS MODULE EXISTS TO PREVENT: kWh read as kW.
+  check("'13.5 KWH' is NOT parsed as a 13.5 kW array", parseDcKw("13.5 KWH BACKUP") === undefined);
+  check("'13.5KWH' glued to its number is caught too", parseDcKw("13.5KWH BACKUP") === undefined);
+  check("a bare KWH token is battery evidence", hasEnergyCapacity("KWH RATED BACKUP") && hasBatteryEvidence("KWH RATED BACKUP"));
+
+  // Precedence: battery beats size, always.
+  check(
+    "battery keyword wins even when a DC rating is present",
+    assessPvUnits("7.2 KW DC PV WITH POWERWALL").verdict === "battery"
+  );
+  check(
+    "a kWh figure alone is enough to call it battery",
+    assessPvUnits("INSTALL 27 KWH SYSTEM").verdict === "battery"
+  );
+  check("a DC rating with no battery evidence is a panel install", assessPvUnits("6.300 KW DC ROOF MOUNTED").verdict === "panels");
+
+  // The measured negative result, recorded so nobody rebuilds the wrong thing.
+  check(
+    "value/squarefeet/permittype/permitclass are recorded as NON-discriminators",
+    BUCKEYE_UNIT_VALIDATION.uselessDiscriminators.length === 4 &&
+      BUCKEYE_UNIT_VALIDATION.residualBatteries === 0
+  );
+  check(
+    "the validation residual reconciles: 405 second-or-later, 295 parsed, 9 hand-read",
+    BUCKEYE_UNIT_VALIDATION.secondOrLaterNoBatteryKeyword === 405 &&
+      RESIDUAL_UNPARSED_SAMPLES.length === BUCKEYE_UNIT_VALIDATION.residualUnparsed
+  );
+
+  console.log("== permit chain (linked permits, expansion, total system size)");
+  check(
+    "a cited permit number is parsed out of the description",
+    parseLinkedPermits("DERATE MAIN BREAKER TO 175 AMPS **PV INSTALL ON PERMIT ELECR-22-0699**")[0] === "ELECR-22-0699"
+  );
+  check(
+    "...including a parenthesised one",
+    parseLinkedPermits("ADDING TO AN EXISTING SYSTEM (ELECR-20-11490)")[0] === "ELECR-20-11490"
+  );
+  check("expansion wording is detected", mentionsExpansion("ADDING TO AN EXISTING SOLAR SYSTEM"));
+  check("...and 'ADDING MODULES' counts", mentionsExpansion("ADDING MODULES TO EXISTING SYSTEM"));
+  check("a plain new install does not read as an expansion", !mentionsExpansion("7 KW DC ROOF MOUNTED PV SOLAR"));
+
+  const chain = (n: string, year: number, desc: string): PermitRecord => ({
+    jurisdiction: "buckeye", permitNumber: n, apn: "50396720", address: "1 W MAIN ST", description: desc,
+    finaledAt: `${year}-06-01T00:00:00.000Z`, finaledYear: year, completionSource: "finaled",
+    completionStatus: "complete", classOverride: "solar", permitType: "Electrical - Residential", fetchedAt: now,
+  });
+  const expanded = solarWithoutBattery(
+    [
+      chain("ELECR-20-11490", 2020, "6.3 KW DC ROOF MOUNTED PV SOLAR"),
+      chain("ELECR-23-00123", 2023, "ADDING 2.92 KW DC TO AN EXISTING SYSTEM (ELECR-20-11490)"),
+    ],
+    { now, maxAgeYears: 20 }
+  );
+  const t = expanded.targets.find((x) => x.apn === "50396720");
+  check("total system size is the SUM across the parcel's PV permits", t?.totalSystemKwDc === 9.22);
+  check("...while systemKwDc stays the largest single permit", t?.systemKwDc === 6.3);
+  check("expansion count is permits beyond the first", t?.expansionCount === 1);
+  check("the cited original permit is linked", t?.linkedPermits?.includes("ELECR-20-11490") === true);
+  check("the expansion is noted", t?.notes?.includes("states-expansion") === true);
+  check("...and NOT quarantined — an addition is a sales fact, not a risk", !t?.reviewFlags?.length);
+
+  // Third branch of the rule: neither battery evidence nor a DC rating.
+  const undecided = solarWithoutBattery(
+    [chain("ELECR-21-00099", 2021, "CHANGING DERATE FROM EXISTING SOLAR SYSTEM TO LINE SIDE TAP")],
+    { now }
+  );
+  check(
+    "a PV permit stating neither battery nor size is held for review",
+    undecided.targets[0]?.reviewFlags?.includes("no-dc-rating") === true &&
+      undecided.stats.parcelsNoDcRating === 1
+  );
+}
+
 async function main() {
   const now = new Date().toISOString();
   if (process.argv.includes("--live")) {
@@ -955,6 +1078,7 @@ async function main() {
     runWestValleyRegressions(now);
     await runVocabularyGuardRegressions();
     runBatteryDetectionRegressions(now);
+    runUnitOfMeasureRegressions(now);
     await runLlmClassificationRegressions(now);
   }
   if (failures > 0) {

@@ -36,6 +36,7 @@
  */
 
 import type { PermitRecord } from "./types";
+import { parseDcKw } from "./systemSize";
 
 /** Above this, it is not a house. */
 export const RESIDENTIAL_MAX_KW_DC = 30;
@@ -116,25 +117,14 @@ const COM_TYPE_PATTERNS: RegExp[] = [
 ];
 
 /**
- * Largest DC rating stated, in kW. Handles "6.300 KW DC", "712.215 KWDC",
- * "555 KW" and picks the DC figure out of "1019.83 KW DC / 815 KW AC".
- * Returns undefined when no rating is stated — which is unknown, not a pass.
+ * Largest DC rating stated, in kW.
+ *
+ * The parsing itself lives in systemSize.ts, because the unit of measure turned
+ * out to be the thing that separates a panel addition from a battery — a much
+ * bigger job than sizing a gate. This is the same function under the name the
+ * residential gate has always called it by.
  */
-export function parseKwDc(description: string): number | undefined {
-  const d = description.toUpperCase();
-  const dc: number[] = [];
-  const any: number[] = [];
-  const re = /(\d+(?:[.,]\d+)?)\s*KW\s*(DC|AC)?/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(d)) !== null) {
-    const value = Number(m[1].replace(/,/g, ""));
-    if (!Number.isFinite(value)) continue;
-    if (m[2] === "DC") dc.push(value);
-    else if (m[2] !== "AC") any.push(value);
-  }
-  const pool = dc.length ? dc : any;
-  return pool.length ? Math.max(...pool) : undefined;
-}
+export { parseDcKw as parseKwDc };
 
 function typeFieldsSay(rec: PermitRecord, patterns: RegExp[]): boolean {
   // Deliberately excludes rec.description: a real residential row began
@@ -145,7 +135,7 @@ function typeFieldsSay(rec: PermitRecord, patterns: RegExp[]): boolean {
 
 export function assessResidential(rec: PermitRecord): ResidentialAssessment {
   const d = rec.description.toUpperCase();
-  const kwDc = parseKwDc(rec.description);
+  const kwDc = parseDcKw(rec.description);
 
   // (a) Size is decisive when stated — nothing on a house roof is this big.
   if (kwDc !== undefined && kwDc > RESIDENTIAL_MAX_KW_DC) {
