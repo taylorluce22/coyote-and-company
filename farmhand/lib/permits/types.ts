@@ -11,6 +11,7 @@
 
 import type { CompletionStatus } from "./status";
 import type { BatteryDetectionMethod } from "./batteryMatcher";
+import type { Classification } from "./taxonomy";
 
 /**
  * Where an install date came from. Sources differ in what they publish, and a
@@ -42,6 +43,8 @@ export type Jurisdiction =
   | "mesa"
   | "tempe"
   | "scottsdale"
+  | "gilbert"
+  | "tucson"
   | "goodyear"
   | "buckeye"
   | "litchfield-park"
@@ -96,6 +99,14 @@ export interface PermitRecord {
   occupancyOverride?: "residential" | "commercial";
   /** How battery presence was determined — free text is weaker and worth surfacing. */
   batteryDetection?: "source-flag" | "description-only";
+  /**
+   * Taxonomy tags plus HOW they were decided and with what confidence. Tags,
+   * method and confidence travel together as one object so a row can never
+   * carry LLM tags labeled as a rule match. Absent means the row has not been
+   * through the tagging stage; PermitClass remains what the set-difference
+   * runs on.
+   */
+  classification?: Classification;
   /** ISO timestamp of the ingest fetch — record-level provenance. */
   fetchedAt: string;
 }

@@ -111,6 +111,8 @@ single-tenant `fh:default` lead-store namespace.
 | `MARICOPA_ASSESSOR_TOKEN` | free assessor API token (contact form, subject "API Token/Question") |
 | `DATAZAPP_API_KEY` (+ optional `DATAZAPP_API_URL`) | phone append |
 | `PERMITS_DIALING_ENABLED` | **ships absent = dialing OFF.** Setting it to `true` is the deliberate act that allows the dial queue to return unmasked numbers — and only when the gate is also armed |
+| `ANTHROPIC_API_KEY` | optional. Absent = the LLM classification stage is inert and the deterministic rules run alone |
+| `ANTHROPIC_MODEL` | optional override; defaults to `claude-opus-5` |
 
 ## STATUS
 
@@ -413,6 +415,73 @@ _Updated as work lands. Timezone: America/Phoenix._
   measure our expected false-positive rate; not a build dependency.
   **Permit data remains the only address-resolvable battery signal that
   exists.**
+- **2026-08-11 — Competitive intel, and the one real capability gap: LLM
+  classification.** How the commercial vendors do this is now known, and the
+  headline is that **there is no private feed**. Shovels.ai — the market
+  leader, millions of permits a month — sources exactly the way this system
+  does: jurisdiction open-data portals, building-department APIs,
+  public-records requests, then assessor and contractor-licensing data for
+  enrichment. No bulk licensing deal with Accela or Tyler. Their advantage is
+  scale, not access, and scale is not what stands between us and a working
+  list.
+
+  The one thing they genuinely do better is **classify with models instead of
+  keywords**, and their stated reason is the exact failure this project has hit
+  three times: every city has its own permitting terminology. `SOLAR` returning
+  zero rows in Buckeye (the word is `Photovoltaic`), `C of C Issued` vs
+  `Finaled` in Mesa, `ESS` matching `ADDRESS` in a SQL LIKE. Each read as a
+  correct query and quietly answered a different question.
+
+  So this landed as a **second path, not a replacement** — `lib/permits/`:
+
+  1. **`taxonomy.ts`** — the vendors' 15-tag taxonomy adopted as-is, for proven
+     boundaries and comparability against a vendor feed if we ever benchmark.
+     **BATTERY is a first-class tag, separate from SOLAR**, which independently
+     confirms what enumerating three cities' permit vocabularies already
+     showed: no city files storage as its own permit type, so battery is a
+     *classification* problem and every serious vendor solves it by classifying
+     text.
+  2. **`llmClassify.ts`** — Anthropic Messages API over raw `fetch`, matching
+     `lib/claudeScript.ts` rather than adding the SDK as a second way to call
+     the same API. Cached system prompt (taxonomy + rules are identical every
+     batch), structured JSON output, low effort — classification is mechanical
+     judgment and the cost lever is what makes a per-row pass affordable across
+     a new city. Returns `[]` on missing key, HTTP error, refusal, or
+     unparseable content, so the caller always keeps its rule answer.
+  3. **`tagging.ts`** — the two paths joined. Rules are the fast path and the
+     regression baseline; SOLAR and BATTERY still come from
+     `classifyDescription()`/`hasBatteryEvidence()`, so there is exactly one
+     battery matcher in the codebase. The LLM runs on rows the rules mark
+     ambiguous and on **every row of a jurisdiction whose vocabulary has not
+     been learned** — today only `mesa`, `buckeye`, `peoria` count as learned.
+     It is **ADD-ONLY**: it may fill a row the rules left empty and may never
+     clear a rule tag. Worst case it contributes nothing.
+  4. **Disagreement is the actual deliverable.** Every permit carries
+     `classification { tags, method, confidence }` — `rule`, `llm`, or `source`
+     — and rule-vs-LLM splits on SOLAR/BATTERY are counted per jurisdiction.
+     That count *is* the vocabulary-gap detector: it is how a new city's
+     terminology gets discovered on day one instead of never.
+
+  34 new checks, all against a **stubbed transport** so the suite stays offline
+  and needs no API key (244 total). The stage is **off by default** —
+  `useLlm` opt-in, and absent `ANTHROPIC_API_KEY` it is simply inert.
+
+  **Build vs. buy — buy nothing, and the reason is specific.** Sourcing parity
+  is established above. Shovels refreshes monthly, which is the same cadence we
+  can hold, so there is no freshness argument either. Plumb Intelligence is
+  AZ-only and closer to our footprint, but **battery is not a separate tag in
+  its schema** — so it cannot answer the question this product is built on.
+  Decisive point: **nobody sells the packaged list.** Every vendor sells permit
+  records; none sells "solar without battery." That derivation is the product,
+  and it is the part no purchase would replace.
+
+  Three new endpoints verified live and added to the adapter backlog
+  (`lib/permits/adapters/README.md`): **Tucson** and **Tempe** as ordinary next
+  builds, and **Gilbert with a caution** — a `WorkClass LIKE '%SOLAR%'` query
+  there returned 2 rows out of ~215,000, both Cancelled, in a city of 280,000.
+  That is the query being wrong, not a fact about Gilbert. Its full `WorkClass`
+  vocabulary gets enumerated before any adapter is written; the backlog entry
+  records it as a live demonstration of the fail-loud-on-zero rule.
 - **Ship state: list-building + compliance-armed, dialing OFF.** ✅
 - Open items, in order:
   1. First live run (from Vercel or any machine with egress to
@@ -424,4 +493,9 @@ _Updated as work lands. Timezone: America/Phoenix._
   3. Verify the Datazapp API contract before funding an append batch.
   4. Get the SAN + file the A.R.S. 44-1272.01 limited registration;
      record both in the Comply tab.
-  5. P1 adapters: Tempe, Scottsdale.
+  5. P1 adapters, in order: **Tucson** and **Tempe** (endpoints verified),
+     then **Gilbert** — but enumerate Gilbert's full `WorkClass` vocabulary
+     first; a SOLAR keyword there returns 2 rows out of 215k. Then Scottsdale.
+  6. Run the LLM stage over a real ambiguous slice with a key configured and
+     read the per-jurisdiction disagreement counts — anything Tucson/Tempe
+     disagrees on is that city's vocabulary telling us what the rules miss.

@@ -69,7 +69,35 @@ geometry — point-in-polygon against city limits — never the ZIP.
 | `goodyear` | **not buildable** | no usable public data |
 | `litchfield-park` | **won't build** | no API; ~80% of the ZIP is county anyway |
 | `maricopa-unincorporated` | not built | county ArcGIS layer — see licensing note below |
-| `tempe`, `scottsdale` | not built | P1, unscoped |
+| `tucson` | **backlog — endpoint verified** | ArcGIS `Building_Permits/FeatureServer` (PDSD) |
+| `tempe` | **backlog — endpoint verified** | ArcGIS `Building_Permits/FeatureServer` |
+| `gilbert` | **backlog — vocabulary UNKNOWN** | ArcGIS `Permits/FeatureServer` |
+| `scottsdale` | not built | P1, unscoped |
+
+### Backlog: Tucson, Tempe, Gilbert
+
+Three live endpoints are verified and none of them has an adapter yet. Tucson
+and Tempe are ordinary next builds. Gilbert is not, and the reason is worth
+reading before anyone picks it up.
+
+**Gilbert is a live demonstration of the fail-loud-on-zero rule.** A
+`WorkClass LIKE '%SOLAR%'` query against its layer returned **2 rows out of
+~215,000, both Cancelled**. A city of 280,000 in Arizona did not issue two solar
+permits. That result is a fact about the query, not about Gilbert — the same
+shape as Buckeye, where `SOLAR` returned zero because the word in that system is
+`Photovoltaic`.
+
+So: **enumerate Gilbert's full `WorkClass` vocabulary with
+`returnDistinctValues` before writing a line of adapter code**, exactly as
+Buckeye's 105 workclasses were enumerated. Do not build against a keyword guess,
+and do not let a near-zero count reach a fixture — `assertVocabulary` and the
+throw-on-zero-rows guard in `buckeye.ts` exist because this failure is silent
+otherwise: the adapter runs, the tests pass, and the city simply contributes
+nothing.
+
+Tucson and Tempe get the same treatment on principle (one real record, full
+field list, status vocabulary with counts), but neither is currently showing the
+warning sign Gilbert is.
 
 ### Peoria — the best source in the program
 

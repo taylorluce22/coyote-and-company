@@ -114,6 +114,11 @@ export const BATTERY_DETECTION_METHOD: Record<string, BatteryDetectionMethod> = 
   "maricopa-unincorporated": "description_text",
   tempe: "description_text",
   scottsdale: "description_text",
+  // Backlog cities. Both default to reading text, and both stay "unlearned"
+  // (see tagging.ts) until their vocabularies have actually been enumerated —
+  // Gilbert's especially, where a SOLAR keyword returned 2 rows out of 215k.
+  tucson: "description_text",
+  gilbert: "description_text",
 };
 
 export function batteryDetectionMethodFor(jurisdiction: string): BatteryDetectionMethod {

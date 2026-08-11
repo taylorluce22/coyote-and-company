@@ -48,8 +48,11 @@ import {
   BUCKEYE_EXPECTED_TARGETS,
 } from "../lib/permits/fixtures/westvalley";
 import { normalizeApn } from "../lib/permits/types";
+import { PERMIT_TAGS } from "../lib/permits/taxonomy";
+import { ruleTags, tagPermits, jurisdictionLearned } from "../lib/permits/tagging";
+import { classifyWithLlm, llmClassifyEnabled, needsLlmReview, tagsDisagree } from "../lib/permits/llmClassify";
 import { defaultComplianceState, evaluateGate, leadDialVerdict, type ComplianceState } from "../lib/permits/comply";
-import type { EnrichedLead, PermitRecord } from "../lib/permits/types";
+import type { EnrichedLead, Jurisdiction, PermitRecord } from "../lib/permits/types";
 
 let failures = 0;
 function check(label: string, ok: boolean, detail?: string) {
@@ -729,6 +732,166 @@ function runBatteryDetectionRegressions(now: string) {
   );
 }
 
+/**
+ * The LLM path, proven WITHOUT an API key: every request goes through a stubbed
+ * fetch, so this suite stays offline and deterministic. What is being checked is
+ * not the model's judgment — it is that the second path can only ever add
+ * information, and fails closed on every abnormal response.
+ */
+async function runLlmClassificationRegressions(now: string) {
+  console.log("== taxonomy + rule tagging");
+
+  check("BATTERY is a first-class tag, independent of SOLAR", PERMIT_TAGS.includes("BATTERY"));
+  check("taxonomy is the vendor 15", PERMIT_TAGS.length === 15);
+
+  const install = ruleTags("6.3 KW DC ROOF MOUNTED SOLAR WITH (N) 225A MAIN SERVICE PANEL");
+  check("a real PV install tags SOLAR", install.tags.includes("SOLAR"));
+  check("...and its panel work tags ELECTRICAL too", install.tags.includes("ELECTRICAL"));
+  check("...by rule, at full confidence", install.method === "rule" && install.confidence === 1);
+
+  // The ancillary boundary is the one the vendors draw the same way: a permit
+  // that names PV as the REASON for electrical work is not a solar install.
+  const ancillary = ruleTags(
+    "REPLACE 200-AMP ELECTRICAL PANEL WITH 400-AMP AND INSTALL BI-DIRECTIONAL ELECTRICAL METER FOR NEW PV SOLAR"
+  );
+  check("an ancillary meter permit does NOT tag SOLAR", !ancillary.tags.includes("SOLAR"));
+  check("...it tags ELECTRICAL and ELECTRIC_METER", ancillary.tags.includes("ELECTRICAL") && ancillary.tags.includes("ELECTRIC_METER"));
+
+  check(
+    "battery text tags BATTERY without SOLAR",
+    (() => {
+      const t = ruleTags("INSTALL (2) TESLA POWERWALL 3 WITH BACKUP GATEWAY").tags;
+      return t.includes("BATTERY") && !t.includes("SOLAR");
+    })()
+  );
+  check(
+    "a structural class from the source is labeled method=source, not rule",
+    ruleTags("", "battery").method === "source"
+  );
+  check(
+    "ROOF MOUNT on a solar permit is not roofing work",
+    !ruleTags("7 KW ROOF MOUNTED PV SOLAR").tags.includes("ROOFING")
+  );
+
+  console.log("== llm classification stage (stubbed transport)");
+
+  check("mesa/buckeye/peoria vocabularies are learned", ["mesa", "buckeye", "peoria"].every((j) => jurisdictionLearned(j as Jurisdiction)));
+  check("a city we have never enumerated is not", !jurisdictionLearned("tempe"));
+  check(
+    "every row of an unlearned jurisdiction goes to the LLM, even a confident one",
+    needsLlmReview("7 KW ROOF MOUNTED PV SOLAR", ["SOLAR"], false)
+  );
+  check(
+    "in a learned city only substantive rows the rules missed do",
+    needsLlmReview("ADDING MODULES TO EXISTING ARRAY AT REAR OF PROPERTY", [], true) &&
+      !needsLlmReview("PV SOLAR", ["SOLAR"], true) &&
+      !needsLlmReview("MISC", [], true)
+  );
+  check("disagreement is measured on SOLAR/BATTERY only", tagsDisagree(["SOLAR"], ["SOLAR", "ROOFING"]) === false);
+  check("...and a BATTERY split is a disagreement", tagsDisagree(["SOLAR"], ["SOLAR", "BATTERY"]));
+
+  const stub = (body: unknown, ok = true): typeof fetch =>
+    (async () => ({ ok, json: async () => body })) as unknown as typeof fetch;
+  const reply = (results: unknown[]) => ({
+    stop_reason: "end_turn",
+    content: [{ type: "thinking", thinking: "..." }, { type: "text", text: JSON.stringify({ results }) }],
+  });
+
+  const priorKey = process.env.ANTHROPIC_API_KEY;
+  process.env.ANTHROPIC_API_KEY = "test-key-not-used";
+  try {
+    const good = await classifyWithLlm(["ADDING MODULES TO EXISTING ARRAY"], {
+      fetchImpl: stub(reply([{ index: 0, tags: ["SOLAR"], confidence: 0.8, reason: "installs modules" }])),
+    });
+    check("a well-formed answer round-trips", good.length === 1 && good[0].tags[0] === "SOLAR");
+    check("...labeled method=llm with its own confidence", good[0]?.method === "llm" && good[0]?.confidence === 0.8);
+
+    const dirty = await classifyWithLlm(["X", "Y"], {
+      fetchImpl: stub(
+        reply([
+          { index: 0, tags: ["SOLAR", "NOT_A_TAG"], confidence: 4, reason: "" },
+          { index: 9, tags: ["BATTERY"], confidence: 1, reason: "out of range" },
+        ])
+      ),
+    });
+    check("tags outside the taxonomy are dropped", dirty.length === 1 && dirty[0].tags.length === 1);
+    check("confidence is clamped to 0..1", dirty[0]?.confidence === 1);
+    check("an index pointing outside the batch is dropped, never misassigned", !dirty.some((d) => d.index === 9));
+
+    // Failure modes, all of which must return [] so the caller keeps its rules.
+    check(
+      "a refusal short-circuits before content is read",
+      (await classifyWithLlm(["X"], { fetchImpl: stub({ stop_reason: "refusal", content: [] }) })).length === 0
+    );
+    check(
+      "an HTTP error returns nothing rather than throwing",
+      (await classifyWithLlm(["X"], { fetchImpl: stub({}, false) })).length === 0
+    );
+    check(
+      "unparseable content returns nothing",
+      (await classifyWithLlm(["X"], { fetchImpl: stub({ content: [{ type: "text", text: "sorry!" }] }) })).length === 0
+    );
+    check(
+      "a thinking-only response returns nothing",
+      (await classifyWithLlm(["X"], { fetchImpl: stub({ content: [{ type: "thinking", thinking: "hm" }] }) })).length === 0
+    );
+
+    // ADD-ONLY, the property the whole stage rests on.
+    const rec = (desc: string, j: Jurisdiction): PermitRecord => ({
+      jurisdiction: j, permitNumber: "P1", apn: "12345678", address: "", description: desc,
+      completionSource: "unverified", completionStatus: "unknown", fetchedAt: now,
+    });
+    const hostile = await tagPermits([rec("7 KW DC ROOF MOUNTED PV SOLAR", "tempe")], {
+      useLlm: true,
+      fetchImpl: stub(reply([{ index: 0, tags: ["ROOFING"], confidence: 0.9, reason: "wrong" }])),
+    });
+    check(
+      "the LLM cannot clear a rule tag: SOLAR survives a contradicting answer",
+      hostile.records[0].classification?.tags.includes("SOLAR") === true
+    );
+    check("...and the contradiction is counted, not silently dropped", hostile.stats.disagreements === 1);
+    check(
+      "...against the jurisdiction, which is where a vocabulary gap shows up",
+      hostile.stats.disagreementsByJurisdiction.tempe === 1
+    );
+
+    // The real Buckeye row: an array install that never writes "solar" or "PV",
+    // so the keyword rules return nothing. This is the case the second path exists for.
+    const filled = await tagPermits([rec("ADDING MODULES TO EXISTING ARRAY AT REAR OF PROPERTY", "tempe")], {
+      useLlm: true,
+      fetchImpl: stub(reply([{ index: 0, tags: ["SOLAR"], confidence: 0.7, reason: "array install" }])),
+    });
+    check("the LLM fills a row the rules left empty", filled.stats.llmAddedTags === 1);
+    check("...and that row is labeled llm, not rule", filled.records[0].classification?.method === "llm");
+
+    const learnedOnly = await tagPermits([rec("7 KW DC ROOF MOUNTED PV SOLAR", "mesa")], {
+      useLlm: true,
+      fetchImpl: stub(reply([{ index: 0, tags: ["ROOFING"], confidence: 1, reason: "should never run" }])),
+    });
+    check(
+      "a confident row in a learned city never reaches the LLM at all",
+      learnedOnly.stats.sentToLlm === 0 && learnedOnly.stats.ruleOnly === 1
+    );
+
+    const off = await tagPermits([rec("SOMETHING UNRECOGNIZED ENTIRELY BY THE RULES", "tempe")], {
+      fetchImpl: stub(reply([{ index: 0, tags: ["SOLAR"], confidence: 1, reason: "" }])),
+    });
+    check("the stage is off by default — rules still run, no call is made", off.stats.sentToLlm === 0);
+    check("...and records still come back classified", off.records[0].classification?.method === "rule");
+  } finally {
+    if (priorKey === undefined) delete process.env.ANTHROPIC_API_KEY;
+    else process.env.ANTHROPIC_API_KEY = priorKey;
+  }
+
+  check("with no API key configured the stage is simply off", (() => {
+    const k = process.env.ANTHROPIC_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
+    const enabled = llmClassifyEnabled();
+    if (k !== undefined) process.env.ANTHROPIC_API_KEY = k;
+    return !enabled;
+  })());
+}
+
 async function main() {
   const now = new Date().toISOString();
   if (process.argv.includes("--live")) {
@@ -742,6 +905,7 @@ async function main() {
     runWestValleyRegressions(now);
     await runVocabularyGuardRegressions();
     runBatteryDetectionRegressions(now);
+    await runLlmClassificationRegressions(now);
   }
   if (failures > 0) {
     console.error(`\n${failures} check(s) FAILED`);
