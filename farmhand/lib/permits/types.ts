@@ -136,6 +136,15 @@ export interface TargetParcel {
   contractor?: string;
   /** Utility named in the permit text. Absent means unknown, not "not SRP". */
   utility?: UtilityMention;
+  /**
+   * ALWAYS "permit-data-only". Every battery conclusion in this system rests on
+   * PERMITTED batteries; an unpermitted retrofit is invisible to us. The field
+   * exists so the limit travels on the record itself and nobody downstream
+   * mistakes "no battery permit" for "no battery".
+   */
+  batteryEvidence: "permit-data-only";
+  /** How battery presence was determined on this parcel's source. */
+  batteryDetection?: "source-flag" | "description-only";
   /** ISO timestamp of the FILTER run that produced this row. */
   computedAt: string;
 }

@@ -63,7 +63,7 @@ export const PEORIA_EXPECTED_TARGETS = ["30500001", "30500002", "30500006"];
  *
  *   BLD-001 / 30600001  Photovoltaic System, Finaled, no battery -> TARGET
  *   BLD-002 / 30600002  Photovoltaic Standard Plan + battery text -> excluded
- *   BLD-003 / 30600003  Photovoltaic, status not Finaled          -> excluded (unknown)
+ *   BLD-003 / 30600003  Photovoltaic, status Issued               -> excluded (incomplete)
  *   BLD-004 / 30600004  Photovoltaic, blank address               -> TARGET (APN join)
  */
 export function buckeyeFixtureRows(now: string): BuckeyeRow[] {

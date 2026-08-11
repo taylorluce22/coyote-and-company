@@ -46,6 +46,8 @@ export interface SetDifferenceStats {
   parcelsIncompleteSolar: number;
   /** Parcels whose solar permit status couldn't be resolved either way — surfaced, not assumed. */
   parcelsAmbiguousStatus: number;
+  /** Battery permits carrying no date at all. They still subtract; surfaced so the policy is visible. */
+  undatedBatteryPermits: number;
   /** Parcels rejected by the residential gate (commercial/municipal arrays). */
   parcelsCommercial: number;
   /** Why each was rejected, tallied — lets the gate be audited from a live run. */
@@ -87,6 +89,7 @@ export function solarWithoutBattery(
   const systemKw = new Map<string, number>();
   const solarByApn = new Map<string, PermitRecord[]>();
   let missingApn = 0;
+  let undatedBatteryPermits = 0;
 
   for (const rec of records) {
     // A source that classifies its own rows always beats reading the text.
@@ -102,7 +105,13 @@ export function solarWithoutBattery(
     // merely PULLED a battery permit is getting a battery; waiting for it to
     // final before excluding them would put them on the call list in the
     // meantime.
-    if (cls === "battery" || cls === "solar+battery") batteryApns.add(rec.apn);
+    if (cls === "battery" || cls === "solar+battery") {
+      batteryApns.add(rec.apn);
+      // A storage permit with no date still proves a battery exists on the
+      // parcel, so it subtracts — the safe direction. Counted here so the
+      // number is visible rather than absorbed: Buckeye has 102 of these.
+      if (!rec.finaledAt && !rec.issuedAt && !rec.finaledYear) undatedBatteryPermits += 1;
+    }
     if (cls === "solar+battery") combinedApns.add(rec.apn);
     if (cls === "solar-ancillary") {
       ancillaryApns.add(rec.apn);
@@ -206,6 +215,8 @@ export function solarWithoutBattery(
       installYear,
       systemKwDc: systemKw.get(apn),
       contractor: permits.find((p) => p.contractor)?.contractor,
+      batteryEvidence: "permit-data-only",
+      batteryDetection: permits.find((p) => p.batteryDetection)?.batteryDetection,
       utility: permits.find((p) => p.utility)?.utility,
       computedAt: opts.now,
     });
@@ -243,6 +254,7 @@ export function solarWithoutBattery(
       excludedByBattery,
       excludedByWindow,
       permitsMissingApn: missingApn,
+      undatedBatteryPermits,
       targets: targets.length,
     },
   };

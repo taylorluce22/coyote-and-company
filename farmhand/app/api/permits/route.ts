@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { kvEnabled } from "@/lib/kv";
 import { getAdapter, ADAPTERS } from "@/lib/permits/adapters";
 import { solarWithoutBattery } from "@/lib/permits/setDifference";
+import { computeAttachRateByYear, checkAttachRateShape } from "@/lib/permits/attachRate";
 import { targetsToCsv } from "@/lib/permits/csv";
 import {
   getLeads,
@@ -93,8 +94,8 @@ export async function POST(req: NextRequest) {
       const records = await adapter.fetchPermits({ now, maxRows: num(body.maxRows, 20000, 100, 50000) });
       const { targets, stats } = solarWithoutBattery(records, {
         now,
-        minAgeMonths: num(body.minAgeMonths, 6, 0, 120),
-        maxAgeYears: num(body.maxAgeYears, 5, 1, 30),
+        minAgeMonths: num(body.minAgeMonths, 24, 0, 120),
+        maxAgeYears: num(body.maxAgeYears, 20, 1, 30),
       });
       return NextResponse.json({ ok: true, stats, targets: targets.slice(0, 200), csv: targetsToCsv(targets) });
     } catch (err) {
@@ -135,11 +136,31 @@ export async function POST(req: NextRequest) {
     if (!records.length) return NextResponse.json({ ok: false, error: "no ingested records — run ingest first" });
     const { targets, stats } = solarWithoutBattery(records, {
       now,
-      minAgeMonths: num(body.minAgeMonths, 6, 0, 120),
-      maxAgeYears: num(body.maxAgeYears, 5, 1, 30),
+      minAgeMonths: num(body.minAgeMonths, 24, 0, 120),
+      maxAgeYears: num(body.maxAgeYears, 20, 1, 30),
     });
     await setTargets(client, targets);
     await patchMeta(client, { lastFilterAt: now });
+
+    // Standing data-quality check. Battery attach rate by install year has a
+    // verified shape (near-zero before 2024, >50% by 2025) confirmed
+    // independently in two cities by two unrelated detection methods. A city
+    // whose curve departs from it has almost certainly broken its battery
+    // detection rather than found a different market — and broken detection is
+    // silent, so it gets checked on every run.
+    const byJurisdiction = new Map<string, typeof records>();
+    for (const rec of records) {
+      const list = byJurisdiction.get(rec.jurisdiction) ?? [];
+      list.push(rec);
+      byJurisdiction.set(rec.jurisdiction, list);
+    }
+    const attachRates: Record<string, unknown> = {};
+    const dataQualityWarnings: string[] = [];
+    for (const [jurisdiction, recs] of byJurisdiction) {
+      const rates = computeAttachRateByYear(recs);
+      attachRates[jurisdiction] = rates;
+      for (const w of checkAttachRateShape(jurisdiction, rates)) dataQualityWarnings.push(w.message);
+    }
 
     // Reconcile existing leads against the new target set. A parcel that just
     // dropped out — because its battery permit finally landed in the ingest —
@@ -159,9 +180,11 @@ export async function POST(req: NextRequest) {
         targets: targets.slice(0, 200),
         leadsRetired: changed.filter((l) => l.retired).length,
         leadsRestored: changed.filter((l) => !l.retired).length,
+        attachRates,
+        dataQualityWarnings,
       });
     }
-    return NextResponse.json({ ok: true, stats, targets: targets.slice(0, 200) });
+    return NextResponse.json({ ok: true, stats, targets: targets.slice(0, 200), attachRates, dataQualityWarnings });
   }
 
   return NextResponse.json({ ok: false, error: "unknown action" });

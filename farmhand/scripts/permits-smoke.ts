@@ -16,12 +16,29 @@ import { normalizeLineType } from "../lib/permits/enrich/phoneAppend";
 import { mesaFixtureRows, EXPECTED_TARGET_APNS, MESA_STATUS_FIXTURES, LIVE_CONTAMINANTS } from "../lib/permits/fixtures/mesa";
 import { solarWithoutBattery } from "../lib/permits/setDifference";
 import { targetsToCsv } from "../lib/permits/csv";
-import { classifyDescription, isAncillaryScope } from "../lib/permits/classify";
+import { classifyDescription, isAncillaryScope, hasBatteryEvidence } from "../lib/permits/classify";
+import { BATTERY_COARSE_TOKENS } from "../lib/permits/coarseNet";
+import {
+  computeAttachRateByYear,
+  checkAttachRateShape,
+  ATTACH_RATE_BASELINE,
+  LOW_ATTACH_CEILING_PCT,
+  HIGH_ATTACH_FLOOR_PCT,
+} from "../lib/permits/attachRate";
 import { assessResidential, parseKwDc } from "../lib/permits/residential";
 import { classifyMesaStatus, MESA_COMPLETED_SOLAR_BASELINE, MESA_SOLAR_MATCH_BASELINE } from "../lib/permits/status";
 import { detectUtility } from "../lib/permits/utility";
 import { peoriaRowToRecord, peoriaYearFromPermitNumber, PEORIA_VERIFIED } from "../lib/permits/adapters/peoria";
-import { buckeyeRowToRecord, buckeyeWhere, classifyBuckeyeStatus, BUCKEYE_VERIFIED } from "../lib/permits/adapters/buckeye";
+import {
+  buckeyeRowToRecord,
+  buckeyeWhere,
+  classifyBuckeyeStatus,
+  BUCKEYE_VERIFIED,
+  BUCKEYE_SOLAR_WORKCLASSES,
+  BUCKEYE_PV_STATUSES,
+  BUCKEYE_LAYER,
+} from "../lib/permits/adapters/buckeye";
+import { arcgisDistinctValues, assertVocabulary, VocabularyDriftError } from "../lib/permits/adapters/arcgis";
 import {
   peoriaFixtureRows,
   buckeyeFixtureRows,
@@ -30,7 +47,7 @@ import {
 } from "../lib/permits/fixtures/westvalley";
 import { normalizeApn } from "../lib/permits/types";
 import { defaultComplianceState, evaluateGate, leadDialVerdict, type ComplianceState } from "../lib/permits/comply";
-import type { EnrichedLead } from "../lib/permits/types";
+import type { EnrichedLead, PermitRecord } from "../lib/permits/types";
 
 let failures = 0;
 function check(label: string, ok: boolean, detail?: string) {
@@ -84,6 +101,10 @@ function runFixtureProof(now: string) {
   );
   check("install year read from source, not derived", !!targets.find((t) => t.apn === "30433501")?.installYear);
   check("contractor carried through", targets.find((t) => t.apn === "30433501")?.contractor === "SOLARCITY CORP");
+  check(
+    "every target carries battery_evidence=permit-data-only (unpermitted retrofits are invisible)",
+    targets.length > 0 && targets.every((t) => t.batteryEvidence === "permit-data-only")
+  );
 
   console.log("== CSV output");
   const csv = targetsToCsv(targets);
@@ -464,8 +485,8 @@ function runWestValleyRegressions(now: string) {
     buckeyeRecords.every((r) => r.batteryDetection === "description-only")
   );
   check(
-    "buckeye 'Finaled' is complete; other statuses are unknown, not guessed",
-    classifyBuckeyeStatus("Finaled") === "complete" && classifyBuckeyeStatus("Issued") === "unknown"
+    "buckeye 'Finaled' complete, 'Issued' incomplete (vocabulary now enumerated, not guessed)",
+    classifyBuckeyeStatus("Finaled") === "complete" && classifyBuckeyeStatus("Issued") === "incomplete"
   );
   check(
     "buckeye keeps a row whose address fields are both blank (APN is the join key)",
@@ -482,6 +503,181 @@ function runWestValleyRegressions(now: string) {
   check("buckeye non-Finaled parcel excluded", !buckeyeApns.includes("30600003"));
 }
 
+/**
+ * The vocabulary rule, which is the real lesson of this program: these sources
+ * differ in VOCABULARY, not access. A shared keyword list is guaranteed to
+ * return zero somewhere, and zero must be an error rather than a result.
+ */
+async function runVocabularyGuardRegressions() {
+  console.log("== vocabulary guard");
+
+  const stubFetch = (distinct: string[]) =>
+    (async () =>
+      new Response(
+        JSON.stringify({ features: distinct.map((v) => ({ attributes: { workclass: v } })) }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )) as unknown as typeof fetch;
+
+  const live = await arcgisDistinctValues(
+    "https://example.test/layer/0",
+    "workclass",
+    "1=1",
+    stubFetch(["Photovoltaic System", "Photovoltaic Standard Plan"])
+  );
+  check("distinct values read back", live.length === 2 && live.includes("Photovoltaic System"));
+
+  let threw = false;
+  try {
+    await assertVocabulary(
+      "https://example.test/layer/0",
+      [{ field: "workclass", expected: ["Photovoltaic System", "Solar PV"] }],
+      stubFetch(["Photovoltaic System", "Photovoltaic Standard Plan"])
+    );
+  } catch (err) {
+    threw = err instanceof VocabularyDriftError && err.missing.includes("Solar PV");
+  }
+  check("a configured value that matches nothing raises VocabularyDriftError", threw);
+
+  let ok = true;
+  try {
+    await assertVocabulary(
+      "https://example.test/layer/0",
+      [{ field: "workclass", expected: [...BUCKEYE_SOLAR_WORKCLASSES] }],
+      stubFetch(["Photovoltaic System", "Photovoltaic Standard Plan", "Reroof"])
+    );
+  } catch {
+    ok = false;
+  }
+  check("an intact vocabulary passes", ok);
+
+  // The trap, stated as an assertion: Buckeye renaming its workclass must
+  // surface as an error, not as "Buckeye has no solar permits".
+  let renamedCaught = false;
+  try {
+    await assertVocabulary(
+      BUCKEYE_LAYER,
+      [{ field: "workclass", expected: [...BUCKEYE_SOLAR_WORKCLASSES] }],
+      stubFetch(["Solar System", "Solar Standard Plan"]) // city renamed it
+    );
+  } catch (err) {
+    renamedCaught = err instanceof VocabularyDriftError;
+  }
+  check("a renamed workclass is an ERROR, never a silently empty city", renamedCaught);
+
+  // Buckeye status vocabulary, now fully enumerated.
+  check("buckeye 'Finaled' is complete", classifyBuckeyeStatus("Finaled") === "complete");
+  check(
+    "the other 13 enumerated statuses are incomplete, not unknown",
+    BUCKEYE_PV_STATUSES.filter((s) => s !== "Finaled").every((s) => classifyBuckeyeStatus(s) === "incomplete")
+  );
+  check("a status outside the enumerated 14 is unknown", classifyBuckeyeStatus("Withdrawn") === "unknown");
+  check("buckeye enumerated 14 PV statuses", BUCKEYE_PV_STATUSES.length === 14);
+
+  // Buckeye's verified derivation must reconcile.
+  const v = BUCKEYE_VERIFIED;
+  check(
+    `buckeye derivation reconciles: ${v.distinctParcels} − ${v.excludedCombinedPermit} − ${v.excludedSeparateBattery} − ${v.excludedTooNew} = ${v.targets}`,
+    v.distinctParcels - v.excludedCombinedPermit - v.excludedSeparateBattery - v.excludedTooNew === v.targets
+  );
+  check(
+    "buckeye undated storage permits are counted, not ignored",
+    v.undatedStoragePermits === 102
+  );
+  check(
+    "combined-permit rule outweighs separate battery permits (870 vs 90) — the inside-description scan is load-bearing",
+    v.excludedCombinedPermit > v.excludedSeparateBattery * 3
+  );
+  check("buckeye history starts 2019 — no 20 years of depth to claim", v.historyStartsYear === 2019);
+  check("buckeye has a real completion date on every finaled row", v.missingFinalDate === 0);
+}
+
+/**
+ * Battery detection: the SQL-LIKE trap, the strict matcher, and the attach-rate
+ * cross-validation that proves detection is measuring something real.
+ */
+function runBatteryDetectionRegressions(now: string) {
+  console.log("== battery detection");
+
+  // THE RULE: SQL LIKE cannot express a word boundary. Both spellings fail,
+  // in opposite and equally unacceptable directions.
+  const like = (hay: string, needle: string) => hay.includes(needle);
+  check("SQL trap: LIKE '%ESS %' matches 'ADDRESS ' — false battery hit", like("ADDRESS ", "ESS "));
+  check(
+    "SQL trap: LIKE '% ESS%' MISSES 'ESS INSTALL 27 KWH' — battery permit never fetched",
+    !like("ESS INSTALL 27 KWH", " ESS")
+  );
+  check(
+    "so the coarse net contains no ESS/BESS/RESU at all",
+    !BATTERY_COARSE_TOKENS.some((t) => ["ESS", "BESS", "RESU"].includes(t))
+  );
+  check(
+    "and 'ESS INSTALL 27 KWH' is still reachable via a safe coarse token",
+    BATTERY_COARSE_TOKENS.some((t) => "ESS INSTALL 27 KWH".includes(t))
+  );
+  check(
+    "word-bounded classifier makes the real call: ADDRESS is not a battery",
+    classifyDescription("PV SOLAR 6 KW AT SAME ADDRESS") === "solar"
+  );
+
+  // The strict matcher, ported verbatim.
+  const batteries = [
+    "TESLA POWERWALL 2", "PW3 INSTALL", "PW 2 BACKUP", "ENPHASE ENCHARGE 10",
+    "IQ BATTERY 5P", "GENERAC PWRCELL", "FRANKLIN WH", "FRANKLINWH APOWER",
+    "SONNEN ECOLINX", "EG4 18KPV", "SIMPLIPHI PHI 3.8", "LG RESU 10H",
+    "TESLA BACKUP GATEWAY", "ENERGY BANK INSTALL", "13.5 KWH STORAGE",
+    "B.E.S.S. INSTALL", "BESS 27 KWH", "ENERGY STORAGE SYSTEM",
+  ];
+  for (const b of batteries) {
+    check(`battery: "${b}"`, hasBatteryEvidence(b), `not detected`);
+  }
+
+  // RESU is the one that must stay bounded — 815 Buckeye rows say RESULTS/RESUBMIT.
+  check("RESU bounded: 'RESULTS' is not a battery", !hasBatteryEvidence("PLAN RESULTS ATTACHED"));
+  check("RESU bounded: 'RESUBMIT' is not a battery", !hasBatteryEvidence("RESUBMIT CORRECTED PLANS"));
+  check("RESU bounded: 'LG RESU 10H' IS a battery", hasBatteryEvidence("LG RESU 10H"));
+  check("ESS bounded: 'ADDRESS' is not a battery", !hasBatteryEvidence("SAME ADDRESS"));
+  check("ESS bounded: 'PROCESS' is not a battery", !hasBatteryEvidence("PROCESS UPGRADE"));
+  check("TESLA counts — 614 Buckeye permits name it without saying Powerwall", hasBatteryEvidence("TESLA INVERTER AND GATEWAY"));
+
+  // Attach-rate cross-validation: the shape, and detection breaking.
+  console.log("== attach rate (data quality check)");
+  for (const city of ["buckeye", "peoria"]) {
+    const base = ATTACH_RATE_BASELINE[city];
+    check(
+      `${city} pre-2024 attach stays under ${LOW_ATTACH_CEILING_PCT}%`,
+      [2019, 2020, 2021, 2022, 2023].every((y) => base[y] < LOW_ATTACH_CEILING_PCT)
+    );
+    check(`${city} 2025 attach is above ${HIGH_ATTACH_FLOOR_PCT}%`, base[2025] > HIGH_ATTACH_FLOOR_PCT);
+  }
+  check(
+    "cross-validation: two unrelated methods agree on 2025 within 1 point (56.6 vs 57.2)",
+    Math.abs(ATTACH_RATE_BASELINE.buckeye[2025] - ATTACH_RATE_BASELINE.peoria[2025]) < 1
+  );
+
+  const record = (apn: string, year: number, desc: string, cls?: "solar" | "battery"): PermitRecord => ({
+    jurisdiction: "buckeye", permitNumber: `P-${apn}-${year}`, apn, address: "", description: desc,
+    finaledAt: `${year}-06-01T00:00:00.000Z`, finaledYear: year,
+    completionSource: "finaled", completionStatus: "complete", classOverride: cls, fetchedAt: now,
+  });
+  // A healthy 2021: 60 parcels, 2 with batteries -> ~3.3%.
+  const healthy: PermitRecord[] = [];
+  for (let i = 0; i < 60; i++) healthy.push(record(`4000${i}`, 2021, "7 KW DC ROOF MOUNTED PV SOLAR"));
+  for (let i = 0; i < 2; i++) healthy.push(record(`4000${i}`, 2021, "TESLA POWERWALL", "battery"));
+  const healthyRates = computeAttachRateByYear(healthy);
+  check("attach rate computes per parcel", healthyRates[0]?.solarParcels === 60);
+  check("healthy 2021 curve raises no warning", checkAttachRateShape("buckeye", healthyRates).length === 0);
+
+  // Detection over-matching: half the 2021 parcels wrongly flagged.
+  const broken = [...healthy];
+  for (let i = 0; i < 30; i++) broken.push(record(`4000${i}`, 2021, "SAME ADDRESS", "battery"));
+  const brokenWarnings = checkAttachRateShape("buckeye", computeAttachRateByYear(broken));
+  check("a pre-2024 attach spike is flagged as broken detection", brokenWarnings.length > 0);
+  check(
+    "the warning names the likely cause",
+    brokenWarnings.some((w) => /over-matching/.test(w.message))
+  );
+}
+
 async function main() {
   const now = new Date().toISOString();
   if (process.argv.includes("--live")) {
@@ -493,6 +689,8 @@ async function main() {
     runSchemaRegressions();
     runLiveContaminationRegressions(now);
     runWestValleyRegressions(now);
+    await runVocabularyGuardRegressions();
+    runBatteryDetectionRegressions(now);
   }
   if (failures > 0) {
     console.error(`\n${failures} check(s) FAILED`);

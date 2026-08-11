@@ -39,7 +39,7 @@
 
 import type { PermitRecord } from "../types";
 import { normalizeApn } from "../types";
-import { arcgisQueryAll } from "./arcgis";
+import { arcgisQueryAll, assertVocabulary } from "./arcgis";
 
 export const PEORIA_SOLAR_LAYER =
   "https://gis.peoriaaz.gov/arcgis/rest/services/Accela/Solar_Parcels/MapServer/0";
@@ -140,6 +140,20 @@ export interface PeoriaFetchOptions {
 }
 
 export async function fetchPeoriaPermits(opts: PeoriaFetchOptions): Promise<PermitRecord[]> {
+  const fetchImpl = opts.fetchImpl ?? fetch;
+
+  // Same vocabulary rule as every adapter: the checklist codes and the battery
+  // flag are the entire basis of classification here, so if any of them stops
+  // matching rows this must raise rather than return a thinner list.
+  await assertVocabulary(
+    PEORIA_SOLAR_LAYER,
+    [
+      { field: FIELDS.checklist, expected: [PEORIA_RES_PV_CODE, PEORIA_COM_PV_CODE] },
+      { field: FIELDS.checkbox, expected: [PEORIA_BATTERY_FLAG] },
+    ],
+    fetchImpl
+  );
+
   const rows = await arcgisQueryAll<PeoriaRow>({
     layerUrl: PEORIA_SOLAR_LAYER,
     // Pull PV and battery rows in one sweep; both are needed for the
@@ -148,9 +162,16 @@ export async function fetchPeoriaPermits(opts: PeoriaFetchOptions): Promise<Perm
     outFields: Object.values(FIELDS),
     pageSize: PAGE_SIZE,
     maxRows: opts.maxRows ?? 20000,
-    orderBy: FIELDS.permitNumber,
-    fetchImpl: opts.fetchImpl,
+    orderBy: `${FIELDS.permitNumber} ASC`,
+    fetchImpl,
   });
+
+  // An adapter that returns zero is an error, never a result.
+  if (rows.length === 0) {
+    throw new Error(
+      "peoria: query returned zero rows despite the vocabulary check passing — query or layer change, not an empty city."
+    );
+  }
   return rows
     .map((r) => peoriaRowToRecord(r, opts.now))
     .filter((r): r is PermitRecord => r !== null);

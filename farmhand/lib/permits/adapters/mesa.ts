@@ -9,20 +9,14 @@
  *     "8.40 KW DC PV SOLAR", "TESLA POWERWALL3", "B.E.S.S."
  *   - description_of_work LIKE %SOLAR% = 1422 rows, LIKE %BATTERY% = 1649 rows
  *
- * The SoQL $where is a coarse over-fetch (any solar-ish OR battery-ish
- * keyword); the local classifier makes the real call. ESS and bare KWH are
- * deliberately absent from the server filter — %ESS% would match ADDRESS —
- * standalone-ESS permits are expected to also say BATTERY / ENERGY STORAGE /
- * B.E.S.S, which the filter does cover.
- *
- * Permit-number / address / issue-date field names are NOT yet live-verified;
- * the adapter tries the candidate lists below in order and keeps working when
- * none match (records land with recency "unknown"). Verify on first live run
- * and promote the winners into VERIFIED_FIELDS.
+ * The SoQL $where is a COARSE OVER-FETCH ONLY — it never decides anything.
+ * SQL LIKE cannot express a word boundary, so battery matching happens in code
+ * via the word-bounded classifier. See lib/permits/coarseNet.ts for why.
  */
 
 import type { PermitRecord } from "../types";
 import { normalizeApn } from "../types";
+import { SOLAR_COARSE_TOKENS, BATTERY_COARSE_TOKENS } from "../coarseNet";
 import { classifyMesaStatus } from "../status";
 import { detectUtility } from "../utility";
 
@@ -51,36 +45,10 @@ const VERIFIED_FIELDS = {
 } as const;
 
 /**
- * Coarse server-side over-fetch. Every token the local classifier can treat as
- * battery evidence MUST have a match here, or the battery permit is never
- * fetched, never subtracts its parcel, and that parcel lands on the call list
- * as a false positive — the failure the whole module exists to prevent.
- *
- * The earlier revision omitted ESS/BESS/KWH on the theory that a standalone
- * ESS permit would also say BATTERY or ENERGY STORAGE. That was an assumption,
- * not a verified fact, and a real Mesa description reading only
- * "ESS INSTALL 27 KWH" would have been silently skipped. Bare "ESS" can't be
- * used raw (LIKE '%ESS%' matches ADDRESS), so it's space-prefixed; STORAGE and
- * KWH are safe as substrings and catch the same permits by another route.
- * Over-fetching costs a few rows — under-fetching costs list correctness.
+ * Shared coarse net. Every token is a safe substring; the short dangerous ones
+ * (ESS, BESS, RESU) are deliberately absent from SQL and recovered in code.
  */
-const COARSE_KEYWORDS = [
-  "SOLAR",
-  "PHOTOVOLTAIC",
-  "PHOTO-VOLTAIC",
-  "PHOTO VOLTAIC",
-  "PV",
-  "BATTER",
-  "POWERWALL",
-  "POWER WALL",
-  "POWER-WALL",
-  "PW3",
-  "STORAGE",
-  " ESS",
-  "BESS",
-  "B.E.S.S",
-  "KWH",
-];
+const COARSE_KEYWORDS = [...SOLAR_COARSE_TOKENS, ...BATTERY_COARSE_TOKENS];
 
 const PAGE_SIZE = 1000;
 /**

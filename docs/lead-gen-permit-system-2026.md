@@ -291,6 +291,64 @@ _Updated as work lands. Timezone: America/Phoenix._
   is not an engineering decision and is recorded here rather than resolved.
   It does not affect Peoria or Buckeye, which are city sources under their
   own terms — so it does not block the West Valley work.
+- **2026-08-10 — Battery detection audit: a real bug, and a cross-validation.**
+  - **The bug, which would have shipped.** Matching battery terms in SQL with
+    `LIKE '%ESS %'` also matches `"ADDRESS "` — the trailing space doesn't
+    save it. That over-excluded real targets. The version in the repo had the
+    mirror-image defect: `LIKE '% ESS%'` *misses* a description starting
+    `"ESS INSTALL 27 KWH"`, so the battery permit is never fetched and the
+    battery home ships as a target — the worse direction.
+    **Rule, now enforced in code: never do battery matching in SQL `LIKE`.**
+    SQL is a coarse over-fetch net of safe substrings only
+    (`lib/permits/coarseNet.ts`, which contains no `ESS`/`BESS`/`RESU`);
+    the word-bounded classifier decides.
+  - **Corrected Buckeye count: 6168 targets, not 6063** — it went *up*,
+    because the false positives were excluding real homes. Reconciles exactly:
+    7661 − 870 (combined) − 90 (later separate battery) − 533 (under 2 years).
+  - **Strict matcher ported**, adding the storage brands: Enphase Encharge /
+    IQ Battery, Generac PWRcell, FranklinWH, sonnen, EG4, SimpliPhi, LG RESU,
+    Tesla Backup Gateway, energy bank, and bare `TESLA`. Two entries are
+    load-bearing and look odd: `\bRESU\b` must stay word-bounded (unbounded it
+    matches RESULTS and RESUBMIT — 815 Buckeye rows), and `\bTESLA\b` earns
+    its place because 614 Buckeye permits name Tesla without ever saying
+    Powerwall.
+  - **Cross-validation — the strongest evidence the thesis has.** Battery
+    attach rate by solar year, computed independently in two cities by two
+    unrelated methods (Buckeye free-text regex, Peoria structured flag):
+
+    | year | Buckeye | Peoria |
+    | --- | --- | --- |
+    | 2019 | 1.7% | 0.9% |
+    | 2020 | 2.1% | 2.6% |
+    | 2021 | 2.7% | 4.3% |
+    | 2022 | 3.5% | 5.4% |
+    | 2023 | 3.0% | 6.0% |
+    | 2024 | 18.8% | 29.0% |
+    | 2025 | **56.6%** | **57.2%** |
+    | 2026 | 78.6% | 68.0% |
+
+    2025 agreeing to within 0.6 points across a regex and a checkbox in
+    different permit systems means the detection measures something real
+    rather than a keyword artifact. It also states the business case: the
+    2019–2023 cohort installed when almost nobody attached storage, and that
+    is exactly the cohort this system targets.
+  - **Built as a standing data-quality check** (`lib/permits/attachRate.ts`,
+    run on every `filter`): attach rate by year per jurisdiction, with
+    warnings when a curve departs from the verified shape — because broken
+    battery detection is silent, and a departure is far more likely to be a
+    detection bug than a changed market.
+  - Also verified: Peoria's 883 battery rows are 697 sharing a solar permit id
+    and 186 standalone, so retrofit-only batteries do appear there.
+- **Two limits stated plainly, not papered over:**
+  1. **102 Buckeye storage permits carry neither a finalize nor an issue
+     date.** Policy adopted: they still subtract their parcel, because an
+     undated storage permit is still proof of a battery, and excluding is the
+     safe direction. The count is reported as `undatedBatteryPermits` rather
+     than absorbed silently.
+  2. **This measures PERMITTED batteries only.** An unpermitted retrofit is
+     invisible. Every target now carries `battery_evidence=permit-data-only`
+     in the record and in the CSV, so "no battery permit" is never mistaken
+     downstream for "no battery".
 - **Ship state: list-building + compliance-armed, dialing OFF.** ✅
 - Open items, in order:
   1. First live run (from Vercel or any machine with egress to

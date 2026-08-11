@@ -1,6 +1,38 @@
 # Jurisdiction adapters
 
-## The rule that governs this directory
+## The rule that governs every adapter: vocabulary, not access
+
+**These are not scraping targets. They are ArcGIS REST query APIs, and the
+failure mode is vocabulary.**
+
+Every city names the same thing differently:
+
+| City | How it says "solar" |
+| --- | --- |
+| Mesa | free text `PV SOLAR` in `description_of_work` |
+| Buckeye | `workclass` = `Photovoltaic System` / `Photovoltaic Standard Plan` — `SOLAR` matches **zero rows** |
+| Peoria | checklist code `801 - Photovoltaic RES` |
+
+A keyword list carried from one city to another is *guaranteed* to return zero
+or near-zero somewhere, and it will look like a coverage gap rather than a bug.
+This has now bitten three times: the `ESS` over-fetch, the ZIP-as-city filter,
+and Buckeye's `SOLAR`-vs-`Photovoltaic`. Same shape each time — a query that
+reads correctly and quietly answers a different question.
+
+So, for every new jurisdiction:
+
+1. **Start by enumerating** the distinct values of the classification and status
+   fields with `returnDistinctValues=true` — `arcgisDistinctValues()` in
+   `arcgis.ts` — and record them in the adapter as named constants.
+2. **Assert the vocabulary before every fetch.** `assertVocabulary()` throws
+   `VocabularyDriftError` when a configured value stops matching rows.
+3. **An adapter that returns zero rows is an ERROR, never a result.** Both the
+   Peoria and Buckeye fetchers throw on an empty result rather than returning
+   `[]`.
+4. **Page with a stable `orderByFields`.** Without one, `resultOffset` paging
+   repeats and skips rows. Buckeye uses `objectid ASC`.
+
+## The rule about county data
 
 **Never infer a city from a ZIP code on county data.**
 
