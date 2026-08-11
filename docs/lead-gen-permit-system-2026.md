@@ -48,11 +48,38 @@ Four idempotent, incremental stages:
 
 ## ENRICH
 
-- Join APN → Maricopa Assessor API (free token):
-  `/parcel/{apn}/owner-details` and `/search/property/?q=` for owner +
-  mailing address.
-- Pluggable phone-append interface (Datazapp first) that **must** return a
-  wireless/landline line-type flag.
+**The assessor is fully public — no token, no API key.** The
+free-token-by-contact-form plan is dropped; it was unnecessary. Join APN →
+`Parcel_Data_View/FeatureServer/0` (ASR_Parcels, 1,742,671 parcels, 101
+fields, unauthenticated), with `Parcels_view` (T_PARCELS) as a fallback. Join
+key is the bare 8–9 character APN with no dashes, which matches Buckeye
+`parcelnumber` and Mesa `parcel_number` directly; `APNDash` is display only.
+Verified: 6,192 of 6,197 Buckeye targets matched, 99.9%, in ~30 seconds.
+
+This is not just an owner lookup. It unlocks four things:
+
+1. **Owner occupancy** — mailing vs. situs address. Buckeye: 5,490
+   owner-occupied, 670 absentee, 214 flagged Rental. **Absentee owners are a
+   separate segment and out of the default queue** — a landlord is not a
+   battery buyer.
+2. **A real residential gate** — `PropertyUseDescription` ("SFR GRADE 010-3
+   URBAN SUBDIVIDED") is authoritative. 6,156 of 6,192 are SFR; the other 36
+   are exactly the commercial contamination the text rules kept missing. This
+   is now the **primary** residential gate and the kW-size heuristic demotes
+   to a secondary check.
+3. **Segmentation** — Pool (1,335 of the Buckeye targets), livable area,
+   construction year, full cash value. A pool is a large summer load, which
+   is a concrete reason that household benefits from storage.
+4. **A deliverable address** — which makes the mail channel the compliance
+   design already routes cell-only households toward actually buildable.
+
+**City comes from the assessor, not the issuing jurisdiction:** 293 Buckeye
+rows sit at addresses the assessor calls Litchfield Park.
+
+- **Still not free: phone numbers.** They exist in no public record. That
+  remains the licensed, marketing-permissible append (Datazapp first) behind
+  the compliance gate, and it **must** return a wireless/landline line-type
+  flag. Nothing above makes the list call-ready.
 - Per-field provenance stored (source + fetch date). Never fabricate a
   number — no source, no value.
 
@@ -180,7 +207,6 @@ single-tenant `fh:default` lead-store namespace.
 | --- | --- |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | store (Upstash/Vercel-KV, already used by leadStore) |
 | `MESA_SOCRATA_APP_TOKEN` | optional, higher Socrata rate limits |
-| `MARICOPA_ASSESSOR_TOKEN` | free assessor API token (contact form, subject "API Token/Question") |
 | `DATAZAPP_API_KEY` (+ optional `DATAZAPP_API_URL`) | phone append |
 | `PERMITS_DIALING_ENABLED` | **ships absent = dialing OFF.** Setting it to `true` is the deliberate act that allows the dial queue to return unmasked numbers — and only when the gate is also armed |
 | `ANTHROPIC_API_KEY` | optional. Absent = the LLM classification stage is inert and the deterministic rules run alone |
@@ -554,17 +580,87 @@ _Updated as work lands. Timezone: America/Phoenix._
   That is the query being wrong, not a fact about Gilbert. Its full `WorkClass`
   vocabulary gets enumerated before any adapter is written; the backlog entry
   records it as a live demonstration of the fail-loud-on-zero rule.
+- **2026-08-11 — Second-PV question closed, assessor enrichment landed,
+  draft export shipped.** Three things, and the first one is a measured
+  answer to a question that had been open since the Buckeye derivation.
+
+  **1. The unit of measure is the discriminator.** Is a second PV permit
+  under the identical workclass an array addition or a hidden battery? Tested
+  against all 8942 Buckeye photovoltaic permits. The negative result comes
+  first because it saves the trip: **structural metadata does not
+  discriminate.** `permittype` is 'Electrical - Residential' for 100% of both
+  battery and non-battery PV permits, `permitclass` is 'Photovoltaic System'
+  for both, `squarefeet` is zero for 95.2% vs 97.0%, average value $27,943 vs
+  $28,484. No classifier on value, squarefeet, permittype or permitclass can
+  work.
+
+  What does: **panels are DC POWER, batteries are ENERGY CAPACITY.** In
+  precedence order — battery keyword or a kWh figure → battery, exclude; else
+  a DC rating → panels, keep; else manual review. `lib/permits/systemSize.ts`
+  parses every live format (KW DC, KWDC, kW DC, W DC, KW(DC), comma decimal
+  '191,40'), with `(?!H)` after the unit so "13.5 KWH" can never parse as a
+  13.5 kW array. **One deliberate divergence from the spec as written:** the
+  stated rule was "divide any DC value above 1000 by 1000", which is right
+  about watts and wrong about kilowatts — 1019.83 KW DC is a real commercial
+  array and dividing it produces a 1.02 kW house that walks through the
+  residential gate. Normalization keys off the **unit** instead, which gets
+  4760W DC → 4.76 kW without inverting that case.
+
+  Validation: of 405 second-or-later PV permits with no battery keyword, 295
+  stated a DC rating and the 9 residuals were read by hand — zero batteries.
+  So **`second-pv-permit` is downgraded from quarantine to an informational
+  note** and those parcels stay in the queue. `TargetParcel` now separates
+  `notes` (informational) from `reviewFlags` (quarantine); the only
+  quarantine left from this rule is `no-dc-rating`. Also captured:
+  `linkedPermits` (43.7% of second permits cite the original inline — and the
+  self-reference is exactly the chain worth keeping), `expansionCount`, and
+  `totalSystemKwDc` summed across the parcel.
+
+  **2. The Maricopa assessor is fully public — no token.** See the ENRICH
+  section above for the layer, the join key and the four capabilities it
+  unlocks. In code: `lib/permits/enrich/assessor.ts` (batched `APN IN (...)`
+  join, fallback layer, `segmentFor()`), the token-based `maricopa.ts`
+  deleted, `MARICOPA_ASSESSOR_TOKEN` gone from the env table, and
+  `EnrichedLead` carrying `assessor` + `segment`. **COMPLY now blocks any
+  non-primary segment from the default queue** — an absentee lead with a
+  clear landline and a fresh scrub is still blocked, and a regression proves
+  it.
+
+  **3. The draft export.** `POST /api/permits {action:"export"}` and
+  `GET ?format=export-csv`, 27 columns, sorted install year ascending then
+  system size descending. **No phone column, and none may be added** — an
+  export is the artifact most likely to leave the system. Absentee, rental,
+  non-residential and needs-review rows are held out of the default draft and
+  recoverable with `includeHeldBack`. Every export states that it is a draft,
+  that dialing is off, and that public-record sourcing bars Customer Match /
+  Meta upload.
+
+  Buckeye regression baseline recorded and self-reconciling: 6,197 targets
+  pre-assessor, 6,192 matched, 5,490 owner-occupied, 6,156 SFR, 1,335 pools,
+  293 rows whose assessor city is Litchfield Park; the install-year histogram
+  (2019:735, 2020:1141, 2021:1402, 2022:1364, 2023:1207, 2024:343) **sums
+  exactly to 6,192**, and SFR + non-SFR accounts for every matched parcel.
+  321 checks, all offline.
+
+  **One number to reconcile before the export is trusted as final:** this
+  run's 6,197 pre-assessor targets vs. the 6,168 recorded in
+  `BUCKEYE_VERIFIED` from the earlier derivation (and 6,063 before that). The
+  count has moved as the derivation was refined, which is expected, but the
+  two constants now disagree by 29 and both are in the codebase. Flagged
+  rather than silently overwritten.
 - **Ship state: list-building + compliance-armed, dialing OFF.** ✅
 - Open items, in order:
   1. First live run (from Vercel or any machine with egress to
      `data.mesaaz.gov`): `npm run permits:smoke -- --live`, or POST
      `{action:"preview"}` to `/api/permits`. Verify permit-number /
      address / issue-date field names; promote to `VERIFIED_FIELDS`.
-  2. Request the Maricopa assessor token; confirm owner-details response
-     keys against the tolerant scanner.
+  2. Run the assessor join live from a machine with egress and confirm the
+     field names against a real response (the layer is public — nothing to
+     request).
   3. Verify the Datazapp API contract before funding an append batch.
-  4. Get the SAN + file the A.R.S. 44-1272.01 limited registration;
-     record both in the Comply tab.
+  4. Get the SAN + file the A.R.S. 44-1272.01 limited registration; record
+     both in the Comply tab. Registration is a status to record, not an
+     exemption — see the 44-1273 note above.
   5. P1 adapters, in order: **Tucson** and **Tempe** (endpoints verified),
      then **Gilbert** — but enumerate Gilbert's full `WorkClass` vocabulary
      first; a SOLAR keyword there returns 2 rows out of 215k. Then Scottsdale.

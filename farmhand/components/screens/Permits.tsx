@@ -60,6 +60,7 @@ interface ComplyState {
 }
 interface EnrichProbe {
   enabled: boolean;
+  /** Assessor is a public ArcGIS layer — no token, so this is always true. */
   maricopa: boolean;
   providers: Record<string, { label: string; configured: boolean }>;
 }
@@ -223,12 +224,12 @@ export default function Permits() {
               Seed leads from targets
             </button>
             <button
-              style={btn("#41D98A", busy !== null || !probe?.maricopa)}
-              disabled={busy !== null || !probe?.maricopa}
-              title={probe?.maricopa ? "" : "MARICOPA_ASSESSOR_TOKEN not set"}
+              style={btn("#41D98A", busy !== null)}
+              disabled={busy !== null}
+              title="Maricopa County Assessor — public ArcGIS layer, no token"
               onClick={() => post("/api/permits/enrich", { action: "owners" }, "enrich owners")}
             >
-              Enrich owners (assessor)
+              Enrich owners + property (assessor)
             </button>
             <button
               style={btn("#C9A8FF", busy !== null || !probe?.providers?.datazapp?.configured)}
@@ -238,15 +239,27 @@ export default function Permits() {
             >
               Append phones (Datazapp)
             </button>
+            <a
+              href={`/api/permits?client=${encodeURIComponent(workspace)}&format=export-csv`}
+              style={{ ...btn("#F4B942"), textDecoration: "none" }}
+              title="Enriched draft export — no phone numbers, by design"
+            >
+              Download enriched draft CSV
+            </a>
           </div>
           <div style={{ color: "#8B89A0", fontSize: 11.5, lineHeight: 1.6 }}>
-            <div>Maricopa assessor token: {probe?.maricopa ? pill("#41D98A", "configured") : pill("#FF5D8F", "missing")}</div>
+            <div>Maricopa assessor: {pill("#41D98A", "public, no token")}</div>
             <div style={{ marginTop: 4 }}>
               Datazapp: {probe?.providers?.datazapp?.configured ? pill("#41D98A", "configured") : pill("#FF5D8F", "missing")}
             </div>
             <div style={{ marginTop: 8 }}>
               Leads: {comply?.counts?.leads ?? 0} · with phone: {comply?.counts?.withPhone ?? 0}. Every enriched field
               carries provenance (source + fetch date); numbers are never fabricated — a vendor miss stays empty.
+            </div>
+            <div style={{ marginTop: 8 }}>
+              The draft export carries owner, mailing address, occupancy, use code and property facts — and no phone
+              column. Absentee owners, rentals and non-residential parcels are separate segments, held out of it.
+              Public-record sourcing also means this list may not be uploaded to Google Customer Match or Meta.
             </div>
           </div>
         </div>

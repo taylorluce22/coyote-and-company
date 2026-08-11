@@ -218,6 +218,58 @@ export interface PhoneData {
   lineType: LineType;
 }
 
+/**
+ * One parcel as the Maricopa County Assessor publishes it — public ArcGIS
+ * layer, no token. Far more than an owner lookup: occupancy, the authoritative
+ * residential use code, and the property facts that qualify a household.
+ * Shapes live here so lib/permits/enrich/assessor.ts and the COMPLY layer can
+ * share them without importing each other.
+ */
+export interface AssessorData {
+  apn: string;
+  /** 503-96-720 display form. The bare form is the join key. */
+  apnDash?: string;
+  ownerName?: string;
+  mailingAddress?: string;
+  mailingCity?: string;
+  mailingState?: string;
+  mailingZip?: string;
+  propertyAddress?: string;
+  /** Authoritative city — Buckeye's permit system covers 293 addresses the assessor calls Litchfield Park. */
+  propertyCity?: string;
+  propertyZip?: string;
+  /** e.g. "SFR GRADE 010-3 URBAN SUBDIVIDED" — the real residential gate. */
+  propertyUse?: string;
+  /** Mailing and situs agree. Undefined when either is missing — never a guessed false. */
+  ownerOccupied?: boolean;
+  isRental?: boolean;
+  isSfr?: boolean;
+  livableSqFt?: number;
+  yearBuilt?: number;
+  /** A pool is a large summer load — a concrete reason storage helps this household. */
+  pool?: boolean;
+  stories?: number;
+  roofType?: string;
+  airConditioningType?: string;
+  fullCashValue?: number;
+  salePrice?: number;
+  saleDate?: string;
+  latitude?: number;
+  longitude?: number;
+  assessorLink?: string;
+  treasurerLink?: string;
+  /** Which layer answered. The fallback carries far fewer fields. */
+  layer: "primary" | "fallback";
+}
+
+/**
+ * Which population a lead belongs to. Absentee and non-residential are not
+ * lesser leads, they are DIFFERENT leads: a landlord is not buying a battery
+ * for a house they don't live in. Both are worked separately, never in the
+ * default dial queue.
+ */
+export type LeadSegment = "primary" | "absentee" | "rental" | "non-residential" | "unknown";
+
 export interface OwnerData {
   name: string;
   mailingAddress?: string;
@@ -232,6 +284,10 @@ export interface EnrichedLead {
   address: string;
   newestSolarIssuedAt?: string;
   owner?: Sourced<OwnerData>;
+  /** Full assessor record — occupancy, use code, and the qualification facts. */
+  assessor?: Sourced<AssessorData>;
+  /** Derived from the assessor record; only "primary" reaches the default queue. */
+  segment?: LeadSegment;
   phone?: Sourced<PhoneData>;
   /** National DNC scrub result. Stale (> 31 days) scrubs block dialing in COMPLY. */
   dnc?: { status: "clear" | "listed" | "unknown"; scrubbedAt: string; receipt?: string };

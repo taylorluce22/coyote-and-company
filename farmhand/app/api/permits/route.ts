@@ -4,6 +4,8 @@ import { getAdapter, ADAPTERS } from "@/lib/permits/adapters";
 import { solarWithoutBattery } from "@/lib/permits/setDifference";
 import { computeAttachRateByYear, checkAttachRateShape } from "@/lib/permits/attachRate";
 import { targetsToCsv } from "@/lib/permits/csv";
+import { EXPORT_COLUMNS, exportRowsToCsv, selectExportRows, summarizeExport } from "@/lib/permits/export";
+import type { Jurisdiction } from "@/lib/permits/types";
 import {
   getLeads,
   getMeta,
@@ -31,7 +33,13 @@ import {
  *                            → { ok, stats, targets, csv }  stateless one-shot
  *                              (live fetch -> filter, nothing stored) — works
  *                              without KV; used to prove an adapter live.
+ *      POST { action: "export", client, jurisdiction?, includeHeldBack? }
+ *                            → { ok, summary, columns, csv } the enriched
+ *                              draft export: permit derivation joined to
+ *                              assessor facts. NO phone column, by design.
  * GET  /api/permits?client=x&format=csv → text/csv of the stored target list.
+ * GET  /api/permits?client=x&format=export-csv[&jurisdiction=buckeye]
+ *                            → text/csv of the enriched draft export.
  */
 
 export const dynamic = "force-dynamic";
@@ -52,6 +60,19 @@ export async function GET(req: NextRequest) {
     getRecords(client),
     getTargets(client),
   ]);
+  if (req.nextUrl.searchParams.get("format") === "export-csv") {
+    const j = req.nextUrl.searchParams.get("jurisdiction");
+    const leads = await getLeads(client);
+    const rows = selectExportRows(leads, targets, {
+      jurisdiction: (j || undefined) as Jurisdiction | undefined,
+    });
+    return new Response(exportRowsToCsv(rows), {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename=permit-leads-${j || "all"}-draft.csv`,
+      },
+    });
+  }
   if (req.nextUrl.searchParams.get("format") === "csv") {
     return new Response(targetsToCsv(targets), {
       headers: {
@@ -76,6 +97,7 @@ interface PermitsPostBody {
   maxRows?: number;
   minAgeMonths?: number;
   maxAgeYears?: number;
+  includeHeldBack?: boolean;
 }
 
 export async function POST(req: NextRequest) {
@@ -185,6 +207,23 @@ export async function POST(req: NextRequest) {
       });
     }
     return NextResponse.json({ ok: true, stats, targets: targets.slice(0, 200), attachRates, dataQualityWarnings });
+  }
+
+  if (action === "export") {
+    const jurisdiction = body.jurisdiction ? (String(body.jurisdiction) as Jurisdiction) : undefined;
+    const [leads, targets] = await Promise.all([getLeads(client), getTargets(client)]);
+    if (!leads.length) return NextResponse.json({ ok: false, error: "no leads — run enrich seed first" });
+    const opts = { jurisdiction, includeHeldBack: body.includeHeldBack === true };
+    const rows = selectExportRows(leads, targets, opts);
+    return NextResponse.json({
+      ok: true,
+      summary: summarizeExport(leads, targets, opts),
+      columns: EXPORT_COLUMNS,
+      csv: exportRowsToCsv(rows),
+      // Said on every export, because a file of names and addresses invites
+      // exactly the wrong conclusion.
+      draft: "DRAFT for review — dialing is OFF, no phone numbers are in this file, and public-record sourcing means Google Customer Match / Meta audience upload are not permitted uses.",
+    });
   }
 
   return NextResponse.json({ ok: false, error: "unknown action" });

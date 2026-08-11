@@ -57,6 +57,21 @@ import {
   BUCKEYE_UNIT_VALIDATION,
   RESIDUAL_UNPARSED_SAMPLES,
 } from "../lib/permits/systemSize";
+import {
+  fetchAssessorRecords,
+  isSfrUse,
+  sameStreetAddress,
+  segmentFor,
+  ASSESSOR_VERIFIED,
+  DEFAULT_QUEUE_SEGMENTS,
+} from "../lib/permits/enrich/assessor";
+import {
+  EXPORT_COLUMNS,
+  exportRowsToCsv,
+  selectExportRows,
+  summarizeExport,
+} from "../lib/permits/export";
+import { HISTORY_STARTS, coverageNote } from "../lib/permits/adapters";
 import { PERMIT_TAGS } from "../lib/permits/taxonomy";
 import { ruleTags, tagPermits, jurisdictionLearned } from "../lib/permits/tagging";
 import { classifyWithLlm, llmClassifyEnabled, needsLlmReview, tagsDisagree } from "../lib/permits/llmClassify";
@@ -67,7 +82,7 @@ import {
   DNC_SCRUB_APPLIES_TO_ALL_LINE_TYPES,
   type ComplianceState,
 } from "../lib/permits/comply";
-import type { EnrichedLead, Jurisdiction, PermitRecord } from "../lib/permits/types";
+import type { EnrichedLead, Jurisdiction, PermitRecord, TargetParcel } from "../lib/permits/types";
 
 let failures = 0;
 function check(label: string, ok: boolean, detail?: string) {
@@ -1065,6 +1080,151 @@ function runUnitOfMeasureRegressions(now: string) {
   );
 }
 
+/**
+ * Assessor join + the draft export. The assessor layer is public and needs no
+ * token, but these run against a stubbed fetch so the suite stays offline.
+ */
+async function runAssessorAndExportRegressions(now: string) {
+  console.log("== assessor join (public ArcGIS, no token)");
+
+  // The live derivation has to reconcile with itself, or one of the numbers is
+  // from a different run than the others.
+  const v = ASSESSOR_VERIFIED;
+  check(
+    "install-year histogram sums to the matched count (6192)",
+    Object.values(v.buckeyeInstallYears).reduce((a, b) => a + b, 0) === v.buckeyeMatched
+  );
+  check("SFR + non-SFR accounts for every matched parcel", v.buckeyeSfr + v.buckeyeNonSfr === v.buckeyeMatched);
+  check(
+    "the 5 unmatched parcels are stated, not absorbed",
+    v.buckeyeTargets - v.buckeyeMatched === 5
+  );
+  check("history starts 2019 — the histogram cannot begin earlier", Math.min(...Object.keys(v.buckeyeInstallYears).map(Number)) === 2019);
+  check("...and the adapter registry says so too", HISTORY_STARTS.buckeye === 2019 && HISTORY_STARTS.peoria === 2019);
+  check("coverage note refuses to imply twenty years", /starts 2019/.test(coverageNote("buckeye")));
+
+  check("SFR use description is recognised", isSfrUse("SFR GRADE 010-3 URBAN SUBDIVIDED") === true);
+  check("a commercial use description is not", isSfrUse("COMMERCIAL STORE RETAIL") === false);
+  check("no use description is unknown, not a pass", isSfrUse(undefined) === undefined);
+  check("owner-occupancy compares normalized street text", sameStreetAddress("123 W MAIN ST", "123 W Main St.") === true);
+  check("a different mailing address reads absentee", sameStreetAddress("PO BOX 900", "123 W MAIN ST") === false);
+  check(
+    "a missing address is UNKNOWN, never a confirmed absentee",
+    sameStreetAddress(undefined, "123 W MAIN ST") === undefined
+  );
+
+  const feature = (attrs: Record<string, unknown>) => ({ attributes: attrs });
+  const assessorStub = (rows: Record<string, unknown>[]): typeof fetch =>
+    (async () => ({ ok: true, json: async () => ({ features: rows.map(feature) }) })) as unknown as typeof fetch;
+
+  const recs = await fetchAssessorRecords(["503-96-720"], {
+    fetchImpl: assessorStub([
+      {
+        APN: "50396720", APNDash: "503-96-720", OwnerName: "DOE JANE",
+        OwnerAddressLine1: "123 W MAIN ST", OwnerCity: "BUCKEYE", OwnerState: "AZ", OwnerZipCode: "85326",
+        PropertyFullStreetAddress: "123 W MAIN ST", PropertyCity: "LITCHFIELD PARK", PropertyZipCode: "85340",
+        PropertyUseDescription: "SFR GRADE 010-3 URBAN SUBDIVIDED",
+        Rental: "N", LivableArea_SqFt: 2140, ConstructionYear: 2004, Pool: "Y", Stories: 1, FullCashValue: 385000,
+      },
+    ]),
+  });
+  const rec = recs.get("50396720");
+  check("a dashed APN joins to the bare assessor key", !!rec);
+  check("owner-occupied derived from mailing vs situs", rec?.ownerOccupied === true);
+  check("SFR gate reads the assessor, not the permit text", rec?.isSfr === true);
+  check("pool is captured — a large summer load is a reason to want storage", rec?.pool === true);
+  check("the segment is primary", segmentFor(rec) === "primary");
+  check(
+    "PROPERTY CITY comes from the assessor: a Buckeye permit at a Litchfield Park address",
+    rec?.propertyCity === "LITCHFIELD PARK"
+  );
+
+  const absentee = await fetchAssessorRecords(["11122233"], {
+    fetchImpl: assessorStub([
+      {
+        APN: "11122233", OwnerName: "ACME RENTALS LLC", OwnerAddressLine1: "PO BOX 900",
+        PropertyFullStreetAddress: "9 N ELM ST", PropertyUseDescription: "SFR GRADE 010-3", Rental: "Y",
+      },
+    ]),
+  });
+  check("a rental flag segments the lead out of the default queue", segmentFor(absentee.get("11122233")) === "rental");
+  check(
+    "...as does an absentee mailing address",
+    segmentFor({ apn: "1", propertyAddress: "9 N ELM ST", mailingAddress: "PO BOX 900", ownerOccupied: false, isSfr: true, layer: "primary" }) === "absentee"
+  );
+  check(
+    "...and a non-SFR use, which outranks everything else",
+    segmentFor({ apn: "1", ownerOccupied: true, isSfr: false, layer: "primary" }) === "non-residential"
+  );
+  check("only the primary segment reaches the default queue", DEFAULT_QUEUE_SEGMENTS.size === 1 && DEFAULT_QUEUE_SEGMENTS.has("primary"));
+
+  const openState: ComplianceState = {
+    san: { number: "S", recordedAt: now },
+    azRegistration: { status: "filed", kind: "roc-limited-44-1272.01", recordedAt: now },
+    wirelessSuppression: true, lastDncScrubAt: now, callWindow: { startHour: 8, endHour: 21 },
+  };
+  const absenteeLead: EnrichedLead = {
+    apn: "11122233", jurisdiction: "buckeye", address: "9 N ELM ST", segment: "absentee",
+    phone: { value: { number: "6025551234", lineType: "landline" }, prov: { source: "manual", fetchedAt: now } },
+    dnc: { status: "clear", scrubbedAt: now, receipt: "R" }, updatedAt: now,
+  };
+  const verdict = leadDialVerdict(absenteeLead, openState, new Set(), now);
+  check(
+    "an absentee lead is blocked even with a clear landline and fresh scrub",
+    !verdict.eligible && /absentee/.test(verdict.eligible === false ? verdict.reason : "")
+  );
+
+  console.log("== draft export");
+  const target = (apn: string, year: number, kw: number): TargetParcel => ({
+    apn, jurisdiction: "buckeye", address: "1 W MAIN ST",
+    solarPermits: [{ permitNumber: `E-${apn}`, description: `${kw} KW DC PV` }],
+    newestSolarIssuedAt: `${year}-06-01T00:00:00.000Z`, installYear: year, recency: "in-window",
+    completionSource: "finaled", systemKwDc: kw, totalSystemKwDc: kw, expansionCount: 0,
+    batteryEvidence: "permit-data-only", batteryDetectionMethod: "description_text", computedAt: now,
+  });
+  const lead = (apn: string, extra: Partial<EnrichedLead> = {}): EnrichedLead => ({
+    apn, jurisdiction: "buckeye", address: "1 W MAIN ST",
+    assessor: {
+      value: {
+        apn, apnDash: "503-96-720", ownerName: "DOE JANE", propertyAddress: "1 W MAIN ST",
+        propertyCity: "BUCKEYE", mailingAddress: "1 W MAIN ST", ownerOccupied: true, isSfr: true,
+        pool: true, layer: "primary",
+      },
+      prov: { source: "maricopa-assessor-arcgis", fetchedAt: now },
+    },
+    segment: "primary", updatedAt: now, ...extra,
+  });
+
+  const leads = [lead("A1"), lead("A2"), lead("A3"), lead("A4", { segment: "absentee" }), lead("A5", { needsReview: true, reviewFlags: ["no-dc-rating"] })];
+  const targets = [target("A1", 2021, 6.3), target("A2", 2019, 4.0), target("A3", 2021, 9.9), target("A4", 2020, 7.0), target("A5", 2022, 5.0)];
+  const rows = selectExportRows(leads, targets);
+  check("absentee and held-for-review rows are out of the default draft", rows.length === 3);
+  check(
+    "sorted by install year ASC, then system size DESC",
+    rows.map((r) => r.lead.apn).join(",") === "A2,A3,A1"
+  );
+  check("held-back rows are recoverable, not deleted", selectExportRows(leads, targets, { includeHeldBack: true }).length === 5);
+
+  const csv = exportRowsToCsv(rows);
+  const header = csv.split("\n")[0];
+  check("the export has all 27 agreed columns in order", header === EXPORT_COLUMNS.join(","));
+  check("header + one row per lead", csv.trim().split("\n").length === rows.length + 1);
+  // The single most important property of this file.
+  check("NO phone column exists in the export", !/phone/i.test(header));
+  check(
+    "...and no 10-digit number appears in the body either",
+    !/\b\d{10}\b/.test(csv.split("\n").slice(1).join("\n"))
+  );
+  check("battery_evidence travels on every exported row", csv.split("\n").slice(1, -1).every((r) => r.includes("permit-data-only")));
+  check("permit_count is expansions + 1", csv.split("\n")[1].split(",")[EXPORT_COLUMNS.indexOf("permit_count")] === "1");
+
+  const summary = summarizeExport(leads, targets);
+  check("summary counts the absentee segment it excluded", summary.absentee === 1);
+  check("summary reports held-back rows rather than hiding them", summary.heldBack === 2);
+  check("summary groups by ASSESSOR property city", summary.byPropertyCity.BUCKEYE === 5);
+  check("summary carries the 2019 coverage note", summary.coverage.some((c) => /2019/.test(c)));
+}
+
 async function main() {
   const now = new Date().toISOString();
   if (process.argv.includes("--live")) {
@@ -1080,6 +1240,7 @@ async function main() {
     runBatteryDetectionRegressions(now);
     runUnitOfMeasureRegressions(now);
     await runLlmClassificationRegressions(now);
+    await runAssessorAndExportRegressions(now);
   }
   if (failures > 0) {
     console.error(`\n${failures} check(s) FAILED`);

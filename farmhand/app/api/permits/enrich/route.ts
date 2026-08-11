@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { kvEnabled } from "@/lib/kv";
-import { maricopaEnabled, fetchOwner } from "@/lib/permits/enrich/maricopa";
+import {
+  fetchAssessorRecords,
+  segmentFor,
+  sourcedAssessor,
+  assessorProvenance,
+} from "@/lib/permits/enrich/assessor";
 import { getPhoneProvider, PHONE_PROVIDERS } from "@/lib/permits/enrich/phoneAppend";
 import { getLeads, getTargets, upsertLeads } from "@/lib/permits/store";
 import type { EnrichedLead, LineType } from "@/lib/permits/types";
@@ -16,7 +21,7 @@ import { canonicalPhone, isDialable } from "@/lib/permits/phone";
  * POST { action: "seed", client }
  *        stored targets -> lead rows (idempotent; existing enrichment kept)
  * POST { action: "owners", client, limit? }
- *        fills missing owners from the assessor, sequentially, small batches
+ *        batched assessor join — owner, occupancy, use code, property facts
  * POST { action: "phones", client, provider, limit? }
  *        fills missing phones for owner-bearing leads via the append provider
  * POST { action: "setPhone", client, apn, number, lineType }
@@ -29,7 +34,8 @@ export const maxDuration = 300;
 export async function GET() {
   return NextResponse.json({
     enabled: kvEnabled(),
-    maricopa: maricopaEnabled(),
+    // Public ArcGIS layer — nothing to configure, so this capability is always on.
+    maricopa: true,
     providers: Object.fromEntries(
       Object.values(PHONE_PROVIDERS).map((p) => [p.id, { label: p.label, configured: p.configured() }])
     ),
@@ -70,9 +76,8 @@ export async function POST(req: NextRequest) {
       // Everything seeded is in the current target set, so a parcel that was
       // retired by an earlier filter and has since come back is restored here.
       retired: false,
-      // A parcel flagged by the keyword-independent second-PV-permit check is
-      // a battery candidate no keyword can see, so it is held out of the queue
-      // until a human looks rather than dialed on the strength of silence.
+      // Quarantine flags only — TargetParcel.notes (second-pv-permit,
+      // states-expansion) are information and must not hold a lead back.
       needsReview: !!t.reviewFlags?.length,
       reviewFlags: t.reviewFlags,
       updatedAt: now,
@@ -82,20 +87,60 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === "owners") {
-    if (!maricopaEnabled()) return NextResponse.json({ ok: false, error: "MARICOPA_ASSESSOR_TOKEN not set" });
+    // No token, no key: the county publishes the whole assessment roll as a
+    // public ArcGIS layer, and the join runs in one batched query rather than
+    // one HTTP round trip per parcel. 6,192 of 6,197 Buckeye targets matched.
     const leads = await getLeads(client);
-    const missing = leads.filter((l) => !l.owner).slice(0, limit);
-    let found = 0;
+    const missing = leads.filter((l) => !l.assessor).slice(0, limit);
+    if (!missing.length) return NextResponse.json({ ok: true, attempted: 0, found: 0 });
+    const records = await fetchAssessorRecords(missing.map((l) => l.apn));
     const updated: EnrichedLead[] = [];
+    const segments: Record<string, number> = {};
     for (const lead of missing) {
-      const owner = await fetchOwner(lead.apn, lead.address, { now });
-      if (owner) {
-        found += 1;
-        updated.push({ ...lead, owner, updatedAt: now });
-      }
+      const rec = records.get(normalizeApn(lead.apn));
+      if (!rec) continue;
+      const segment = segmentFor(rec);
+      segments[segment] = (segments[segment] ?? 0) + 1;
+      updated.push({
+        ...lead,
+        assessor: sourcedAssessor(rec, now),
+        segment,
+        // The owner block stays populated because the phone-append provider
+        // keys off it; the assessor record is the fuller source of the same
+        // facts, not a replacement for the interface downstream expects.
+        owner: rec.ownerName
+          ? {
+              value: {
+                name: rec.ownerName,
+                mailingAddress: rec.mailingAddress,
+                ownerOccupied: rec.ownerOccupied,
+              },
+              prov: assessorProvenance(now),
+            }
+          : lead.owner,
+        // PropertyUseDescription is authoritative where our description-text
+        // rules were guesses: the 36 non-SFR parcels in the Buckeye set are
+        // the commercial contamination every text heuristic missed.
+        ...(rec.isSfr === false
+          ? {
+              needsReview: true,
+              reviewFlags: [...new Set([...(lead.reviewFlags ?? []), "non-residential-use"])],
+            }
+          : {}),
+        updatedAt: now,
+      });
     }
     if (updated.length) await upsertLeads(client, updated);
-    return NextResponse.json({ ok: true, attempted: missing.length, found, remaining: leads.filter((l) => !l.owner).length - found });
+    return NextResponse.json({
+      ok: true,
+      attempted: missing.length,
+      found: updated.length,
+      segments,
+      remaining: leads.filter((l) => !l.assessor).length - updated.length,
+      // Only "primary" reaches the default dial queue. Absentee owners and
+      // rentals are a separate campaign, not a lesser one.
+      note: "absentee, rental and non-residential segments are held out of the default dial queue",
+    });
   }
 
   if (action === "phones") {
