@@ -49,6 +49,8 @@ MUTED is set by Taylor, never by an agent's own judgment — that is the complia
 
 ## Verified state as of 2026-08-10 21:15 UTC
 
+> **Stale as of Tue 8/11 13:41 UTC.** The scheduled morning routine fired without a Gmail connector and could not recompute. This table is the last *verified* snapshot, not current state — treat every row as "true at 8/10 21:15, unknown since."
+
 Computed by this rule against live Gmail, not from the tracker:
 
 | Counterparty | Last inbound | Last outbound | State |

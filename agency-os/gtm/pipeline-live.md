@@ -2,7 +2,9 @@
 
 Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. **Standing rule (refined 8/10): all meetings are phone calls, but email copy never mentions phone vs. video — schedule normally in email; the preference is expressed only in the calendar invite (Google Calendar invite with a phone-call location, no Meet link).** This file is the working tracker until the CRM backend exists; the daily routine keeps it current.
 
-**Status is computed, not remembered — see `reply-triage-rules.md`.** Conversation state is per counterparty across all threads (last inbound vs. last delivered outbound), never per Gmail thread, because recaps start new subjects. Machine mail (calendar accepts, Bookings confirmations, bounces, auto-acks) never sets state. Verified 8/10 21:15 UTC: **nothing is currently waiting on Taylor.**
+**Status is computed, not remembered — see `reply-triage-rules.md`.** Conversation state is per counterparty across all threads (last inbound vs. last delivered outbound), never per Gmail thread, because recaps start new subjects. Machine mail (calendar accepts, Bookings confirmations, bounces, auto-acks) never sets state.
+
+> ⚠️ **Tue 8/11 13:41 UTC — morning routine ran WITHOUT Gmail.** The scheduled fire had no Gmail connector, so no mailbox was read and no state was recomputed. **Everything below is the 8/10 21:15 UTC snapshot carried forward, not today's truth.** Any reply, bounce, or board answer that arrived after 8/10 21:15 is invisible to this file right now. No follow-up drafts could be created this run either. Fix: re-create the routine from the claude.ai Routines UI with the Gmail connector attached, or run the check interactively — an interactive session has Gmail and recomputes in about a minute.
 
 ## Active supplier conversations
 
@@ -57,7 +59,7 @@ Orion Specialty Labs · BPI Labs · GFC Pharma · Apertus · OurPharma · SCA Ph
 | Day | Item |
 |---|---|
 | **Mon 8/10** | ✅ STASKA times, Belmar follow-up, Globyz Thursday confirm — **all three sent 21:01 UTC** · ✅ A2 follow-ups drafted for all 39 batch non-responders (in drafts, Taylor sends) · ⬜ start the counsel referral (retired-lawyer contact) |
-| **Tue 8/11** | ~~Frier Levitt call~~ — slot unconfirmed/likely off after the counsel pivot; no nudge. Day is open unless the referral moves fast |
+| **Tue 8/11** | ~~Frier Levitt call~~ — slot unconfirmed/likely off after the counsel pivot; no nudge (MUTED). Day is open unless the referral moves fast. Routine ran 13:41 UTC without Gmail — nothing recomputed, no drafts created. Nothing was due today by cadence: Belmar day-3 lands 8/13, and the 39 A2s are drafted-but-unsent so no A3 clock has started |
 | **Wed 8/12** | **Assure Infusions call, 10 AM MST** — prep doc coming from diligence research |
 | **Thu 8/13** | **Globyz/Nexgen call, 10:25 AM MST** (Salman Pathan) · STASKA call if Nick picks a Thu slot (proposed 9:00 or 11:00 AM MST — no overlap with Globyz) |
 | **Fri 8/14** | STASKA fallback slot (morning) · log the week's outcomes here |
