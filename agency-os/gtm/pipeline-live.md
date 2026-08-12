@@ -4,7 +4,7 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. **Standing rul
 
 **Status is computed, not remembered — see `reply-triage-rules.md`.** Conversation state is per counterparty across all threads (last inbound vs. last delivered outbound), never per Gmail thread, because recaps start new subjects. Machine mail (calendar accepts, Bookings confirmations, bounces, auto-acks) never sets state.
 
-> ⚠️ **Tue 8/11 13:41 UTC — morning routine ran WITHOUT Gmail.** The scheduled fire had no Gmail connector, so no mailbox was read and no state was recomputed. **Everything below is the 8/10 21:15 UTC snapshot carried forward, not today's truth.** Any reply, bounce, or board answer that arrived after 8/10 21:15 is invisible to this file right now. No follow-up drafts could be created this run either. Fix: re-create the routine from the claude.ai Routines UI with the Gmail connector attached, or run the check interactively — an interactive session has Gmail and recomputes in about a minute.
+> ⚠️ **BLIND SINCE 8/10 21:15 UTC — two consecutive scheduled runs with no Gmail.** Tue 8/11 13:41 UTC and Wed 8/12 13:37 UTC both fired without a Gmail connector: no mailbox read, no state recomputed, no drafts created either run. **Everything below is the 8/10 21:15 UTC snapshot carried forward — it is now ~40 hours old and is not today's truth.** Any reply, bounce, board answer, or reschedule since then is invisible here. The pattern is not a one-off: unattended fires of this routine do not have Gmail, so the tracker will keep going stale until the routine is re-created from the claude.ai Routines UI with the Gmail connector attached. An interactive session has Gmail and recomputes in about a minute.
 
 ## Active supplier conversations
 
@@ -60,6 +60,6 @@ Orion Specialty Labs · BPI Labs · GFC Pharma · Apertus · OurPharma · SCA Ph
 |---|---|
 | **Mon 8/10** | ✅ STASKA times, Belmar follow-up, Globyz Thursday confirm — **all three sent 21:01 UTC** · ✅ A2 follow-ups drafted for all 39 batch non-responders (in drafts, Taylor sends) · ⬜ start the counsel referral (retired-lawyer contact) |
 | **Tue 8/11** | ~~Frier Levitt call~~ — slot unconfirmed/likely off after the counsel pivot; no nudge (MUTED). Day is open unless the referral moves fast. Routine ran 13:41 UTC without Gmail — nothing recomputed, no drafts created. Nothing was due today by cadence: Belmar day-3 lands 8/13, and the 39 A2s are drafted-but-unsent so no A3 clock has started |
-| **Wed 8/12** | **Assure Infusions call, 10 AM MST** — prep doc coming from diligence research |
+| **Wed 8/12** | **Assure Infusions call, 10 AM MST / 17:00 UTC — TODAY.** Brief ready: `call-brief-assure-infusions.md` (Bartow FL IV-fluids/503B hybrid, registered 11/22/2024, never FDA-inspected as of 6/2025 — inspection question leads; Andrea Caudill's title verified, Alex Lucio CEO). Confirmed 8/4 in-thread; **not re-verified since 8/10 21:15 — a reschedule sent after that is not visible to this file** |
 | **Thu 8/13** | **Globyz/Nexgen call, 10:25 AM MST** (Salman Pathan) · STASKA call if Nick picks a Thu slot (proposed 9:00 or 11:00 AM MST — no overlap with Globyz) |
 | **Fri 8/14** | STASKA fallback slot (morning) · log the week's outcomes here |
