@@ -49,7 +49,7 @@ MUTED is set by Taylor, never by an agent's own judgment — that is the complia
 
 ## Verified state as of 2026-08-10 21:15 UTC
 
-> **Stale — two failed recomputes (Tue 8/11 13:41 UTC, Wed 8/12 13:37 UTC).** Both scheduled runs fired without a Gmail connector. This table is the last *verified* snapshot, not current state — treat every row as "true at 8/10 21:15, unknown since." The staleness is structural, not incidental: a routine that can't reach Gmail can never satisfy the rule this file describes, because the rule is defined by mailbox state.
+> **Stale — three failed recomputes (Tue 8/11 13:41, Wed 8/12 13:37, Thu 8/13 13:33 UTC).** All three scheduled runs fired without a Gmail connector. This table is the last *verified* snapshot, not current state — treat every row as "true at 8/10 21:15, unknown since." The staleness is structural, not incidental: a routine that can't reach Gmail can never satisfy the rule this file describes, because the rule is defined by mailbox state. As of 8/13 the gap has started costing scheduled touches, not just freshness — Belmar's day-3 came due with no draft created.
 
 Computed by this rule against live Gmail, not from the tracker:
 
