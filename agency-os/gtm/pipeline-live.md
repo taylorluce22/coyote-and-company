@@ -4,11 +4,28 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. **Standing rul
 
 **Status is computed, not remembered — see `reply-triage-rules.md`.** Conversation state is per counterparty across all threads (last inbound vs. last delivered outbound), never per Gmail thread, because recaps start new subjects. Machine mail (calendar accepts, Bookings confirmations, bounces, auto-acks) never sets state.
 
-> ⚠️ **BLIND SINCE 8/10 21:15 UTC — three consecutive scheduled runs with no Gmail** (Tue 8/11 13:41, Wed 8/12 13:37, Thu 8/13 13:33 UTC). No mailbox read, no state recomputed, no drafts created on any of them. **Everything below is the 8/10 21:15 UTC snapshot carried forward — now ~64 hours old and not today's truth.** Any reply, bounce, board answer, or reschedule since Monday night is invisible here, including whatever came out of the Assure call on 8/12.
+> ⚠️ **BLIND SINCE 8/10 21:15 UTC — four consecutive scheduled runs with no Gmail** (Tue 8/11 13:41, Wed 8/12 13:37, Thu 8/13 13:33, Fri 8/14 13:38 UTC). No mailbox read, no state recomputed, no drafts created on any of them. **Everything below is the 8/10 21:15 UTC snapshot — now ~88 hours old. Treat it as history, not status.** The entire operating week after Monday night is unobserved.
 >
-> **A follow-up is now overdue because of this**, not because of a decision: Belmar's day-3 (from the 8/10 send) falls today, 8/13, and no draft could be created. That's the first time the connector gap has cost a scheduled touch rather than just freshness.
+> **Costs so far are real, not cosmetic:** Belmar's day-3 came due 8/13 and no draft was created (now day-4 overdue). Two calls happened inside the blind window with no outcome logged. Nothing here reflects a decision by Taylor or a judgment by the agent — it is purely the missing connector.
 >
-> The pattern is structural — unattended fires of this routine do not carry Gmail, so the tracker keeps going stale until the routine is re-created from the claude.ai Routines UI with the connector attached. An interactive session has Gmail and recomputes in about a minute.
+> The pattern is structural: unattended fires of this routine do not carry Gmail, so this file cannot self-correct. Re-create the routine from the claude.ai Routines UI with the connector attached, or run the check interactively — an interactive session has Gmail and recomputes in about a minute. Until then, prefer the reconciliation list below over anything else on this page.
+
+## Reconciliation queue — run these the moment Gmail is available
+
+Everything unobserved since 8/10 21:15 UTC, as checkable items. Per `reply-triage-rules.md`, each counterparty needs BOTH searches (`from:{domain} newer_than:30d` and `in:sent to:{domain} newer_than:30d`) with timestamps compared — machine mail sets nothing.
+
+| # | Check | Why it's open |
+|---|---|---|
+| 1 | **Assure Infusions** — did the Wed 8/12 10 AM MST call happen, and what came of it? | Call fell inside the blind window; no outcome recorded anywhere |
+| 2 | **Globyz/NexGen** — did the Thu 8/13 10:25 AM MST call happen? | Same; confirmed via Bookings 8/10, never re-verified |
+| 3 | **STASKA / Nick Shada** — did he pick a Thu or Fri slot? | Times sent 8/10 21:01; any reply landed in the blind window. Fri 8/14 was the fallback slot — today |
+| 4 | **Belmar / Rob Kilgore** — any reply, and is the day-3 follow-up still unsent? | Never replied as of 8/10; follow-up due 8/13, undrafted |
+| 5 | **The 39 A2 drafts** — sent, partially sent, or untouched? | Drafted 8/10, unsent then. Cadence for A3 (day 7) starts from actual sends, so it can't be computed until this is known |
+| 6 | **AZ / OH / TN boards** — any guidance response? | Letters out 8/8; answers get recorded against the RC register in `docs/00-decision-table.md` |
+| 7 | **ProRx / Dave Dugas** — back from travel ~8/17; anything early? | Ball was with them at 8/8 22:03 recap |
+| 8 | **Any bounce or opt-out across all of the above** | An opt-out is honored immediately and permanently; a bounce means UNDELIVERED and needs a new route, not a wait |
+
+Frier Levitt stays MUTED throughout — not checked, not drafted, not nudged.
 
 ## Active supplier conversations
 
@@ -66,4 +83,4 @@ Orion Specialty Labs · BPI Labs · GFC Pharma · Apertus · OurPharma · SCA Ph
 | **Tue 8/11** | ~~Frier Levitt call~~ — slot unconfirmed/likely off after the counsel pivot; no nudge (MUTED). Day is open unless the referral moves fast. Routine ran 13:41 UTC without Gmail — nothing recomputed, no drafts created. Nothing was due today by cadence: Belmar day-3 lands 8/13, and the 39 A2s are drafted-but-unsent so no A3 clock has started |
 | **Wed 8/12** | **Assure Infusions call, 10 AM MST / 17:00 UTC — TODAY.** Brief ready: `call-brief-assure-infusions.md` (Bartow FL IV-fluids/503B hybrid, registered 11/22/2024, never FDA-inspected as of 6/2025 — inspection question leads; Andrea Caudill's title verified, Alex Lucio CEO). Confirmed 8/4 in-thread; **not re-verified since 8/10 21:15 — a reschedule sent after that is not visible to this file** |
 | **Thu 8/13** | **Globyz/NexGen call, 10:25 AM MST / 17:25 UTC — TODAY.** Brief: `call-brief-globyz-nexgen.md` (NexGen registered 503B 1/15/2026, never FDA-inspected; registration under NexGen not Globyz — that's the opening question). Confirmed 8/10 via Bookings; **not re-verified since — a reschedule after Mon night is invisible** · STASKA if Nick picked a Thu slot: unknown, his reply would have arrived during the blind window · **Belmar day-3 follow-up due today — draft NOT created (no Gmail this run)** |
-| **Fri 8/14** | STASKA fallback slot (morning) · log the week's outcomes here — **Assure 8/12 outcome is still unlogged**; nothing recorded whether the call was held |
+| **Fri 8/14** | STASKA fallback slot (morning) — unknown whether Nick took it · **Week closes unlogged.** Assure 8/12 and Globyz 8/13 outcomes both unrecorded, Belmar day-3 undrafted since 8/13. See the reconciliation queue above — that list, not this table, is the accurate picture of the week |
