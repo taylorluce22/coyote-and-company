@@ -4,28 +4,60 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. **Standing rul
 
 **Status is computed, not remembered — see `reply-triage-rules.md`.** Conversation state is per counterparty across all threads (last inbound vs. last delivered outbound), never per Gmail thread, because recaps start new subjects. Machine mail (calendar accepts, Bookings confirmations, bounces, auto-acks) never sets state.
 
-> ⚠️ **BLIND SINCE 8/10 21:15 UTC — four consecutive scheduled runs with no Gmail** (Tue 8/11 13:41, Wed 8/12 13:37, Thu 8/13 13:33, Fri 8/14 13:38 UTC). No mailbox read, no state recomputed, no drafts created on any of them. **Everything below is the 8/10 21:15 UTC snapshot — now ~88 hours old. Treat it as history, not status.** The entire operating week after Monday night is unobserved.
+> ✅ **RECOMPUTED Fri 8/14 ~14:00 UTC with Gmail restored.** The blind window is closed; the reconciliation queue below is worked through and the findings are folded into the rows above and the sections that follow. Two items came back as **YOUR MOVE** (Medivant, Globyz) and the 39 A2 drafts are confirmed **unsent**.
+>
+> <details><summary>Historical: the four blind runs</summary>
+>
+> ⚠️ **BLIND 8/10 21:15 → 8/14 — four consecutive scheduled runs with no Gmail** (Tue 8/11 13:41, Wed 8/12 13:37, Thu 8/13 13:33, Fri 8/14 13:38 UTC). No mailbox read, no state recomputed, no drafts created on any of them. **Everything below is the 8/10 21:15 UTC snapshot — now ~88 hours old. Treat it as history, not status.** The entire operating week after Monday night is unobserved.
 >
 > **Costs so far are real, not cosmetic:** Belmar's day-3 came due 8/13 and no draft was created (now day-4 overdue). Two calls happened inside the blind window with no outcome logged. Nothing here reflects a decision by Taylor or a judgment by the agent — it is purely the missing connector.
 >
-> The pattern is structural: unattended fires of this routine do not carry Gmail, so this file cannot self-correct. Re-create the routine from the claude.ai Routines UI with the connector attached, or run the check interactively — an interactive session has Gmail and recomputes in about a minute. Until then, prefer the reconciliation list below over anything else on this page.
+> The pattern is structural: unattended fires of this routine do not carry Gmail. Re-create the routine from the claude.ai Routines UI with the connector attached, or run the check interactively.
+>
+> </details>
 
-## Reconciliation queue — run these the moment Gmail is available
+## Reconciliation — worked 8/14, results
 
-Everything unobserved since 8/10 21:15 UTC, as checkable items. Per `reply-triage-rules.md`, each counterparty needs BOTH searches (`from:{domain} newer_than:30d` and `in:sent to:{domain} newer_than:30d`) with timestamps compared — machine mail sets nothing.
-
-| # | Check | Why it's open |
+| # | Check | Result |
 |---|---|---|
-| 1 | **Assure Infusions** — did the Wed 8/12 10 AM MST call happen, and what came of it? | Call fell inside the blind window; no outcome recorded anywhere |
-| 2 | **Globyz/NexGen** — did the Thu 8/13 10:25 AM MST call happen? | Same; confirmed via Bookings 8/10, never re-verified |
-| 3 | **STASKA / Nick Shada** — did he pick a Thu or Fri slot? | Times sent 8/10 21:01; any reply landed in the blind window. Fri 8/14 was the fallback slot — today |
-| 4 | **Belmar / Rob Kilgore** — any reply, and is the day-3 follow-up still unsent? | Never replied as of 8/10; follow-up due 8/13, undrafted |
-| 5 | **The 39 A2 drafts** — sent, partially sent, or untouched? | Drafted 8/10, unsent then. Cadence for A3 (day 7) starts from actual sends, so it can't be computed until this is known |
-| 6 | **AZ / OH / TN boards** — any guidance response? | Letters out 8/8; answers get recorded against the RC register in `docs/00-decision-table.md` |
-| 7 | **ProRx / Dave Dugas** — back from travel ~8/17; anything early? | Ball was with them at 8/8 22:03 recap |
-| 8 | **Any bounce or opt-out across all of the above** | An opt-out is honored immediately and permanently; a bounce means UNDELIVERED and needs a new route, not a wait |
+| 1 | Assure — did the 8/12 call happen? | **No trace in mail either way.** No message from acaudill@ since 8/5, none from Taylor since 8/4 22:16. The call was accepted on the calendar and nothing contradicts it; whether it was held is not determinable from email |
+| 2 | Globyz — did the 8/13 call happen? | **Yes.** See the Globyz section below — Ahmed Saeed-Khan's 8/13 23:00 follow-up says "nice speaking to you" |
+| 3 | STASKA / Nick Shada | **No reply.** Nothing inbound since 8/6 21:14; Taylor's times went 8/10 21:01. Ball with them, day-4 |
+| 4 | Belmar / Rob Kilgore | **No reply, ever.** Last outbound 8/10 21:01. Day-3 came due 8/13 — draft still owed |
+| 5 | The 39 A2 drafts | **All 39 unsent**, sitting in drafts, timestamped 8/10 22:20–22:22 UTC. No A3 clock has started |
+| 6 | AZ / OH / TN boards | **No response** from any of the three |
+| 7 | ProRx / Dave Dugas | **Nothing new.** Ball with them since the 8/8 22:03 recap; he was due back ~8/17 |
+| 8 | Bounces / opt-outs | **None new** |
 
-Frier Levitt stays MUTED throughout — not checked, not drafted, not nudged.
+Also found, not on the list: **Medivant Health** ran a scheduled meeting on 8/13 that isn't recorded anywhere in this tracker, and two deliverability test sends went out 8/13 22:55 to `test.mailpool.io` and `apollomailtester.com` (Apollo tooling — machine mail, not counterparties).
+
+Frier Levitt: MUTED, not checked, not drafted, not nudged.
+
+## Medivant Health — live, and waiting on Taylor
+
+**State: YOUR MOVE since 8/13 21:11 UTC (~41 hours).** Last inbound is Jessica Kientz's message; nothing outbound since 21:07.
+
+What happened, from the thread: Jessica Kientz (Administrative Assistant, +1 480-956-5484) wrote at 21:03 asking if Taylor was joining "the meeting we have scheduled today," cc'ing R.Dave@, jbowley@ and klatusek@medivanthealth.com. Taylor replied at 21:05 that he couldn't join — technical trouble — and offered his number at 21:07. Jessica sent a Teams invite at 21:11. The thread ends there.
+
+**A follow-up draft is staged** (reschedule, asks for windows next week, no phone-vs-video language per the standing rule).
+
+**Conflict with the batch queue — worth catching before any bulk send:** Medivant is also row 18 of the 39 queued A2 drafts, addressed to `customerservice@medivanthealth.com`. That draft is now wrong: it treats a live, named, multi-person conversation as a cold non-responder. It should be skipped or rewritten before the queue goes out.
+
+## Globyz/NexGen — call held 8/13; they asked Taylor to source tirzepatide
+
+The call happened. **Ahmed Saeed-Khan** (Business Development Director / Special Projects Co-ordinator; Mississauga ON, new US office at 6 Horne Drive, Folcroft PA; M +1 647-825-6774) wrote at 8/13 23:00:54, cc sal@globyz.com, verbatim:
+
+> "As mentioned for now we're buying Tirzepatide mainly, if you have any suppliers you could link us up with that would be appreciated. Further down the line once we have our own production facility and products to offer we can certainly look at your proposal."
+
+**State: YOUR MOVE since 8/13 23:00 UTC.** Two facts follow, reported as facts — the decision is Taylor's.
+
+**1. This inverts the model's direction.** SCP's structure is: supplier pays, SCP introduces license-verified *buyers* to that supplier. Ahmed is asking SCP to find *suppliers* for Globyz as a buyer. Sourcing product on a buyer's behalf is procurement, not introduction. **Legally exposed, with mechanism:** the whole zero-license position in `docs/10-regulatory-research.md` rests on never taking title, never transmitting price, never negotiating a sale — and on not acting as a broker. A sourcing role for a purchaser is the fact pattern that state "broker"/"virtual wholesaler" definitions are aimed at, which is precisely the open question in the guidance letters sitting unanswered at the AZ, OH and TN boards. Doing this before those answers arrive resolves the question by conduct rather than by ruling.
+
+**2. Tirzepatide is a prohibited category in SCP's own documents, and an active FDA enforcement area.** Facts: FDA declared the tirzepatide shortage resolved in December 2024, which ended the §503A/§503B compounding permission tied to shortage status; FDA's enforcement discretion for 503B tirzepatide compounding ran out in March 2025. Compounding a drug that is essentially a copy of an approved drug (Mounjaro/Zepbound) is restricted under FDCA §503B(a)(5). This is not theoretical — **ProRx's 4/7/2026 warning letter cites post-eligibility tirzepatide production**, documented in `prorx-verification.md`. Separately, SCP's own draft supplier agreement §6(c) excludes GLP-1s — semaglutide, tirzepatide, liraglutide — from marketing, and `docs/10-regulatory-research.md` lists them as a prohibited lane. Introducing a tirzepatide supply relationship would contradict the contract SCP asks its own suppliers to sign.
+
+**Also from the same message: Globyz is deferring on being a supplier** — "further down the line once we have our own production facility and products to offer." NexGen's 503B registration is 1/15/2026 with no inspection yet, which is consistent with that. As a supplier lead this is a later-stage conversation, not a near-term one.
+
+No draft was prepared for this thread. Whether and how to answer Ahmed is Taylor's call, and any reply turns on the two facts above rather than on wording.
 
 ## Active supplier conversations
 
@@ -35,7 +67,7 @@ Frier Levitt stays MUTED throughout — not checked, not drafted, not nudged.
 | **ProRx Pharma** (Exton PA — location corrected 8/10; affiliated BoomRx portal) | Dave Dugas, VP Sales (904-945-1844) + Mark | 🟡 **Ball with them.** Call held 8/7; your recap sent 8/8 22:03 — **3% of gross on introduced customers, no intro fee**. Dave out of country week of 8/10, on email | 8/8 you → recap (new thread, not a reply in Dave's) | Follow up when Dave returns (~8/17). Compliance facts below — FYI, not a gate |
 | **STASKA Pharmaceuticals** | Nick Shada | 🟢 **Ball with them.** Wants the call; times sent 8/10 21:01 | 8/10 you → times | Await Nick's pick. **Prep brief ready: `call-brief-staska.md`** (Class I recall 9/2024 + WL 5/2025, close-out unverified — remediation questions lead) |
 | **Belmar Pharma Solutions** | Rob Kilgore, CEO (direct) | 🟡 **No reply yet** — no inbound from Rob at any point. Follow-up sent 8/10 21:01 (first email 8/6, after belmarselect@ bounced) | 8/10 you → rob@ | Day-3 clock restarts 8/10; next touch due 8/13 |
-| **Globyz Pharma / Nexgen Formulations** (Folcroft PA) | Salman Pathan, CEO (sal@globyz.com) | 🟢 Replied 8/6 to the batch send; **call set: Thu Aug 13, 1:25 PM ET / 10:25 AM MST** (rescheduled from 8/10 via Microsoft Bookings) | 8/6 → reply received | **Prep brief ready: `call-brief-globyz-nexgen.md`** — registration RESOLVED (registered 503B 1/15/2026, never inspected). Schedule conflict RESOLVED 8/10: the AOS digest predated the ~9:15 AM reschedule; **Thursday 8/13 1:25 PM ET / 10:25 AM MST confirmed** (single Bookings ID = moved not duplicated; Monday calendar empty). Thursday confirm **sent 8/10 21:01** (bare confirm, no phone-vs-video language). Bookings re-confirmation arrived 8/10 16:20 UTC — machine mail, no reply owed |
+| **Globyz Pharma / NexGen Formulations** (Folcroft PA) | Salman Pathan, CEO (sal@) · **Ahmed Saeed-Khan, BD Director (Ahmed@)** — the active contact | 🔴 **YOUR MOVE since 8/13 23:00.** Call held Thu 8/13. Ahmed: they're **buying tirzepatide** and want SCP to source suppliers; SCP's proposal deferred until they have their own production. See the Globyz section below — direction inversion + prohibited category | 8/13 23:00 ← Ahmed | **Prep brief ready: `call-brief-globyz-nexgen.md`** — registration RESOLVED (registered 503B 1/15/2026, never inspected). Schedule conflict RESOLVED 8/10: the AOS digest predated the ~9:15 AM reschedule; **Thursday 8/13 1:25 PM ET / 10:25 AM MST confirmed** (single Bookings ID = moved not duplicated; Monday calendar empty). Thursday confirm **sent 8/10 21:01** (bare confirm, no phone-vs-video language). Bookings re-confirmation arrived 8/10 16:20 UTC — machine mail, no reply owed |
 
 ## Counsel & regulatory
 

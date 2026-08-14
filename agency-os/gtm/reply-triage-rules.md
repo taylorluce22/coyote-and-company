@@ -47,9 +47,26 @@ A bounce is not inbound from the counterparty. It means `lastOutbound` never arr
 
 MUTED is set by Taylor, never by an agent's own judgment — that is the compliance charter's no-steering rule applied to triage. A muted conversation does not appear in triage, does not generate cadence items, and does not get a draft. Currently muted: **Frier Levitt / Arielle Miliambro / Denise Schallenberger** — last inbound 8/7 14:35 with no reply from Taylor, which the old logic would surface as "your move" every morning; the founder withdrew the nudge on 8/10 and is routing counsel through a personal referral. Do not surface it.
 
-## Verified state as of 2026-08-10 21:15 UTC
+## Verified state as of 2026-08-14 ~14:00 UTC
 
-> **Stale — four failed recomputes (Tue 8/11 13:41, Wed 8/12 13:37, Thu 8/13 13:33, Fri 8/14 13:38 UTC).** Every scheduled run this week fired without a Gmail connector. A reconciliation queue of what went unobserved is in `pipeline-live.md`. This table is the last *verified* snapshot, not current state — treat every row as "true at 8/10 21:15, unknown since." The staleness is structural, not incidental: a routine that can't reach Gmail can never satisfy the rule this file describes, because the rule is defined by mailbox state. As of 8/13 the gap has started costing scheduled touches, not just freshness — Belmar's day-3 came due with no draft created.
+Computed by this rule against live Gmail. Supersedes the 8/10 snapshot, which stood unverified through four scheduled runs (8/11–8/14) that all fired without a Gmail connector.
+
+| Counterparty | Last inbound | Last outbound | State |
+|---|---|---|---|
+| **Medivant Health** (Jessica Kientz + R.Dave/jbowley/klatusek) | **8/13 21:11** | 8/13 21:07 | **YOUR MOVE** (~41h) — meeting missed on a bad link; she sent a Teams invite and it stopped there. Reschedule draft staged. Not previously tracked at all |
+| **Globyz/NexGen** (Ahmed Saeed-Khan, cc Salman Pathan) | **8/13 23:00** | 8/13 17:43 | **YOUR MOVE** — call held; they want SCP to source tirzepatide, and defer SCP's proposal until they have production. Facts in `pipeline-live.md`; no draft prepared |
+| ProRx (Dave Dugas / Mark L'Hommedieu / sales@) | 8/7 20:18 | 8/8 22:03 (recap, new thread) | BALL WITH THEM — Dave due back ~8/17 |
+| STASKA (Nick Shada) | 8/6 21:14 | 8/10 21:01 | BALL WITH THEM — no answer on the proposed times, day-4 |
+| Belmar (Rob Kilgore) | never | 8/10 21:01 | NO REPLY YET — **day-3 came due 8/13, still owed** |
+| Assure (Andrea Caudill) | 8/4 12:18 human; 8/5 accept = machine | 8/4 22:16 | BALL WITH THEM — 8/12 call left no trace in mail either way |
+| Frier Levitt | 8/7 14:35 | 8/7 14:33 | **MUTED** (founder, 8/10) |
+| AZ / OH / TN boards | never | 8/8 12:41 | NO REPLY YET — nudge at 2 weeks (8/22) |
+| 8/5 batch — 39 facilities | never (2 auto-acks don't count) | 8/5 | NO REPLY YET — **A2s drafted 8/10, all 39 still unsent**; no A3 clock started |
+| Galaxy Pharmaceuticals | never | 8/5, failed 8/8 | **UNDELIVERED** — route dead, needs the web form |
+
+Medivant is the sharpest illustration of why this file exists: it was in no tracker, no queue, and no triage view, yet it was the single most advanced conversation in the pipeline — a scheduled meeting with four people. It was found only by reading mail state rather than reading our own records.
+
+<details><summary>Superseded: the 8/10 21:15 UTC snapshot</summary>
 
 Computed by this rule against live Gmail, not from the tracker:
 
@@ -64,6 +81,8 @@ Computed by this rule against live Gmail, not from the tracker:
 | AZ / OH / TN boards | never | 8/8 12:41 | NO REPLY YET — nudge at 2 weeks (8/22) |
 | 8/5 batch — 39 facilities | never (2 auto-acks don't count) | 8/5 | NO REPLY YET — A2 drafted 8/10, unsent |
 | Galaxy Pharmaceuticals | never | 8/5, failed 8/8 | **UNDELIVERED** — route dead, needs the web form |
+
+</details>
 
 The batch row is why the count matters: the tracker listed 10 of 45 sends, so 29 conversations existed in Gmail and nowhere else. A triage view built only from what a tracker remembers will miss whatever the tracker forgot — the counts have to come from mail state each run.
 
