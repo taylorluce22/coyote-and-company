@@ -4,7 +4,21 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. **Standing rul
 
 **Status is computed, not remembered — see `reply-triage-rules.md`.** Conversation state is per counterparty across all threads (last inbound vs. last delivered outbound), never per Gmail thread, because recaps start new subjects. Machine mail (calendar accepts, Bookings confirmations, bounces, auto-acks) never sets state.
 
-> ✅ **RECOMPUTED Fri 8/14 ~14:00 UTC with Gmail restored.** The blind window is closed; the reconciliation queue below is worked through and the findings are folded into the rows above and the sections that follow. Two items came back as **YOUR MOVE** (Medivant, Globyz) and the 39 A2 drafts are confirmed **unsent**.
+> ⚠️ **Mon 8/17 13:32 UTC — routine ran blind again (5th scheduled fire without Gmail: 8/11, 8/12, 8/13, 8/14, 8/17).** Last verified state is Fri 8/14 ~14:00 UTC, ~71 hours old. Friday's recompute happened only because Taylor asked interactively — the schedule itself has never once succeeded.
+>
+> **Three cadence items are due today and none could be drafted:**
+>
+> | Due today | Basis | Status |
+> |---|---|---|
+> | **ProRx follow-up** | Dave Dugas was out of country the week of 8/10, "back ~8/17" — that's today | Not drafted (no Gmail) |
+> | **Belmar A3 (day 7)** | Send was 8/10 21:01; day-3 was already missed on 8/13 | Not drafted (no Gmail) |
+> | **STASKA A3 (day 7)** | Times sent 8/10 21:01, no answer since | Not drafted (no Gmail) |
+>
+> **And two conversations have been waiting on Taylor since Thursday** (~4 days as of this run), per the 8/14 computation: **Medivant** (missed meeting, reschedule draft staged 8/14 — unknown whether sent) and **Globyz/Ahmed** (tirzepatide sourcing request, no draft by design — see the Globyz section). Whether either moved since Friday is not observable this run.
+>
+> <details><summary>Historical: recompute of Fri 8/14, and the four blind runs before it</summary>
+>
+> ✅ **RECOMPUTED Fri 8/14 ~14:00 UTC with Gmail restored.** The blind window was closed; the reconciliation queue below was worked through and folded into the rows above. Two items came back as **YOUR MOVE** (Medivant, Globyz) and the 39 A2 drafts were confirmed **unsent**.
 >
 > <details><summary>Historical: the four blind runs</summary>
 >
@@ -15,6 +29,8 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. **Standing rul
 > The pattern is structural: unattended fires of this routine do not carry Gmail. Re-create the routine from the claude.ai Routines UI with the connector attached, or run the check interactively.
 >
 > </details>
+>
+> **Five for five.** The scheduled routine has produced zero verified checks since it was created. Every accurate update in this file came from an interactive session. Until the connector is attached in the Routines UI, the schedule is a reminder that a check is due, not a check.
 
 ## Reconciliation — worked 8/14, results
 

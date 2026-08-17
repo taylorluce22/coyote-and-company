@@ -49,6 +49,8 @@ MUTED is set by Taylor, never by an agent's own judgment — that is the complia
 
 ## Verified state as of 2026-08-14 ~14:00 UTC
 
+> **Not re-verified since.** The Mon 8/17 13:32 UTC scheduled run fired without Gmail — the fifth in a row — so this table is ~71 hours old. The two YOUR MOVE rows below were ~41 hours old when computed and are ~4 days old now if nothing moved; whether they moved is unobserved.
+
 Computed by this rule against live Gmail. Supersedes the 8/10 snapshot, which stood unverified through four scheduled runs (8/11–8/14) that all fired without a Gmail connector.
 
 | Counterparty | Last inbound | Last outbound | State |
