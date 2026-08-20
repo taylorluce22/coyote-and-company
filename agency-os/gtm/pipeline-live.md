@@ -4,19 +4,19 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. **Standing rul
 
 **Status is computed, not remembered — see `reply-triage-rules.md`.** Conversation state is per counterparty across all threads (last inbound vs. last delivered outbound), never per Gmail thread, because recaps start new subjects. Machine mail (calendar accepts, Bookings confirmations, bounces, auto-acks) never sets state.
 
-> ⚠️ **Wed 8/19 13:32 UTC — seventh consecutive scheduled fire without Gmail** (8/11, 8/12, 8/13, 8/14, 8/17, 8/18, 8/19). Last verified state is Fri 8/14 ~14:00 UTC, **~119 hours / 5 days old**. Every accurate update this file has ever received came from an interactive session; the schedule has never once succeeded.
+> ⚠️ **Thu 8/20 13:32 UTC — eighth consecutive scheduled fire without Gmail** (8/11–8/14, 8/17–8/20). Last verified state is Fri 8/14 ~14:00 UTC, **~143 hours / 6 days old**. Every accurate update this file has ever received came from an interactive session; the schedule has never once succeeded.
 >
 > **Nothing new fell due today. The overdue set is unchanged in composition and one day older, still undraftable:**
 >
 > | Item | Basis | Days overdue |
 > |---|---|---|
-> | **ProRx follow-up** | Dave Dugas due back ~8/17 | 2 |
-> | **Belmar A3 (day 7)** | Sent 8/10 21:01; day-3 also missed on 8/13 | 2 (day-3 leg: 6) |
-> | **STASKA A3 (day 7)** | Times sent 8/10 21:01, no answer since | 2 |
+> | **ProRx follow-up** | Dave Dugas due back ~8/17 | 3 |
+> | **Belmar A3 (day 7)** | Sent 8/10 21:01; day-3 also missed on 8/13 | 3 (day-3 leg: 7) |
+> | **STASKA A3 (day 7)** | Times sent 8/10 21:01, no answer since | 3 |
 >
-> **Two conversations have been waiting on Taylor since Thursday 8/13 — now ~6 days**, per the 8/14 computation: **Medivant** (missed meeting with a four-person group; reschedule draft staged 8/14, unknown whether sent) and **Globyz/Ahmed** (tirzepatide sourcing request, no draft by design — see the Globyz section). Whether either moved is unobservable.
+> **Two conversations have been waiting on Taylor since Thursday 8/13 — now a full week**, per the 8/14 computation: **Medivant** (missed meeting with a four-person group; reschedule draft staged 8/14, unknown whether sent) and **Globyz/Ahmed** (tirzepatide sourcing request, no draft by design — see the Globyz section). Whether either moved is unobservable.
 >
-> **Next dated item: the AZ/OH/TN board nudge, Fri 8/22 — three days out.** Two weeks from the 8/8 letters. On current form it will go undrafted.
+> **Date correction (found 8/20):** earlier entries called the board nudge "Fri 8/22." **8/22 is a Saturday** — the 8/8 letters also went out on a Saturday, so the clean two-week mark lands on a weekend. On business days the nudge is **Fri 8/21 (tomorrow) or Mon 8/24**; which one is Taylor's call. On current form it goes undrafted either way.
 >
 > <details><summary>Historical: recompute of Fri 8/14, and the four blind runs before it</summary>
 >
@@ -32,7 +32,7 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. **Standing rul
 >
 > </details>
 >
-> **Seven for seven.** The scheduled routine has produced zero verified checks since it was created. Until the Gmail connector is attached in the Routines UI, the schedule is a reminder that a check is due, not a check.
+> **Eight for eight.** The scheduled routine has produced zero verified checks since it was created. Until the Gmail connector is attached in the Routines UI, the schedule is a reminder that a check is due, not a check.
 
 ## Reconciliation — worked 8/14, results
 

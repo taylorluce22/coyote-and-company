@@ -49,7 +49,7 @@ MUTED is set by Taylor, never by an agent's own judgment — that is the complia
 
 ## Verified state as of 2026-08-14 ~14:00 UTC
 
-> **Not re-verified since.** Seven scheduled runs in a row (8/11–8/19) have fired without Gmail, so this table is **~119 hours / 5 days old**. The two YOUR MOVE rows below were ~41 hours old when computed and are ~6 days old now if nothing moved; whether they moved is unobserved.
+> **Not re-verified since.** Eight scheduled runs in a row (8/11–8/20) have fired without Gmail, so this table is **~143 hours / 6 days old**. The two YOUR MOVE rows below were ~41 hours old when computed and are a full week old now if nothing moved; whether they moved is unobserved.
 
 Computed by this rule against live Gmail. Supersedes the 8/10 snapshot, which stood unverified through four scheduled runs (8/11–8/14) that all fired without a Gmail connector.
 
@@ -62,7 +62,7 @@ Computed by this rule against live Gmail. Supersedes the 8/10 snapshot, which st
 | Belmar (Rob Kilgore) | never | 8/10 21:01 | NO REPLY YET — **day-3 came due 8/13, still owed** |
 | Assure (Andrea Caudill) | 8/4 12:18 human; 8/5 accept = machine | 8/4 22:16 | BALL WITH THEM — 8/12 call left no trace in mail either way |
 | Frier Levitt | 8/7 14:35 | 8/7 14:33 | **MUTED** (founder, 8/10) |
-| AZ / OH / TN boards | never | 8/8 12:41 | NO REPLY YET — nudge at 2 weeks (8/22) |
+| AZ / OH / TN boards | never | 8/8 12:41 | NO REPLY YET — 2-week mark is Sat 8/22; business-day nudge is Fri 8/21 or Mon 8/24 |
 | 8/5 batch — 39 facilities | never (2 auto-acks don't count) | 8/5 | NO REPLY YET — **A2s drafted 8/10, all 39 still unsent**; no A3 clock started |
 | Galaxy Pharmaceuticals | never | 8/5, failed 8/8 | **UNDELIVERED** — route dead, needs the web form |
 
