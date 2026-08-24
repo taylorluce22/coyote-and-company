@@ -4,7 +4,7 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. **Standing rul
 
 **Status is computed, not remembered — see `reply-triage-rules.md`.** Conversation state is per counterparty across all threads (last inbound vs. last delivered outbound), never per Gmail thread, because recaps start new subjects. Machine mail (calendar accepts, Bookings confirmations, bounces, auto-acks) never sets state.
 
-> ⚠️ **Fri 8/21 13:31 UTC — ninth consecutive scheduled fire without Gmail** (8/11–8/14, 8/17–8/21). Last verified state is Fri 8/14 ~14:00 UTC, **a full week old**. Every accurate update this file has ever received came from an interactive session; the schedule has never once succeeded.
+> ⚠️ **Mon 8/24 13:32 UTC — tenth consecutive scheduled fire without Gmail** (8/11–8/14, 8/17–8/21, 8/24). Last verified state is Fri 8/14 ~14:00 UTC, **ten days old**. Every accurate update this file has ever received came from an interactive session; the schedule has never once succeeded.
 >
 > **Copy for the whole backlog is now written to `pending-drafts-2026-08.md`** — ProRx, Belmar A3, STASKA A3 and the three board nudges, paste-ready as thread replies. They are not Gmail drafts and nothing is sent; the outage cost the drafting mechanism, not the drafting.
 >
@@ -12,14 +12,16 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. **Standing rul
 >
 > | Item | Basis | Days overdue |
 > |---|---|---|
-> | **ProRx follow-up** | Dave Dugas due back ~8/17 | 4 — copy ready |
-> | **Belmar A3 (day 7)** | Sent 8/10 21:01; day-3 also missed on 8/13 | 4 (day-3 leg: 8) — copy ready |
-> | **STASKA A3 (day 7)** | Times sent 8/10 21:01, no answer since | 4 — copy ready |
-> | **AZ / OH / TN board nudges** | 2 weeks from the 8/8 letters | due today or Mon 8/24 — copy ready |
+> | **ProRx follow-up** | Dave Dugas due back ~8/17 | 7 — copy ready |
+> | **Belmar A3 (day 7)** | Sent 8/10 21:01; day-3 also missed on 8/13 | 7 (day-3 leg: 11) — copy ready |
+> | **STASKA A3 (day 7)** | Times sent 8/10 21:01, no answer since | 7 — copy ready |
+> | **AZ / OH / TN board nudges** | 2 weeks from the 8/8 letters (Sat 8/22) | **today is the second and last business-day option** — copy ready |
 >
-> **Two conversations have been waiting on Taylor since Thursday 8/13 — now eight days**, per the 8/14 computation: **Medivant** (missed meeting with a four-person group; reschedule draft staged 8/14, unknown whether sent) and **Globyz/Ahmed** (tirzepatide sourcing request, no draft by design — see the Globyz section). Whether either moved is unobservable.
+> **Two conversations have been waiting on Taylor since Thursday 8/13 — now eleven days**, per the 8/14 computation: **Medivant** (missed meeting with a four-person group; reschedule draft staged 8/14, unknown whether sent) and **Globyz/Ahmed** (tirzepatide sourcing request, no draft by design — see the Globyz section). Whether either moved is unobservable.
 >
-> **The board two-week mark is tomorrow (Sat 8/22).** Today is the last business day before it; Mon 8/24 is the other option. Copy for all three nudges is in `pending-drafts-2026-08.md`.
+> **New today — Belmar's A4 (breakup, day 14) falls today** by the calendar, counting from the 8/10 touch. But A3 was never sent, so the sequence is stalled mid-way rather than exhausted: sending a breakup after a follow-up that never went out would read oddly to Rob, who has heard nothing since 8/10. Whether to send the A3 copy now, skip to the breakup, or leave it is Taylor's call — both texts are cheap to produce and A3 is already written.
+>
+> **Cadence note:** the 8/5 batch's own A3/A4 clocks have never started, because the 39 A2 drafts were never sent. That sequence is frozen, not overdue.
 >
 > <details><summary>Historical: recompute of Fri 8/14, and the four blind runs before it</summary>
 >
@@ -35,7 +37,7 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. **Standing rul
 >
 > </details>
 >
-> **Nine for nine.** The scheduled routine has produced zero verified checks since it was created. Until the Gmail connector is attached in the Routines UI, the schedule is a reminder that a check is due, not a check.
+> **Ten for ten.** The scheduled routine has produced zero verified checks since it was created. Until the Gmail connector is attached in the Routines UI, the schedule is a reminder that a check is due, not a check.
 
 ## Reconciliation — worked 8/14, results
 
