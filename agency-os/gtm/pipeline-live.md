@@ -4,7 +4,9 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. **Standing rul
 
 **Status is computed, not remembered — see `reply-triage-rules.md`.** Conversation state is per counterparty across all threads (last inbound vs. last delivered outbound), never per Gmail thread, because recaps start new subjects. Machine mail (calendar accepts, Bookings confirmations, bounces, auto-acks) never sets state.
 
-> ⚠️ **Thu 9/3 13:31 UTC — eighteenth consecutive scheduled fire without Gmail** (every weekday 8/11–9/3). Last verified state is Fri 8/14 ~14:00 UTC, **twenty days old**. Every accurate update this file has ever received came from an interactive session; the schedule has never once succeeded.
+> ⚠️ **Fri 9/4 13:32 UTC — nineteenth consecutive scheduled fire without Gmail** (every weekday 8/11–9/4). Last verified state is Fri 8/14 ~14:00 UTC, **three weeks old**.
+>
+> **Repair attempted 9/4, blocked by org policy:** the trigger API surface came back this morning with a `connectors` parameter, so the agent tried to re-create this routine with Gmail attached — the same fix identified on day one. The API refused: "the connectors parameter is not available for this organization." That confirms the block is organization-level policy, not a transient API gap. **The claude.ai Routines UI remains the only path to a Gmail-attached routine, and only Taylor can use it.** Every accurate update this file has ever received came from an interactive session; the schedule has never once succeeded.
 >
 > **Copy for the whole backlog is now written to `pending-drafts-2026-08.md`** — ProRx, Belmar A3, STASKA A3 and the three board nudges, paste-ready as thread replies. They are not Gmail drafts and nothing is sent; the outage cost the drafting mechanism, not the drafting.
 >
@@ -12,11 +14,11 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. **Standing rul
 >
 > | Item | Basis | Days overdue |
 > |---|---|---|
-> | **ProRx follow-up** | Dave Dugas due back ~8/17 | 17 — copy ready |
-> | **Belmar A3 (day 7)** | Sent 8/10 21:01; day-3 also missed on 8/13 | 17 (day-3 leg: 21) — copy ready |
-> | **Belmar A4 (day 14)** | Fell due 8/24 with A3 still unsent | 10 — see note below |
-> | **STASKA A3 (day 7)** | Times sent 8/10 21:01, no answer since | 17 — copy ready |
-> | **STASKA A4 (day 14)** | Fell due 8/24 by the calendar, same stall as Belmar's: A3 never sent | 10 — sequence stalled, not exhausted |
+> | **ProRx follow-up** | Dave Dugas due back ~8/17 | 18 — copy ready |
+> | **Belmar A3 (day 7)** | Sent 8/10 21:01; day-3 also missed on 8/13 | 18 (day-3 leg: 22) — copy ready |
+> | **Belmar A4 (day 14)** | Fell due 8/24 with A3 still unsent | 11 — see note below |
+> | **STASKA A3 (day 7)** | Times sent 8/10 21:01, no answer since | 18 — copy ready |
+> | **STASKA A4 (day 14)** | Fell due 8/24 by the calendar, same stall as Belmar's: A3 never sent | 11 — sequence stalled, not exhausted |
 > | **AZ / OH / TN board nudges** | 2 weeks from the 8/8 letters (Sat 8/22) | **both business-day options (8/21, 8/24) have passed** — copy ready, now simply late |
 >
 > **Two conversations have been waiting on Taylor since Thursday 8/13 — now three weeks**, per the 8/14 computation: **Medivant** (missed meeting with a four-person group; reschedule draft staged 8/14, unknown whether sent) and **Globyz/Ahmed** (tirzepatide sourcing request, no draft by design — see the Globyz section). Whether either moved is unobservable.
@@ -41,7 +43,7 @@ Updated 2026-08-10 (Mon) from taylor@sonoranclinicalpartners.com. **Standing rul
 >
 > </details>
 >
-> **Eighteen for eighteen.** The scheduled routine has produced zero verified checks since it was created. Until the Gmail connector is attached in the Routines UI, the schedule is a reminder that a check is due, not a check. These daily entries now restate the same facts with larger numbers; the run log stays for the record, but the live content is the backlog table above and `pending-drafts-2026-08.md`.
+> **Nineteen for nineteen.** The scheduled routine has produced zero verified checks since it was created. Until the Gmail connector is attached in the Routines UI, the schedule is a reminder that a check is due, not a check. These daily entries now restate the same facts with larger numbers; the run log stays for the record, but the live content is the backlog table above and `pending-drafts-2026-08.md`.
 >
 > **Infrastructure note (8/26):** this container was reset at some point before today's run — the checkout had rolled back to an unrelated commit and `agency-os/` was absent from the working tree. Nothing was lost; everything had been pushed, and the branch was fast-forwarded from origin. Worth knowing because it is the second failure mode in a row where the *record* survived only because it lives in git rather than in a session.
 

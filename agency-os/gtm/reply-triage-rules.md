@@ -49,7 +49,7 @@ MUTED is set by Taylor, never by an agent's own judgment — that is the complia
 
 ## Verified state as of 2026-08-14 ~14:00 UTC
 
-> **Not re-verified since.** Eighteen scheduled runs in a row (8/11–9/3) have fired without Gmail, so this table is **twenty days old** — old enough that it should be read as a record of what was true on 8/14, not as pipeline status. The two YOUR MOVE rows below are three weeks old if nothing moved; whether they moved is unobserved. Paste-ready copy for every overdue cadence item is in `pending-drafts-2026-08.md`.
+> **Not re-verified since.** Nineteen scheduled runs in a row (8/11–9/4) have fired without Gmail, so this table is **three weeks old** — old enough that it should be read as a record of what was true on 8/14, not as pipeline status. The two YOUR MOVE rows below are three weeks old if nothing moved; whether they moved is unobserved. Paste-ready copy for every overdue cadence item is in `pending-drafts-2026-08.md`.
 
 Computed by this rule against live Gmail. Supersedes the 8/10 snapshot, which stood unverified through four scheduled runs (8/11–8/14) that all fired without a Gmail connector.
 
